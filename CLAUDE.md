@@ -76,13 +76,30 @@ O backend utilizará **monólito modular organizado por domínio**.
 5. O frontend não deve implementar regras financeiras.
 6. Valores monetários deverão utilizar `BigDecimal` no backend.
 7. Migrations deverão ser feitas exclusivamente pelo Flyway.
-8. Não utilizar `ddl-auto=create` ou `ddl-auto=update`.
+8. Não utilizar `ddl-auto=create`, `ddl-auto=create-drop` ou `ddl-auto=update`.
 9. O backend será responsável pela autorização e isolamento dos dados dos usuários.
 10. O frontend nunca será considerado uma barreira de segurança.
 11. Não adicionar dependências sem necessidade.
 12. Toda alteração deverá preservar os testes existentes.
 13. Toda tarefa deverá terminar com build e testes relevantes.
 14. Segredos, senhas e tokens nunca deverão ser versionados.
+
+---
+
+## Regras de migrations
+
+1. Toda alteração estrutural no banco deverá ser feita por Flyway.
+2. Nunca modificar uma migration que já tenha sido aplicada em ambientes compartilhados.
+3. Correções de schema deverão ser realizadas através de uma nova migration.
+4. Migrations deverão ser versionadas no Git.
+5. Hibernate não deverá criar ou alterar tabelas automaticamente.
+6. Migrations devem ser determinísticas.
+7. Não inserir dados de usuário ou dados sensíveis através de migrations.
+8. Dados iniciais necessários ao sistema deverão ser tratados explicitamente e separados das alterações estruturais quando apropriado.
+9. Alterações destrutivas deverão ser avaliadas cuidadosamente antes da implementação.
+10. Toda migration deverá ser compatível com MySQL.
+11. Scripts de migration deverão ficar em `backend/src/main/resources/db/migration`.
+12. O padrão obrigatório de nomenclatura é `V<versão>__<descricao>.sql`, por exemplo `V1__initial_schema.sql`.
 
 ---
 

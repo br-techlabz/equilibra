@@ -1,0 +1,207 @@
+# TASK-0.4 — Configurar Flyway e estratégia de migrations
+
+Leia integralmente o `CLAUDE.md` antes de realizar qualquer alteração.
+
+Analise o estado atual do projeto e, principalmente:
+
+- `backend/pom.xml`
+- configurações `application*.yml`
+- configuração do datasource
+- Docker Compose
+- configuração atual do MySQL
+- testes existentes
+- qualquer configuração Flyway já criada nas TASK-0.1, TASK-0.2 ou TASK-0.3
+
+Não recrie configurações que já existam e estejam corretas.
+
+## Objetivo
+
+Estabelecer o Flyway como mecanismo oficial e exclusivo de gerenciamento do schema do banco de dados do Equilibra.
+
+Nesta tarefa ainda NÃO deverão ser criadas tabelas funcionais como usuários, contas, categorias ou transações.
+
+## 1. Verificar dependências
+
+Confirme que o backend possui dependências Flyway compatíveis com:
+
+- Spring Boot 4
+- MySQL 8
+- versão Java utilizada pelo projeto
+
+Caso já estejam configuradas corretamente, não altere suas versões sem necessidade.
+
+Evite definir manualmente versões gerenciadas pelo Spring Boot.
+
+## 2. Configurar Flyway
+
+Configure o Flyway para utilizar o mesmo datasource principal da aplicação.
+
+Utilize o diretório padrão:
+
+`src/main/resources/db/migration`
+
+As migrations deverão seguir obrigatoriamente o padrão:
+
+`V<versão>__<descricao>.sql`
+
+Exemplos futuros:
+
+`V1__initial_schema.sql`
+
+`V2__create_users.sql`
+
+`V3__create_accounts.sql`
+
+Não crie essas migrations funcionais agora.
+
+## 3. Estratégia de schema
+
+O Hibernate NÃO deverá criar ou alterar automaticamente o schema.
+
+Confirme que não são utilizados:
+
+`ddl-auto=create`
+
+`ddl-auto=create-drop`
+
+`ddl-auto=update`
+
+O objetivo arquitetural é:
+
+Flyway = criação/evolução do banco
+
+Hibernate/JPA = validação e persistência
+
+Quando aplicável, utilize:
+
+`ddl-auto: validate`
+
+## 4. Migration técnica inicial
+
+Se for tecnicamente necessário validar o funcionamento completo do Flyway, crie somente uma migration técnica mínima e neutra.
+
+Ela NÃO deve representar uma entidade de negócio.
+
+Não crie tabelas como:
+
+- users
+- accounts
+- categories
+- tags
+- transactions
+- transfers
+- attachments
+
+Se o funcionamento do Flyway puder ser validado corretamente sem uma migration artificial, prefira não criar objetos desnecessários no banco.
+
+## 5. Regras para migrations futuras
+
+Documente no `CLAUDE.md` as seguintes regras:
+
+1. Toda alteração estrutural no banco deverá ser feita por Flyway.
+
+2. Nunca modificar uma migration que já tenha sido aplicada em ambientes compartilhados.
+
+3. Correções de schema deverão ser realizadas através de uma nova migration.
+
+4. Migrations deverão ser versionadas no Git.
+
+5. Hibernate não deverá criar ou alterar tabelas automaticamente.
+
+6. Migrations devem ser determinísticas.
+
+7. Não inserir dados de usuário ou dados sensíveis através de migrations.
+
+8. Dados iniciais necessários ao sistema deverão ser tratados explicitamente e separados das alterações estruturais quando apropriado.
+
+9. Alterações destrutivas deverão ser avaliadas cuidadosamente antes da implementação.
+
+10. Toda migration deverá ser compatível com MySQL.
+
+## 6. Teste de integração do Flyway
+
+Crie ou ajuste um teste de integração que permita verificar que:
+
+- o banco inicia adequadamente para testes
+- Flyway executa as migrations
+- o contexto Spring inicializa
+- o schema esperado pode ser validado
+
+Prefira Testcontainers com MySQL para testes de integração.
+
+Não utilize H2 para simular MySQL.
+
+O objetivo é reduzir diferenças entre testes e produção.
+
+Reutilize qualquer infraestrutura Testcontainers existente.
+
+Não duplique configurações.
+
+## 7. Validação manual
+
+Quando possível no ambiente atual:
+
+1. iniciar MySQL
+2. iniciar backend
+3. verificar execução do Flyway
+4. verificar criação da tabela de histórico do Flyway
+5. executar testes
+6. executar build
+
+Não apague dados existentes sem necessidade.
+
+## 8. Documentação
+
+Atualize o README somente quando necessário para documentar:
+
+- funcionamento das migrations
+- localização dos scripts
+- convenção de nomenclatura
+- comportamento do Flyway ao iniciar a aplicação
+
+Não repita documentação já existente.
+
+## Restrições
+
+Nesta tarefa NÃO:
+
+- implemente autenticação
+- crie entidade User
+- crie contas
+- crie categorias
+- crie tags
+- crie transações
+- crie transferências
+- implemente Dashboard
+- implemente APIs de negócio
+- implemente telas Angular
+
+## Critérios de aceite
+
+A tarefa somente estará concluída quando:
+
+- Flyway estiver configurado corretamente
+- Hibernate não estiver gerenciando automaticamente o schema
+- convenção de migrations estiver documentada
+- migrations forem executadas automaticamente no startup apropriado
+- integração com MySQL estiver validada
+- testes relevantes estiverem passando
+- build Maven estiver passando
+
+## Finalização
+
+Ao terminar, apresente:
+
+1. estado encontrado antes das alterações
+2. alterações realizadas
+3. arquivos criados
+4. arquivos modificados
+5. configuração final do Flyway
+6. estratégia definida para migrations
+7. testes executados
+8. resultado dos testes
+9. resultado do build
+10. problemas ou limitações encontrados
+11. pendências para a TASK-0.5
+
+Não implemente nenhuma tarefa posterior.

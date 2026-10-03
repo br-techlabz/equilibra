@@ -182,6 +182,17 @@ cd backend
 - **Swagger UI**: http://localhost:8080/api/swagger-ui.html
 - **OpenAPI Docs**: http://localhost:8080/api/api-docs
 
+### Migrations de Banco de Dados
+
+O Equilibra utiliza **Flyway** como mecanismo oficial e exclusivo para criação e evolução do schema do banco.
+
+- Scripts ficam em `backend/src/main/resources/db/migration`.
+- O padrão obrigatório é `V<versão>__<descricao>.sql`.
+- Exemplos futuros: `V1__initial_schema.sql`, `V2__create_users.sql`.
+- O Flyway executa automaticamente as migrations no startup do backend, usando o mesmo datasource da aplicação.
+- Hibernate/JPA valida o schema com `ddl-auto: validate`; não deve criar ou alterar tabelas automaticamente.
+- Migrations já aplicadas em ambientes compartilhados não devem ser modificadas; correções devem ser feitas por novas migrations.
+
 ### Frontend (pendente)
 ```bash
 # TODO: comandos de build e execução
