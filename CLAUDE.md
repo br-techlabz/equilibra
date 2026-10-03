@@ -275,8 +275,9 @@ Não aplicar essa estrutura mecanicamente quando ela não trouxer benefício. O 
 ## Documentação arquitetural
 
 1. A arquitetura base está documentada em `docs/architecture.md`.
-2. Decisões arquiteturais importantes poderão ser registradas em ADRs dentro de `docs/adr/`.
-3. O ADR inicial do monólito modular é `docs/adr/0001-modular-monolith.md`.
+2. A arquitetura frontend está documentada em `docs/frontend-architecture.md`.
+3. Decisões arquiteturais importantes poderão ser registradas em ADRs dentro de `docs/adr/`.
+4. O ADR inicial do monólito modular é `docs/adr/0001-modular-monolith.md`.
 
 ---
 

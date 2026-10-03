@@ -1,0 +1,820 @@
+# TASK-0.7 — Fundação do frontend Angular 19 do Equilibra
+
+Leia integralmente antes de realizar alterações:
+
+- `CLAUDE.md`
+- `docs/architecture.md`
+- `docs/api-guidelines.md`
+- ADRs existentes
+- README
+
+Analise o estado atual do diretório `/frontend`.
+
+Esta TASK deve estabelecer a fundação arquitetural e visual do frontend.
+
+NÃO implemente funcionalidades financeiras.
+
+---
+
+# 1. Objetivo
+
+Criar ou consolidar o frontend do Equilibra utilizando:
+
+- Angular 19
+- TypeScript
+- Angular Material
+- SCSS
+- Standalone Components
+- Angular Router
+- Signals quando apropriado
+- Reactive Forms para formulários futuros
+
+O resultado deverá ser uma aplicação:
+
+- moderna
+- limpa
+- responsiva
+- acessível
+- preparada para desktop
+- preparada para tablet
+- preparada para smartphone
+
+Não implementar ainda:
+
+- login funcional
+- cadastro de usuário
+- Dashboard funcional
+- contas
+- categorias
+- tags
+- transações
+- relatórios
+
+---
+
+# 2. Verificar projeto existente
+
+Antes de criar qualquer coisa:
+
+1. Analise o `package.json`.
+2. Confirme a versão efetivamente instalada do Angular.
+3. Analise a estrutura existente.
+4. Analise configuração TypeScript.
+5. Analise configuração de testes.
+6. Analise estilos existentes.
+7. Verifique se Angular Material já está instalado.
+8. Verifique se SSR foi configurado.
+9. Verifique configuração de linting.
+10. Verifique scripts existentes.
+
+Não recrie o projeto Angular se ele já estiver corretamente inicializado.
+
+Não faça upgrade/downgrade desnecessário.
+
+Preserve Angular 19 conforme definido pelo projeto.
+
+---
+
+# 3. Arquitetura frontend
+
+Organize o frontend conceitualmente em:
+
+src/app/
+├── core/
+├── shared/
+├── layout/
+└── features/
+
+## core
+
+Deverá conter infraestrutura global da aplicação quando necessária, como futuramente:
+
+- configuração HTTP
+- interceptors
+- guards
+- autenticação
+- serviços singleton globais
+
+Não crie implementações fictícias nesta TASK.
+
+## shared
+
+Componentes, diretivas, pipes e utilitários verdadeiramente reutilizáveis.
+
+Não transforme `shared` em depósito genérico.
+
+## layout
+
+Responsável pela estrutura visual principal:
+
+- application shell
+- header/toolbar
+- sidebar/navigation
+- área de conteúdo
+
+## features
+
+Funcionalidades de negócio.
+
+Módulos futuros:
+
+- auth
+- dashboard
+- accounts
+- categories
+- tags
+- transactions
+- reports
+
+Não crie estruturas vazias apenas para representar funcionalidades futuras.
+
+---
+
+# 4. Standalone Components
+
+Utilize Standalone Components.
+
+Não introduza NgModules para funcionalidades novas sem necessidade técnica concreta.
+
+Utilize APIs modernas do Angular 19 quando apropriado.
+
+Não migre código existente funcional apenas por preferência estilística sem necessidade.
+
+---
+
+# 5. Application Shell
+
+Implemente um shell visual base contendo:
+
+- toolbar/header
+- sidebar/drawer
+- área principal para router outlet
+
+Estrutura conceitual:
+
++--------------------------------------------------+
+| Equilibra                              usuário   |
++--------------+-----------------------------------+
+|              |                                   |
+| Navegação    |          Conteúdo                 |
+|              |                                   |
+|              |                                   |
++--------------+-----------------------------------+
+
+No desktop:
+
+- sidebar lateral visível
+- conteúdo ao lado
+
+No mobile:
+
+- sidebar deverá funcionar como drawer
+- aberta através de botão/menu
+- conteúdo ocupa largura disponível
+
+Não utilize largura fixa que prejudique telas pequenas.
+
+---
+
+# 6. Navegação
+
+Prepare visualmente o menu futuro:
+
+- Dashboard
+
+- Cadastros
+  - Contas
+  - Categorias
+  - Tags
+
+- Transações
+  - Despesas
+  - Receitas
+  - Transferências
+
+- Relatórios
+
+Nesta TASK esses itens NÃO precisam direcionar para funcionalidades reais.
+
+Evite criar páginas completas fictícias.
+
+Quando necessário para validar o router, utilize somente placeholders mínimos claramente identificados como temporários.
+
+Não implemente regras financeiras.
+
+---
+
+# 7. Menu Transações
+
+"Transações" deverá funcionar visualmente como grupo expansível/colapsável contendo:
+
+- Despesas
+- Receitas
+- Transferências
+
+"Cadastros" também poderá ser agrupado contendo:
+
+- Contas
+- Categorias
+- Tags
+
+Escolha uma solução consistente utilizando Angular Material.
+
+Garanta navegação adequada por teclado.
+
+---
+
+# 8. Header
+
+O header deverá possuir inicialmente:
+
+- identidade Equilibra
+- botão para menu em telas pequenas
+- espaço reservado para informações do usuário autenticado
+
+Como autenticação ainda não existe, NÃO crie usuário fake.
+
+Não exiba nomes fictícios como:
+
+"João Silva"
+
+Se for necessário representar a área futura, utilize somente estrutura neutra.
+
+Não implemente logout ainda.
+
+---
+
+# 9. Identidade visual
+
+Crie uma identidade visual inicial consistente para o Equilibra.
+
+Objetivos visuais:
+
+- confiança
+- organização
+- equilíbrio
+- simplicidade
+- finanças pessoais
+
+Utilize como direção principal tons de:
+
+- teal
+- verde moderado
+- superfícies neutras
+- cinzas suaves
+
+Evite:
+
+- verde neon
+- excesso de gradientes
+- sombras exageradas
+- excesso de cores
+- aparência de dashboard corporativo antigo
+
+A interface deve parecer uma aplicação financeira moderna.
+
+---
+
+# 10. Design tokens
+
+Evite espalhar valores visuais arbitrários pelo SCSS.
+
+Centralize quando apropriado:
+
+- espaçamento
+- border radius
+- tamanhos principais
+- superfícies
+- cores semânticas
+
+Utilize o sistema de theming do Angular Material sempre que possível.
+
+Não construa um design system excessivamente complexo.
+
+---
+
+# 11. Tema
+
+Configure um tema claro consistente do Angular Material.
+
+Prepare a estrutura para que futuramente seja possível implementar dark mode sem reescrever todos os componentes.
+
+NÃO implemente dark mode nesta TASK.
+
+Não crie botão de troca de tema ainda.
+
+---
+
+# 12. Tipografia
+
+Utilize uma hierarquia tipográfica consistente.
+
+Defina estilos adequados para:
+
+- título da página
+- subtítulo
+- headings
+- corpo
+- labels
+- textos auxiliares
+
+Evite tamanhos excessivamente pequenos em mobile.
+
+Não dependa de fontes externas sem necessidade.
+
+Se utilizar uma fonte externa, justifique e avalie impacto de carregamento e privacidade.
+
+Prefira inicialmente fontes do sistema quando possível.
+
+---
+
+# 13. Responsividade
+
+Considere pelo menos:
+
+## Mobile
+
+aproximadamente abaixo de 600px
+
+## Tablet
+
+aproximadamente 600px–959px
+
+## Desktop
+
+aproximadamente 960px ou superior
+
+Não trate esses valores como regra absoluta caso Angular Material forneça abordagem melhor.
+
+A interface deverá funcionar adequadamente desde aproximadamente 360px de largura.
+
+Não deverá existir scroll horizontal causado pelo layout principal.
+
+---
+
+# 14. Mobile first
+
+Desenvolva estilos considerando telas pequenas primeiro quando apropriado.
+
+Elementos interativos devem possuir área adequada para toque.
+
+Não dependa exclusivamente de hover.
+
+---
+
+# 15. Área principal
+
+A área de conteúdo deverá possuir:
+
+- largura responsiva
+- padding consistente
+- espaço adequado entre seções
+
+Em monitores grandes, evite que conteúdos de formulário fiquem exageradamente largos quando isso prejudicar legibilidade.
+
+Não imponha limite que prejudique dashboards futuros.
+
+---
+
+# 16. Page container
+
+Se houver benefício concreto, crie um componente estrutural reutilizável para páginas.
+
+Exemplo conceitual:
+
+PageContainer
+
+com suporte a:
+
+- título
+- subtítulo opcional
+- actions
+- conteúdo
+
+Não crie abstrações excessivas.
+
+Esse componente poderá ser utilizado futuramente em:
+
+- Contas
+- Categorias
+- Transações
+- Relatórios
+
+---
+
+# 17. Empty State
+
+Se fizer sentido nesta TASK, crie um componente simples reutilizável de estado vazio.
+
+Exemplo futuro:
+
+"Nenhuma transação encontrada."
+
+Porém, não crie dezenas de componentes compartilhados antecipadamente.
+
+---
+
+# 18. Loading
+
+Defina uma estratégia visual para carregamento futuro utilizando Angular Material.
+
+Não implemente um sistema global complexo de loading.
+
+Pode ser documentada a utilização de:
+
+- progress spinner
+- progress bar
+- skeleton futuramente quando necessário
+
+---
+
+# 19. Feedback
+
+Defina como padrão futuro:
+
+- snackbar para feedback transitório
+- dialog para confirmações relevantes
+- erros de formulário próximos ao campo
+
+Não implemente serviços globais complexos sem uso real.
+
+---
+
+# 20. Acessibilidade
+
+A interface deverá considerar:
+
+- HTML semântico
+- navegação por teclado
+- foco visível
+- labels apropriados
+- ARIA somente quando necessário
+- contraste adequado
+- botões com nomes acessíveis
+- ícones com descrição quando comunicarem informação
+
+Não utilizar somente cor para indicar significado financeiro.
+
+---
+
+# 21. Ícones
+
+Utilize Angular Material Icons ou solução já existente no projeto.
+
+Mantenha consistência.
+
+Não instale múltiplas bibliotecas de ícones.
+
+---
+
+# 22. Rotas
+
+Configure uma estrutura limpa de roteamento.
+
+Prepare o sistema para lazy loading das features futuras.
+
+Não carregue todas as funcionalidades antecipadamente.
+
+O shell deverá conter o `router-outlet` apropriado.
+
+Nesta TASK pode existir uma rota inicial temporária apenas para demonstrar o funcionamento do shell.
+
+Essa rota será substituída pelo Dashboard real futuramente.
+
+---
+
+# 23. Página temporária
+
+Crie, somente se necessário, uma página inicial mínima para validar o shell.
+
+Ela poderá apresentar:
+
+- título "Equilibra"
+- texto informando que o ambiente frontend está configurado
+
+Não crie cards financeiros fictícios.
+
+Não crie gráficos fictícios.
+
+Não crie dados financeiros fake.
+
+---
+
+# 24. Configuração de ambientes
+
+Analise a estratégia Angular existente para configuração de ambiente.
+
+Prepare uma forma limpa de configurar a URL base da API.
+
+Não espalhe:
+
+`http://localhost:8080`
+
+pelo código.
+
+Deve existir um ponto central para configuração futura da API.
+
+A integração efetiva com o backend será realizada na TASK-0.8.
+
+---
+
+# 25. HTTP
+
+Prepare o Angular para utilizar `HttpClient` através das APIs modernas de providers.
+
+Não crie serviços HTTP fictícios para:
+
+- Account
+- Transaction
+- Category
+
+Apenas prepare a infraestrutura mínima necessária.
+
+---
+
+# 26. Interceptors
+
+Não implemente JWT interceptor nesta TASK.
+
+Autenticação ainda não existe.
+
+Apenas mantenha arquitetura preparada para interceptors futuros.
+
+O request ID será tratado na TASK-0.8 se decidirmos propagá-lo a partir do frontend.
+
+---
+
+# 27. Formulários
+
+Reactive Forms será o padrão para formulários de negócio.
+
+Não crie formulários financeiros nesta TASK.
+
+Documente a decisão arquitetural.
+
+---
+
+# 28. Estado
+
+Não instale NgRx, Akita ou outra biblioteca global de estado nesta TASK.
+
+Utilize inicialmente recursos nativos do Angular:
+
+- Signals
+- services
+- RxJS quando apropriado
+
+Uma biblioteca de estado somente deverá ser adicionada se a complexidade futura justificar.
+
+---
+
+# 29. RxJS e Signals
+
+Use:
+
+Signals para estado local/síncrono quando apropriado.
+
+RxJS para fluxos assíncronos e HTTP quando apropriado.
+
+Não converta tudo para Signals ou tudo para Observables de forma dogmática.
+
+---
+
+# 30. SCSS
+
+Organize os estilos globais de maneira simples.
+
+Evite:
+
+- `!important` indiscriminado
+- seletores profundamente aninhados
+- CSS duplicado
+- estilos globais que vazem para features
+
+Utilize estilos de componentes quando apropriado.
+
+---
+
+# 31. Qualidade TypeScript
+
+Mantenha TypeScript strict quando já configurado ou quando puder ser ativado sem quebrar injustificadamente a base.
+
+Evite:
+
+`any`
+
+quando um tipo adequado puder ser definido.
+
+Não utilize casts apenas para silenciar erros sem compreender a causa.
+
+---
+
+# 32. ESLint e formatação
+
+Analise as ferramentas já existentes.
+
+Se ESLint já estiver configurado, preserve-o.
+
+Se não estiver, avalie se a configuração é apropriada nesta TASK.
+
+Não adicione múltiplas ferramentas concorrentes.
+
+Não faça alterações massivas de formatação em arquivos não relacionados.
+
+---
+
+# 33. Testes
+
+Crie testes relevantes para a infraestrutura visual implementada.
+
+No mínimo valide quando aplicável:
+
+- criação do App
+- renderização do shell
+- existência do router outlet
+- comportamento básico do menu
+- comportamento responsivo que possa ser testado adequadamente
+
+Não teste detalhes internos do Angular Material.
+
+Teste comportamento observável.
+
+---
+
+# 34. Testes E2E
+
+Confirme se Playwright já existe.
+
+Se já estiver configurado, preserve.
+
+Se a configuração estiver prevista mas ausente, configure Playwright de maneira mínima e funcional se isso puder ser feito sem complexidade excessiva.
+
+Crie no máximo um smoke test nesta TASK:
+
+- aplicação abre
+- shell principal é exibido
+
+Não crie testes E2E de funcionalidades inexistentes.
+
+---
+
+# 35. Build
+
+Ao finalizar execute os comandos disponíveis para:
+
+- lint
+- testes
+- build de produção
+
+Corrija problemas introduzidos pela TASK.
+
+---
+
+# 36. Bundle
+
+Observe warnings relevantes de bundle.
+
+Não faça otimizações prematuras.
+
+Entretanto, evite adicionar dependências grandes sem necessidade.
+
+---
+
+# 37. Documentação
+
+Crie, se ainda não existir:
+
+`docs/frontend-architecture.md`
+
+ou utilize localização equivalente definida pelo projeto.
+
+Documente:
+
+- arquitetura frontend
+- core/shared/layout/features
+- standalone components
+- lazy loading
+- estratégia de estado
+- Signals/RxJS
+- Reactive Forms
+- Angular Material
+- responsividade
+- identidade visual
+- acessibilidade
+- estratégia de configuração da API
+
+Atualize `CLAUDE.md` somente com regras permanentes.
+
+Evite duplicação excessiva.
+
+---
+
+# 38. Não criar funcionalidades antecipadamente
+
+NÃO implementar nesta TASK:
+
+- tela de login
+- tela de cadastro
+- autenticação
+- JWT
+- Dashboard financeiro
+- contas
+- categorias
+- tags
+- despesas
+- receitas
+- transferências
+- anexos
+- relatórios
+- gráficos financeiros
+- auditoria
+
+---
+
+# 39. Não utilizar dados fake
+
+Não crie:
+
+- usuários fictícios
+- saldos fictícios
+- transações fictícias
+- contas fictícias
+- gráficos fictícios
+
+Mocks deverão existir apenas dentro de testes quando necessários.
+
+---
+
+# 40. Critérios de aceite
+
+A TASK-0.7 estará concluída quando:
+
+- Angular 19 estiver funcionando
+- Angular Material estiver configurado
+- SCSS estiver configurado
+- arquitetura frontend estiver definida
+- Standalone Components estiverem sendo utilizados
+- application shell estiver implementado
+- header estiver implementado
+- sidebar/drawer estiver implementado
+- layout estiver responsivo
+- menu funcionar adequadamente
+- aplicação funcionar em aproximadamente 360px de largura
+- router estiver configurado
+- estratégia de lazy loading estiver preparada
+- configuração da API possuir ponto central
+- não existirem funcionalidades financeiras fictícias
+- testes estiverem passando
+- lint estiver passando, quando configurado
+- build de produção estiver passando
+- arquitetura estiver documentada
+
+---
+
+# 41. Validação visual
+
+Antes de considerar a TASK concluída, valide o layout pelo menos nas seguintes larguras aproximadas:
+
+- 360px
+- 768px
+- 1280px
+- 1920px
+
+Verifique:
+
+- ausência de scroll horizontal indevido
+- menu utilizável
+- toolbar correta
+- conteúdo legível
+- espaçamento consistente
+- drawer funcionando
+- foco de teclado visível
+
+Se houver ferramentas disponíveis para inspeção visual/browser, utilize-as.
+
+---
+
+# 42. Relatório final
+
+Ao concluir apresente:
+
+1. Estado inicial encontrado.
+2. Versões efetivamente utilizadas.
+3. Arquitetura frontend adotada.
+4. Estrutura relevante de diretórios.
+5. Componentes criados.
+6. Arquivos criados.
+7. Arquivos modificados.
+8. Dependências adicionadas e justificativa.
+9. Estratégia de tema utilizada.
+10. Estratégia de responsividade.
+11. Estratégia de roteamento.
+12. Testes criados.
+13. Resultado dos testes.
+14. Resultado do lint.
+15. Resultado do build.
+16. Resultado da validação visual.
+17. Warnings ou limitações existentes.
+18. Pendências para TASK-0.8.
+
+Não implemente a TASK-0.8 ou qualquer funcionalidade posterior.

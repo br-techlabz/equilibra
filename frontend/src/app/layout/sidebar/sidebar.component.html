@@ -1,0 +1,54 @@
+<nav class="sidebar-nav" aria-label="Navegação principal">
+  <div class="sidebar-header">
+    <span class="sidebar-brand">Equilibra</span>
+  </div>
+
+  <mat-divider />
+
+  <mat-nav-list class="nav-list" role="list" aria-label="Menu de navegação">
+    @for (item of navigationItems; track item.label) {
+      @if (item.children && item.children.length > 0) {
+        <mat-expansion-panel
+          class="nav-group"
+          [expanded]="item.expanded"
+          (opened)="item.expanded = true"
+          (closed)="item.expanded = false"
+          hideToggle>
+          <mat-expansion-panel-header class="nav-group-header">
+            <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
+            <span class="nav-label">{{ item.label }}</span>
+            <mat-icon class="expand-icon">expand_more</mat-icon>
+          </mat-expansion-panel-header>
+
+          @for (child of item.children; track child.label) {
+            <a
+              mat-list-item
+              class="nav-child-item"
+              [routerLink]="child.route"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              (click)="onNavigationClick()"
+              [matTooltip]="child.label"
+              matTooltipPosition="right">
+              <mat-icon matListItemIcon class="nav-child-icon">{{ child.icon }}</mat-icon>
+              <span class="nav-child-label">{{ child.label }}</span>
+            </a>
+          }
+        </mat-expansion-panel>
+      } @else {
+        <a
+          mat-list-item
+          class="nav-item"
+          [routerLink]="item.route"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          (click)="onNavigationClick()"
+          [matTooltip]="item.label"
+          matTooltipPosition="right">
+          <mat-icon matListItemIcon class="nav-icon">{{ item.icon }}</mat-icon>
+          <span class="nav-label">{{ item.label }}</span>
+        </a>
+      }
+    }
+  </mat-nav-list>
+</nav>

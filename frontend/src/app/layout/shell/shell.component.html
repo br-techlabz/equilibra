@@ -1,0 +1,21 @@
+<mat-sidenav-container class="shell-container" [class.mobile]="isMobile()">
+  <mat-sidenav
+    #sidenav
+    [mode]="sidenavMode()"
+    [opened]="sidenavOpened()"
+    (closed)="onSidebarClose()"
+    class="shell-sidenav"
+    role="navigation"
+    aria-label="Navegação principal">
+    <app-sidebar (navigationClick)="onSidebarClose()" />
+  </mat-sidenav>
+
+  <mat-sidenav-content class="shell-content">
+    <app-header (menuToggle)="onMenuToggle()" />
+    <main class="main-content">
+      <div class="content-container">
+        <router-outlet />
+      </div>
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

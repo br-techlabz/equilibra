@@ -1,0 +1,63 @@
+<div class="dashboard-page">
+  <header class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Visão geral das suas finanças</p>
+  </header>
+
+  <section class="dashboard-cards" aria-label="Resumo financeiro">
+    <mat-card class="dashboard-card" appearance="outlined">
+      <mat-card-header>
+        <mat-card-title class="card-title">Saldo Total</mat-card-title>
+        <mat-card-subtitle class="card-subtitle">Todos os seus ativos</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="card-value">R$ 0,00</div>
+        <mat-icon class="card-icon">account_balance_wallet</mat-icon>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="dashboard-card" appearance="outlined">
+      <mat-card-header>
+        <mat-card-title class="card-title">Receitas do Mês</mat-card-title>
+        <mat-card-subtitle class="card-subtitle">Entradas registradas</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="card-value positive">R$ 0,00</div>
+        <mat-icon class="card-icon">arrow_downward</mat-icon>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="dashboard-card" appearance="outlined">
+      <mat-card-header>
+        <mat-card-title class="card-title">Despesas do Mês</mat-card-title>
+        <mat-card-subtitle class="card-subtitle">Saídas registradas</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="card-value negative">R$ 0,00</div>
+        <mat-icon class="card-icon">arrow_upward</mat-icon>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="dashboard-card" appearance="outlined">
+      <mat-card-header>
+        <mat-card-title class="card-title">Saldo Projetado</mat-card-title>
+        <mat-card-subtitle class="card-subtitle">Estimativa fim do mês</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="card-value">R$ 0,00</div>
+        <mat-icon class="card-icon">trending_up</mat-icon>
+      </mat-card-content>
+    </mat-card>
+  </section>
+
+  <section class="dashboard-empty" aria-label="Estado vazio">
+    <mat-card appearance="outlined">
+      <mat-card-content class="empty-content">
+        <mat-icon class="empty-icon">info</mat-icon>
+        <h2>Bem-vindo ao Equilibra</h2>
+        <p>Seu ambiente de gestão financeira está configurado e pronto para uso.</p>
+        <p>As funcionalidades financeiras serão implementadas nas próximas sprints.</p>
+      </mat-card-content>
+    </mat-card>
+  </section>
+</div>

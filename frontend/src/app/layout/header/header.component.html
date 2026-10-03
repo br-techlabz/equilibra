@@ -1,0 +1,21 @@
+<mat-toolbar class="header-toolbar" color="primary">
+  <button
+    mat-icon-button
+    class="menu-button"
+    (click)="onMenuClick()"
+    matTooltip="Abrir menu"
+    aria-label="Abrir menu de navegação">
+    <mat-icon>menu</mat-icon>
+  </button>
+
+  <span class="header-title">Equilibra</span>
+
+  <span class="header-spacer"></span>
+
+  <div class="header-user-area">
+    <div class="user-placeholder" aria-hidden="true">
+      <mat-icon>account_circle</mat-icon>
+    </div>
+    <span class="user-text">Usuário</span>
+  </div>
+</mat-toolbar>
