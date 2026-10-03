@@ -1,0 +1,771 @@
+# TASK-0.9 — Sprint 0 Gate: revisão, integração e validação da fundação do Equilibra
+
+Esta é a tarefa final da Sprint 0.
+
+Seu objetivo principal NÃO é adicionar novas funcionalidades.
+
+Atue primeiro como revisor técnico sênior da fundação construída nas TASK-0.1 até TASK-0.8 e depois corrija problemas encontrados que estejam dentro do escopo desta Sprint.
+
+Leia integralmente antes de alterar qualquer arquivo:
+
+- `CLAUDE.md`
+- `README.md`
+- `docs/architecture.md`
+- `docs/api-guidelines.md`
+- `docs/frontend-architecture.md`
+- todos os ADRs existentes
+- arquivos relevantes de configuração backend/frontend
+- Docker Compose
+- `.env.example`
+
+Analise o histórico Git quando disponível para compreender as alterações anteriores.
+
+NÃO implemente a Sprint 1.
+
+---
+
+# 1. Objetivo
+
+Validar que a fundação técnica do Equilibra está:
+
+- funcional
+- integrada
+- documentada
+- testada
+- segura para desenvolvimento
+- consistente arquiteturalmente
+- pronta para receber funcionalidades de negócio
+
+A arquitetura alvo continua sendo:
+
+Angular 19
+↓
+REST
+↓
+Spring Boot 4
+↓
+JPA/Hibernate
+↓
+Flyway
+↓
+MySQL 8
+
+---
+
+# 2. Fase 1 — Auditoria antes das alterações
+
+Antes de modificar qualquer arquivo, faça uma auditoria da implementação atual.
+
+Classifique problemas encontrados em:
+
+## BLOCKER
+
+Impede iniciar a Sprint 1 com segurança.
+
+Exemplos:
+
+- backend não compila
+- frontend não compila
+- aplicação não inicia
+- Flyway falha
+- frontend não comunica com backend
+- testes essenciais quebrados
+- credenciais versionadas
+
+## HIGH
+
+Problema importante que deve ser corrigido antes da Sprint 1.
+
+## MEDIUM
+
+Deve ser corrigido quando a alteração for pequena e estiver dentro do escopo.
+
+## LOW
+
+Melhoria que pode ser registrada como débito técnico.
+
+Não faça refatorações cosméticas extensas.
+
+---
+
+# 3. Backend — revisão estrutural
+
+Revise:
+
+- versão Java
+- Spring Boot
+- Maven
+- dependências
+- package raiz
+- arquitetura modular
+- profiles
+- configuração externa
+- Spring Security temporário
+- JPA
+- Hibernate
+- Flyway
+- Actuator
+- OpenAPI
+- Problem Details
+- Request ID
+- logging
+- testes
+- Testcontainers
+
+Procure:
+
+- dependências duplicadas
+- dependências não utilizadas
+- versões sobrescritas desnecessariamente
+- configurações conflitantes
+- código morto
+- TODOs críticos
+- configuração insegura
+
+Não faça upgrade de bibliotecas apenas porque existe versão mais recente.
+
+---
+
+# 4. Frontend — revisão estrutural
+
+Revise:
+
+- Angular 19
+- TypeScript
+- Angular Material
+- SCSS
+- standalone components
+- router
+- lazy loading
+- layout
+- responsividade
+- configuração da API
+- HttpClient
+- Problem Details
+- Request ID
+- testes
+- Playwright, se configurado
+- lint
+
+Procure:
+
+- `any` desnecessário
+- subscriptions incorretas
+- código morto
+- dependências não utilizadas
+- URLs hardcoded
+- estilos duplicados
+- problemas de acessibilidade
+- problemas de responsividade
+
+---
+
+# 5. Banco de dados
+
+Suba o MySQL utilizando a infraestrutura existente.
+
+Valide:
+
+- container saudável
+- banco criado
+- charset adequado
+- timezone coerente
+- volume persistente
+- conexão do Spring Boot
+- Flyway funcionando
+- histórico do Flyway presente
+
+Não criar tabelas de negócio.
+
+---
+
+# 6. Flyway
+
+Verifique que:
+
+- Flyway é responsável pela evolução do schema
+- Hibernate não utiliza `create`, `create-drop` ou `update`
+- migrations aplicadas não foram alteradas indevidamente
+- nomenclatura segue convenção
+- integração com MySQL funciona
+
+Não modificar migration já aplicada apenas para melhorar estilo.
+
+---
+
+# 7. Segurança de configuração
+
+Procure no repositório por possíveis:
+
+- senhas
+- tokens
+- API keys
+- secrets
+- connection strings contendo credenciais
+- Authorization headers
+- credenciais Docker
+
+Verifique:
+
+- `.env` ignorado
+- `.env.example` sem segredo real
+- arquivos de IDE sem informação sensível
+- logs sem segredo
+
+Caso encontre segredo real versionado, não apenas o substitua silenciosamente.
+
+Informe claramente no relatório que ele deverá ser rotacionado.
+
+---
+
+# 8. Gitignore
+
+Revise `.gitignore`.
+
+Confirme cobertura para:
+
+- `.env`
+- logs
+- `target`
+- `node_modules`
+- builds Angular
+- arquivos temporários
+- IDEs quando apropriado
+- caches
+
+Não ignore migrations.
+
+Não ignore documentação necessária.
+
+---
+
+# 9. Spring Security temporário
+
+Revise a configuração criada para a Sprint 0.
+
+Ela deve permitir somente o necessário para desenvolvimento atual.
+
+Confirme que não existe uma configuração acidental equivalente a liberar indiscriminadamente tudo sem documentação.
+
+Autenticação real será implementada na Sprint 1.
+
+NÃO implemente JWT agora.
+
+---
+
+# 10. Actuator
+
+Confirme que somente endpoints necessários estão expostos.
+
+Health pode permanecer disponível.
+
+Não exponha desnecessariamente:
+
+- env
+- beans
+- heapdump
+- configprops
+
+Verifique que health não revela informações sensíveis.
+
+---
+
+# 11. OpenAPI
+
+Valide que:
+
+- documentação inicializa
+- UI/documento pode ser acessado conforme configuração
+- configuração é compatível com Spring Boot 4
+- não existem endpoints fictícios permanentes
+
+---
+
+# 12. Problem Details
+
+Valide o tratamento criado na TASK-0.6.
+
+Confirme pelo menos:
+
+- 400
+- 404
+- 409
+- 500
+
+Confirme:
+
+- Content-Type adequado
+- estrutura consistente
+- erros de campo
+- ausência de stack trace na resposta
+- ausência de SQL
+- ausência de detalhes internos
+
+---
+
+# 13. Request ID
+
+Valide:
+
+- geração quando ausente
+- reutilização quando válido
+- substituição quando inválido
+- retorno no header
+- presença adequada no logging/MDC
+- limpeza do MDC
+
+Confirme a integração Angular ↔ Spring Boot.
+
+---
+
+# 14. CORS / Proxy
+
+Revise a decisão da TASK-0.8.
+
+Confirme que:
+
+- desenvolvimento funciona
+- não existe CORS excessivamente permissivo
+- não existem domínios de produção inventados
+- configuração está documentada
+
+---
+
+# 15. Integração completa
+
+Execute o fluxo real:
+
+MySQL
+↓
+Spring Boot
+↓
+Angular
+
+Valide:
+
+1. MySQL inicia.
+2. Health do container fica saudável.
+3. Spring Boot inicia.
+4. Flyway executa.
+5. Backend conecta ao MySQL.
+6. Actuator responde.
+7. OpenAPI funciona.
+8. Angular inicia.
+9. Angular consulta backend.
+10. Request ID funciona.
+11. UI reconhece API disponível.
+
+---
+
+# 16. Backend indisponível
+
+Desligue temporariamente o backend quando possível.
+
+Confirme:
+
+- Angular continua inicializando
+- aplicação não quebra
+- UI representa indisponibilidade adequadamente
+- não há stack trace para usuário
+
+Depois restaure o backend.
+
+---
+
+# 17. Backend build
+
+Execute build limpo do backend.
+
+Utilize o comando Maven apropriado existente no projeto.
+
+Valide:
+
+- compilação
+- testes unitários
+- testes de integração
+- Testcontainers quando necessário
+
+Nenhum teste deverá ser desabilitado apenas para fazer o build passar.
+
+---
+
+# 18. Frontend build
+
+Execute:
+
+- instalação limpa de dependências quando apropriado
+- lint
+- testes
+- build de produção
+
+Utilize os scripts reais definidos em `package.json`.
+
+Não invente comandos.
+
+Analise warnings relevantes.
+
+---
+
+# 19. E2E
+
+Se Playwright estiver configurado, execute o smoke test existente.
+
+Valide:
+
+- aplicação abre
+- shell aparece
+- integração básica funciona
+
+Não crie E2E financeiro.
+
+---
+
+# 20. Responsividade
+
+Valide visualmente pelo menos:
+
+- 360px
+- 768px
+- 1280px
+- 1920px
+
+Procure:
+
+- scroll horizontal indevido
+- conteúdo cortado
+- drawer quebrado
+- toolbar quebrada
+- elementos inacessíveis
+- textos ilegíveis
+
+Corrija problemas claros encontrados.
+
+---
+
+# 21. Acessibilidade básica
+
+Faça uma revisão básica:
+
+- landmarks HTML
+- navegação por teclado
+- foco visível
+- labels
+- nomes acessíveis
+- contraste
+- ícones informativos
+
+Não transforme esta TASK em auditoria WCAG completa.
+
+Corrija problemas evidentes.
+
+---
+
+# 22. Performance básica frontend
+
+Analise o build Angular.
+
+Verifique:
+
+- dependências grandes sem necessidade
+- assets excessivos
+- warnings de bundle
+- imports desnecessários
+
+Não faça otimizações prematuras.
+
+---
+
+# 23. Logging
+
+Backend:
+
+- SLF4J
+- sem `System.out.println`
+- sem secrets
+- Request ID quando apropriado
+
+Frontend:
+
+- evitar console logs permanentes desnecessários
+- nenhum dado sensível
+- comportamento diferente entre desenvolvimento/produção quando apropriado
+
+---
+
+# 24. Docker Compose
+
+Revise o Compose.
+
+Valide:
+
+- configuração correta
+- healthcheck
+- volume
+- variáveis
+- shutdown limpo
+
+Execute:
+
+subida
+
+validação
+
+desligamento
+
+Não remova volumes automaticamente durante testes sem necessidade.
+
+---
+
+# 25. Documentação
+
+Revise:
+
+- README
+- CLAUDE.md
+- architecture.md
+- api-guidelines.md
+- frontend-architecture.md
+- ADRs
+
+Corrija:
+
+- comandos incorretos
+- documentação desatualizada
+- contradições
+- tecnologias documentadas mas inexistentes
+
+A documentação deve refletir o código real.
+
+---
+
+# 26. README — Quick Start
+
+Garanta que exista uma seção objetiva de Quick Start contendo somente comandos realmente válidos.
+
+O desenvolvedor deverá conseguir entender como:
+
+1. preparar configuração
+2. iniciar MySQL
+3. iniciar backend
+4. iniciar frontend
+5. acessar aplicação
+6. acessar health
+7. acessar documentação da API
+8. executar testes
+
+---
+
+# 27. Limpeza
+
+Remova somente quando seguro:
+
+- arquivos temporários
+- código claramente morto
+- placeholders não utilizados
+- imports mortos
+- configurações duplicadas
+
+Não faça refatoração extensa apenas por preferência.
+
+---
+
+# 28. Não adicionar funcionalidades
+
+É PROIBIDO implementar nesta TASK:
+
+- User
+- cadastro
+- login
+- JWT
+- refresh token
+- Account
+- Category
+- Tag
+- Transaction
+- Transfer
+- Attachment
+- Dashboard financeiro
+- Report
+- Audit funcional
+
+Não criar migrations de negócio.
+
+Não criar tabelas de negócio.
+
+Não iniciar Sprint 1.
+
+---
+
+# 29. Teste de instalação limpa
+
+Quando viável, valide o projeto assumindo um ambiente de desenvolvimento limpo.
+
+Frontend:
+
+confirme que dependências podem ser restauradas a partir dos arquivos versionados.
+
+Backend:
+
+confirme que Maven consegue resolver dependências normalmente.
+
+Não apague caches globais do sistema sem necessidade.
+
+---
+
+# 30. Reprodutibilidade
+
+Confirme que o projeto não depende de:
+
+- caminhos absolutos da máquina
+- arquivos locais não documentados
+- configurações da IDE
+- serviços desconhecidos
+- credenciais pessoais
+
+---
+
+# 31. Critérios de aprovação da Sprint 0
+
+A Sprint 0 somente poderá ser marcada como APROVADA se:
+
+- backend compila
+- frontend compila
+- testes backend passam
+- testes frontend passam
+- lint passa quando configurado
+- MySQL funciona
+- Flyway funciona
+- backend conecta ao MySQL
+- Angular comunica com Spring Boot
+- health funciona
+- OpenAPI funciona
+- Problem Details funciona
+- Request ID funciona
+- layout responsivo funciona
+- documentação corresponde à implementação
+- nenhum segredo conhecido está versionado
+- nenhum BLOCKER permanece aberto
+- nenhum HIGH permanece aberto sem justificativa explícita
+
+---
+
+# 32. Se encontrar BLOCKER ou HIGH
+
+Corrija o problema se:
+
+- estiver dentro do escopo da Sprint 0
+- a correção não exigir funcionalidade futura
+- houver solução segura
+
+Depois execute novamente os testes relacionados.
+
+Se a correção depender da Sprint 1 ou de decisão externa:
+
+NÃO improvise.
+
+Registre claramente a pendência.
+
+---
+
+# 33. Sprint Gate
+
+Ao final classifique a Sprint 0 exclusivamente como:
+
+`APROVADA`
+
+ou:
+
+`NÃO APROVADA`
+
+Use `APROVADA` somente se os critérios definidos nesta TASK forem atendidos.
+
+Caso contrário, use `NÃO APROVADA` e liste objetivamente o que impede aprovação.
+
+Não marque como aprovada apenas porque o build funciona.
+
+---
+
+# 34. Relatório final obrigatório
+
+Apresente o relatório final nesta estrutura:
+
+## Sprint 0 Gate
+
+Status:
+APROVADA / NÃO APROVADA
+
+## Ambiente validado
+
+- Java:
+- Spring Boot:
+- Maven:
+- Node:
+- Angular:
+- TypeScript:
+- MySQL:
+- Docker:
+
+Utilize versões efetivamente detectadas.
+
+## Backend
+
+Resultado da revisão.
+
+## Frontend
+
+Resultado da revisão.
+
+## Banco/Flyway
+
+Resultado.
+
+## Integração
+
+Resultado.
+
+## Segurança
+
+Resultado.
+
+## Testes
+
+Liste comandos executados e resultados.
+
+## Builds
+
+Backend:
+PASS / FAIL
+
+Frontend:
+PASS / FAIL
+
+## E2E
+
+PASS / FAIL / NÃO CONFIGURADO
+
+## Problemas encontrados
+
+Classifique cada problema:
+
+BLOCKER
+HIGH
+MEDIUM
+LOW
+
+Informe quais foram corrigidos.
+
+## Arquivos modificados
+
+Liste somente arquivos realmente modificados.
+
+## Débito técnico
+
+Liste apenas itens reais identificados.
+
+## Prontidão para Sprint 1
+
+Informe objetivamente se a fundação está pronta para iniciar:
+
+**Sprint 1 — Identidade, usuários e autenticação**
+
+Não implemente nenhuma parte da Sprint 1.
