@@ -1,0 +1,823 @@
+# TASK-0.8 — Integração Frontend Angular 19 ↔ Backend Spring Boot 4
+
+Leia integralmente antes de alterar qualquer arquivo:
+
+- `CLAUDE.md`
+- `docs/architecture.md`
+- `docs/api-guidelines.md`
+- `docs/frontend-architecture.md`
+- ADRs existentes
+- README
+
+Analise todo o estado relevante produzido pelas TASK-0.1 até TASK-0.7.
+
+Não presuma que uma configuração esteja ausente antes de verificar.
+
+Não recrie infraestrutura existente que já esteja correta.
+
+---
+
+# 1. Objetivo
+
+Estabelecer e validar a comunicação real entre:
+
+Angular 19
+↓
+HTTP/REST
+↓
+Spring Boot 4
+↓
+MySQL 8 / Flyway
+
+Ao final desta TASK deverá ser possível iniciar o ambiente local e comprovar que o frontend consegue consultar o backend.
+
+Também deverão estar integrados:
+
+- configuração central da API
+- CORS ou proxy de desenvolvimento
+- HttpClient
+- Problem Details
+- X-Request-ID
+- tratamento básico de erros HTTP
+- health/status da API
+
+NÃO implementar funcionalidades de negócio.
+
+---
+
+# 2. Inspeção inicial
+
+Antes de modificar arquivos, analise:
+
+## Backend
+
+- configuração Spring Security
+- CORS existente
+- Actuator
+- endpoint de health
+- `RequestIdFilter`
+- `GlobalExceptionHandler`
+- Problem Details
+- profiles
+- portas
+- context path, se existir
+
+## Frontend
+
+- `app.config`
+- configuração de `HttpClient`
+- environments/configuração equivalente
+- arquitetura `core`
+- services existentes
+- interceptors existentes
+- router
+- shell
+- página temporária criada na TASK-0.7
+
+## Infraestrutura
+
+- Docker Compose
+- `.env.example`
+- README
+- scripts existentes
+
+Apresente um plano resumido antes da implementação.
+
+---
+
+# 3. Estratégia da URL da API
+
+A URL do backend NÃO deverá ser espalhada pelo frontend.
+
+É proibido colocar repetidamente:
+
+`http://localhost:8080`
+
+em services e components.
+
+Utilize um ponto central de configuração.
+
+Exemplo conceitual:
+
+`apiBaseUrl`
+
+A solução deverá funcionar adequadamente em:
+
+- desenvolvimento
+- testes
+- build de produção
+
+Não inclua URLs reais de produção que ainda não existam.
+
+---
+
+# 4. Configuração de desenvolvimento
+
+Escolha a estratégia mais apropriada entre:
+
+## Opção A — Angular development proxy
+
+Exemplo conceitual:
+
+`/api` → Spring Boot
+
+ou:
+
+## Opção B — CORS configurável no backend
+
+Avalie a arquitetura atual antes de decidir.
+
+Para desenvolvimento local, prefira uma solução simples que reduza diferenças de configuração e não abra CORS desnecessariamente.
+
+Documente a decisão.
+
+---
+
+# 5. CORS
+
+Caso CORS seja necessário:
+
+NÃO utilize indiscriminadamente:
+
+`*`
+
+junto com credenciais.
+
+Configure origins através de configuração externa quando apropriado.
+
+Não codifique domínios futuros inexistentes.
+
+A política deverá ser restritiva e apropriada para desenvolvimento.
+
+Lembre-se de que autenticação será implementada posteriormente.
+
+---
+
+# 6. HttpClient
+
+Confirme que Angular utiliza `HttpClient` através das APIs modernas de providers.
+
+Não introduza NgModule apenas para configurar HTTP.
+
+Não crie services de funcionalidades inexistentes.
+
+---
+
+# 7. ApiClient
+
+Avalie se existe benefício em criar uma camada pequena de infraestrutura HTTP.
+
+Por exemplo:
+
+`core/http`
+
+Entretanto:
+
+NÃO crie um wrapper gigantesco sobre `HttpClient`.
+
+NÃO tente reimplementar todas as funcionalidades do Angular HttpClient.
+
+Services futuros poderão utilizar HttpClient diretamente ou uma abstração mínima quando houver benefício real.
+
+---
+
+# 8. Endpoint de status
+
+O frontend precisa de uma forma segura e simples de verificar se o backend está disponível.
+
+Analise primeiro o Actuator existente.
+
+Se `/actuator/health` atender adequadamente ao requisito e for apropriado expô-lo ao frontend no ambiente atual, reutilize-o.
+
+Evite criar um endpoint redundante.
+
+Se houver razões arquiteturais concretas para não expor diretamente o Actuator ao frontend, implemente uma alternativa mínima.
+
+Documente a decisão.
+
+---
+
+# 9. Health não é regra de negócio
+
+A verificação de status serve apenas para validar integração e disponibilidade técnica.
+
+Não utilize health check para:
+
+- autenticação
+- verificar usuário
+- carregar dados financeiros
+- armazenar estado de negócio
+
+---
+
+# 10. Serviço de status no Angular
+
+Crie um serviço pequeno e tipado para consultar o status do backend.
+
+Exemplo conceitual:
+
+`ApiStatusService`
+
+ou nome coerente com a arquitetura existente.
+
+Ele deverá:
+
+- utilizar HttpClient
+- possuir tipos explícitos
+- não utilizar `any`
+- lidar corretamente com sucesso e erro
+
+Não transforme esse service em um client genérico para toda a aplicação.
+
+---
+
+# 11. Página temporária
+
+Utilize a página temporária criada na TASK-0.7 para demonstrar a integração.
+
+Ela poderá mostrar discretamente algo como:
+
+API conectada
+
+ou:
+
+API indisponível
+
+Essa informação é técnica e temporária.
+
+Não transforme a página em Dashboard.
+
+Não criar:
+
+- saldo
+- receitas
+- despesas
+- patrimônio
+- gráficos
+
+A futura implementação do Dashboard substituirá essa tela.
+
+---
+
+# 12. Estado de carregamento
+
+Enquanto o frontend consulta o backend, represente estado de carregamento adequadamente.
+
+Estados mínimos:
+
+- carregando
+- disponível
+- indisponível
+
+Utilize Angular Signals quando isso for apropriado para estado local.
+
+Evite biblioteca externa de estado.
+
+---
+
+# 13. Problem Details no frontend
+
+Crie suporte básico e tipado ao padrão Problem Details utilizado pelo backend.
+
+Defina um modelo/interface coerente com RFC 9457 e com as propriedades adicionais implementadas na TASK-0.6.
+
+Exemplo conceitual:
+
+ProblemDetails
+
+com suporte a:
+
+- type
+- title
+- status
+- detail
+- instance
+- requestId
+- timestamp
+- errors
+
+Adapte aos campos REAIS implementados no backend.
+
+Não invente propriedades que o backend não utiliza.
+
+---
+
+# 14. Erros de validação
+
+Se o backend da TASK-0.6 retorna erros de campo, modele-os adequadamente no frontend.
+
+Exemplo conceitual:
+
+FieldValidationError
+
+com:
+
+- field
+- message
+
+Não implemente formulários apenas para demonstrar isso.
+
+A infraestrutura será utilizada nas próximas sprints.
+
+---
+
+# 15. Tratamento HTTP
+
+Crie uma estratégia simples para normalização de erros HTTP quando houver benefício concreto.
+
+Não esconda completamente o `HttpErrorResponse` se informações dele forem necessárias.
+
+Não transforme qualquer erro em:
+
+"Erro desconhecido"
+
+quando houver Problem Details válido fornecido pelo backend.
+
+---
+
+# 16. Interceptor de erro
+
+Avalie se um interceptor funcional é a solução adequada para:
+
+- identificar Problem Details
+- preservar request ID
+- tratamento técnico comum
+
+Não implemente notificações automáticas para todo erro.
+
+Exemplo de comportamento que deve ser evitado:
+
+qualquer HTTP 400 → Snackbar "Erro!"
+
+Features futuras devem decidir como apresentar erros de negócio e validação ao usuário.
+
+---
+
+# 17. X-Request-ID
+
+O backend já implementa suporte a:
+
+`X-Request-ID`
+
+Integre o frontend com esse mecanismo.
+
+Para requisições à API:
+
+1. gere um UUID quando apropriado no frontend
+2. envie:
+
+`X-Request-ID`
+
+3. permita que o backend valide/substitua o ID
+4. leia o `X-Request-ID` retornado pelo backend quando necessário
+
+Utilize APIs nativas do browser quando adequadas, como:
+
+`crypto.randomUUID()`
+
+Avalie compatibilidade com os browsers suportados.
+
+Não adicione biblioteca UUID sem necessidade.
+
+---
+
+# 18. Request ID e debugging
+
+O request ID poderá ser utilizado para diagnóstico futuro.
+
+Não exiba permanentemente IDs técnicos para usuários comuns.
+
+Ele poderá ser registrado em console somente quando apropriado ao ambiente de desenvolvimento.
+
+Evite poluir o console em produção.
+
+---
+
+# 19. Segurança dos logs frontend
+
+Nunca registrar no console:
+
+- senha
+- token
+- Authorization header
+- dados financeiros completos
+- conteúdo de anexos
+
+Ainda que essas funcionalidades não existam, documente a regra.
+
+---
+
+# 20. Interceptor futuro de autenticação
+
+Prepare a arquitetura para que futuramente exista um interceptor responsável por autenticação.
+
+NÃO implemente agora:
+
+`Authorization: Bearer ...`
+
+Não criar token fictício.
+
+Não criar JWT.
+
+Não criar localStorage para autenticação.
+
+---
+
+# 21. Ordem futura dos interceptors
+
+Se houver múltiplos interceptors no futuro, documente que sua ordem deverá ser considerada explicitamente.
+
+Exemplo futuro:
+
+- request ID
+- autenticação
+- tratamento técnico de erros
+
+Não crie interceptors vazios apenas para representar o futuro.
+
+---
+
+# 22. Spring Security
+
+Preserve a configuração temporária da Sprint 0.
+
+O endpoint utilizado para verificar status deverá ser acessível sem autenticação durante esta fase.
+
+Não abra todos os endpoints indiscriminadamente apenas para fazer a integração funcionar.
+
+---
+
+# 23. Actuator
+
+Caso utilize Actuator:
+
+Exponha apenas endpoints necessários.
+
+Não exponha indiscriminadamente:
+
+- env
+- beans
+- configprops
+- heapdump
+
+Mantenha exposição mínima.
+
+Health é suficiente para esta TASK na maioria dos casos.
+
+---
+
+# 24. Informações do health
+
+Não exponha detalhes sensíveis através do health endpoint.
+
+Não é necessário que o frontend saiba:
+
+- credenciais
+- URL interna do banco
+- detalhes de infraestrutura
+- stack traces
+
+O frontend precisa apenas saber se a API está disponível.
+
+---
+
+# 25. Proxy Angular
+
+Caso utilize proxy de desenvolvimento:
+
+Crie arquivo de configuração apropriado.
+
+Exemplo conceitual:
+
+`proxy.conf.json`
+
+ou formato suportado pela versão Angular utilizada.
+
+Configure o script de desenvolvimento adequadamente.
+
+Não utilize configurações obsoletas sem verificar compatibilidade com Angular 19.
+
+---
+
+# 26. Docker
+
+Não containerize o frontend apenas porque estamos integrando as aplicações, caso isso ainda não esteja previsto na Sprint.
+
+A TASK-0.9 fará a validação final da infraestrutura completa.
+
+Nesta TASK concentre-se na comunicação.
+
+---
+
+# 27. Tipagem
+
+Toda resposta HTTP criada nesta TASK deverá possuir tipagem TypeScript explícita.
+
+Evite:
+
+`Observable<any>`
+
+quando a estrutura é conhecida.
+
+---
+
+# 28. RxJS
+
+HTTP continuará naturalmente utilizando Observables.
+
+Converta para Signals somente quando isso melhorar o estado da UI.
+
+Não converta todos os Observables indiscriminadamente.
+
+---
+
+# 29. Timeout
+
+Não implemente retries agressivos.
+
+Não faça polling contínuo do health endpoint.
+
+Uma consulta inicial é suficiente para a validação desta TASK.
+
+Caso implemente timeout HTTP, escolha valor razoável e documente.
+
+---
+
+# 30. Retry
+
+NÃO implemente retry automático global para:
+
+POST
+PUT
+PATCH
+DELETE
+
+Isso poderá duplicar operações futuras.
+
+Para health check, retry também não é necessário nesta TASK.
+
+---
+
+# 31. Testes frontend
+
+Crie testes cobrindo quando aplicável:
+
+## ApiStatusService
+
+- URL correta
+- tipagem/comportamento esperado
+
+## Request ID
+
+- header é enviado
+- UUID é criado quando necessário
+
+## Problem Details
+
+- resposta Problem Details pode ser interpretada corretamente
+
+## Tela temporária
+
+- estado loading
+- estado disponível
+- estado indisponível
+
+Utilize mocks HTTP apropriados.
+
+Não faça os testes unitários dependerem do backend real.
+
+---
+
+# 32. Testes backend
+
+Caso CORS, Security ou Actuator sejam alterados, crie ou ajuste testes cobrindo as mudanças.
+
+Não quebre testes existentes da TASK-0.6.
+
+---
+
+# 33. E2E
+
+Atualize ou crie um smoke test Playwright capaz de validar, quando o ambiente integrado estiver disponível:
+
+1. abrir frontend
+2. frontend carregar
+3. comunicação com backend ocorrer
+4. indicador técnico mostrar API disponível
+
+Não crie E2E de negócio.
+
+---
+
+# 34. Teste de indisponibilidade
+
+Quando possível, valide também que o frontend não quebra quando o backend está offline.
+
+A interface deverá continuar carregando e indicar indisponibilidade de maneira controlada.
+
+Não exibir stack trace.
+
+---
+
+# 35. Tratamento de rede
+
+Diferencie quando possível:
+
+- resposta HTTP de erro do backend
+- falha de rede/servidor indisponível
+
+Não invente detalhes técnicos para o usuário.
+
+---
+
+# 36. Desenvolvimento local
+
+O fluxo ideal deverá ser simples.
+
+Documente comandos reais para iniciar:
+
+1. MySQL
+2. backend
+3. frontend
+
+Não documente comandos que não foram testados.
+
+---
+
+# 37. README
+
+Atualize o README com seção:
+
+## Desenvolvimento local
+
+Inclua:
+
+- pré-requisitos
+- infraestrutura
+- backend
+- frontend
+- URLs locais
+- Swagger/OpenAPI
+- Actuator health quando aplicável
+
+Mantenha a documentação objetiva.
+
+---
+
+# 38. Portas
+
+Documente as portas utilizadas.
+
+Preferencialmente mantenha padrões já existentes, por exemplo:
+
+Angular:
+`4200`
+
+Spring Boot:
+`8080`
+
+MySQL:
+`3306`
+
+Não altere portas existentes sem necessidade.
+
+---
+
+# 39. Configuração futura de produção
+
+Não codifique suposições de domínio.
+
+Evite:
+
+`https://equilibra.com.br`
+
+se esse domínio não foi definido.
+
+A configuração deverá permitir que o endereço seja fornecido pelo ambiente de deployment futuro.
+
+---
+
+# 40. Critérios de aceite
+
+A TASK-0.8 estará concluída quando:
+
+- Angular conseguir comunicar-se com Spring Boot
+- URL da API estiver centralizada
+- HttpClient estiver configurado corretamente
+- estratégia proxy/CORS estiver definida
+- health/status puder ser consultado pelo Angular
+- página temporária representar disponibilidade da API
+- Problem Details estiver tipado no frontend
+- erros de campo estiverem tipados quando existentes
+- X-Request-ID estiver integrado
+- backend continuar validando request IDs
+- não houver autenticação fictícia
+- não houver dados financeiros fictícios
+- frontend funcionar quando backend estiver indisponível
+- testes backend relevantes estiverem passando
+- testes frontend estiverem passando
+- lint estiver passando quando configurado
+- build backend estiver passando
+- build frontend de produção estiver passando
+
+---
+
+# 41. Validação integrada
+
+Execute uma validação real, quando o ambiente permitir:
+
+MySQL
+↓
+Spring Boot
+↓
+Angular
+
+Confirme:
+
+1. MySQL saudável.
+2. Spring Boot inicia.
+3. Flyway executa.
+4. Actuator/health responde.
+5. Angular inicia.
+6. Angular consulta backend.
+7. X-Request-ID aparece na comunicação.
+8. UI indica API disponível.
+9. Swagger/OpenAPI continua funcionando.
+
+Depois desligue temporariamente o backend, quando viável, e confirme:
+
+10. Angular continua funcionando.
+11. UI representa API indisponível sem quebrar.
+
+---
+
+# 42. Segurança
+
+Faça uma revisão rápida das alterações verificando:
+
+- nenhuma credencial adicionada ao frontend
+- nenhuma senha versionada
+- nenhum token fictício
+- nenhum endpoint sensível do Actuator exposto
+- CORS não excessivamente permissivo
+- nenhuma informação sensível em logs
+- nenhuma configuração de produção inventada
+
+---
+
+# 43. Restrições
+
+NÃO implementar:
+
+- cadastro
+- login
+- JWT
+- refresh token
+- usuários
+- contas
+- categorias
+- tags
+- despesas
+- receitas
+- transferências
+- anexos
+- Dashboard financeiro
+- relatórios
+- auditoria funcional
+
+NÃO criar tabelas de negócio.
+
+NÃO criar migrations de negócio.
+
+NÃO criar dados fake.
+
+NÃO iniciar a TASK-0.9.
+
+---
+
+# 44. Relatório final
+
+Ao concluir apresente:
+
+1. Estado inicial encontrado.
+2. Estratégia escolhida para frontend/backend.
+3. Estratégia escolhida entre proxy e CORS.
+4. URL/configuração da API.
+5. Estrutura HTTP criada no Angular.
+6. Estratégia de Problem Details.
+7. Estratégia de X-Request-ID.
+8. Alterações realizadas no backend.
+9. Alterações realizadas no frontend.
+10. Arquivos criados.
+11. Arquivos modificados.
+12. Testes backend executados e resultados.
+13. Testes frontend executados e resultados.
+14. Resultado do lint.
+15. Resultado do build backend.
+16. Resultado do build frontend.
+17. Resultado da validação integrada.
+18. Resultado do teste com backend indisponível.
+19. Warnings ou limitações.
+20. Pendências para TASK-0.9.
+
+Não implemente nenhuma tarefa posterior.

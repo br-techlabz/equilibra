@@ -193,10 +193,54 @@ O Equilibra utiliza **Flyway** como mecanismo oficial e exclusivo para criação
 - Hibernate/JPA valida o schema com `ddl-auto: validate`; não deve criar ou alterar tabelas automaticamente.
 - Migrations já aplicadas em ambientes compartilhados não devem ser modificadas; correções devem ser feitas por novas migrations.
 
-### Frontend (pendente)
+### Frontend (Desenvolvimento Local)
+
+#### Pré-requisitos
+- Node.js 20+ (LTS)
+- npm 10+
+- Angular CLI 19 (`npm install -g @angular/cli`)
+
+#### Build e testes
 ```bash
-# TODO: comandos de build e execução
+cd frontend
+
+# Instalar dependências
+npm install
+
+# Lint
+npm run lint
+
+# Formatar código
+npm run format
+
+# Executar testes
+npm run test
+
+# Build de desenvolvimento
+npm run build
+
+# Build de produção
+npm run build -- --configuration production
 ```
+
+#### Executar localmente
+```bash
+cd frontend
+
+# Servidor de desenvolvimento (proxy para backend configurado automaticamente)
+npm start
+# ou
+ng serve
+```
+
+A aplicação estará disponível em http://localhost:4200
+
+#### Configuração de API
+A URL base da API é configurada via `src/environments/environment.ts`:
+- Desenvolvimento: `http://localhost:8080/api`
+- Produção: configurável via `environment.prod.ts`
+
+O Angular development proxy está configurado para redirecionar `/api/*` para `http://localhost:8080` durante o desenvolvimento.
 
 ---
 

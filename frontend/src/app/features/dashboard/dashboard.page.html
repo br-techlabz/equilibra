@@ -4,6 +4,41 @@
     <p class="page-subtitle">Visão geral das suas finanças</p>
   </header>
 
+  <!-- Status da API -->
+  <section class="api-status-section" aria-label="Status da API">
+    <mat-card appearance="outlined" class="api-status-card">
+      <mat-card-content>
+        <div class="api-status-content">
+          <mat-icon
+            class="status-icon"
+            [color]="getStatusColor()"
+            [matTooltip]="getStatusText()">
+            {{ getStatusIcon() }}
+          </mat-icon>
+          <div class="status-info">
+            <span class="status-label">Status da API</span>
+            <span class="status-text">{{ getStatusText() }}</span>
+          </div>
+          @if (apiStatus() === 'loading') {
+            <mat-progress-spinner
+              diameter="24"
+              mode="indeterminate"
+              color="accent">
+            </mat-progress-spinner>
+          } @else {
+            <button
+              mat-icon-button
+              (click)="checkApiStatus()"
+              matTooltip="Verificar novamente"
+              aria-label="Verificar status da API novamente">
+              <mat-icon>refresh</mat-icon>
+            </button>
+          }
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </section>
+
   <section class="dashboard-cards" aria-label="Resumo financeiro">
     <mat-card class="dashboard-card" appearance="outlined">
       <mat-card-header>
