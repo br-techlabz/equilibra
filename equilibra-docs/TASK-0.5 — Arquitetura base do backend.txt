@@ -1,0 +1,627 @@
+# TASK-0.5 — Definir arquitetura base do backend do Equilibra
+
+Leia integralmente o `CLAUDE.md` antes de qualquer alteração.
+
+Analise cuidadosamente o estado atual do backend após as TASK-0.1, TASK-0.2, TASK-0.3 e TASK-0.4.
+
+Antes de modificar arquivos, examine pelo menos:
+
+- `backend/pom.xml`
+- estrutura atual de packages
+- classe principal Spring Boot
+- `application*.yml`
+- configuração do Spring Security existente
+- configuração do Flyway
+- migrations existentes
+- testes existentes
+- documentação arquitetural existente
+
+Não recrie estruturas ou configurações que já estejam corretas.
+
+---
+
+# 1. Objetivo
+
+Estabelecer a arquitetura base do backend do Equilibra para suportar a implementação incremental dos módulos de negócio nas próximas sprints.
+
+O backend deverá seguir o modelo de **monólito modular organizado por domínio/feature**, evitando uma arquitetura global baseada apenas em camadas como:
+
+`controller/`
+`service/`
+`repository/`
+`entity/`
+
+Não implemente funcionalidades financeiras nesta tarefa.
+
+---
+
+# 2. Package raiz
+
+Preserve o package raiz escolhido nas tarefas anteriores.
+
+Exemplo:
+
+`br.com.equilibra`
+
+ou:
+
+`com.equilibra`
+
+Não altere o package raiz existente sem necessidade técnica concreta.
+
+A classe principal `@SpringBootApplication` deverá permanecer no nível adequado para permitir component scanning dos módulos.
+
+---
+
+# 3. Organização por domínio
+
+A arquitetura futura deverá ser organizada conceitualmente desta forma:
+
+equilibra
+├── auth
+├── user
+├── account
+├── category
+├── tag
+├── transaction
+├── transfer
+├── attachment
+├── dashboard
+├── report
+├── audit
+└── shared
+
+IMPORTANTE:
+
+Não crie packages vazios apenas para representar essa estrutura.
+
+Crie somente packages/classes que possuam função concreta nesta TASK.
+
+Documente no `CLAUDE.md` os módulos previstos para implementação futura.
+
+---
+
+# 4. Estrutura interna dos módulos
+
+Quando um módulo for implementado, utilize preferencialmente organização interna semelhante a:
+
+<domain>/
+├── api/
+├── application/
+├── domain/
+└── infrastructure/
+
+Entretanto, não aplique essa estrutura mecanicamente quando ela não trouxer benefício.
+
+As responsabilidades conceituais são:
+
+## api
+
+Responsável pela camada HTTP:
+
+- controllers
+- request DTOs
+- response DTOs
+- contratos REST relacionados ao módulo
+
+Não deve conter regras de negócio.
+
+## application
+
+Responsável por:
+
+- casos de uso
+- serviços de aplicação
+- coordenação das operações
+- transações quando apropriado
+
+## domain
+
+Responsável por:
+
+- entidades
+- enums
+- regras de negócio
+- conceitos do domínio
+
+O domínio não deve depender de controllers ou detalhes da camada HTTP.
+
+## infrastructure
+
+Responsável por detalhes técnicos:
+
+- repositories
+- persistência
+- adapters
+- integrações externas
+- implementações técnicas
+
+Não transforme essa organização em complexidade desnecessária.
+
+O Equilibra deve continuar sendo um monólito modular pragmático.
+
+---
+
+# 5. Dependências entre módulos
+
+Estabeleça as seguintes regras arquiteturais:
+
+1. Um módulo não deve acessar diretamente detalhes internos de outro módulo.
+
+2. Controllers devem acessar casos de uso/serviços de aplicação, nunca repositories diretamente.
+
+3. Repositories não devem ser utilizados diretamente por controllers.
+
+4. DTOs da API não devem ser usados como entidades JPA.
+
+5. Entidades JPA nunca devem ser retornadas diretamente pelos controllers.
+
+6. Módulos devem expor apenas o necessário para colaboração com outros módulos.
+
+7. `shared` deverá conter somente elementos realmente compartilhados.
+
+8. Não transformar `shared` em um local genérico para qualquer código sem classificação.
+
+9. Evitar dependências circulares.
+
+10. Não criar abstrações antecipadamente sem necessidade concreta.
+
+---
+
+# 6. DTOs
+
+Defina como regra:
+
+APIs REST deverão utilizar DTOs específicos.
+
+Exemplo conceitual futuro:
+
+CreateAccountRequest
+
+UpdateAccountRequest
+
+AccountResponse
+
+Não criar esses DTOs nesta tarefa.
+
+Request e Response devem ser separados quando seus objetivos forem diferentes.
+
+Nunca utilizar entidades JPA como payload público da API.
+
+---
+
+# 7. Mapeamento
+
+Quando houver necessidade de conversão entre:
+
+- entidade
+- request
+- response
+- DTO de aplicação
+
+utilizar MapStruct quando isso reduzir código repetitivo.
+
+Antes de adicionar MapStruct, verifique se ele já está configurado.
+
+Se não estiver e não houver nenhum mapeamento real nesta TASK, NÃO adicione a dependência apenas por antecipação.
+
+Documente a decisão para utilização futura.
+
+Evite mapeadores excessivamente genéricos.
+
+---
+
+# 8. IDs
+
+Estabeleça uma estratégia consistente para identificadores das entidades.
+
+Para novas entidades de negócio, prefira UUID, salvo se existir uma decisão anterior documentada diferente.
+
+A representação externa deverá ser consistente.
+
+Não crie entidades apenas para testar UUID.
+
+Documente a decisão arquitetural.
+
+---
+
+# 9. Datas e horários
+
+Defina uma estratégia consistente.
+
+Para eventos técnicos como:
+
+- createdAt
+- updatedAt
+- loginAt
+- audit timestamps
+
+prefira `Instant`.
+
+Para data/hora informada pelo usuário em uma transação financeira, a modelagem deverá considerar explicitamente timezone.
+
+Não tome decisões implícitas baseadas no timezone do servidor.
+
+Documente que o sistema deverá possuir estratégia explícita de timezone antes da implementação das transações.
+
+Não implemente transações nesta TASK.
+
+---
+
+# 10. Valores monetários
+
+Reforce a regra:
+
+Valores financeiros devem utilizar:
+
+`BigDecimal`
+
+Nunca utilizar:
+
+- float
+- Float
+- double
+- Double
+
+para valores monetários.
+
+A precisão e escala deverão ser definidas explicitamente nas entidades financeiras futuras.
+
+---
+
+# 11. Paginação
+
+APIs que futuramente retornarem coleções potencialmente grandes deverão possuir paginação server-side.
+
+Utilize mecanismos do Spring Data quando apropriado.
+
+Não retornar listas ilimitadas de:
+
+- transações
+- auditoria
+- anexos
+- relatórios detalhados
+
+Cadastros pequenos poderão utilizar endpoints específicos de seleção quando necessário.
+
+Não implemente endpoints nesta TASK.
+
+---
+
+# 12. Ordenação e filtros
+
+Filtros devem ser executados preferencialmente no backend quando envolverem conjuntos potencialmente grandes.
+
+Não carregar milhares de registros no Angular para realizar filtragem local.
+
+Parâmetros de ordenação e filtro deverão ser validados.
+
+---
+
+# 13. Transações de banco
+
+Utilize `@Transactional` na camada de aplicação/service quando uma operação representar uma unidade atômica de negócio.
+
+Evite colocar `@Transactional` indiscriminadamente em controllers.
+
+Transferências financeiras futuras deverão obrigatoriamente ser atômicas.
+
+Não implemente transferências nesta tarefa.
+
+---
+
+# 14. Exceções
+
+Prepare a arquitetura para uma estratégia centralizada de tratamento de erros.
+
+Não implemente ainda todo o mecanismo se ele fizer parte da TASK-0.6.
+
+Nesta TASK, apenas:
+
+- documente a estratégia
+- evite criar mecanismos concorrentes
+- identifique código existente que possa conflitar
+
+A TASK-0.6 será responsável pelo tratamento global de erros e pelo contrato REST de erros.
+
+---
+
+# 15. Segurança e contexto do usuário
+
+Documente uma regra arquitetural obrigatória:
+
+Nenhum endpoint futuro deverá aceitar `userId` fornecido pelo frontend como fonte de autorização ou propriedade.
+
+O usuário deverá ser identificado pelo contexto autenticado do Spring Security.
+
+Exemplo proibido:
+
+POST /transactions?userId=123
+
+ou confiar em:
+
+{
+  "userId": "123"
+}
+
+para determinar o proprietário.
+
+O backend deverá obter a identidade do usuário autenticado.
+
+Repositories e services deverão garantir isolamento por usuário quando apropriado.
+
+A implementação efetiva da autenticação ocorrerá na Sprint correspondente.
+
+---
+
+# 16. Auditoria
+
+Prepare a arquitetura conceitualmente para auditoria futura.
+
+O sistema deverá conseguir registrar futuramente eventos relevantes como:
+
+- criação
+- alteração
+- exclusão
+- login
+- operações financeiras importantes
+
+Não implemente o módulo de auditoria agora.
+
+Não adicionar frameworks de auditoria sem necessidade.
+
+---
+
+# 17. Logging
+
+Defina regras básicas:
+
+- utilizar SLF4J
+- evitar `System.out.println`
+- não registrar senhas
+- não registrar tokens JWT
+- não registrar conteúdo sensível de anexos
+- evitar dados financeiros desnecessários nos logs
+- utilizar níveis adequados de log
+
+Não adicionar infraestrutura externa de observabilidade nesta tarefa.
+
+---
+
+# 18. Configuração
+
+Configurações específicas de ambiente deverão permanecer externas ao código sempre que apropriado.
+
+Segredos nunca devem ser versionados.
+
+Preserve a estratégia de:
+
+- `application.yml`
+- profiles
+- variáveis de ambiente
+
+já estabelecida nas tarefas anteriores.
+
+---
+
+# 19. Testabilidade
+
+A arquitetura deverá facilitar testes unitários e de integração.
+
+Regras de negócio importantes devem poder ser testadas sem necessidade de iniciar todo o servidor HTTP.
+
+Integrações com banco deverão utilizar Testcontainers quando apropriado.
+
+Não utilizar H2 para substituir comportamentos específicos do MySQL.
+
+---
+
+# 20. Documentação arquitetural
+
+Crie, se ainda não existir:
+
+`docs/architecture.md`
+
+O documento deverá registrar de maneira objetiva:
+
+## Visão geral
+
+Equilibra é um monólito modular.
+
+## Stack
+
+Registrar as tecnologias efetivamente existentes no projeto.
+
+Não documentar bibliotecas como implementadas se ainda não estiverem instaladas.
+
+## Organização dos módulos
+
+Documentar os módulos previstos:
+
+- auth
+- user
+- account
+- category
+- tag
+- transaction
+- transfer
+- attachment
+- dashboard
+- report
+- audit
+- shared
+
+## Dependências
+
+Registrar as regras de dependência entre módulos.
+
+## Persistência
+
+Registrar:
+
+- MySQL
+- JPA/Hibernate
+- Flyway
+- Testcontainers
+
+## API
+
+Registrar que:
+
+- REST será utilizado
+- entidades não serão expostas
+- DTOs serão utilizados
+- paginação será aplicada quando necessária
+
+## Segurança
+
+Registrar a estratégia de isolamento multiusuário.
+
+## Decisões financeiras
+
+Registrar:
+
+- BigDecimal para dinheiro
+- transferências deverão ser atômicas
+- regras financeiras permanecem no backend
+
+## Evolução
+
+Registrar que decisões arquiteturais importantes futuras poderão ser documentadas através de ADRs.
+
+---
+
+# 21. ADRs
+
+Crie o diretório:
+
+`docs/adr/`
+
+Não crie dezenas de ADRs.
+
+Crie apenas um ADR inicial se fizer sentido:
+
+`0001-modular-monolith.md`
+
+Documente:
+
+Contexto:
+O Equilibra possui múltiplos domínios relacionados, mas não possui necessidade atual de distribuição independente.
+
+Decisão:
+Utilizar monólito modular organizado por domínio.
+
+Consequências positivas:
+- menor complexidade operacional
+- transações locais mais simples
+- desenvolvimento incremental
+- deploy simplificado
+- fronteiras de domínio preservadas
+
+Trade-offs:
+- módulos compartilham o mesmo processo
+- disciplina arquitetural é necessária para preservar fronteiras
+
+Não apresente microserviços como objetivo obrigatório futuro.
+
+---
+
+# 22. Não implementar arquitetura especulativa
+
+NÃO adicione nesta tarefa, sem necessidade atual:
+
+- Kafka
+- RabbitMQ
+- Redis
+- Elasticsearch
+- Kubernetes
+- Spring Cloud
+- CQRS
+- Event Sourcing
+- GraphQL
+- WebSockets
+- arquitetura de microserviços
+
+Essas tecnologias somente deverão ser introduzidas quando existir requisito concreto.
+
+---
+
+# 23. Validação da arquitetura
+
+Após as alterações:
+
+1. Execute os testes existentes.
+2. Execute o build Maven.
+3. Confirme que a aplicação continua inicializando.
+4. Confirme que Flyway continua funcionando.
+5. Confirme que nenhuma funcionalidade existente foi quebrada.
+
+Não altere migrations aplicadas anteriormente apenas para adequá-las à nova documentação.
+
+---
+
+# 24. Critérios de aceite
+
+A TASK-0.5 estará concluída quando:
+
+- arquitetura modular estiver claramente definida
+- `CLAUDE.md` refletir as regras arquiteturais
+- `docs/architecture.md` existir
+- decisão pelo monólito modular estiver documentada
+- estratégia de DTOs estiver definida
+- estratégia de IDs estiver definida
+- estratégia de datas estiver documentada
+- estratégia de BigDecimal estiver documentada
+- regras de segurança multiusuário estiverem documentadas
+- regras de dependência entre módulos estiverem documentadas
+- nenhuma funcionalidade financeira tiver sido implementada
+- nenhuma entidade futura tiver sido criada apenas para representar arquitetura
+- testes existentes estiverem passando
+- build estiver passando
+
+---
+
+# 25. Restrições desta TASK
+
+NÃO implementar:
+
+- cadastro de usuários
+- login
+- JWT
+- contas
+- categorias
+- tags
+- receitas
+- despesas
+- transferências
+- anexos
+- Dashboard
+- relatórios
+- auditoria funcional
+
+NÃO criar tabelas dessas funcionalidades.
+
+NÃO criar migrations correspondentes.
+
+NÃO criar packages vazios apenas para representar módulos futuros.
+
+---
+
+# 26. Relatório final
+
+Ao finalizar, apresente:
+
+1. Estado arquitetural encontrado antes da alteração.
+2. Alterações realizadas.
+3. Arquivos criados.
+4. Arquivos modificados.
+5. Estrutura final relevante do backend.
+6. Decisões arquiteturais tomadas.
+7. Dependências adicionadas ou removidas e justificativa.
+8. Testes executados.
+9. Resultado dos testes.
+10. Resultado do build.
+11. Eventuais problemas encontrados.
+12. Pendências para TASK-0.6.
+
+Não implemente a TASK-0.6 ou qualquer tarefa posterior.

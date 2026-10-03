@@ -47,9 +47,22 @@ Aplicação web multiusuário para gerenciamento de finanças domésticas.
 
 ## Arquitetura
 
-O backend utilizará **monólito modular organizado por domínio**.
+O backend utilizará **monólito modular organizado por domínio/feature**.
 
-### Domínios previstos:
+A organização deve evitar uma estrutura global baseada apenas em camadas como `controller/`, `service/`, `repository/` e `entity/` na raiz da aplicação.
+
+### Package raiz
+
+O package raiz do backend é:
+
+```text
+br.com.equilibra
+```
+
+A classe principal `EquilibraApiApplication` deve permanecer nesse nível para permitir component scanning dos módulos atuais e futuros.
+
+### Domínios previstos
+
 - auth
 - user
 - account
@@ -63,7 +76,41 @@ O backend utilizará **monólito modular organizado por domínio**.
 - audit
 - shared
 
-> Não criar esses módulos funcionalmente na TASK-0.1.
+Não criar packages vazios apenas para representar módulos futuros. Crie somente packages/classes que tenham função concreta na tarefa atual.
+
+### Estrutura interna preferencial dos módulos
+
+Quando um módulo for implementado, utilize preferencialmente a organização:
+
+```text
+<domain>/
+├── api/
+├── application/
+├── domain/
+└── infrastructure/
+```
+
+Responsabilidades:
+
+- `api`: controllers, request DTOs, response DTOs e contratos REST do módulo. Não deve conter regras de negócio.
+- `application`: casos de uso, serviços de aplicação, coordenação de operações e transações quando apropriado.
+- `domain`: entidades, enums, regras de negócio e conceitos do domínio. Não deve depender da camada HTTP.
+- `infrastructure`: repositories, persistência, adapters, integrações externas e implementações técnicas.
+
+Não aplicar essa estrutura mecanicamente quando ela não trouxer benefício. O Equilibra deve continuar sendo um monólito modular pragmático.
+
+### Dependências entre módulos
+
+1. Um módulo não deve acessar diretamente detalhes internos de outro módulo.
+2. Controllers devem acessar casos de uso/serviços de aplicação, nunca repositories diretamente.
+3. Repositories não devem ser utilizados diretamente por controllers.
+4. DTOs da API não devem ser usados como entidades JPA.
+5. Entidades JPA nunca devem ser retornadas diretamente pelos controllers.
+6. Módulos devem expor apenas o necessário para colaboração com outros módulos.
+7. `shared` deverá conter somente elementos realmente compartilhados.
+8. Não transformar `shared` em um local genérico para qualquer código sem classificação.
+9. Evitar dependências circulares.
+10. Não criar abstrações antecipadamente sem necessidade concreta.
 
 ---
 
@@ -86,6 +133,103 @@ O backend utilizará **monólito modular organizado por domínio**.
 
 ---
 
+## Regras de API e DTOs
+
+1. APIs REST deverão utilizar DTOs específicos para entrada e saída.
+2. Request e Response devem ser separados quando seus objetivos forem diferentes.
+3. Nunca utilizar entidades JPA como payload público da API.
+4. Entidades JPA não devem ser expostas diretamente por controllers.
+5. MapStruct poderá ser utilizado quando houver mapeamentos reais e ele reduzir código repetitivo.
+6. Não adicionar MapStruct por antecipação se não houver mapeamento real na tarefa atual.
+7. Evitar mapeadores excessivamente genéricos.
+
+---
+
+## Identificadores
+
+1. Para novas entidades de negócio, prefira UUID, salvo decisão arquitetural documentada diferente.
+2. A representação externa dos IDs deverá ser consistente nas APIs.
+3. Não criar entidades apenas para testar a estratégia de UUID.
+
+---
+
+## Datas, horários e timezone
+
+1. Para eventos técnicos como `createdAt`, `updatedAt`, `loginAt` e timestamps de auditoria, prefira `Instant`.
+2. Para data/hora informada pelo usuário em transações financeiras, a modelagem deverá considerar explicitamente timezone.
+3. Não tomar decisões implícitas baseadas no timezone do servidor.
+4. A estratégia de timezone deverá ser explicitada antes da implementação de transações financeiras.
+
+---
+
+## Valores monetários
+
+1. Valores financeiros devem utilizar `BigDecimal` no backend.
+2. Nunca utilizar `float`, `Float`, `double` ou `Double` para valores monetários.
+3. Precisão e escala deverão ser definidas explicitamente nas entidades financeiras futuras.
+4. Regras financeiras permanecem no backend; o frontend não deve implementá-las.
+
+---
+
+## Paginação, ordenação e filtros
+
+1. APIs que retornarem coleções potencialmente grandes deverão possuir paginação server-side.
+2. Utilize mecanismos do Spring Data quando apropriado.
+3. Não retornar listas ilimitadas de transações, auditoria, anexos ou relatórios detalhados.
+4. Filtros sobre conjuntos potencialmente grandes devem ser executados preferencialmente no backend.
+5. Não carregar milhares de registros no Angular para realizar filtragem local.
+6. Parâmetros de ordenação e filtro deverão ser validados.
+
+---
+
+## Transações de banco
+
+1. Utilize `@Transactional` na camada de aplicação/service quando uma operação representar uma unidade atômica de negócio.
+2. Evite colocar `@Transactional` em controllers.
+3. Transferências financeiras futuras deverão obrigatoriamente ser atômicas.
+
+---
+
+## Segurança e contexto do usuário
+
+1. Nenhum endpoint futuro deverá aceitar `userId` fornecido pelo frontend como fonte de autorização ou propriedade.
+2. O usuário deverá ser identificado pelo contexto autenticado do Spring Security.
+3. É proibido confiar em parâmetros como `POST /transactions?userId=123` para determinar o proprietário do dado.
+4. É proibido confiar em payloads como `{ "userId": "123" }` para autorização ou isolamento de dados.
+5. Repositories e services deverão garantir isolamento por usuário quando apropriado.
+6. A implementação efetiva da autenticação ocorrerá na Sprint correspondente.
+7. O frontend nunca será considerado uma barreira de segurança.
+
+---
+
+## Auditoria
+
+1. O sistema deverá conseguir registrar futuramente eventos relevantes de criação, alteração, exclusão, login e operações financeiras importantes.
+2. Não adicionar frameworks de auditoria sem necessidade concreta.
+3. O módulo de auditoria será implementado em tarefa/sprint própria.
+
+---
+
+## Logging
+
+1. Utilizar SLF4J.
+2. Evitar `System.out.println`.
+3. Não registrar senhas.
+4. Não registrar tokens JWT.
+5. Não registrar conteúdo sensível de anexos.
+6. Evitar dados financeiros desnecessários nos logs.
+7. Utilizar níveis adequados de log.
+
+---
+
+## Exceções
+
+1. O backend deverá possuir estratégia centralizada de tratamento de erros.
+2. Não criar mecanismos concorrentes de erro sem necessidade.
+3. A TASK-0.6 será responsável pelo tratamento global de erros e pelo contrato REST de erros.
+
+---
+
 ## Regras de migrations
 
 1. Toda alteração estrutural no banco deverá ser feita por Flyway.
@@ -100,6 +244,33 @@ O backend utilizará **monólito modular organizado por domínio**.
 10. Toda migration deverá ser compatível com MySQL.
 11. Scripts de migration deverão ficar em `backend/src/main/resources/db/migration`.
 12. O padrão obrigatório de nomenclatura é `V<versão>__<descricao>.sql`, por exemplo `V1__initial_schema.sql`.
+
+---
+
+## Configuração e segredos
+
+1. Configurações específicas de ambiente deverão permanecer externas ao código sempre que apropriado.
+2. Segredos nunca devem ser versionados.
+3. Preserve a estratégia de `application.yml`, profiles e variáveis de ambiente.
+4. `.env` real deve permanecer ignorado pelo Git.
+5. `.env.example` pode conter apenas valores de desenvolvimento/exemplo.
+
+---
+
+## Testabilidade
+
+1. A arquitetura deverá facilitar testes unitários e de integração.
+2. Regras de negócio importantes devem poder ser testadas sem necessidade de iniciar todo o servidor HTTP.
+3. Integrações com banco deverão utilizar Testcontainers quando apropriado.
+4. Não utilizar H2 para substituir comportamentos específicos do MySQL.
+
+---
+
+## Documentação arquitetural
+
+1. A arquitetura base está documentada em `docs/architecture.md`.
+2. Decisões arquiteturais importantes poderão ser registradas em ADRs dentro de `docs/adr/`.
+3. O ADR inicial do monólito modular é `docs/adr/0001-modular-monolith.md`.
 
 ---
 

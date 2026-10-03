@@ -202,5 +202,7 @@ O Equilibra utiliza **Flyway** como mecanismo oficial e exclusivo para criação
 
 ## Documentação Adicional
 
-- [CLAUDE.md](CLAUDE.md) — Regras e fluxo de desenvolvimento
+- [CLAUDE.md](CLAUDE.md) — Regras e fluxo de desenvolvimento assistido
+- [docs/architecture.md](docs/architecture.md) — Arquitetura base do backend
+- [docs/adr/0001-modular-monolith.md](docs/adr/0001-modular-monolith.md) — ADR inicial: monólito modular
 - [docs/](docs/) — Documentação técnica e de arquitetura
