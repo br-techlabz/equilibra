@@ -222,11 +222,17 @@ Não aplicar essa estrutura mecanicamente quando ela não trouxer benefício. O 
 
 ---
 
-## Exceções
+## Exceções e contrato REST
 
 1. O backend deverá possuir estratégia centralizada de tratamento de erros.
-2. Não criar mecanismos concorrentes de erro sem necessidade.
-3. A TASK-0.6 será responsável pelo tratamento global de erros e pelo contrato REST de erros.
+2. O contrato de erros deve utilizar `ProblemDetail`/Problem Details quando apropriado.
+3. Não criar envelopes globais obrigatórios como `success/data/error`.
+4. Não criar mecanismos concorrentes de erro sem necessidade.
+5. Erros inesperados não devem expor stack trace, SQL, paths internos, credenciais ou detalhes sensíveis.
+6. Validação de campos deve retornar estrutura consumível pelo frontend com campo e mensagem.
+7. Toda resposta HTTP deverá possuir correlação por `X-Request-ID` quando passar pela infraestrutura web.
+8. O request ID deverá ser incluído no MDC durante a requisição e removido ao final.
+9. Convenções REST estão documentadas em `docs/api-guidelines.md`.
 
 ---
 

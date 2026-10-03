@@ -1,0 +1,717 @@
+# TASK-0.6 — Padronizar API REST e tratamento global de erros
+
+Leia integralmente:
+
+- `CLAUDE.md`
+- `docs/architecture.md`
+- ADRs existentes
+
+antes de realizar qualquer alteração.
+
+Analise o estado atual do backend após as TASK-0.1 até TASK-0.5.
+
+Antes de modificar código, examine pelo menos:
+
+- `backend/pom.xml`
+- estrutura atual de packages
+- configuração Spring Security
+- controllers existentes
+- exceções existentes
+- configuração do Spring MVC
+- testes existentes
+- endpoints Actuator
+- configuração OpenAPI existente
+
+Não recrie infraestrutura que já exista e esteja correta.
+
+Não implemente funcionalidades de negócio nesta TASK.
+
+---
+
+# 1. Objetivo
+
+Estabelecer um contrato REST consistente para toda a API do Equilibra e implementar tratamento global de erros reutilizável pelos módulos futuros.
+
+A solução deverá:
+
+- utilizar recursos nativos do Spring sempre que possível
+- seguir padrões HTTP
+- evitar formatos proprietários desnecessários
+- suportar validação de campos
+- possuir respostas previsíveis
+- não expor detalhes internos
+- facilitar consumo pelo Angular
+- ser testável
+- permanecer compatível com Spring Boot 4
+
+---
+
+# 2. Padrão de erros
+
+Utilize o padrão Problem Details definido pela RFC 9457 sempre que apropriado.
+
+Aproveite o suporte do Spring para `ProblemDetail`.
+
+Não crie um envelope genérico do tipo:
+
+{
+  "success": false,
+  "data": null,
+  "error": ...
+}
+
+se `ProblemDetail` resolver adequadamente o problema.
+
+Uma resposta conceitual de erro poderá possuir informações como:
+
+{
+  "type": "...",
+  "title": "Validation failed",
+  "status": 400,
+  "detail": "One or more fields are invalid.",
+  "instance": "...",
+  "timestamp": "...",
+  "errors": [...]
+}
+
+Não é obrigatório reproduzir exatamente essa estrutura.
+
+Utilize corretamente os campos nativos de `ProblemDetail` e adicione propriedades extras apenas quando realmente úteis.
+
+---
+
+# 3. Content-Type
+
+Erros baseados em Problem Details deverão utilizar, quando apropriado:
+
+`application/problem+json`
+
+Respostas normais da API continuam utilizando:
+
+`application/json`
+
+Não force manualmente Content-Type se o Spring puder negociá-lo corretamente.
+
+---
+
+# 4. Global Exception Handler
+
+Implemente um tratamento global utilizando mecanismo apropriado do Spring, preferencialmente:
+
+`@RestControllerAdvice`
+
+Centralize o tratamento das exceções REST.
+
+Evite:
+
+- try/catch repetitivo nos controllers
+- controllers criando manualmente respostas de erro
+- exposição de stack traces
+- exposição de mensagens internas do banco
+- exposição de detalhes de implementação
+
+---
+
+# 5. Localização
+
+Como o Equilibra é organizado como monólito modular, coloque a infraestrutura de tratamento HTTP compartilhada em localização coerente dentro de `shared`.
+
+Exemplo conceitual:
+
+shared/
+└── web/
+    └── exception/
+
+Não siga esse caminho cegamente caso a arquitetura existente tenha definido organização melhor.
+
+Preserve as decisões da TASK-0.5.
+
+---
+
+# 6. Categorias de erros
+
+Prepare tratamento consistente para pelo menos:
+
+## 400 — Bad Request
+
+Para:
+
+- JSON inválido
+- tipos incompatíveis
+- parâmetros inválidos
+- validação Bean Validation
+- argumentos ausentes quando obrigatórios
+
+## 401 — Unauthorized
+
+Para requisições sem autenticação válida.
+
+Como a autenticação real ainda não foi implementada, não crie JWT nesta TASK.
+
+Apenas preserve compatibilidade com Spring Security.
+
+## 403 — Forbidden
+
+Para usuário autenticado sem autorização suficiente.
+
+Não implemente regras de autorização de negócio ainda.
+
+## 404 — Not Found
+
+Prepare uma exceção reutilizável de aplicação para recursos não encontrados.
+
+Exemplo conceitual:
+
+`ResourceNotFoundException`
+
+Ela poderá ser usada futuramente para:
+
+- conta inexistente
+- categoria inexistente
+- transação inexistente
+
+Não crie essas entidades nesta TASK.
+
+## 409 — Conflict
+
+Prepare uma exceção reutilizável para conflitos de estado ou unicidade quando apropriado.
+
+Exemplo:
+
+`ResourceConflictException`
+
+Ela poderá futuramente representar situações como:
+
+- e-mail já cadastrado
+- conflito de estado
+
+Não implemente cadastro de usuário agora.
+
+## 422
+
+Não utilize 422 automaticamente para toda validação.
+
+Defina e documente uma política clara.
+
+Validação sintática/estrutural de request deverá normalmente resultar em `400 Bad Request`.
+
+Erros de regra de negócio poderão utilizar outro status quando houver justificativa semântica clara.
+
+Evite criar complexidade desnecessária nesta TASK.
+
+## 500 — Internal Server Error
+
+Erros inesperados deverão retornar resposta segura e genérica.
+
+Nunca retornar ao cliente:
+
+- stack trace
+- SQL
+- credenciais
+- paths internos
+- nomes de servidores
+- detalhes sensíveis da infraestrutura
+
+O erro completo poderá ser registrado internamente através do sistema de logging.
+
+---
+
+# 7. Validação de campos
+
+Padronize o tratamento de erros provenientes de:
+
+`@Valid`
+
+e Jakarta Bean Validation.
+
+Quando houver erros em campos, forneça estrutura que permita ao Angular identificar:
+
+- campo
+- mensagem
+
+Exemplo conceitual:
+
+"errors": [
+  {
+    "field": "description",
+    "message": "must not be blank"
+  },
+  {
+    "field": "amount",
+    "message": "must be greater than zero"
+  }
+]
+
+Crie um DTO/record pequeno para representar erros de campo somente se necessário.
+
+Não criar hierarquias complexas.
+
+---
+
+# 8. Mensagens
+
+As mensagens retornadas pela API devem ser apropriadas para consumo do frontend.
+
+Evite depender exclusivamente de mensagens internas de exceptions de frameworks.
+
+Entretanto, NÃO implemente internacionalização completa nesta TASK.
+
+A aplicação poderá futuramente adicionar i18n.
+
+Documente essa possibilidade sem implementá-la agora.
+
+---
+
+# 9. Timestamp
+
+Se adicionar timestamp às respostas de erro, utilize:
+
+`Instant`
+
+e representação ISO-8601.
+
+Não utilize timezone local do servidor como fonte implícita.
+
+---
+
+# 10. Identificação da requisição
+
+Implemente um mecanismo simples de identificação/correlação das requisições HTTP.
+
+Utilize preferencialmente um header como:
+
+`X-Request-ID`
+
+Comportamento desejado:
+
+1. Se o cliente fornecer um `X-Request-ID` válido, ele poderá ser reutilizado.
+2. Caso contrário, o backend gera um identificador.
+3. O identificador deverá ser disponibilizado na resposta.
+4. O identificador deverá ser incluído no contexto de logging quando tecnicamente apropriado.
+5. Respostas de erro poderão incluir o request ID como propriedade adicional.
+
+Utilize UUID ou representação equivalente.
+
+Implemente isso através de um filtro Spring apropriado, preferencialmente baseado em `OncePerRequestFilter`.
+
+---
+
+# 11. Segurança do X-Request-ID
+
+Não confie cegamente em valores arbitrários enviados pelo cliente.
+
+Defina limite de tamanho e formato aceitável.
+
+Se o valor recebido for inválido, gere um novo identificador.
+
+Não permita que o header seja utilizado para:
+
+- log injection
+- conteúdo arbitrário
+- valores excessivamente grandes
+
+---
+
+# 12. Logging
+
+Utilize SLF4J/MDC quando apropriado para incluir o request ID nos logs.
+
+Garanta limpeza do MDC ao final da requisição para evitar vazamento entre threads.
+
+Não registrar:
+
+- senha
+- token JWT
+- Authorization header
+- conteúdo completo de anexos
+- dados financeiros sem necessidade
+
+Erros inesperados podem registrar stack trace internamente.
+
+Erros esperados de validação não precisam gerar logs de nível ERROR.
+
+---
+
+# 13. Exceções de domínio vs HTTP
+
+Mantenha separação conceitual entre:
+
+- regras/exceções da aplicação
+- tradução dessas exceções para HTTP
+
+Evite acoplar entidades ou regras de domínio a:
+
+- `ResponseEntity`
+- `HttpStatus`
+- `ProblemDetail`
+
+quando isso puder ser evitado.
+
+O `@RestControllerAdvice` deverá ser responsável por traduzir exceções para o protocolo HTTP.
+
+---
+
+# 14. Respostas de sucesso
+
+Não crie um envelope global obrigatório como:
+
+{
+  "success": true,
+  "data": ...
+}
+
+Prefira respostas REST naturais.
+
+Exemplos futuros:
+
+GET /accounts
+
+→ coleção/página de contas
+
+GET /accounts/{id}
+
+→ representação da conta
+
+POST /accounts
+
+→ 201 Created
+
+PUT/PATCH
+
+→ 200 ou 204 conforme contrato
+
+DELETE
+
+→ 204 quando apropriado
+
+Não implemente esses endpoints agora.
+
+Apenas documente as convenções.
+
+---
+
+# 15. Convenções HTTP
+
+Documente em `docs/api-guidelines.md` as convenções REST do Equilibra.
+
+Inclua:
+
+## GET
+
+Operações de leitura não devem alterar estado.
+
+## POST
+
+Utilizado para criação de recursos ou operações que não sejam idempotentes.
+
+Criação bem-sucedida deverá preferencialmente retornar:
+
+`201 Created`
+
+e header `Location` quando aplicável.
+
+## PUT
+
+Quando utilizado, deverá representar substituição/atualização idempotente conforme contrato.
+
+## PATCH
+
+Pode ser utilizado futuramente para atualização parcial quando houver benefício claro.
+
+## DELETE
+
+Exclusão bem-sucedida poderá retornar:
+
+`204 No Content`.
+
+---
+
+# 16. Status HTTP
+
+Documente pelo menos:
+
+- 200 OK
+- 201 Created
+- 204 No Content
+- 400 Bad Request
+- 401 Unauthorized
+- 403 Forbidden
+- 404 Not Found
+- 409 Conflict
+- 500 Internal Server Error
+
+Não utilize sempre `200 OK`.
+
+---
+
+# 17. Paginação
+
+Documente uma convenção inicial para endpoints paginados.
+
+Quando utilizar Spring Data `Page`, evite necessariamente expor diretamente estruturas internas do framework se isso criar acoplamento indesejado ao contrato público.
+
+Defina uma representação estável de paginação quando ela se tornar necessária.
+
+Não implemente endpoints paginados fictícios nesta TASK.
+
+---
+
+# 18. OpenAPI
+
+Integre o contrato de erros com a documentação OpenAPI existente quando isso puder ser feito de maneira limpa.
+
+Não documente manualmente cada endpoint inexistente.
+
+Confirme que Swagger/OpenAPI continua inicializando corretamente.
+
+Se a biblioteca atual tiver limitações com Spring Boot 4, não realize downgrade do Spring Boot apenas para acomodá-la.
+
+Registre qualquer incompatibilidade encontrada.
+
+---
+
+# 19. Endpoint técnico para testes
+
+Não crie endpoints artificiais de produção apenas para disparar erros.
+
+Para testar o `@RestControllerAdvice`, utilize controllers de teste ou mecanismos restritos ao ambiente de testes.
+
+Nenhum endpoint como:
+
+`/api/test/error`
+
+deverá permanecer disponível na aplicação de produção apenas para testes.
+
+---
+
+# 20. Testes obrigatórios
+
+Crie testes automatizados cobrindo, quando aplicável:
+
+### Validação
+
+Request inválido produz:
+
+`400`
+
+e possui informações dos campos inválidos.
+
+### ResourceNotFoundException
+
+Produz:
+
+`404`
+
+com Problem Details.
+
+### ResourceConflictException
+
+Produz:
+
+`409`
+
+com Problem Details.
+
+### Erro inesperado
+
+Produz:
+
+`500`
+
+sem expor detalhes internos.
+
+### Request ID
+
+Verifique:
+
+- geração quando ausente
+- reutilização quando válido
+- substituição quando inválido
+- presença na resposta
+
+Utilize testes apropriados com MockMvc ou infraestrutura equivalente disponível no projeto.
+
+Evite iniciar MySQL/Testcontainers em testes que não precisam do banco.
+
+---
+
+# 21. Teste de integração existente
+
+Não quebre os testes Testcontainers/Flyway criados nas tarefas anteriores.
+
+Execute também os testes existentes relevantes.
+
+---
+
+# 22. Spring Security
+
+A configuração temporária de segurança da Sprint 0 deverá continuar funcionando.
+
+Não implemente:
+
+- login
+- JWT
+- refresh token
+- UserDetails customizado
+- cadastro de usuário
+
+Isso será feito posteriormente.
+
+Entretanto, confirme que o tratamento de erros não interfere indevidamente nos endpoints permitidos atualmente, como:
+
+- health
+- documentação OpenAPI
+
+---
+
+# 23. CORS
+
+Analise se já existe configuração CORS.
+
+Não utilize:
+
+`*`
+
+indiscriminadamente junto com credenciais.
+
+Como o frontend Angular será configurado posteriormente, prepare apenas uma estratégia segura e configurável se houver necessidade concreta nesta TASK.
+
+Caso CORS ainda não seja necessário, documente a decisão e deixe a implementação para a TASK-0.8.
+
+---
+
+# 24. Estrutura sugerida
+
+A estrutura final poderá se aproximar conceitualmente de:
+
+shared/
+└── web/
+    ├── exception/
+    │   ├── GlobalExceptionHandler
+    │   ├── ResourceNotFoundException
+    │   ├── ResourceConflictException
+    │   └── FieldValidationError
+    │
+    └── filter/
+        └── RequestIdFilter
+
+Não siga esses nomes cegamente.
+
+Adapte à arquitetura existente e às convenções Java utilizadas no projeto.
+
+Evite criar interfaces ou classes sem uso.
+
+---
+
+# 25. Documentação
+
+Crie:
+
+`docs/api-guidelines.md`
+
+Inclua:
+
+- padrão REST
+- Problem Details
+- convenções de status HTTP
+- validação
+- paginação
+- request ID
+- política de erros
+- política de respostas de sucesso
+
+Atualize `CLAUDE.md` somente com regras arquiteturais permanentes relevantes.
+
+Evite duplicar todo o conteúdo de `api-guidelines.md` dentro do `CLAUDE.md`.
+
+---
+
+# 26. Critérios de aceite
+
+A TASK-0.6 estará concluída quando:
+
+- tratamento global de exceções estiver implementado
+- Problem Details estiver sendo utilizado
+- erros de validação possuírem representação consistente
+- 404 estiver padronizado
+- 409 estiver padronizado
+- 500 não expuser informações internas
+- request ID estiver implementado
+- MDC for limpo corretamente
+- convenções REST estiverem documentadas
+- testes automatizados cobrirem os principais cenários
+- OpenAPI continuar funcionando
+- Actuator continuar funcionando
+- Flyway continuar funcionando
+- testes existentes continuarem passando
+- build Maven estiver passando
+
+---
+
+# 27. Restrições
+
+NÃO implementar nesta TASK:
+
+- User
+- cadastro
+- login
+- JWT
+- Account
+- Category
+- Tag
+- Transaction
+- Transfer
+- Attachment
+- Dashboard
+- Report
+- Audit funcional
+
+Não criar migrations de negócio.
+
+Não criar tabelas de negócio.
+
+Não criar endpoints fictícios permanentes.
+
+Não iniciar a TASK-0.7.
+
+---
+
+# 28. Validação final
+
+Execute:
+
+1. testes específicos da nova infraestrutura
+2. suíte de testes relevante do backend
+3. build Maven
+4. inicialização da aplicação quando possível
+
+Confirme que:
+
+- Spring inicia
+- MySQL conecta
+- Flyway executa
+- Actuator funciona
+- OpenAPI funciona
+
+---
+
+# 29. Relatório final
+
+Ao concluir, apresente:
+
+1. Estado encontrado antes da implementação.
+2. Estratégia escolhida para Problem Details.
+3. Estrutura criada.
+4. Arquivos criados.
+5. Arquivos modificados.
+6. Exceções implementadas.
+7. Funcionamento do Request ID.
+8. Estratégia de logging/MDC.
+9. Testes adicionados.
+10. Testes executados e resultados.
+11. Resultado do build.
+12. Resultado da inicialização.
+13. Eventuais limitações encontradas.
+14. Pendências para TASK-0.7.
+
+Não implemente nenhuma tarefa posterior.
