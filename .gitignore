@@ -1,0 +1,124 @@
+# ============================================================
+# Equilibra - .gitignore
+# ============================================================
+
+# ---- Java / Maven ----
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar.gz
+*.rar
+hs_err_pid*
+replay_pid*
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# ---- IntelliJ IDEA ----
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# ---- VS Code ----
+.vscode/
+*.code-workspace
+# Except: keep launch.json and settings.json if they exist in repo
+!.vscode/launch.json
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# ---- Node.js / Angular ----
+node_modules/
+dist/
+dist-*/
+.browser/
+*.tsbuildinfo
+.angular/
+.eslintcache
+.npm
+.yarn-integrity
+.yarn-cache/
+.pnp
+.pnp.js
+
+# ---- Build artifacts ----
+build/
+*.log
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# ---- Environment / Secrets ----
+.env
+.env.*
+*.env
+*.env.local
+*.env.*.local
+.env.production
+.env.development
+.env.test
+secrets/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# ---- OS Files ----
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ---- Logs ----
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---- Test / Coverage ----
+coverage/
+.nyc_output/
+*.lcov
+test-results/
+junit-results/
+
+# ---- Docker ----
+.docker/
+
+# ---- Misc ----
+*.swp
+*.swo
+*~
+*.bak
+*.backup
+*.orig
+.cache/
+*.pid
+*.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ---- Maven Wrapper (optional - uncomment if not using wrapper) ----
+# .mvn/wrapper/maven-wrapper.jar
+
+# ---- Angular CLI ----
+.angular/cache/
+
+# ---- Spring Boot ----
+*.log

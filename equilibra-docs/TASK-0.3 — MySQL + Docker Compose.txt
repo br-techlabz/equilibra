@@ -1,0 +1,89 @@
+# TASK-0.3 — Configurar MySQL e ambiente Docker
+
+Leia `CLAUDE.md` e analise as implementações existentes antes de alterar arquivos.
+
+## Objetivo
+
+Criar o ambiente local de banco de dados para o Equilibra utilizando MySQL e Docker Compose.
+
+## MySQL
+
+Configure MySQL 8 utilizando imagem oficial.
+
+Crie o banco:
+
+`equilibra`
+
+Não coloque credenciais sensíveis diretamente no repositório.
+
+Utilize variáveis de ambiente.
+
+Forneça um arquivo `.env.example` contendo apenas valores apropriados para desenvolvimento/exemplos, nunca credenciais reais de produção.
+
+O `.env` real deverá permanecer ignorado pelo Git.
+
+## Docker Compose
+
+Configure o serviço MySQL com:
+
+- volume persistente
+- healthcheck
+- restart apropriado para desenvolvimento
+- porta configurável
+- charset UTF-8 adequado
+- timezone documentado
+
+Não exponha serviços desnecessários.
+
+## Spring Boot
+
+Atualize `application.yml`/profile de desenvolvimento para utilizar variáveis de ambiente para:
+
+- URL
+- database
+- username
+- password
+
+Não duplicar configurações.
+
+## Validação
+
+Suba o MySQL através do Docker Compose.
+
+Confirme:
+
+1. container saudável
+2. banco criado
+3. backend consegue estabelecer conexão
+4. aplicação inicia corretamente
+
+## Documentação
+
+Atualize README com os comandos reais para:
+
+- iniciar infraestrutura
+- parar infraestrutura
+- visualizar logs
+- iniciar backend
+
+## Restrições
+
+Não criar tabelas de negócio manualmente.
+
+Não utilizar Hibernate para criar schema.
+
+Não implementar funcionalidades financeiras.
+
+## Critérios de aceite
+
+- MySQL executando via Docker
+- volume persistente configurado
+- healthcheck funcionando
+- backend conectando ao banco
+- credenciais externas ao código
+- `.env` ignorado
+- `.env.example` disponível
+- README atualizado
+- backend inicializando corretamente
+
+Ao finalizar informe testes realizados e resultado.

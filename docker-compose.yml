@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: equilibra-mysql
+    environment:
+      MYSQL_DATABASE: equilibra
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_USER: ${MYSQL_USER:-equilibra}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-equilibra}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - equilibra-network
+
+  # Backend Spring Boot (placeholder - será configurado na TASK-0.2)
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: equilibra-backend
+  #   environment:
+  #     SPRING_PROFILES_ACTIVE: docker
+  #     SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/equilibra?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+  #     SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-equilibra}
+  #     SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-equilibra}
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     mysql:
+  #       condition: service_healthy
+  #   networks:
+  #     - equilibra-network
+
+  # Frontend Angular (placeholder - será configurado posteriormente)
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: equilibra-frontend
+  #   ports:
+  #     - "4200:80"
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - equilibra-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  equilibra-network:
+    driver: bridge

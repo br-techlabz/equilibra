@@ -1,0 +1,140 @@
+# TASK-0.2 — Inicializar backend Spring Boot 4
+
+Leia `CLAUDE.md` antes de qualquer alteração.
+
+Analise a estrutura criada na TASK-0.1.
+
+## Objetivo
+
+Criar a fundação executável do backend do Equilibra utilizando Spring Boot 4.
+
+Não implemente funcionalidades de negócio.
+
+## Configuração
+
+Configure o projeto Maven dentro de `/backend`.
+
+Utilize:
+
+- Spring Boot 4
+- Java 21 ou versão LTS oficialmente compatível
+- Maven
+
+Defina um package raiz consistente, preferencialmente:
+
+`br.com.equilibra`
+
+ou
+
+`com.equilibra`
+
+Escolha um e mantenha-o como padrão do projeto.
+
+Artifact:
+
+`equilibra-api`
+
+## Dependências
+
+Adicione somente as dependências necessárias para a arquitetura prevista:
+
+- Spring Web
+- Spring Data JPA
+- Spring Security
+- Validation
+- MySQL Driver
+- Flyway
+- OpenAPI/Swagger compatível com Spring Boot 4
+- Actuator
+- Test
+- Testcontainers para testes futuros
+
+Antes de escolher versões adicionais, verifique compatibilidade com Spring Boot 4.
+
+Evite sobrescrever versões gerenciadas pelo Spring Boot sem necessidade.
+
+## Configuração
+
+Crie configuração base utilizando:
+
+`application.yml`
+
+Prepare profiles:
+
+- default
+- dev
+- test
+
+Configurações sensíveis deverão ser fornecidas por variáveis de ambiente.
+
+Não coloque senhas reais no repositório.
+
+Prepare propriedades para:
+
+- datasource
+- JPA
+- Flyway
+- Actuator
+- logging
+
+Configure Hibernate para validar o schema, e não criá-lo automaticamente.
+
+Utilize:
+
+`ddl-auto: validate`
+
+quando o banco estiver disponível.
+
+## Health
+
+Utilize Spring Boot Actuator para fornecer health check.
+
+Não crie um controller próprio se o Actuator resolver o requisito adequadamente.
+
+## Segurança temporária
+
+Spring Security poderá inicialmente permitir explicitamente apenas os endpoints necessários para desenvolvimento, como health e documentação.
+
+Não implemente JWT nesta tarefa.
+
+Documente claramente que a configuração é temporária e será substituída na Sprint de autenticação.
+
+## Testes
+
+Crie pelo menos um teste básico verificando que o contexto Spring pode ser carregado quando apropriado.
+
+Se dependências externas impedirem um teste isolado, configure adequadamente o profile de testes em vez de remover o teste.
+
+## Restrições
+
+Não criar:
+
+- User
+- Account
+- Category
+- Transaction
+- Transfer
+- autenticação JWT
+- regras financeiras
+- controllers de negócio
+
+## Critérios de aceite
+
+O comando Maven apropriado deve:
+
+- compilar o projeto
+- executar os testes com sucesso
+
+A aplicação deve possuir configuração suficiente para ser executada posteriormente com o MySQL da TASK-0.3.
+
+## Finalização
+
+Ao terminar informe:
+
+1. estrutura criada
+2. dependências utilizadas
+3. configurações criadas
+4. testes executados
+5. resultado do build
+6. decisões técnicas
+7. pendências para TASK-0.3
