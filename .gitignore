@@ -15,7 +15,9 @@ target/
 hs_err_pid*
 replay_pid*
 .mvn/timing.properties
-.mvn/wrapper/maven-wrapper.jar
+# Maven Wrapper JAR deve ser versionado para builds reproduzíveis
+# .mvn/wrapper/maven-wrapper.jar
+!backend/.mvn/wrapper/maven-wrapper.jar
 
 # ---- IntelliJ IDEA ----
 .idea/
@@ -31,6 +33,9 @@ out/
 !.vscode/launch.json
 !.vscode/settings.json
 !.vscode/extensions.json
+
+# ---- Claude Code local settings ----
+.claude/settings.local.json
 
 # ---- Node.js / Angular ----
 node_modules/
@@ -54,9 +59,13 @@ build/
 .tmp/
 .temp/
 
+# ---- Claude Code generated scratch/workflow files ----
+.github/modernize/
+
 # ---- Environment / Secrets ----
 .env
 .env.*
+!.env.example
 *.env
 *.env.local
 *.env.*.local
@@ -114,8 +123,8 @@ package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
-# ---- Maven Wrapper (optional - uncomment if not using wrapper) ----
-# .mvn/wrapper/maven-wrapper.jar
+# ---- Maven Wrapper ----
+# Versionar o wrapper permite build sem Maven instalado globalmente.
 
 # ---- Angular CLI ----
 .angular/cache/

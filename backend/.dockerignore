@@ -1,0 +1,53 @@
+# ============================================================
+# Equilibra API - .dockerignore
+# ============================================================
+
+# Maven
+target/
+*.jar
+*.war
+*.ear
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+.vscode/
+*.code-workspace
+
+# Git
+.git/
+.gitignore
+
+# Logs
+logs/
+*.log
+
+# Build
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Maven wrapper
+# .mvn/wrapper/maven-wrapper.jar (necessário para build no Docker)
+
+# Testes
+test-results/
+junit-results/
+coverage/
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Documentação
+README.md
+docs/

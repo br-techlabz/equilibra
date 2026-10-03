@@ -1,0 +1,92 @@
+#!/bin/sh
+#
+# Maven Start Up Batch script
+#
+# Required ENV vars:
+# ------------------
+#   JAVA_HOME - location of a JDK home dir
+#
+# Optional ENV vars
+# -----------------
+#   M2_HOME - location of a maven2 installation
+#   MAVEN_BATCH_ECHO - set to 'on' to enable echoing of the batch commands
+#   MAVEN_BATCH_PAUSE - set to 'on' to wait for a key press before ending
+#   MAVEN_OPTS - parameters passed to the Java VM when running Maven
+#     e.g. to debug Maven itself, use
+#       set MAVEN_OPTS=-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=8000
+#   MAVEN_SKIP_RC - flag to disable loading of mavenrc files
+#   MVN_CMD - the command to use to run Maven, default is "mvn"
+#
+#   CYGWIN - used to detect if we are running on Cygwin
+#   DARWIN - used to detect if we are running on Mac OS X
+#
+#   MVNW_VERBOSE - verbose output
+#   MVNW_USERNAME - username for password-protected repositories
+#   MVNW_PASSWORD - password for password-protected repositories
+
+# OS specific support.  $var _must_ be set to either true or false.
+cygwin=false
+darwin=false
+mingw=false
+case "`uname`" in
+  CYGWIN*) cygwin=true ;;
+  MINGW*) mingw=true ;;
+  Darwin*) darwin=true ;;
+esac
+
+# For Cygwin, ensure paths are in UNIX format before anything is touched
+if $cygwin ; then
+  [ -n "$M2_HOME" ] && M2_HOME=`cygpath --unix "$M2_HOME"`
+  [ -n "$JAVA_HOME" ] && JAVA_HOME=`cygpath --unix "$JAVA_HOME"`
+  [ -n "$CLASSPATH" ] && CLASSPATH=`cygpath --unix "$CLASSPATH"`
+fi
+
+# For Mingw, ensure paths are in UNIX format before anything is touched
+if $mingw ; then
+  [ -n "$M2_HOME" ] && M2_HOME=`cygpath --unix "$M2_HOME"`
+  [ -n "$JAVA_HOME" ] && JAVA_HOME=`cygpath --unix "$JAVA_HOME"`
+  [ -n "$CLASSPATH" ] && CLASSPATH=`cygpath --unix "$CLASSPATH"`
+fi
+
+# Attempt to set MAVEN_HOME
+if [ -z "$M2_HOME" ] ; then
+  # resolve links - $0 may be a link to maven's home
+  PRG="$0"
+  # need this for relative symlinks
+  while [ -h "$PRG" ] ; do
+    ls=`ls -ld "$PRG"`
+    link=`expr "$ls" : '.*-> \(.*\)$'`
+    if expr "$link" : '/.*' > /dev/null ; then
+      PRG="$link"
+    else
+      PRG="`dirname "$PRG"`/$link"
+    fi
+  done
+  saveddir=`pwd`
+  MAVEN_HOME=`dirname "$PRG"`
+  MAVEN_HOME=`cd "$MAVEN_HOME" && pwd`
+fi
+
+# For Cygwin, switch paths to Windows format before running java
+if $cygwin ; then
+  [ -n "$MAVEN_HOME" ] && MAVEN_HOME=`cygpath --windows "$MAVEN_HOME"`
+  [ -n "$JAVA_HOME" ] && JAVA_HOME=`cygpath --windows "$JAVA_HOME"`
+  [ -n "$CLASSPATH" ] && CLASSPATH=`cygpath --windows "$CLASSPATH"`
+fi
+
+# For Darwin, add options to specify where the Java VM should look for classes
+if $darwin ; then
+  :
+fi
+
+# Set MAVEN_OPTS if not set
+if [ -z "$MAVEN_OPTS" ] ; then
+  MAVEN_OPTS="-Xmx1024m"
+fi
+
+# Execute Maven
+exec "$JAVA_HOME/bin/java" \
+  $MAVEN_OPTS \
+  -classpath "$MAVEN_HOME/.mvn/wrapper/maven-wrapper.jar" \
+  -Dmaven.multiModuleProjectDirectory="$MAVEN_HOME" \
+  org.apache.maven.wrapper.MavenWrapperMain "$@"
