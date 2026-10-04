@@ -1,5 +1,6 @@
 package br.com.equilibra.shared.web.exception;
 
+import br.com.equilibra.auth.application.InvalidCredentialsException;
 import br.com.equilibra.shared.web.filter.RequestIdFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -111,6 +112,17 @@ public class GlobalExceptionHandler {
             ex.getMessage(),
             request,
             "resource-conflict"
+        );
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ProblemDetail handleInvalidCredentials(InvalidCredentialsException ex, HttpServletRequest request) {
+        return createProblem(
+            HttpStatus.UNAUTHORIZED,
+            "Authentication failed",
+            InvalidCredentialsException.MESSAGE,
+            request,
+            "authentication-failed"
         );
     }
 

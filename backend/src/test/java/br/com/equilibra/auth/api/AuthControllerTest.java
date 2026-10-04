@@ -1,5 +1,9 @@
 package br.com.equilibra.auth.api;
 
+import br.com.equilibra.auth.application.AuthenticateUserCommand;
+import br.com.equilibra.auth.application.AuthenticateUserService;
+import br.com.equilibra.auth.application.AuthenticatedUser;
+import br.com.equilibra.auth.application.InvalidCredentialsException;
 import br.com.equilibra.auth.application.RegisterUserCommand;
 import br.com.equilibra.auth.application.RegisterUserResult;
 import br.com.equilibra.auth.application.RegisterUserService;
@@ -31,22 +35,89 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AuthControllerTest {
 
     private RegisterUserService registerUserService;
+    private AuthenticateUserService authenticateUserService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         registerUserService = mock(RegisterUserService.class);
+        authenticateUserService = mock(AuthenticateUserService.class);
 
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
         mockMvc = MockMvcBuilders
-            .standaloneSetup(new AuthController(registerUserService))
+            .standaloneSetup(new AuthController(registerUserService, authenticateUserService))
             .setControllerAdvice(new GlobalExceptionHandler())
             .setMessageConverters(new MappingJackson2HttpMessageConverter())
             .setValidator(validator)
             .addFilters(new RequestIdFilter())
             .build();
+    }
+
+    @Test
+    void shouldReturnOkForValidLoginWithoutSensitiveFields() throws Exception {
+        when(authenticateUserService.authenticate(any(AuthenticateUserCommand.class))).thenReturn(
+            new AuthenticatedUser("123e4567-e89b-12d3-a456-426614174000", "bill@example.com")
+        );
+
+        mockMvc.perform(post("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "email": " Bill@Example.com ",
+                      "password": "senhaValida123"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(header().exists(RequestIdFilter.REQUEST_ID_HEADER))
+            .andExpect(jsonPath("$.id").value("123e4567-e89b-12d3-a456-426614174000"))
+            .andExpect(jsonPath("$.email").value("bill@example.com"))
+            .andExpect(content().string(not(containsString("password"))))
+            .andExpect(content().string(not(containsString("passwordHash"))))
+            .andExpect(content().string(not(containsString("token"))))
+            .andExpect(content().string(not(containsString("senhaValida123"))));
+
+        verify(authenticateUserService).authenticate(new AuthenticateUserCommand(" Bill@Example.com ", "senhaValida123"));
+    }
+
+    @Test
+    void shouldReturnBadRequestForInvalidLoginRequest() throws Exception {
+        mockMvc.perform(post("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "email": "not-an-email",
+                      "password": ""
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.title").value("Validation failed"))
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.requestId").exists());
+    }
+
+    @Test
+    void shouldReturnUnauthorizedForInvalidCredentials() throws Exception {
+        when(authenticateUserService.authenticate(any(AuthenticateUserCommand.class))).thenThrow(new InvalidCredentialsException());
+
+        mockMvc.perform(post("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "email": "bill@example.com",
+                      "password": "senhaErrada123"
+                    }
+                    """))
+            .andExpect(status().isUnauthorized())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+            .andExpect(jsonPath("$.title").value("Authentication failed"))
+            .andExpect(jsonPath("$.status").value(401))
+            .andExpect(jsonPath("$.detail").value("Invalid email or password."))
+            .andExpect(jsonPath("$.requestId").exists())
+            .andExpect(content().string(not(containsString("senhaErrada123"))))
+            .andExpect(content().string(not(containsString("passwordHash"))));
     }
 
     @Test

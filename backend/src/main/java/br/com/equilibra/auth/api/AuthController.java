@@ -1,5 +1,8 @@
 package br.com.equilibra.auth.api;
 
+import br.com.equilibra.auth.application.AuthenticateUserCommand;
+import br.com.equilibra.auth.application.AuthenticateUserService;
+import br.com.equilibra.auth.application.AuthenticatedUser;
 import br.com.equilibra.auth.application.RegisterUserCommand;
 import br.com.equilibra.auth.application.RegisterUserResult;
 import br.com.equilibra.auth.application.RegisterUserService;
@@ -27,9 +30,42 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final RegisterUserService registerUserService;
+    private final AuthenticateUserService authenticateUserService;
 
-    public AuthController(RegisterUserService registerUserService) {
+    public AuthController(RegisterUserService registerUserService, AuthenticateUserService authenticateUserService) {
         this.registerUserService = registerUserService;
+        this.authenticateUserService = authenticateUserService;
+    }
+
+    @PostMapping("/login")
+    @Operation(
+        summary = "Autenticar usuário",
+        description = "Valida email e senha e retorna uma identidade temporária. A emissão de tokens será adicionada em tarefa futura."
+    )
+    @SecurityRequirements
+    @ApiResponse(
+        responseCode = "200",
+        description = "Credenciais válidas",
+        content = @Content(schema = @Schema(implementation = AuthenticatedUserResponse.class))
+    )
+    @ApiResponse(
+        responseCode = "400",
+        description = "Request inválido",
+        content = @Content(schema = @Schema(implementation = ProblemDetail.class))
+    )
+    @ApiResponse(
+        responseCode = "401",
+        description = "Credenciais inválidas",
+        content = @Content(schema = @Schema(implementation = ProblemDetail.class))
+    )
+    public ResponseEntity<AuthenticatedUserResponse> login(@Valid @RequestBody LoginRequest request) {
+        AuthenticatedUser authenticatedUser = authenticateUserService.authenticate(
+            new AuthenticateUserCommand(request.email(), request.password())
+        );
+
+        return ResponseEntity.ok(
+            new AuthenticatedUserResponse(authenticatedUser.userId(), authenticatedUser.email())
+        );
     }
 
     @PostMapping("/register")

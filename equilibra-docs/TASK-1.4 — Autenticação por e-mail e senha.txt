@@ -1,0 +1,1013 @@
+# TASK-1.4 — Autenticação por e-mail e senha
+
+As TASK-1.1, TASK-1.2 e TASK-1.3 foram concluídas.
+
+Estamos na:
+
+**Sprint 1 — Identidade, Usuários e Autenticação**
+
+Nesta TASK implemente exclusivamente a autenticação das credenciais do usuário.
+
+Objetivo conceitual:
+
+email + senha
+↓
+normalização do email
+↓
+localização do usuário
+↓
+verificação de status
+↓
+verificação segura da senha
+↓
+identidade autenticada
+
+NÃO emita JWT nesta TASK.
+
+---
+
+# 1. Preparação obrigatória
+
+Antes de modificar qualquer arquivo, leia integralmente:
+
+- `CLAUDE.md`
+- `README.md`
+- `docs/architecture.md`
+- `docs/api-guidelines.md`
+- `docs/security.md`
+- ADRs existentes
+
+Analise especificamente:
+
+- módulo `user`
+- módulo `auth`, se já existir
+- entidade `User`
+- UserRepository
+- normalização de email
+- PasswordService/PasswordEncoder
+- política de senha
+- endpoint de cadastro
+- configuração Spring Security
+- Problem Details
+- Request ID
+- testes existentes
+
+Apresente um plano resumido antes de implementar.
+
+Não duplique infraestrutura existente.
+
+---
+
+# 2. Objetivo
+
+Implementar a infraestrutura necessária para autenticar um usuário através de:
+
+- email
+- senha
+
+O sistema deverá determinar com segurança se as credenciais correspondem a um usuário ativo.
+
+Ainda NÃO deverá emitir:
+
+- JWT
+- access token
+- refresh token
+- cookie de sessão
+
+---
+
+# 3. Separação de responsabilidades
+
+A autenticação deverá permanecer separada de:
+
+- transporte HTTP
+- geração de JWT
+- persistência financeira
+- frontend
+
+Estrutura conceitual:
+
+Login Request
+↓
+Authentication Service
+↓
+User Repository
+↓
+Password Service
+↓
+Authenticated Identity
+
+Não coloque toda a lógica no controller.
+
+---
+
+# 4. Endpoint
+
+Implemente:
+
+`POST /api/auth/login`
+
+ou rota equivalente coerente com a API existente.
+
+O endpoint será público.
+
+Entretanto, nesta TASK ele serve somente para validar as credenciais.
+
+JWT será adicionado na TASK-1.5.
+
+---
+
+# 5. Request DTO
+
+Crie DTO específico.
+
+Exemplo:
+
+`LoginRequest`
+
+Campos:
+
+- email
+- password
+
+Não utilizar entidade `User`.
+
+---
+
+# 6. Validação estrutural
+
+Email:
+
+- obrigatório
+- não vazio
+- formato válido
+- tamanho máximo adequado
+
+Password:
+
+- obrigatório
+- não vazio
+
+IMPORTANTE:
+
+No login, NÃO reaplique necessariamente toda a política de criação de senha.
+
+Uma senha já armazenada deve ser simplesmente autenticada.
+
+Não rejeite uma credencial existente porque uma política futura de senha mudou.
+
+---
+
+# 7. Normalização do email
+
+Reutilize EXATAMENTE a estratégia definida nas TASK-1.1 e TASK-1.3.
+
+Não implemente outra normalização.
+
+Fluxo:
+
+email recebido
+↓
+normalização
+↓
+busca do usuário
+
+---
+
+# 8. Busca do usuário
+
+Localize o usuário através do email normalizado.
+
+Não carregue usuários desnecessariamente.
+
+Utilize o repository existente.
+
+Não crie query manual se Spring Data já resolver adequadamente.
+
+---
+
+# 9. Usuário inexistente
+
+Se o usuário não existir, a autenticação deve falhar.
+
+A resposta NÃO deve permitir enumeração de contas.
+
+Portanto, não retornar algo como:
+
+`Email não cadastrado`
+
+Prefira mensagem genérica equivalente a:
+
+`Invalid email or password.`
+
+---
+
+# 10. Senha incorreta
+
+Se a senha estiver incorreta, utilize a MESMA resposta externa usada para usuário inexistente.
+
+Não retornar:
+
+`Incorrect password`
+
+Isso evita revelar que o email existe.
+
+---
+
+# 11. Timing e enumeração
+
+Evite diferenças triviais de comportamento que facilitem enumeração de usuários.
+
+Analise se é apropriado realizar uma verificação de hash mesmo quando o usuário não existe, utilizando hash fictício seguro/precomputado ou mecanismo equivalente.
+
+Não implemente sleeps artificiais.
+
+Não tente criar criptografia própria.
+
+Documente a estratégia adotada.
+
+---
+
+# 12. Usuário inativo
+
+Se:
+
+`active == false`
+
+a autenticação deverá falhar.
+
+Externamente, prefira resposta genérica de autenticação quando isso evitar exposição do estado da conta.
+
+Não informar desnecessariamente:
+
+`This account exists but is disabled.`
+
+Documente a decisão.
+
+---
+
+# 13. Password verification
+
+Utilize exclusivamente a infraestrutura criada na TASK-1.2.
+
+Exemplo conceitual:
+
+`passwordService.matches(rawPassword, passwordHash)`
+
+Nunca:
+
+- comparar strings
+- decodificar hash
+- gerar novo hash e comparar diretamente
+- utilizar equals
+
+---
+
+# 14. Senha em memória
+
+Mantenha a senha em texto puro somente durante o tempo necessário para autenticação.
+
+Não:
+
+- persistir
+- armazenar em atributo singleton
+- colocar em cache
+- registrar em log
+- incluir em exceptions
+
+---
+
+# 15. Serviço de autenticação
+
+Crie serviço/caso de uso específico.
+
+Exemplo conceitual:
+
+`AuthenticateUserService`
+
+ou:
+
+`AuthenticateUserUseCase`
+
+Siga a arquitetura existente.
+
+Responsabilidades:
+
+1. normalizar email
+2. localizar usuário
+3. verificar status
+4. verificar senha
+5. retornar identidade autenticada interna
+
+---
+
+# 16. Identidade autenticada
+
+Crie uma representação interna mínima da identidade autenticada.
+
+Exemplo conceitual:
+
+`AuthenticatedUser`
+
+contendo somente informações necessárias para etapas posteriores.
+
+Sugestão:
+
+- userId
+- email
+
+NÃO incluir:
+
+- password
+- passwordHash
+
+Essa estrutura será útil para TASK-1.5.
+
+---
+
+# 17. Não retornar entidade JPA
+
+O serviço de autenticação não deverá obrigar o controller a expor `User`.
+
+Preserve a fronteira:
+
+JPA Entity
+≠
+API Response
+
+---
+
+# 18. Response temporário
+
+Como JWT ainda não existe, a resposta desta TASK deve ser mínima e explicitamente temporária.
+
+Pode retornar representação segura como:
+
+{
+  "id": "...",
+  "email": "..."
+}
+
+NÃO retornar:
+
+- password
+- passwordHash
+- token fictício
+- token vazio
+- `jwt: null`
+- refresh token
+
+Documente que o contrato será evoluído na TASK-1.5.
+
+---
+
+# 19. HTTP Status — sucesso
+
+Credenciais válidas:
+
+`200 OK`
+
+Não utilizar `201`.
+
+Nenhum recurso está sendo criado.
+
+---
+
+# 20. HTTP Status — credenciais inválidas
+
+Utilize:
+
+`401 Unauthorized`
+
+para:
+
+- usuário inexistente
+- senha incorreta
+- usuário não autenticável
+
+A resposta deve utilizar Problem Details quando coerente com a infraestrutura existente.
+
+---
+
+# 21. WWW-Authenticate
+
+Avalie corretamente a semântica HTTP e a configuração Spring Security.
+
+Não adicione valores incorretos apenas por formalidade.
+
+Documente a decisão caso configure `WWW-Authenticate`.
+
+---
+
+# 22. Erros de validação
+
+Request estruturalmente inválido:
+
+`400 Bad Request`
+
+Exemplos:
+
+- email vazio
+- email malformado
+- password ausente
+
+Credenciais estruturalmente válidas porém incorretas:
+
+`401 Unauthorized`
+
+Não confundir os dois cenários.
+
+---
+
+# 23. Exceção de autenticação
+
+Crie exceção específica somente se ela melhorar a arquitetura.
+
+Exemplo conceitual:
+
+`InvalidCredentialsException`
+
+O tratamento HTTP deverá continuar centralizado.
+
+Não colocar `HttpStatus` no domínio se isso violar a arquitetura definida.
+
+---
+
+# 24. Problem Details
+
+Para `401`, retorne resposta segura.
+
+Exemplo conceitual:
+
+- status: 401
+- title: Authentication failed
+- detail: Invalid email or password.
+
+Não incluir:
+
+- email recebido
+- senha
+- hash
+- existência da conta
+- status active
+
+---
+
+# 25. Request ID
+
+O endpoint deverá continuar participando automaticamente do mecanismo:
+
+`X-Request-ID`
+
+Não duplique lógica no controller.
+
+---
+
+# 26. Logging
+
+Eventos de autenticação podem ser registrados quando necessário.
+
+Por exemplo:
+
+- authentication succeeded
+- authentication failed
+
+Entretanto:
+
+NUNCA registrar:
+
+- password
+- passwordHash
+- Authorization
+- futuras credenciais JWT
+
+Evite registrar email completo em falhas quando não necessário.
+
+---
+
+# 27. Spring Security
+
+Integre a solução com Spring Security de maneira coerente.
+
+Entretanto, NÃO configure JWT ainda.
+
+Avalie se a autenticação deve utilizar:
+
+- AuthenticationManager
+- AuthenticationProvider
+
+ou serviço de aplicação apoiado nas abstrações Spring.
+
+Prefira integração idiomática com Spring Security quando isso não introduzir complexidade desnecessária.
+
+Documente a escolha.
+
+---
+
+# 28. UserDetails
+
+Se Spring Security exigir adaptação do `User`, crie uma representação apropriada.
+
+NÃO faça a entidade JPA implementar interfaces do Spring Security se isso acoplar desnecessariamente o domínio ao framework.
+
+Prefira adapter quando apropriado.
+
+---
+
+# 29. UserDetailsService
+
+Se necessário para a estratégia escolhida, implemente um `UserDetailsService` ou equivalente.
+
+Ele deverá:
+
+- buscar por email normalizado
+- respeitar status do usuário
+- não expor passwordHash externamente
+
+Não criar múltiplos mecanismos concorrentes de autenticação.
+
+---
+
+# 30. AuthenticationProvider
+
+Caso utilize `DaoAuthenticationProvider`, configure corretamente:
+
+- UserDetailsService
+- PasswordEncoder
+
+Não implemente provider customizado se o provider padrão resolver o requisito.
+
+---
+
+# 31. AuthenticationManager
+
+Se necessário, exponha/configure `AuthenticationManager` seguindo APIs atuais do Spring Security utilizado pelo projeto.
+
+Não utilize padrões obsoletos de versões antigas do Spring Security.
+
+---
+
+# 32. SecurityFilterChain
+
+Atualize a configuração somente o necessário.
+
+Permita publicamente:
+
+`POST /api/auth/login`
+
+e preserve:
+
+`POST /api/auth/register`
+
+Não libere indiscriminadamente:
+
+`/api/**`
+
+---
+
+# 33. Sessão HTTP
+
+Nesta TASK NÃO queremos criar autenticação baseada em sessão acidentalmente.
+
+Analise a configuração Spring Security.
+
+A arquitetura futura utilizará JWT.
+
+Evite que uma autenticação bem-sucedida passe a depender de:
+
+`JSESSIONID`
+
+ou estado HTTP de servidor.
+
+Documente a estratégia.
+
+---
+
+# 34. CSRF
+
+Revise a configuração considerando a futura arquitetura stateless JWT.
+
+Não faça mudanças indiscriminadas.
+
+Se a API já está configurada como stateless na fundação, preserve.
+
+Se uma mudança for necessária, documente claramente.
+
+---
+
+# 35. JWT
+
+PROIBIDO nesta TASK:
+
+- gerar JWT
+- validar JWT
+- criar JWT filter
+- adicionar Authorization Bearer
+- criar secret
+- criar chave RSA
+- access token
+- refresh token
+
+Tudo isso pertence à TASK-1.5.
+
+---
+
+# 36. Upgrade de password hash
+
+A TASK-1.2 pode ter documentado possibilidade de upgrade futuro do hash.
+
+Se a infraestrutura utilizada indicar que o hash precisa de upgrade, NÃO implemente rehash complexo nesta TASK sem necessidade.
+
+Registre como evolução caso apropriado.
+
+Prioridade aqui é autenticação correta.
+
+---
+
+# 37. Rate limiting
+
+Não implemente Redis ou infraestrutura externa.
+
+Registre como requisito futuro para proteção de:
+
+`/register`
+`/login`
+
+Não faça sleep após login inválido.
+
+---
+
+# 38. Brute force
+
+Não implemente bloqueio complexo de conta nesta TASK.
+
+Não altere `active` automaticamente após tentativas inválidas.
+
+Isso poderá ser tratado futuramente com política específica.
+
+---
+
+# 39. Testes unitários
+
+Cubra o serviço/caso de uso.
+
+### Usuário válido
+
+- email normalizado
+- usuário encontrado
+- active = true
+- senha correta
+- autenticação bem-sucedida
+
+### Senha incorreta
+
+- autenticação falha
+
+### Usuário inexistente
+
+- autenticação falha
+
+### Usuário inativo
+
+- autenticação falha
+
+### Segurança
+
+Confirme que resultado autenticado não contém passwordHash.
+
+---
+
+# 40. Testes da API
+
+Cubra:
+
+### 200
+
+Credenciais válidas.
+
+### 400
+
+Request inválido.
+
+### 401
+
+Senha incorreta.
+
+### 401
+
+Email inexistente.
+
+### 401
+
+Usuário inativo.
+
+Confirme que os três últimos não revelam informações desnecessárias sobre a conta.
+
+---
+
+# 41. Teste de enumeração
+
+Compare semanticamente as respostas para:
+
+- email inexistente
+- senha incorreta
+
+Elas devem possuir resposta externa equivalente quanto à informação revelada.
+
+Não teste tempo exato em CI.
+
+Timing tests tendem a ser instáveis.
+
+---
+
+# 42. Teste de integração MySQL
+
+Utilize Testcontainers.
+
+Fluxo:
+
+1. criar usuário de teste com senha hasheada
+2. POST login com credenciais corretas
+3. receber 200
+4. POST login com senha incorreta
+5. receber 401
+6. POST login com email inexistente
+7. receber 401
+
+Não utilize H2.
+
+---
+
+# 43. Teste de casing
+
+Usuário armazenado como:
+
+`bill@example.com`
+
+Login enviado como:
+
+`BILL@EXAMPLE.COM`
+
+deverá funcionar conforme política de normalização.
+
+---
+
+# 44. Teste de espaços no email
+
+Login:
+
+` bill@example.com `
+
+deverá seguir a política já definida.
+
+Não criar nova regra.
+
+---
+
+# 45. Teste da senha exata
+
+Se a senha cadastrada contém espaços legítimos, a autenticação deve respeitar exatamente esses caracteres.
+
+Não aplicar `trim()`.
+
+---
+
+# 46. OpenAPI
+
+Documente:
+
+`POST /api/auth/login`
+
+Inclua:
+
+- finalidade
+- request
+- 200
+- 400
+- 401
+
+Deixe claro que a emissão de token será adicionada posteriormente.
+
+Não documente JWT ainda.
+
+---
+
+# 47. Frontend
+
+NÃO alterar Angular.
+
+Tela de login será implementada na TASK-1.8.
+
+---
+
+# 48. Migration
+
+Esta TASK não deveria exigir migration.
+
+Se uma alteração de banco for realmente necessária:
+
+- não altere migration aplicada
+- crie migration corretiva
+- justifique
+
+---
+
+# 49. Testes existentes
+
+Execute toda a suíte relevante.
+
+Confirme que continuam funcionando:
+
+- cadastro
+- password infrastructure
+- Problem Details
+- Request ID
+- Flyway
+- Testcontainers
+
+---
+
+# 50. Build
+
+Execute build Maven completo.
+
+Não desabilite testes.
+
+---
+
+# 51. Critérios de aceite
+
+A TASK-1.4 estará concluída quando:
+
+- `/api/auth/login` existir
+- endpoint for público
+- request DTO existir
+- email for normalizado
+- usuário for localizado de maneira segura
+- active for verificado
+- senha for verificada com PasswordEncoder
+- senha incorreta retornar 401
+- usuário inexistente retornar 401
+- usuário inativo não autenticar
+- resposta não permitir enumeração trivial
+- resposta válida não contiver passwordHash
+- sessão HTTP não for criada como mecanismo de autenticação
+- JWT NÃO tiver sido implementado
+- Problem Details funcionar
+- Request ID funcionar
+- OpenAPI estiver atualizado
+- testes unitários passarem
+- testes de API passarem
+- testes Testcontainers passarem
+- testes anteriores passarem
+- build Maven passar
+
+---
+
+# 52. Restrições
+
+NÃO implementar:
+
+- JWT
+- access token
+- refresh token
+- Authorization Bearer
+- JWT filter
+- frontend
+- login Angular
+- route guard
+- logout
+- recuperação de senha
+- alteração de senha
+- confirmação de email
+- OAuth
+- MFA
+- CAPTCHA
+- lockout persistente
+- Redis
+
+Não iniciar TASK-1.5.
+
+---
+
+# 53. Validação manual
+
+Quando possível:
+
+1. cadastre usuário fictício pelo endpoint existente
+2. faça login com credenciais corretas
+3. confirme 200
+4. faça login com senha incorreta
+5. confirme 401
+6. faça login com email inexistente
+7. confirme 401
+8. compare as respostas inválidas
+9. confirme X-Request-ID
+10. confirme ausência de JSESSIONID como mecanismo de autenticação
+
+Não deixe credenciais sensíveis reais no ambiente.
+
+---
+
+# 54. Relatório final
+
+Ao concluir apresente:
+
+## TASK-1.4
+
+Status:
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## Endpoint
+
+Método e rota.
+
+## Estratégia Spring Security
+
+Explique:
+
+- AuthenticationManager/Provider utilizado, se aplicável
+- UserDetailsService/adapter utilizado, se aplicável
+- PasswordEncoder utilizado
+
+## Fluxo
+
+Descreva resumidamente:
+
+email
+→ normalização
+→ usuário
+→ status
+→ senha
+→ identidade
+
+## Enumeração
+
+Explique como usuário inexistente e senha incorreta são tratados externamente.
+
+## Sessão
+
+Confirme se a API permanece stateless.
+
+## Segurança
+
+Confirme:
+
+- password não logado
+- passwordHash não retornado
+- usuário inativo não autentica
+- comparação segura
+
+## HTTP
+
+- sucesso:
+- request inválido:
+- credenciais inválidas:
+
+## Problem Details
+
+PASS / FAIL
+
+## Request ID
+
+PASS / FAIL
+
+## OpenAPI
+
+PASS / FAIL
+
+## Testes
+
+Liste comandos e resultados.
+
+## Testcontainers/MySQL
+
+PASS / FAIL
+
+## Build Maven
+
+PASS / FAIL
+
+## Arquivos criados
+
+Liste.
+
+## Arquivos modificados
+
+Liste.
+
+## Migrations
+
+Informe se houve migration.
+
+## Pendências
+
+Somente pendências reais.
+
+## Próxima tarefa
+
+Informe prontidão para:
+
+**TASK-1.5 — JWT e autorização stateless**
+
+NÃO implemente TASK-1.5.

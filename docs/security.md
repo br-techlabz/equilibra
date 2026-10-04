@@ -105,6 +105,12 @@ public PasswordEncoder passwordEncoder() {
 
 O endpoint `POST /api/auth/register` é público para permitir criação de conta, mas não autentica automaticamente o usuário criado.
 
+O endpoint `POST /api/auth/login` é público para validar credenciais e retornar uma identidade temporária segura. Ele não emite JWT, access token, refresh token, cookie de sessão ou token fictício; a emissão de tokens será definida na TASK-1.5.
+
+Falhas de autenticação retornam resposta genérica para evitar enumeração de contas: usuário inexistente, senha incorreta e usuário inativo resultam externamente em `401 Unauthorized` com `Invalid email or password.`. Quando o usuário não existe ou não está autenticável, o fluxo executa verificação contra hash BCrypt fictício precomputado para reduzir diferenças triviais de caminho sem sleeps artificiais.
+
+A API permanece stateless; o login não cria autenticação baseada em `JSESSIONID`. Não há configuração de `WWW-Authenticate` específica nesta etapa porque ainda não existe esquema final de autenticação Bearer/JWT.
+
 Requisito futuro: avaliar rate limiting para endpoints públicos sensíveis, especialmente cadastro, login e recuperação de senha. Não há Redis, CAPTCHA ou infraestrutura dedicada nesta etapa.
 
 ---

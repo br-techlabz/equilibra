@@ -34,8 +34,8 @@ public class SecurityConfig {
 
             // Autorização de endpoints
             .authorizeHttpRequests(auth -> auth
-                // Endpoint público de cadastro
-                .requestMatchers(HttpMethod.POST, "/auth/register").permitAll()
+                // Endpoints públicos de autenticação
+                .requestMatchers(HttpMethod.POST, "/auth/register", "/auth/login").permitAll()
 
                 // Endpoints públicos (health, actuator, docs)
                 .requestMatchers(
