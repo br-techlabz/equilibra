@@ -1,0 +1,777 @@
+# TASK-1.3 — Cadastro de usuário
+
+As TASK-1.1 e TASK-1.2 foram concluídas.
+
+Estamos na:
+
+**Sprint 1 — Identidade, Usuários e Autenticação**
+
+Nesta TASK implemente exclusivamente o fluxo de criação de conta de usuário.
+
+NÃO implemente login, JWT ou frontend.
+
+---
+
+# 1. Preparação
+
+Antes de modificar qualquer arquivo, leia integralmente:
+
+- `CLAUDE.md`
+- `README.md`
+- `docs/architecture.md`
+- `docs/api-guidelines.md`
+- `docs/security.md`
+- ADRs existentes
+
+Analise especialmente:
+
+- módulo `user`
+- entidade `User`
+- repository
+- estratégia de normalização de email
+- migration de usuários
+- infraestrutura de senha da TASK-1.2
+- `PasswordEncoder`
+- política de senha
+- Problem Details da TASK-0.6
+- `ResourceConflictException`
+- Request ID
+- Spring Security temporário
+- OpenAPI
+- testes existentes
+
+Apresente um plano resumido antes de implementar.
+
+Não duplique infraestrutura existente.
+
+---
+
+# 2. Objetivo
+
+Permitir que uma pessoa crie uma conta no Equilibra utilizando:
+
+- email
+- senha
+
+Endpoint:
+
+`POST /api/auth/register`
+
+ou equivalente coerente com a convenção de API existente.
+
+O endpoint será público.
+
+Ao final da operação:
+
+1. email é validado
+2. email é normalizado
+3. senha é validada
+4. senha é convertida em hash
+5. usuário é persistido
+6. resposta segura é retornada
+
+O usuário NÃO deverá ser autenticado automaticamente nesta TASK.
+
+---
+
+# 3. Request
+
+Crie DTO específico.
+
+Exemplo conceitual:
+
+`RegisterUserRequest`
+
+Campos:
+
+- email
+- password
+
+Não utilizar entidade `User` como request.
+
+---
+
+# 4. Email
+
+Valide:
+
+- obrigatório
+- não vazio
+- formato válido
+- tamanho máximo compatível com o modelo
+
+Utilize Jakarta Bean Validation quando apropriado.
+
+A validação HTTP não substitui constraints do banco.
+
+---
+
+# 5. Normalização
+
+Reutilize EXATAMENTE a política estabelecida na TASK-1.1.
+
+Não implemente uma segunda estratégia.
+
+A normalização deve ocorrer antes de:
+
+- verificar existência
+- persistir
+
+Exemplo:
+
+` Bill@Example.com `
+
+deverá seguir a política documentada e resultar no mesmo identificador lógico que:
+
+`bill@example.com`
+
+Não aplicar regras específicas de Gmail ou outros provedores.
+
+---
+
+# 6. Senha
+
+Valide utilizando a política implementada na TASK-1.2.
+
+Não duplique regras manualmente no controller.
+
+Não aplicar `trim()` à senha.
+
+Não modificar casing.
+
+Não registrar senha.
+
+---
+
+# 7. Hash
+
+Antes de persistir:
+
+raw password
+↓
+PasswordService/PasswordEncoder
+↓
+passwordHash
+↓
+User
+
+Nunca persistir raw password.
+
+Nunca retornar raw password.
+
+Nunca retornar passwordHash.
+
+---
+
+# 8. Caso de uso
+
+Implemente o cadastro através da camada de aplicação.
+
+Exemplo conceitual:
+
+`RegisterUserService`
+
+ou:
+
+`RegisterUserUseCase`
+
+Siga a nomenclatura existente.
+
+O controller NÃO deverá:
+
+- acessar repository diretamente
+- executar hash diretamente
+- implementar normalização
+- possuir regra de negócio
+
+Controller deve apenas:
+
+1. receber request
+2. validar contrato HTTP
+3. delegar ao caso de uso
+4. devolver resposta
+
+---
+
+# 9. Transação
+
+O cadastro deverá executar em contexto transacional apropriado.
+
+Utilize `@Transactional` na camada de aplicação quando coerente.
+
+Não coloque `@Transactional` no controller.
+
+---
+
+# 10. Verificação de email existente
+
+Antes da criação, consulte se o email normalizado já existe.
+
+Isso permite resposta amigável.
+
+Porém:
+
+ESSA VERIFICAÇÃO NÃO É GARANTIA SUFICIENTE.
+
+A constraint UNIQUE do banco continua sendo a proteção definitiva contra race conditions.
+
+---
+
+# 11. Concorrência
+
+Considere o cenário:
+
+Request A verifica email → livre
+Request B verifica email → livre
+Request A insere
+Request B tenta inserir
+
+O segundo request deverá resultar em:
+
+`409 Conflict`
+
+e não:
+
+`500 Internal Server Error`
+
+Trate adequadamente a violação de unicidade relacionada ao email.
+
+Não transforme genericamente qualquer erro de banco em 409.
+
+---
+
+# 12. Email duplicado
+
+Para email já cadastrado, retorne:
+
+`409 Conflict`
+
+utilizando a infraestrutura Problem Details existente.
+
+Mensagem conceitual:
+
+"An account with this email already exists."
+
+Adapte o idioma às convenções atuais da API.
+
+Não informe dados adicionais sobre a conta existente.
+
+---
+
+# 13. Response
+
+Crie DTO específico.
+
+Exemplo:
+
+`RegisteredUserResponse`
+
+Retorne apenas informações seguras necessárias.
+
+Sugestão:
+
+- id
+- email
+- createdAt
+
+Não retornar:
+
+- password
+- passwordHash
+- active, salvo necessidade clara
+- detalhes internos
+
+---
+
+# 14. HTTP Status
+
+Cadastro bem-sucedido:
+
+`201 Created`
+
+Não utilizar `200 OK` por conveniência.
+
+Quando apropriado, forneça header:
+
+`Location`
+
+apontando para a representação futura do recurso.
+
+Porém, NÃO crie um endpoint GET fictício apenas para justificar `Location`.
+
+Se ainda não houver recurso público consultável, documente a decisão.
+
+---
+
+# 15. Validação inválida
+
+Requests inválidos deverão utilizar a infraestrutura existente da TASK-0.6.
+
+Exemplos:
+
+email ausente
+→ 400
+
+email inválido
+→ 400
+
+senha abaixo do mínimo
+→ 400
+
+senha acima do máximo
+→ 400
+
+senha somente espaços
+→ 400
+
+A resposta deve utilizar Problem Details e erros de campo quando apropriado.
+
+---
+
+# 16. Política de mensagens
+
+Não retornar a senha em mensagens.
+
+Não retornar o hash.
+
+Não retornar stack trace.
+
+Não retornar SQL.
+
+Não retornar nome de constraint do banco.
+
+---
+
+# 17. Spring Security
+
+Atualize a configuração de segurança SOMENTE o necessário para permitir:
+
+`POST /api/auth/register`
+
+sem autenticação.
+
+Não abra:
+
+`/api/**`
+
+inteiro.
+
+Mantenha Actuator/OpenAPI conforme política da Sprint 0.
+
+---
+
+# 18. CSRF
+
+Analise a configuração atual antes de alterar CSRF.
+
+Como a estratégia de autenticação ainda não foi finalizada, não desabilite proteções indiscriminadamente apenas para fazer o endpoint funcionar.
+
+Documente qualquer decisão necessária.
+
+A estratégia definitiva será revisitada com JWT.
+
+---
+
+# 19. CORS
+
+Preserve a configuração existente.
+
+Não adicione `*` para permitir o cadastro.
+
+Frontend de cadastro ainda não existe.
+
+---
+
+# 20. Rate limiting
+
+NÃO implemente infraestrutura complexa de rate limiting nesta TASK.
+
+Entretanto, registre como requisito de segurança futuro para endpoints públicos sensíveis, especialmente:
+
+- register
+- login
+- recuperação de senha
+
+Não introduza Redis apenas para isso.
+
+---
+
+# 21. Confirmação de email
+
+NÃO implemente verificação/confirmação de email nesta TASK.
+
+O usuário criado ficará ativo conforme a política atual do modelo.
+
+Confirmação de email poderá ser adicionada futuramente.
+
+Não invente token de confirmação.
+
+---
+
+# 22. Captcha
+
+NÃO implementar CAPTCHA.
+
+Pode ser considerado futuramente caso abuso real justifique.
+
+---
+
+# 23. OpenAPI
+
+Documente o endpoint real no OpenAPI.
+
+Inclua:
+
+- finalidade
+- request
+- 201
+- 400
+- 409
+- 500 quando apropriado
+
+Não documente login ou JWT ainda.
+
+Nunca coloque senha real em exemplos.
+
+---
+
+# 24. Testes unitários do caso de uso
+
+Cubra pelo menos:
+
+### Cadastro válido
+
+- normaliza email
+- valida senha
+- gera hash
+- persiste usuário
+
+### Email existente
+
+- rejeita cadastro
+- produz conflito apropriado
+
+### Senha inválida
+
+- não persiste usuário
+
+### Segurança
+
+- raw password não é usada como passwordHash
+
+Utilize mocks quando o objetivo for testar somente o caso de uso.
+
+---
+
+# 25. Testes do controller/API
+
+Utilize MockMvc ou infraestrutura equivalente.
+
+Cubra:
+
+### 201
+
+Request válido retorna:
+
+`201 Created`
+
+Confirme que response NÃO contém:
+
+- password
+- passwordHash
+
+### 400 — email inválido
+
+### 400 — senha inválida
+
+### 409 — email existente
+
+Confirme Content-Type de Problem Details quando aplicável.
+
+---
+
+# 26. Teste de integração com MySQL
+
+Utilize Testcontainers/MySQL.
+
+Fluxo:
+
+1. banco vazio
+2. POST register
+3. verificar `201`
+4. consultar banco/repository
+5. confirmar usuário persistido
+6. confirmar email normalizado
+7. confirmar hash diferente da senha original
+
+---
+
+# 27. Duplicidade real
+
+Crie teste de integração garantindo que a constraint UNIQUE permanece funcionando.
+
+Não dependa apenas de mock do repository.
+
+---
+
+# 28. Casing
+
+Teste:
+
+`Bill@Example.com`
+
+seguido por tentativa de:
+
+`bill@example.com`
+
+O segundo cadastro deverá ser considerado duplicado conforme a política definida.
+
+Resultado:
+
+`409 Conflict`
+
+---
+
+# 29. Espaços no email
+
+Teste comportamento coerente com normalização:
+
+` bill@example.com `
+
+Não deverá gerar conta independente.
+
+---
+
+# 30. Senha com espaços
+
+Confirme que:
+
+`" minha senha segura "`
+
+não é silenciosamente convertida para:
+
+`"minha senha segura"`
+
+se a primeira for aceita pela política.
+
+---
+
+# 31. Request ID
+
+Confirme que as respostas do endpoint continuam participando do mecanismo:
+
+`X-Request-ID`
+
+Não implemente lógica específica de request ID no controller.
+
+A infraestrutura global deve cuidar disso.
+
+---
+
+# 32. Logging
+
+É permitido registrar eventos técnicos como:
+
+"User registration completed"
+
+quando necessário.
+
+Evite registrar email completo sem necessidade.
+
+É PROIBIDO registrar:
+
+- password
+- passwordHash
+
+---
+
+# 33. Banco
+
+Não altere a tabela `users` sem necessidade real.
+
+Se o modelo atual já suporta o cadastro, nenhuma migration nova deve ser criada.
+
+Caso descubra incompatibilidade:
+
+- não altere migration aplicada
+- crie migration corretiva
+- explique no relatório
+
+---
+
+# 34. Frontend
+
+NÃO alterar Angular nesta TASK.
+
+A tela de cadastro será TASK-1.7.
+
+---
+
+# 35. Critérios de aceite
+
+A TASK-1.3 estará concluída quando:
+
+- endpoint de cadastro existir
+- endpoint for público
+- request DTO existir
+- response DTO existir
+- entidade JPA não for exposta
+- email for validado
+- email for normalizado
+- senha utilizar política da TASK-1.2
+- senha for hasheada
+- plaintext nunca for persistido
+- usuário for persistido
+- email duplicado retornar 409
+- race condition de unicidade não resultar em 500
+- cadastro válido retornar 201
+- passwordHash nunca aparecer na resposta
+- Problem Details continuar funcionando
+- Request ID continuar funcionando
+- OpenAPI documentar o endpoint
+- testes unitários passarem
+- testes API passarem
+- testes MySQL/Testcontainers passarem
+- testes anteriores passarem
+- build Maven passar
+
+---
+
+# 36. Restrições
+
+NÃO implementar:
+
+- login
+- `/api/auth/login`
+- JWT
+- refresh token
+- access token
+- AuthenticationManager definitivo
+- UserDetailsService definitivo
+- auto-login após cadastro
+- tela Angular
+- email de confirmação
+- recuperação de senha
+- alteração de senha
+- OAuth
+- MFA
+- CAPTCHA
+
+Não iniciar TASK-1.4.
+
+---
+
+# 37. Validação manual
+
+Quando possível, com MySQL/backend funcionando, realize uma requisição real de cadastro utilizando credenciais obviamente fictícias.
+
+Valide:
+
+1. 201
+2. JSON seguro
+3. X-Request-ID
+4. registro no banco
+5. email normalizado
+6. passwordHash presente no banco
+7. senha original ausente do banco
+
+Depois tente novamente com o mesmo email em casing diferente.
+
+Valide:
+
+`409 Conflict`
+
+Não deixe dados de teste desnecessários no ambiente compartilhado.
+
+---
+
+# 38. Relatório final
+
+Ao concluir apresente:
+
+## TASK-1.3
+
+Status:
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## Endpoint
+
+Informe método e rota implementados.
+
+## Fluxo
+
+Resuma o fluxo de cadastro.
+
+## Segurança
+
+Confirme:
+
+- password não persistido
+- password não logado
+- passwordHash não retornado
+- PasswordEncoder utilizado
+
+## Email
+
+Confirme:
+
+- normalização
+- validação
+- unicidade
+- comportamento de casing
+
+## HTTP
+
+Informe resultados:
+
+- sucesso
+- validação
+- duplicidade
+
+## Problem Details
+
+PASS / FAIL
+
+## Request ID
+
+PASS / FAIL
+
+## OpenAPI
+
+PASS / FAIL
+
+## Testes
+
+Liste testes e resultados.
+
+## Testcontainers/MySQL
+
+PASS / FAIL
+
+## Build Maven
+
+PASS / FAIL
+
+## Arquivos criados
+
+Liste.
+
+## Arquivos modificados
+
+Liste.
+
+## Migrations
+
+Informe se alguma nova migration foi necessária e por quê.
+
+## Pendências
+
+Liste apenas problemas reais.
+
+## Próxima tarefa
+
+Informe prontidão para:
+
+**TASK-1.4 — Autenticação por email e senha**
+
+NÃO implemente TASK-1.4.

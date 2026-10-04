@@ -156,16 +156,23 @@ spring:
     activate:
       on-profile: test
   datasource:
-    url: jdbc:tc:mysql:8.0:///equilibra_test
+    url: jdbc:tc:mysql:8.0:///equilibra_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8&autoReconnect=true&connectionAttributes=autoCommit:false
     username: test
     password: test
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+    hikari:
+      auto-commit: false
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     show-sql: false
   flyway:
     enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+    clean-disabled: false
+    clean-on-validation-error: true
+    validate-on-migrate: true
 
 logging:
   level:

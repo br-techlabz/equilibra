@@ -1,0 +1,710 @@
+# TASK-1.1 — Modelo User e persistência de usuários
+
+A Sprint 0 foi concluída e aprovada.
+
+Estamos iniciando:
+
+**Sprint 1 — Identidade, Usuários e Autenticação**
+
+Nesta TASK implemente SOMENTE a fundação de persistência da identidade do usuário.
+
+NÃO implemente cadastro HTTP, login, JWT ou telas Angular.
+
+---
+
+# 1. Preparação
+
+Antes de modificar qualquer arquivo, leia integralmente:
+
+- `CLAUDE.md`
+- `README.md`
+- `docs/architecture.md`
+- `docs/api-guidelines.md`
+- ADRs existentes
+- documentação de migrations existente
+
+Analise:
+
+- package raiz
+- estrutura modular definida na Sprint 0
+- configuração JPA/Hibernate
+- configuração Flyway
+- migrations existentes
+- testes Testcontainers
+- estratégia de UUID definida
+- estratégia de timestamps definida
+- Spring Security temporário existente
+
+Apresente um plano resumido antes da implementação.
+
+---
+
+# 2. Objetivo
+
+Criar a persistência básica de usuários do Equilibra.
+
+Ao final desta TASK deverá existir:
+
+- entidade de usuário
+- tabela correspondente no MySQL
+- repository
+- migration Flyway
+- constraints adequadas
+- testes de persistência
+
+Nenhum usuário deverá ainda conseguir se cadastrar ou autenticar através da API.
+
+---
+
+# 3. Módulo
+
+Implemente o módulo:
+
+`user`
+
+seguindo a arquitetura modular definida na Sprint 0.
+
+Adapte a estrutura às convenções reais do projeto.
+
+Conceitualmente poderá existir:
+
+user/
+├── domain/
+└── infrastructure/
+
+Não crie:
+
+- controller
+- endpoint
+- service de cadastro
+- DTO HTTP
+
+nesta TASK.
+
+---
+
+# 4. Entidade User
+
+Crie uma entidade representando o usuário do Equilibra.
+
+Utilize nome Java coerente com o projeto.
+
+Exemplo:
+
+`User`
+
+Caso exista conflito técnico ou semântico relevante, utilize nome alternativo e documente a decisão.
+
+---
+
+# 5. Campos
+
+A entidade deverá possuir inicialmente:
+
+- id
+- email
+- passwordHash
+- active
+- createdAt
+- updatedAt
+
+Não adicione campos pessoais sem requisito.
+
+NÃO adicionar nesta TASK:
+
+- nome
+- CPF
+- telefone
+- endereço
+- foto
+- data de nascimento
+- gênero
+- preferências financeiras
+
+O princípio é armazenar somente o necessário.
+
+---
+
+# 6. ID
+
+Utilize a estratégia de identificadores definida na Sprint 0.
+
+Preferencialmente:
+
+UUID
+
+caso essa tenha sido a decisão arquitetural aprovada.
+
+O ID deverá ser gerado de maneira consistente.
+
+Não utilize IDs sequenciais se isso contrariar a arquitetura existente.
+
+---
+
+# 7. Email
+
+O email será utilizado como login.
+
+Portanto:
+
+- obrigatório
+- não pode ser vazio
+- deve possuir tamanho máximo definido
+- deverá possuir constraint UNIQUE no banco
+- deverá possuir índice adequado
+
+A unicidade deverá ser garantida pelo banco, não apenas pelo Java.
+
+---
+
+# 8. Normalização de email
+
+Defina e documente uma política consistente.
+
+Antes da persistência futura, o sistema deverá considerar o email normalizado.
+
+No mínimo:
+
+- remover espaços externos
+- tratar casing de maneira consistente
+
+Exemplo conceitual:
+
+`usuario@exemplo.com`
+
+e
+
+`USUARIO@EXEMPLO.COM`
+
+não deverão resultar em duas contas independentes.
+
+Como o fluxo de cadastro será implementado posteriormente, nesta TASK prepare a modelagem para garantir essa propriedade.
+
+Escolha uma estratégia compatível com MySQL e documente-a.
+
+Não implemente regras complexas específicas de provedores de email.
+
+NÃO:
+
+- remover pontos do Gmail
+- interpretar aliases `+`
+- alterar semanticamente o endereço
+
+---
+
+# 9. Password Hash
+
+A entidade deverá armazenar:
+
+`passwordHash`
+
+NUNCA:
+
+`password`
+
+em texto puro.
+
+Nesta TASK não é necessário implementar o algoritmo de hash.
+
+Isso será tratado na TASK-1.2.
+
+Entretanto, o banco deverá possuir coluna adequada para armazenar hashes produzidos pela estratégia futura.
+
+Não registre passwordHash em:
+
+- logs
+- `toString`
+- exceptions
+- respostas
+
+---
+
+# 10. Active
+
+Adicione:
+
+`active`
+
+booleano.
+
+Valor inicial:
+
+`true`
+
+O campo permitirá futuramente desativar contas sem necessariamente excluir imediatamente seus registros.
+
+Não implemente fluxo de desativação nesta TASK.
+
+---
+
+# 11. Timestamps
+
+Utilize a estratégia definida na arquitetura.
+
+Campos:
+
+`createdAt`
+`updatedAt`
+
+Preferencialmente representados no Java através de:
+
+`Instant`
+
+quando consistente com a Sprint 0.
+
+Armazene os valores de maneira coerente com UTC.
+
+Não dependa do timezone local da máquina.
+
+---
+
+# 12. Auditoria automática de timestamps
+
+Escolha uma solução simples e compatível com a arquitetura existente.
+
+Pode utilizar mecanismos JPA/Hibernate apropriados ou callbacks quando necessário.
+
+Evite adicionar framework de auditoria apenas para dois timestamps.
+
+Garanta que:
+
+- `createdAt` seja definido na criação
+- `updatedAt` seja atualizado em alterações
+
+Não implemente o módulo de auditoria funcional nesta TASK.
+
+---
+
+# 13. Nome da tabela
+
+Evite nomes que possam conflitar com palavras reservadas.
+
+Prefira:
+
+`users`
+
+ou outro nome consistente com a convenção existente.
+
+Verifique compatibilidade com MySQL.
+
+---
+
+# 14. Migration Flyway
+
+Crie uma NOVA migration.
+
+Não altere migrations aplicadas na Sprint 0.
+
+Utilize a próxima versão disponível.
+
+Exemplo conceitual:
+
+`V2__create_users.sql`
+
+mas determine a versão real observando as migrations existentes.
+
+A migration deverá criar a tabela de usuários.
+
+---
+
+# 15. Schema
+
+A tabela deverá refletir explicitamente:
+
+- primary key
+- email obrigatório
+- unicidade do email
+- password_hash obrigatório
+- active obrigatório
+- created_at obrigatório
+- updated_at obrigatório
+
+Escolha tipos MySQL apropriados.
+
+---
+
+# 16. UUID no MySQL
+
+Utilize a representação de UUID coerente com a decisão arquitetural existente.
+
+Não escolha arbitrariamente entre:
+
+- CHAR(36)
+- BINARY(16)
+
+sem considerar a configuração JPA/Hibernate.
+
+Documente a escolha.
+
+Priorize consistência e manutenção.
+
+Não faça otimização prematura apenas para economizar alguns bytes.
+
+---
+
+# 17. Índices
+
+Analise os acessos futuros.
+
+Login fará consulta frequente por email.
+
+Garanta índice eficiente.
+
+Evite criar índices redundantes se a constraint UNIQUE já fornecer índice adequado no MySQL.
+
+---
+
+# 18. Repository
+
+Crie repository para persistência do usuário utilizando Spring Data JPA.
+
+Ele deverá fornecer somente operações necessárias nesta fase/futuro imediato.
+
+Prepare consulta por email normalizado.
+
+Exemplo conceitual:
+
+`findByEmail(...)`
+
+ou equivalente consistente com a estratégia adotada.
+
+Evite criar métodos especulativos.
+
+---
+
+# 19. Exists
+
+Como o cadastro futuro precisará verificar email existente, avalie fornecer:
+
+`existsByEmail(...)`
+
+se isso for coerente.
+
+Entretanto, lembre-se:
+
+a constraint UNIQUE no banco continua sendo a garantia definitiva contra race conditions.
+
+---
+
+# 20. Isolamento da entidade
+
+A entidade `User` NÃO deverá ser exposta diretamente por API.
+
+Embora não exista controller nesta TASK, preserve essa regra.
+
+Não adicione serialização JSON à entidade sem necessidade.
+
+---
+
+# 21. equals/hashCode
+
+Implemente somente se necessário.
+
+Caso implemente, considere corretamente o ciclo de vida de entidades JPA e IDs.
+
+Não utilize automaticamente todos os campos.
+
+Nunca inclua `passwordHash`.
+
+---
+
+# 22. Lombok
+
+Não adicione Lombok somente para reduzir algumas linhas.
+
+Se o projeto já utiliza Lombok de forma padronizada, siga a convenção existente.
+
+Caso contrário, não introduza uma nova dependência nesta TASK sem justificativa.
+
+---
+
+# 23. Validação
+
+Validações HTTP como:
+
+`@Email`
+
+pertencem principalmente aos DTOs futuros.
+
+Não confie em Bean Validation da entidade como substituto de constraints do banco.
+
+O banco deverá preservar invariantes fundamentais.
+
+---
+
+# 24. Segurança
+
+Revise o código criado garantindo que `passwordHash` não apareça em:
+
+- logs
+- mensagens de erro
+- `toString`
+- debugging explícito
+- serialização acidental
+
+---
+
+# 25. Repository e domínio
+
+Respeite a arquitetura estabelecida na Sprint 0.
+
+Não coloque controller no package de infrastructure.
+
+Não coloque regra HTTP na entidade.
+
+Não introduza `ResponseEntity` no módulo de domínio.
+
+---
+
+# 26. Testes de persistência
+
+Crie testes utilizando MySQL via Testcontainers, reutilizando a infraestrutura da Sprint 0.
+
+Não utilize H2.
+
+Cubra pelo menos:
+
+### Persistência
+
+Criar usuário válido e recuperar pelo ID.
+
+### Busca por email
+
+Persistir usuário e recuperar através do email normalizado.
+
+### Unicidade
+
+Tentar persistir dois usuários com o mesmo email normalizado deve resultar em violação da constraint.
+
+### Active
+
+Novo usuário deve possuir estado coerente com o modelo definido.
+
+### Timestamps
+
+Verifique criação de:
+
+- createdAt
+- updatedAt
+
+quando apropriado.
+
+---
+
+# 27. Teste de casing
+
+Valide explicitamente a estratégia escolhida para email.
+
+Exemplo:
+
+`bill@example.com`
+
+versus:
+
+`BILL@EXAMPLE.COM`
+
+O comportamento deve corresponder à política documentada.
+
+Não dependa acidentalmente da collation default do ambiente sem documentar isso.
+
+---
+
+# 28. Flyway + JPA
+
+Valide que:
+
+1. Flyway cria a tabela.
+2. Hibernate valida o schema.
+3. Hibernate NÃO cria a tabela.
+4. aplicação inicia normalmente.
+
+---
+
+# 29. Spring Security
+
+NÃO altere a configuração temporária de segurança da Sprint 0 além do estritamente necessário para manter o projeto funcionando.
+
+A autenticação será implementada em TASKs posteriores.
+
+---
+
+# 30. Backend somente
+
+Esta TASK deve alterar apenas o necessário no backend, migrations e documentação.
+
+Não altere Angular.
+
+Não crie:
+
+- página de cadastro
+- página de login
+- auth service frontend
+
+---
+
+# 31. Documentação
+
+Atualize documentação arquitetural somente quando houver uma decisão nova relevante.
+
+Documente especificamente:
+
+- representação do UUID
+- normalização de email
+- timestamps
+
+Se uma dessas decisões merecer ADR por impacto arquitetural, avalie criar um ADR curto.
+
+Não crie ADR para decisões triviais.
+
+---
+
+# 32. Testes existentes
+
+Execute toda a suíte backend relevante.
+
+Nenhum teste da Sprint 0 deverá ser quebrado.
+
+Não desabilite testes para fazer o build passar.
+
+---
+
+# 33. Build
+
+Execute build Maven completo.
+
+Confirme:
+
+- compilação
+- testes
+- migrations
+- integração Testcontainers
+
+---
+
+# 34. Critérios de aceite
+
+A TASK-1.1 estará concluída quando:
+
+- módulo `user` existir
+- entidade de usuário estiver implementada
+- ID seguir estratégia arquitetural
+- email for obrigatório
+- email possuir unicidade garantida pelo banco
+- política de normalização estiver definida
+- passwordHash existir
+- senha em texto puro não for armazenada
+- active existir
+- timestamps existirem
+- migration Flyway estiver criada
+- migration funcionar em MySQL
+- Hibernate validar o schema
+- repository estiver implementado
+- busca por email estiver testada
+- unicidade estiver testada
+- estratégia de casing estiver testada
+- Testcontainers estiver sendo utilizado
+- testes anteriores continuarem passando
+- build Maven passar
+
+---
+
+# 35. Restrições
+
+NÃO implementar:
+
+- POST /register
+- POST /login
+- JWT
+- refresh token
+- PasswordEncoder
+- tela de cadastro
+- tela de login
+- guards
+- interceptor Authorization
+- logout
+- recuperação de senha
+- verificação de email
+- OAuth
+- login social
+- MFA
+
+Esses itens pertencem a tarefas futuras.
+
+---
+
+# 36. Relatório final
+
+Ao concluir apresente:
+
+## TASK-1.1
+
+Status:
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## Implementação
+
+Resumo objetivo.
+
+## Modelo User
+
+Liste os campos e decisões relevantes.
+
+## Banco
+
+- migration criada
+- nome da tabela
+- representação UUID
+- constraints
+- índices
+
+## Email
+
+Explique:
+
+- normalização
+- casing
+- unicidade
+
+## Persistência
+
+Explique repository criado.
+
+## Segurança
+
+Confirme que senha em texto puro não é persistida.
+
+## Testes
+
+Liste testes executados e resultados.
+
+## Flyway
+
+PASS / FAIL
+
+## Hibernate Schema Validation
+
+PASS / FAIL
+
+## Build Maven
+
+PASS / FAIL
+
+## Arquivos criados
+
+Liste.
+
+## Arquivos modificados
+
+Liste.
+
+## Pendências
+
+Liste somente pendências reais.
+
+## Próxima tarefa
+
+Informe prontidão para:
+
+**TASK-1.2 — Segurança e armazenamento de senhas**
+
+NÃO implemente a TASK-1.2.

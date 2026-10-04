@@ -1,0 +1,755 @@
+# TASK-1.2 — Segurança e armazenamento de senhas
+
+A TASK-1.1 foi concluída.
+
+Estamos na:
+
+**Sprint 1 — Identidade, Usuários e Autenticação**
+
+Nesta TASK implemente exclusivamente a infraestrutura responsável pelo tratamento seguro de senhas.
+
+NÃO implemente cadastro HTTP, login, JWT ou frontend.
+
+---
+
+# 1. Preparação obrigatória
+
+Antes de modificar qualquer arquivo, leia integralmente:
+
+- `CLAUDE.md`
+- `README.md`
+- `docs/architecture.md`
+- `docs/api-guidelines.md`
+- documentação/ADRs relacionados à segurança
+- implementação criada na TASK-1.1
+
+Analise especificamente:
+
+- entidade `User`
+- `passwordHash`
+- repository de usuários
+- configuração atual do Spring Security
+- dependências de segurança existentes
+- testes existentes
+- profiles
+- configuração externa
+
+Apresente um plano resumido antes da implementação.
+
+Não altere código antes dessa análise.
+
+---
+
+# 2. Objetivo
+
+Criar uma infraestrutura segura e reutilizável para:
+
+- validar requisitos básicos de senha
+- gerar hash seguro
+- verificar senha contra hash
+- impedir armazenamento de senha em texto puro
+- permitir evolução futura do algoritmo
+
+Ao final desta TASK ainda NÃO deverá existir endpoint público de cadastro ou login.
+
+---
+
+# 3. Princípio fundamental
+
+O Equilibra NUNCA deverá armazenar senha em texto puro.
+
+Fluxo futuro:
+
+senha fornecida
+↓
+validação
+↓
+PasswordEncoder
+↓
+hash
+↓
+User.passwordHash
+↓
+MySQL
+
+A senha original deve existir em memória somente pelo tempo necessário para processar a operação.
+
+---
+
+# 4. PasswordEncoder
+
+Utilize a abstração:
+
+`org.springframework.security.crypto.password.PasswordEncoder`
+
+Não implemente algoritmo criptográfico próprio.
+
+Não crie funções manuais utilizando diretamente:
+
+- SHA-256
+- SHA-512
+- MD5
+- Base64
+- AES
+
+como mecanismo de armazenamento de senha.
+
+Senha deve utilizar função específica/adaptativa para password hashing suportada adequadamente pelo Spring Security.
+
+---
+
+# 5. Estratégia de algoritmo
+
+Analise a versão real do Spring Security utilizada pelo projeto.
+
+Escolha uma estratégia moderna, segura e oficialmente suportada.
+
+Considere preferencialmente:
+
+- Argon2
+- bcrypt
+- PBKDF2
+
+conforme suporte real, dependências disponíveis e recomendações atuais da stack.
+
+Não adicione biblioteca criptográfica externa desnecessariamente.
+
+Documente:
+
+- algoritmo escolhido
+- motivo
+- parâmetros relevantes
+- possibilidade de evolução futura
+
+Não reduza deliberadamente parâmetros de segurança apenas para acelerar testes.
+
+---
+
+# 6. Evolução futura do hash
+
+A arquitetura deverá permitir atualização futura do algoritmo/parâmetros sem exigir redefinição imediata da senha de todos os usuários.
+
+Avalie utilizar mecanismo apropriado do Spring Security, como estratégia delegadora/versionada, se isso for coerente com a versão utilizada.
+
+Exemplo conceitual de hashes identificáveis:
+
+`{algorithm}...`
+
+Não implemente uma solução proprietária se o Spring já fornecer mecanismo adequado.
+
+---
+
+# 7. Password service
+
+Evite espalhar chamadas diretas ao encoder por todo o sistema.
+
+Crie uma abstração pequena e objetiva quando coerente com a arquitetura.
+
+Exemplo conceitual:
+
+`PasswordService`
+
+Responsabilidades possíveis:
+
+- encode
+- matches
+
+Exemplo:
+
+`encode(rawPassword)`
+
+`matches(rawPassword, encodedPassword)`
+
+Não transforme esse serviço em um framework de autenticação.
+
+---
+
+# 8. Dependências
+
+Coloque a implementação no módulo arquitetonicamente apropriado.
+
+Avalie se pertence a:
+
+- `auth`
+- `user`
+- infraestrutura compartilhada de segurança
+
+Siga as fronteiras definidas na Sprint 0.
+
+Não coloque criptografia em `shared` apenas por conveniência se ela pertence claramente à identidade/autenticação.
+
+---
+
+# 9. Política de senha
+
+Defina uma política inicial para novas contas.
+
+Requisitos mínimos sugeridos:
+
+- mínimo de 8 caracteres
+- máximo razoável e explícito
+- não aceitar senha vazia
+- não aceitar senha composta somente por espaços
+
+Evite regras artificiais como obrigar simultaneamente:
+
+- maiúscula
+- minúscula
+- número
+- símbolo
+
+a menos que exista requisito claro.
+
+Priorize comprimento e possibilidade de utilização de passphrases.
+
+---
+
+# 10. Comprimento máximo
+
+Defina comprimento máximo para proteger o sistema contra entradas absurdamente grandes.
+
+Escolha um limite razoável que permita passphrases.
+
+Exemplo conceitual:
+
+128 caracteres
+
+ou outro limite justificado.
+
+A política deverá ser reutilizável posteriormente pelo cadastro.
+
+---
+
+# 11. Espaços
+
+Não altere silenciosamente a senha fornecida pelo usuário.
+
+Em particular:
+
+NÃO executar automaticamente:
+
+`trim()`
+
+na senha antes de gerar hash.
+
+Uma senha pode legitimamente possuir espaços.
+
+A validação pode rejeitar valor composto somente por espaços, mas não deverá transformar uma senha válida silenciosamente.
+
+---
+
+# 12. Unicode
+
+Não faça transformações destrutivas arbitrárias na senha.
+
+Não converter para:
+
+- lowercase
+- uppercase
+- ASCII
+
+Não remova caracteres especiais.
+
+Se optar por alguma normalização Unicode, isso deve ser tecnicamente justificado e documentado.
+
+Na ausência de requisito claro, preserve a senha exatamente como fornecida.
+
+---
+
+# 13. DTO de política
+
+Não crie DTO HTTP nesta TASK.
+
+Se a política precisar ser representada em código, crie estrutura interna pequena e reutilizável.
+
+Não criar:
+
+`RegisterRequest`
+
+ainda.
+
+---
+
+# 14. Password validator
+
+Implemente validação de senha de maneira reutilizável para a TASK-1.3.
+
+A validação deverá conseguir informar claramente violações da política.
+
+Entretanto, NÃO retornar a própria senha em mensagens de erro.
+
+---
+
+# 15. Mensagens
+
+Mensagens de validação poderão informar, por exemplo:
+
+- senha deve possuir pelo menos N caracteres
+- senha excede tamanho máximo
+
+Nunca incluir:
+
+- valor fornecido
+- hash
+- parte da senha
+
+---
+
+# 16. Logs
+
+Revise todo código criado nesta TASK.
+
+É proibido registrar:
+
+- raw password
+- encoded password/passwordHash
+- credentials
+
+Evite inclusive em nível:
+
+TRACE
+
+ou:
+
+DEBUG
+
+---
+
+# 17. Exceptions
+
+Nenhuma exception deve incluir a senha.
+
+Evite construções como:
+
+`throw new ...("Invalid password: " + password)`
+
+---
+
+# 18. toString
+
+Confirme novamente que `User.toString()` não inclui `passwordHash`.
+
+Caso Lombok esteja sendo utilizado, verifique explicitamente esse comportamento.
+
+Não exponha `passwordHash` através de métodos auxiliares desnecessários.
+
+---
+
+# 19. Serialização
+
+Embora `User` não deva ser exposto diretamente pela API, aplique defesa em profundidade quando apropriado.
+
+Não altere a arquitetura para depender exclusivamente de annotations JSON na entidade.
+
+DTOs continuarão sendo a fronteira da API.
+
+---
+
+# 20. Comparação de senhas
+
+Nunca compare:
+
+`rawPassword.equals(passwordHash)`
+
+Nunca decodifique hashes.
+
+Utilize exclusivamente:
+
+`PasswordEncoder.matches(...)`
+
+ou mecanismo oficial equivalente.
+
+---
+
+# 21. Salt
+
+Não implemente gerenciamento manual de salt se o algoritmo escolhido já o gerencia adequadamente.
+
+Não armazene uma coluna `salt` separada sem necessidade concreta.
+
+---
+
+# 22. Rehash futuro
+
+Avalie se o encoder escolhido permite identificar necessidade de upgrade do hash.
+
+Se o Spring Security oferecer mecanismo apropriado, documente como futuramente o sistema poderá rehashar a senha após autenticação bem-sucedida.
+
+NÃO implemente login nem rehash automático nesta TASK.
+
+---
+
+# 23. Configuração
+
+Se parâmetros do encoder precisarem ser configurados:
+
+- centralize a configuração
+- não espalhe números mágicos
+- documente a escolha
+
+Não exponha configuração insegura via frontend.
+
+---
+
+# 24. Spring Bean
+
+Disponibilize a infraestrutura através de DI do Spring.
+
+Exemplo:
+
+`PasswordEncoder`
+
+como bean.
+
+Evite:
+
+`new BCryptPasswordEncoder()`
+
+espalhado por services futuros.
+
+---
+
+# 25. Testes do encoder
+
+Crie testes cobrindo:
+
+### Hash
+
+Dada uma senha válida:
+
+- gera representação codificada
+- representação não é igual à senha original
+
+### Salt
+
+Quando apropriado ao algoritmo:
+
+codificar a mesma senha duas vezes deverá produzir hashes diferentes.
+
+Ambos devem validar corretamente.
+
+### Matches correto
+
+Senha correta:
+
+`true`
+
+### Matches incorreto
+
+Senha incorreta:
+
+`false`
+
+---
+
+# 26. Testes da política
+
+Cubra pelo menos:
+
+- senha mínima válida
+- senha abaixo do mínimo
+- senha acima do máximo
+- senha vazia
+- senha somente com espaços
+- passphrase válida
+- caracteres especiais válidos
+- comportamento com Unicode quando aplicável
+
+---
+
+# 27. Teste de não transformação
+
+Adicione teste que garanta que a implementação não aplique `trim()` silenciosamente.
+
+Exemplo conceitual:
+
+`" senha segura "`
+
+não deve ser tratada como:
+
+`"senha segura"`
+
+caso a primeira seja aceita pela política.
+
+---
+
+# 28. Testes não devem expor segredo real
+
+Senhas utilizadas em testes devem ser valores obviamente fictícios.
+
+Nunca copie senha de:
+
+- `.env`
+- banco local
+- configuração pessoal
+
+---
+
+# 29. Testcontainers
+
+Esta TASK é majoritariamente unitária.
+
+Não inicie MySQL/Testcontainers em testes que validam somente:
+
+- encoder
+- política de senha
+
+Execute os testes de integração existentes separadamente para garantir que nada foi quebrado.
+
+---
+
+# 30. Migration
+
+NÃO crie nova migration nesta TASK, salvo se for encontrada incompatibilidade real na coluna `password_hash` criada na TASK-1.1.
+
+Se houver incompatibilidade real:
+
+- NÃO altere migration já aplicada
+- crie nova migration corretiva
+- justifique no relatório
+
+Não faça alteração preventiva sem necessidade.
+
+---
+
+# 31. Banco de dados
+
+Não altere schema apenas para armazenar:
+
+- salt
+- senha original
+- histórico de senhas
+
+Esses requisitos não existem.
+
+---
+
+# 32. Spring Security temporário
+
+Não implemente autenticação nesta TASK.
+
+Preserve a configuração temporária existente.
+
+Não configure:
+
+- login endpoint
+- authentication manager funcional
+- JWT filter
+- UserDetailsService definitivo
+
+Esses itens virão posteriormente.
+
+---
+
+# 33. Frontend
+
+Não alterar Angular nesta TASK.
+
+Não criar:
+
+- password field
+- formulário
+- indicador de força de senha
+- página de cadastro
+
+---
+
+# 34. Documentação
+
+Crie ou atualize documentação de segurança apropriada.
+
+Preferencialmente:
+
+`docs/security.md`
+
+se ainda não existir.
+
+Documente objetivamente:
+
+## Password storage
+
+- algoritmo
+- implementação Spring utilizada
+- parâmetros relevantes
+
+## Password policy
+
+- comprimento mínimo
+- comprimento máximo
+- comportamento de espaços
+- Unicode
+
+## Regras
+
+- nunca armazenar plaintext
+- nunca logar credenciais
+- nunca comparar manualmente hash
+- utilizar PasswordEncoder
+
+## Evolução
+
+Documente estratégia conceitual para upgrade futuro de hashes.
+
+Não documente segredos ou credenciais.
+
+---
+
+# 35. CLAUDE.md
+
+Adicione somente regras permanentes relevantes, como:
+
+- senha nunca pode ser logada
+- passwordHash nunca pode ser retornado pela API
+- PasswordEncoder é obrigatório
+- algoritmo próprio é proibido
+
+Não copie toda a documentação de segurança para o CLAUDE.md.
+
+---
+
+# 36. Dependências
+
+Se for necessário adicionar dependência para o algoritmo escolhido:
+
+1. verifique primeiro se já existe transitivamente
+2. utilize dependência oficial/confiável
+3. confirme compatibilidade com Spring Boot 4
+4. explique a necessidade
+
+Não adicione múltiplas bibliotecas de hashing.
+
+---
+
+# 37. Critérios de aceite
+
+A TASK-1.2 estará concluída quando:
+
+- PasswordEncoder estiver configurado
+- algoritmo seguro estiver definido
+- decisão estiver documentada
+- password service/abstração existir quando apropriado
+- política de senha estiver implementada
+- comprimento mínimo estiver definido
+- comprimento máximo estiver definido
+- espaços não forem removidos silenciosamente
+- plaintext nunca for persistido
+- hashes não forem logados
+- comparação utilizar PasswordEncoder
+- testes do encoder passarem
+- testes da política passarem
+- testes anteriores continuarem passando
+- build Maven passar
+
+---
+
+# 38. Restrições
+
+NÃO implementar:
+
+- endpoint `/register`
+- endpoint `/login`
+- JWT
+- refresh token
+- AuthenticationManager de login
+- UserDetailsService definitivo
+- frontend
+- recuperação de senha
+- alteração de senha
+- reset de senha
+- confirmação de email
+- OAuth
+- MFA
+- CAPTCHA
+
+NÃO iniciar TASK-1.3.
+
+---
+
+# 39. Validação final
+
+Execute:
+
+1. testes unitários da infraestrutura de senha
+2. testes backend existentes relevantes
+3. testes de integração existentes
+4. build Maven completo
+
+Confirme que:
+
+- aplicação continua inicializando
+- Flyway continua funcionando
+- Hibernate continua validando schema
+- nenhuma regressão foi introduzida
+
+---
+
+# 40. Relatório final
+
+Ao concluir apresente:
+
+## TASK-1.2
+
+Status:
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## Estratégia
+
+Informe o algoritmo e a implementação efetivamente escolhidos.
+
+## PasswordEncoder
+
+Explique brevemente a configuração.
+
+## Política
+
+Informe:
+
+- mínimo
+- máximo
+- tratamento de espaços
+- tratamento Unicode
+
+## Proteções
+
+Confirme:
+
+- plaintext não armazenado
+- plaintext não logado
+- hash não exposto
+- comparação segura
+
+## Evolução
+
+Explique como hashes poderão ser atualizados futuramente.
+
+## Dependências
+
+Liste dependências adicionadas e justificativas.
+
+## Testes
+
+Liste testes executados e resultados.
+
+## Build
+
+PASS / FAIL
+
+## Arquivos criados
+
+Liste.
+
+## Arquivos modificados
+
+Liste.
+
+## Pendências
+
+Liste somente problemas reais.
+
+## Próxima tarefa
+
+Informe prontidão para:
+
+**TASK-1.3 — Cadastro de usuário**
+
+NÃO implemente a TASK-1.3.
