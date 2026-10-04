@@ -11,7 +11,10 @@
   </mat-sidenav>
 
   <mat-sidenav-content class="shell-content">
-    <app-header (menuToggle)="onMenuToggle()" />
+    <app-header
+      [userEmail]="currentUserEmail()"
+      (menuToggle)="onMenuToggle()"
+      (logout)="onLogout()" />
     <main class="main-content">
       <div class="content-container">
         <router-outlet />

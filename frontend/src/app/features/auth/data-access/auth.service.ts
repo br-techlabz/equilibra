@@ -134,7 +134,7 @@ export class AuthService {
 
   /**
    * Limpa completamente a sessão (token, usuário, status).
-   * Usado para logout ou reset interno.
+   * Usado para logout, 401, falha de /me ou reset interno.
    * Idempotente: seguro para chamadas repetidas.
    */
   clearSession(): void {
@@ -142,6 +142,15 @@ export class AuthService {
     this._currentUser.set(null);
     this._status.set('unauthenticated');
     this._authError.set(null);
+  }
+
+  /**
+   * Realiza logout do usuário autenticado.
+   * Limpa estado e navega para página de login.
+   */
+  logout(): void {
+    this.clearSession();
+    void this.router.navigate(['/login']);
   }
 
   /**

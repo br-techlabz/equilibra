@@ -1,0 +1,1544 @@
+# TASK-1.10 — Logout, experiência de sessão e Gate da Sprint 1
+
+As TASK-1.1 até TASK-1.9 foram concluídas.
+
+Esta é a última tarefa da:
+
+**Sprint 1 — Identidade, Usuários e Autenticação**
+
+Nesta TASK:
+
+1. implemente a experiência de logout;
+2. finalize o comportamento de sessão no frontend;
+3. revise toda a infraestrutura de autenticação;
+4. execute testes integrados de segurança;
+5. valide o isolamento multiusuário;
+6. execute o Gate final da Sprint 1.
+
+NÃO implemente novas funcionalidades financeiras.
+
+---
+
+# 1. Preparação obrigatória
+
+Antes de modificar código, leia integralmente:
+
+- `CLAUDE.md`
+- `README.md`
+- `docs/architecture.md`
+- `docs/api-guidelines.md`
+- `docs/frontend-architecture.md`
+- `docs/security.md`
+- ADRs existentes
+
+Revise todas as implementações da Sprint 1.
+
+## Backend
+
+Analise:
+
+- User
+- UserRepository
+- normalização de email
+- PasswordEncoder
+- PasswordService
+- `/api/auth/register`
+- `/api/auth/login`
+- JWT
+- JwtEncoder
+- JwtDecoder
+- Resource Server
+- SecurityFilterChain
+- CurrentUser
+- `/api/users/me`
+- Problem Details
+- Request ID
+- isolamento multiusuário
+
+## Frontend
+
+Analise:
+
+- `/register`
+- `/login`
+- AuthApiService
+- AuthService
+- access token em memória
+- currentUser
+- Authorization interceptor
+- tratamento de 401
+- Auth Guard
+- Guest Guard
+- shell autenticado
+- Request ID interceptor
+
+Apresente um plano resumido antes de implementar.
+
+---
+
+# 2. Objetivo funcional
+
+Implementar o fluxo completo:
+
+Register
+↓
+Login
+↓
+JWT
+↓
+Current User
+↓
+Área autenticada
+↓
+Logout
+↓
+Estado local removido
+↓
+Login
+
+Ao final da TASK, toda a Sprint 1 deverá estar validada como uma unidade.
+
+---
+
+# 3. Estratégia de logout
+
+A arquitetura atual utiliza:
+
+- access token JWT
+- stateless backend
+- token somente em memória
+- sem refresh token
+- sem blacklist
+
+Portanto, logout nesta versão é uma operação CLIENT-SIDE.
+
+Logout deverá:
+
+1. apagar access token da memória;
+2. apagar currentUser;
+3. alterar estado para unauthenticated;
+4. navegar para `/login`.
+
+---
+
+# 4. Não criar endpoint de logout
+
+NÃO crie:
+
+`POST /api/auth/logout`
+
+apenas por convenção.
+
+Sem:
+
+- sessão server-side
+- refresh token
+- blacklist
+
+o backend não possui estado útil para invalidar.
+
+Documente essa decisão.
+
+---
+
+# 5. Validade do JWT após logout
+
+Documente claramente:
+
+O JWT emitido continua criptograficamente válido até `exp`.
+
+O logout remove a capacidade normal do frontend de continuar utilizando esse token porque ele deixa de existir na memória.
+
+Esse é um trade-off conhecido da estratégia stateless atual.
+
+Não implemente blacklist apenas para alterar esse comportamento.
+
+---
+
+# 6. AuthService
+
+Finalize uma API clara de logout.
+
+Exemplo conceitual:
+
+`logout()`
+
+Responsabilidades:
+
+- limpar token
+- limpar currentUser
+- atualizar authenticationStatus
+
+Avalie se navegação deve ficar:
+
+- no AuthService
+
+ou:
+
+- no componente/layout
+
+Prefira separação coerente de responsabilidades.
+
+---
+
+# 7. clearSession
+
+Evite duplicação entre:
+
+- logout manual
+- 401
+- falha de `/me`
+
+Centralize a limpeza de estado.
+
+Exemplo conceitual:
+
+`clearSession()`
+
+O logout pode reutilizar essa operação.
+
+---
+
+# 8. Idempotência
+
+Executar limpeza de sessão múltiplas vezes deve ser seguro.
+
+Exemplo:
+
+logout
++
+401 simultâneo
+
+não deve causar exception ou estado inconsistente.
+
+---
+
+# 9. Botão de logout
+
+Adicione ação de logout no shell autenticado.
+
+Posicionamento sugerido:
+
+- menu do usuário
+- área de perfil
+- sidebar
+- toolbar
+
+Escolha de acordo com o layout existente.
+
+Não comprometa responsividade.
+
+---
+
+# 10. Identidade do usuário
+
+Quando apropriado, mostre no shell informação mínima do usuário autenticado.
+
+Exemplo:
+
+email
+
+Não mostrar:
+
+- UUID sem necessidade
+- JWT
+- claims
+- dados técnicos
+
+---
+
+# 11. Acessibilidade
+
+A ação de logout deve:
+
+- funcionar por teclado
+- possuir nome acessível
+- possuir foco visível
+
+Não depender apenas de ícone.
+
+Se utilizar ícone, forneça texto/aria-label adequado.
+
+---
+
+# 12. Mobile
+
+Em dispositivos móveis, logout deve continuar acessível.
+
+Se estiver dentro de drawer/menu:
+
+- menu abre corretamente
+- logout permanece alcançável
+- não fica escondido fora da viewport
+
+---
+
+# 13. Após logout
+
+Após logout:
+
+→ `/login`
+
+O usuário NÃO deverá permanecer visualmente no shell privado.
+
+---
+
+# 14. Histórico do navegador
+
+Avalie comportamento do botão Back após logout.
+
+Se usuário clicar Back:
+
+rota privada deve continuar protegida pelo Auth Guard.
+
+Não dependa de limpar histórico inteiro.
+
+---
+
+# 15. Navegação direta
+
+Após logout:
+
+abrir diretamente:
+
+`/dashboard`
+
+deve:
+
+→ redirecionar para `/login`
+
+---
+
+# 16. Guest Guard
+
+Após logout:
+
+`/login`
+
+e:
+
+`/register`
+
+devem voltar a ser acessíveis.
+
+---
+
+# 17. Login após logout
+
+Teste:
+
+login
+→ logout
+→ login novamente
+
+A aplicação deve funcionar normalmente.
+
+Não exigir reload.
+
+---
+
+# 18. Troca de usuário
+
+Teste explicitamente:
+
+1. login usuário A
+2. logout
+3. login usuário B
+
+Confirme:
+
+- currentUser = B
+- nenhum dado de identidade de A permanece no estado
+- token de A não permanece acessível pelo fluxo normal
+
+---
+
+# 19. Estado sensível futuro
+
+Documente uma regra para as próximas Sprints:
+
+Ao logout, stores/caches contendo dados privados do usuário também deverão ser limpos.
+
+Exemplos futuros:
+
+- contas
+- categorias
+- transações
+- relatórios
+
+Ainda não existem necessariamente.
+
+Não implemente stores fictícios.
+
+---
+
+# 20. Token continua somente em memória
+
+Mantenha a decisão da Sprint:
+
+NÃO utilizar:
+
+- localStorage
+- sessionStorage
+- IndexedDB
+- cookie JS
+
+---
+
+# 21. Reload
+
+Comportamento permanece:
+
+F5
+→ token perdido
+→ usuário não autenticado
+→ login
+
+Isso NÃO é bug nesta versão.
+
+Registre como decisão conhecida.
+
+---
+
+# 22. Não "corrigir" reload
+
+NÃO introduza armazenamento persistente nesta TASK.
+
+NÃO implemente refresh token.
+
+NÃO implemente cookie HttpOnly.
+
+Essas alternativas exigem decisão arquitetural separada.
+
+---
+
+# 23. Expiração durante uso
+
+Quando uma API protegida responder 401 devido a token expirado:
+
+- interceptor existente deve limpar sessão
+- usuário deve voltar ao login
+
+Revise se o comportamento está realmente funcionando.
+
+---
+
+# 24. Mensagem de sessão expirada
+
+Quando for possível distinguir de maneira segura um 401 de endpoint protegido de um logout manual, apresente mensagem amigável como:
+
+"Sua sessão expirou. Entre novamente."
+
+Não tente interpretar detalhes criptográficos.
+
+Não mostrar essa mensagem para:
+
+- senha incorreta no login
+- logout manual
+
+Se a distinção exigir arquitetura excessivamente complexa, mantenha comportamento simples.
+
+---
+
+# 25. 403
+
+Revise novamente:
+
+`403`
+
+NÃO deve apagar sessão automaticamente.
+
+Confirme por teste.
+
+---
+
+# 26. Token externo
+
+Revise o teste da TASK-1.9:
+
+requisição externa
+→ nunca recebe Authorization.
+
+Esse teste deve continuar passando.
+
+---
+
+# 27. Register Gate
+
+Valide novamente:
+
+`POST /api/auth/register`
+
+Cenários:
+
+- válido → 201
+- email inválido → 400
+- senha inválida → 400
+- email duplicado → 409
+
+Confirme ausência de password/passwordHash nas respostas.
+
+---
+
+# 28. Login Gate
+
+Valide:
+
+- credenciais corretas → 200 + JWT
+- senha incorreta → 401
+- email inexistente → 401
+- usuário inativo → 401
+
+Confirme que respostas inválidas não permitem enumeração trivial.
+
+---
+
+# 29. JWT Gate
+
+Valide:
+
+- assinatura
+- issuer
+- subject
+- issuedAt
+- expiration
+- JTI, se implementado
+
+Confirme que JWT NÃO contém:
+
+- password
+- passwordHash
+- dados financeiros
+- secrets
+
+---
+
+# 30. JWT inválido
+
+Teste:
+
+- token malformado
+- token adulterado
+- token expirado
+
+Todos:
+
+→ 401
+
+Sem stack trace.
+
+---
+
+# 31. `/me` Gate
+
+Valide:
+
+sem token
+→ 401
+
+token válido
+→ 200
+
+token inválido
+→ 401
+
+Response não contém:
+
+- password
+- passwordHash
+
+---
+
+# 32. CurrentUser Gate
+
+Confirme:
+
+JWT `sub`
+↓
+Spring Security
+↓
+SecurityContext
+↓
+CurrentUser
+
+O UUID correto deve chegar à camada de aplicação.
+
+---
+
+# 33. Anti-spoofing Gate
+
+Com JWT do usuário A:
+
+envie:
+
+`X-User-ID: <UUID-B>`
+
+quando aplicável.
+
+Confirme:
+
+CurrentUser continua sendo A.
+
+Nenhum header enviado pelo cliente substitui identidade autenticada.
+
+---
+
+# 34. Multiusuário Gate
+
+Crie dois usuários:
+
+A
+B
+
+Faça login com ambos separadamente.
+
+Confirme:
+
+JWT A → `/me` A
+
+JWT B → `/me` B
+
+Nenhuma mistura de identidades.
+
+---
+
+# 35. Ownership architecture Gate
+
+Ainda não existem recursos financeiros completos.
+
+Portanto, NÃO crie entidade fictícia apenas para testar ownership.
+
+Em vez disso, revise documentação e arquitetura.
+
+Confirme regra permanente:
+
+`ownerId = CurrentUser.id()`
+
+e nunca:
+
+`ownerId = request.userId`
+
+---
+
+# 36. IDOR/BOLA Gate
+
+Confirme que documentação estabelece:
+
+- repositories ownership-aware
+- cliente não define owner
+- recurso de outro usuário não deve ser retornado
+- preferência por 404 quando apropriado
+
+Essas regras serão testadas novamente nas Sprints financeiras.
+
+---
+
+# 37. Password Gate
+
+Revise:
+
+- senha nunca persistida em plaintext
+- PasswordEncoder utilizado
+- senha nunca logada
+- passwordHash nunca exposto
+- `toString()` seguro
+- comparação via PasswordEncoder
+
+---
+
+# 38. Email Gate
+
+Confirme:
+
+- normalização centralizada
+- casing tratado consistentemente
+- espaços conforme política definida
+- UNIQUE no banco
+- duplicidade concorrente protegida pelo banco
+
+---
+
+# 39. Security headers
+
+Revise configuração HTTP/Spring Security existente.
+
+Não adicione headers aleatórios.
+
+Confirme que nenhuma alteração da Sprint 1 enfraqueceu configurações padrão úteis.
+
+Documente somente mudanças necessárias.
+
+---
+
+# 40. CORS
+
+Revise configuração final.
+
+Confirme:
+
+- origem de desenvolvimento adequada
+- ausência de `*` inseguro quando credenciais/configuração não permitirem
+- sem ampliação desnecessária
+
+Não alterar apenas para fazer testes passarem.
+
+---
+
+# 41. CSRF
+
+Revise a decisão final da Sprint considerando:
+
+- API stateless
+- Bearer Authorization header
+- ausência de cookie de autenticação
+
+Documente a justificativa da configuração atual.
+
+---
+
+# 42. Sessions
+
+Confirme que backend utiliza estratégia stateless.
+
+Autenticação não deve depender de:
+
+`JSESSIONID`
+
+---
+
+# 43. Secrets
+
+Revise repositório.
+
+Procure por:
+
+- JWT private key
+- JWT secret
+- senha MySQL
+- credenciais reais
+- tokens
+- `.env`
+
+Nenhum segredo real deverá estar versionado.
+
+---
+
+# 44. Logs
+
+Revise código da Sprint 1 procurando por:
+
+- `console.log`
+- logger.debug
+- logger.info
+- exceptions
+
+Confirme que não registram:
+
+- password
+- passwordHash
+- JWT
+- Authorization header
+
+---
+
+# 45. Frontend storage
+
+Procure explicitamente por:
+
+- `localStorage`
+- `sessionStorage`
+- `indexedDB`
+
+Confirme que JWT não é persistido.
+
+---
+
+# 46. Frontend XSS
+
+Revise telas de login/cadastro.
+
+Confirme ausência de:
+
+- innerHTML inseguro
+- bypassSecurityTrustHtml desnecessário
+- renderização de mensagens backend como HTML
+
+---
+
+# 47. Problem Details
+
+Valide que continuam consistentes:
+
+- 400
+- 401
+- 403
+- 409
+- 404 quando aplicável
+- 500
+
+Não exigir que todos tenham detalhes idênticos, mas preserve padrão arquitetural.
+
+---
+
+# 48. Request ID
+
+Confirme `X-Request-ID` em:
+
+- register
+- login
+- `/me`
+- erro 401
+- erro 403 quando aplicável
+- erro de validação
+
+---
+
+# 49. OpenAPI Gate
+
+Revise documentação.
+
+Confirme:
+
+- register documentado
+- login documentado
+- `/me` documentado
+- Bearer scheme configurado
+- endpoints públicos sem requisito Bearer
+- `/me` protegido
+
+---
+
+# 50. Swagger Gate
+
+Quando Swagger UI estiver habilitado:
+
+1. registrar usuário
+2. login
+3. obter token
+4. usar Authorize
+5. chamar `/me`
+
+Não salvar token real em documentação ou screenshots versionadas.
+
+---
+
+# 51. Frontend route Gate
+
+Confirme:
+
+Públicas:
+
+- `/login`
+- `/register`
+
+Privadas:
+
+- `/dashboard` ou rota principal equivalente
+- shell autenticado
+
+---
+
+# 52. Auth Guard Gate
+
+Sem autenticação:
+
+rota privada
+→ login
+
+Com autenticação:
+
+rota privada
+→ permitida
+
+---
+
+# 53. Guest Guard Gate
+
+Sem autenticação:
+
+login/register
+→ permitidos
+
+Com autenticação:
+
+login/register
+→ área principal
+
+---
+
+# 54. Authorization Interceptor Gate
+
+Confirme:
+
+API protegida + token
+→ Bearer
+
+API sem token
+→ sem Bearer
+
+login
+→ sem Bearer
+
+register
+→ sem Bearer
+
+URL externa
+→ sem Bearer
+
+---
+
+# 55. Request ID + Authorization
+
+Confirme que ambos interceptors funcionam simultaneamente.
+
+Não deve haver perda de:
+
+`X-Request-ID`
+
+ao adicionar Authorization.
+
+---
+
+# 56. E2E principal
+
+Crie ou finalize cenário Playwright:
+
+1. abrir `/register`
+2. cadastrar usuário único
+3. chegar ao `/login`
+4. autenticar
+5. entrar na área privada
+6. confirmar usuário autenticado
+7. executar logout
+8. confirmar `/login`
+9. tentar rota privada
+10. confirmar permanência/redirecionamento para login
+
+Esse é o principal Gate E2E da Sprint.
+
+---
+
+# 57. E2E usuário A/B
+
+Quando viável:
+
+1. cadastrar A
+2. login A
+3. confirmar A
+4. logout
+5. cadastrar/login B
+6. confirmar B
+7. confirmar ausência visual de identidade A
+
+---
+
+# 58. E2E reload
+
+Valide comportamento conhecido:
+
+login
+→ área privada
+→ reload
+→ login
+
+PASS significa que o comportamento documentado está funcionando.
+
+---
+
+# 59. Responsividade
+
+Execute validação das telas da Sprint 1 em:
+
+- 360px
+- 768px
+- 1280px
+- 1920px
+
+Revise:
+
+- login
+- register
+- shell
+- menu/logout
+
+Confirme ausência de scroll horizontal indevido.
+
+---
+
+# 60. Acessibilidade
+
+Revise:
+
+## Login
+
+- labels
+- teclado
+- mostrar senha
+- erros
+- loading
+
+## Register
+
+- labels
+- confirmação
+- mostrar senha
+- erros
+
+## Logout
+
+- teclado
+- nome acessível
+- foco
+
+Execute ferramentas existentes de acessibilidade se configuradas.
+
+---
+
+# 61. Loading states
+
+Confirme que:
+
+- login não permite submit duplicado
+- register não permite submit duplicado
+- logout não deixa estado visual inconsistente
+
+---
+
+# 62. Testes backend
+
+Execute a suíte completa do backend.
+
+Inclua:
+
+- unitários
+- integração
+- Testcontainers
+- segurança
+
+Não pule testes para obter build verde.
+
+---
+
+# 63. Testes frontend
+
+Execute:
+
+- testes unitários
+- testes de services
+- interceptors
+- guards
+- componentes
+
+---
+
+# 64. E2E
+
+Execute Playwright se configurado.
+
+Se não estiver configurado, informe explicitamente.
+
+Não marque PASS sem execução.
+
+---
+
+# 65. Lint
+
+Execute lint real do frontend.
+
+Corrija problemas introduzidos pela Sprint.
+
+Não faça refatoração irrelevante em todo projeto.
+
+---
+
+# 66. Backend build
+
+Execute build Maven completo.
+
+Resultado esperado:
+
+PASS
+
+---
+
+# 67. Frontend build
+
+Execute build Angular de produção.
+
+Resultado esperado:
+
+PASS
+
+---
+
+# 68. Docker / ambiente
+
+Se o projeto possui Docker Compose ou ambiente integrado definido na Sprint 0:
+
+suba o ambiente e valide:
+
+MySQL
+↓
+Backend
+↓
+Frontend
+
+Não reestruture Docker nesta TASK sem necessidade.
+
+---
+
+# 69. Integração completa
+
+Execute manualmente ou via E2E:
+
+Register
+→ Login
+→ JWT
+→ `/me`
+→ área privada
+→ Logout
+→ acesso privado negado
+
+Esse fluxo deve passar antes de aprovar a Sprint.
+
+---
+
+# 70. Documentação
+
+Revise documentação da Sprint.
+
+Garanta que esteja consistente com a implementação REAL.
+
+Não deixe documentação dizendo, por exemplo:
+
+"JWT em localStorage"
+
+se implementação usa memória.
+
+---
+
+# 71. ADR de sessão
+
+Se o projeto utiliza ADRs e ainda não houver decisão formal, crie um ADR curto registrando:
+
+## Decisão atual
+
+- access token JWT
+- TTL curto
+- token em memória
+- sem refresh token
+- reload encerra sessão
+- logout client-side
+
+## Consequências
+
+Vantagens:
+
+- menor persistência de bearer token no browser
+- arquitetura simples
+
+Limitações:
+
+- F5 encerra sessão
+- JWT permanece válido até expiração após logout
+
+## Futuro
+
+Persistência de sessão deverá ser reavaliada através de decisão arquitetural explícita.
+
+Não definir solução futura antecipadamente.
+
+---
+
+# 72. CLAUDE.md
+
+Revise as regras permanentes da Sprint.
+
+Devem estar registradas, de forma concisa, regras como:
+
+- passwords nunca são logadas
+- passwordHash nunca é exposto
+- JWT nunca é logado
+- JWT não é enviado a domínio externo
+- APIs privadas são protegidas por padrão
+- CurrentUser define identidade
+- frontend não define ownerId
+- dados privados são ownership-aware
+
+Evite transformar CLAUDE.md em documentação extensa.
+
+---
+
+# 73. Não ampliar escopo
+
+Durante o Gate, corrija:
+
+- bugs
+- regressões
+- falhas de segurança
+- inconsistências de documentação
+- problemas diretamente relacionados à Sprint 1
+
+NÃO aproveite para implementar funcionalidades da Sprint 2.
+
+---
+
+# 74. Definition of Done da Sprint 1
+
+A Sprint 1 só poderá ser considerada concluída se:
+
+### Usuários
+
+- criação de conta funciona
+- email único funciona
+- senha segura funciona
+
+### Autenticação
+
+- login funciona
+- credenciais inválidas são seguras
+- JWT funciona
+
+### Segurança
+
+- API stateless
+- JWT validado
+- token não vaza
+- secrets não estão versionados
+
+### Identidade
+
+- `/me` funciona
+- CurrentUser funciona
+- anti-spoofing funciona
+
+### Frontend
+
+- register funciona
+- login funciona
+- guards funcionam
+- interceptor funciona
+- logout funciona
+
+### Multiusuário
+
+- identidade A/B não se mistura
+- regra de ownership está estabelecida
+
+### Qualidade
+
+- backend tests PASS
+- frontend tests PASS
+- build backend PASS
+- build frontend PASS
+- lint PASS
+- E2E PASS quando configurado
+
+---
+
+# 75. Condição de reprovação
+
+NÃO declare a Sprint concluída se existir problema crítico como:
+
+- password plaintext
+- passwordHash exposto
+- JWT hardcoded
+- JWT em localStorage contra decisão atual
+- token enviado a domínio externo
+- endpoint privado público
+- `/me` retornando usuário incorreto
+- possibilidade de spoofing de userId
+- build quebrado
+- testes críticos falhando
+
+Informe a pendência claramente.
+
+---
+
+# 76. Relatório final — TASK
+
+Ao concluir apresente:
+
+## TASK-1.10
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## Logout
+
+Explique implementação.
+
+## Estado removido
+
+Confirme:
+
+- access token
+- currentUser
+- authenticationStatus
+
+## Navegação
+
+Confirme comportamento após logout.
+
+## JWT após logout
+
+Explique o trade-off atual.
+
+## Reload
+
+Confirme comportamento.
+
+---
+
+# 77. Relatório final — Gate de Segurança
+
+Apresente:
+
+## Password storage
+PASS / FAIL
+
+## Password exposure
+PASS / FAIL
+
+## JWT signing
+PASS / FAIL
+
+## JWT validation
+PASS / FAIL
+
+## JWT expiration
+PASS / FAIL
+
+## JWT external leak protection
+PASS / FAIL
+
+## Stateless
+PASS / FAIL
+
+## CurrentUser
+PASS / FAIL
+
+## Anti-spoofing
+PASS / FAIL
+
+## Multi-user identity
+PASS / FAIL
+
+## Secrets review
+PASS / FAIL
+
+## Logging review
+PASS / FAIL
+
+## CORS
+PASS / FAIL
+
+## CSRF
+PASS / FAIL
+
+---
+
+# 78. Relatório final — Gate Backend
+
+Informe:
+
+## Register
+PASS / FAIL
+
+## Login
+PASS / FAIL
+
+## `/me`
+PASS / FAIL
+
+## 400
+PASS / FAIL
+
+## 401
+PASS / FAIL
+
+## 403
+PASS / FAIL / NÃO APLICÁVEL
+
+## 409
+PASS / FAIL
+
+## Problem Details
+PASS / FAIL
+
+## Request ID
+PASS / FAIL
+
+## OpenAPI
+PASS / FAIL
+
+## Testcontainers/MySQL
+PASS / FAIL
+
+## Maven tests
+PASS / FAIL
+
+## Maven build
+PASS / FAIL
+
+---
+
+# 79. Relatório final — Gate Frontend
+
+Informe:
+
+## Register
+PASS / FAIL
+
+## Login
+PASS / FAIL
+
+## AuthService
+PASS / FAIL
+
+## Authorization Interceptor
+PASS / FAIL
+
+## Auth Guard
+PASS / FAIL
+
+## Guest Guard
+PASS / FAIL
+
+## Logout
+PASS / FAIL
+
+## 401 handling
+PASS / FAIL
+
+## 403 handling
+PASS / FAIL
+
+## External token leak test
+PASS / FAIL
+
+## Unit tests
+PASS / FAIL
+
+## Lint
+PASS / FAIL
+
+## Production build
+PASS / FAIL
+
+---
+
+# 80. Relatório final — E2E
+
+Informe:
+
+## Register → Login
+PASS / FAIL
+
+## Login → área privada
+PASS / FAIL
+
+## `/me`
+PASS / FAIL
+
+## Logout
+PASS / FAIL
+
+## Logout → rota privada negada
+PASS / FAIL
+
+## Usuário A → Logout → Usuário B
+PASS / FAIL
+
+## Reload
+PASS / FAIL
+
+Caso E2E não esteja configurado:
+
+NÃO CONFIGURADO
+
+Explique objetivamente.
+
+---
+
+# 81. Relatório final — UX
+
+Informe validação:
+
+## 360px
+PASS / FAIL
+
+## 768px
+PASS / FAIL
+
+## 1280px
+PASS / FAIL
+
+## 1920px
+PASS / FAIL
+
+## Acessibilidade
+PASS / FAIL
+
+---
+
+# 82. Arquivos
+
+Liste:
+
+## Arquivos criados
+
+## Arquivos modificados
+
+## Arquivos removidos
+
+Não listar artefatos temporários irrelevantes.
+
+---
+
+# 83. Pendências
+
+Classifique eventuais pendências:
+
+### Bloqueantes
+
+Problemas que impedem aprovação da Sprint.
+
+### Não bloqueantes
+
+Melhorias que podem ser tratadas posteriormente.
+
+Não esconda falhas para declarar Sprint concluída.
+
+---
+
+# 84. Resultado da Sprint
+
+Ao final declare explicitamente:
+
+## SPRINT 1 — IDENTIDADE, USUÁRIOS E AUTENTICAÇÃO
+
+**APROVADA**
+
+ou:
+
+**REPROVADA**
+
+Justifique objetivamente.
+
+---
+
+# 85. Próxima etapa
+
+Somente se a Sprint 1 for APROVADA, informe prontidão para:
+
+# Sprint 2 — Contas e Categorias
+
+Próxima tarefa planejada:
+
+**TASK-2.1 — Modelo de domínio das contas de ativo**
+
+NÃO implemente TASK-2.1.
+
+Caso a Sprint seja reprovada, indique quais correções precisam ser realizadas antes da Sprint 2.

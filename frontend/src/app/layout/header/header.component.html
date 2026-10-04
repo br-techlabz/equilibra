@@ -13,9 +13,25 @@
   <span class="header-spacer"></span>
 
   <div class="header-user-area">
-    <div class="user-placeholder" aria-hidden="true">
+    <button
+      mat-icon-button
+      [matMenuTriggerFor]="userMenu"
+      aria-label="Menu do usuário"
+      matTooltip="Conta do usuário"
+      class="user-button">
       <mat-icon>account_circle</mat-icon>
-    </div>
-    <span class="user-text">Usuário</span>
+    </button>
+
+    <mat-menu #userMenu="matMenu" xPosition="before" yPosition="below">
+      <div class="menu-user-info">
+        <mat-icon>account_circle</mat-icon>
+        <span class="menu-user-email">{{ userEmail() }}</span>
+      </div>
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="logout.emit()">
+        <mat-icon>logout</mat-icon>
+        <span>Sair</span>
+      </button>
+    </mat-menu>
   </div>
 </mat-toolbar>
