@@ -1,0 +1,1163 @@
+# TASK-1.8 — Frontend Angular: login e estado de autenticação
+
+As TASK-1.1 até TASK-1.7 foram concluídas.
+
+Estamos na:
+
+**Sprint 1 — Identidade, Usuários e Autenticação**
+
+Nesta TASK implemente:
+
+- tela de login
+- integração com `/api/auth/login`
+- recebimento do access token JWT
+- armazenamento do access token SOMENTE em memória
+- estado de autenticação no Angular
+- carregamento do usuário atual através de `/api/users/me`
+- navegação após autenticação
+
+NÃO implemente ainda o interceptor global de Authorization nem Route Guards.
+
+Esses itens pertencem à TASK-1.9.
+
+---
+
+# 1. Preparação obrigatória
+
+Antes de alterar qualquer arquivo, leia integralmente:
+
+- `CLAUDE.md`
+- `README.md`
+- `docs/architecture.md`
+- `docs/api-guidelines.md`
+- `docs/frontend-architecture.md`
+- `docs/security.md`
+- ADRs existentes
+
+Analise especialmente:
+
+## Backend
+
+Confirme os contratos REAIS de:
+
+`POST /api/auth/login`
+
+e:
+
+`GET /api/users/me`
+
+Confirme:
+
+- request do login
+- response do login
+- `accessToken`
+- `tokenType`
+- `expiresIn`
+- nomes JSON efetivamente utilizados
+- contrato de `/me`
+- 400
+- 401
+- Problem Details
+- Request ID
+
+Não suponha contratos.
+
+## Frontend
+
+Analise:
+
+- feature `auth` criada na TASK-1.7
+- public layout
+- `/register`
+- placeholder `/login`, se existir
+- `AuthApiService`
+- configuração HTTP
+- Problem Details
+- Request ID interceptor
+- Signals
+- Router
+- layout autenticado
+- página temporária existente
+- testes
+- Playwright
+
+Apresente um plano resumido antes da implementação.
+
+---
+
+# 2. Objetivo
+
+Implementar o fluxo:
+
+Usuário
+↓
+/login
+↓
+email + senha
+↓
+POST /api/auth/login
+↓
+JWT
+↓
+token em memória
+↓
+GET /api/users/me
+↓
+Current User
+↓
+estado autenticado
+↓
+navegação para área principal
+
+---
+
+# 3. Rota
+
+Implemente:
+
+`/login`
+
+utilizando o layout público criado na TASK-1.7.
+
+Substitua eventual placeholder existente.
+
+Não utilize o shell autenticado na página de login.
+
+---
+
+# 4. Interface
+
+Preserve a identidade visual do Equilibra.
+
+Estrutura conceitual:
+
+Equilibra
+
+Entre na sua conta
+
+E-mail
+[_____________________]
+
+Senha
+[_____________________]
+
+[ Entrar ]
+
+Não possui conta? Criar conta
+
+Mantenha aparência consistente com `/register`.
+
+---
+
+# 5. Responsividade
+
+Valide pelo menos:
+
+- 360px
+- 768px
+- 1280px
+- 1920px
+
+Não gerar scroll horizontal.
+
+---
+
+# 6. Reactive Forms
+
+Utilize Reactive Forms.
+
+Campos:
+
+- email
+- password
+
+Utilize formulário tipado quando apropriado.
+
+Evite `any`.
+
+---
+
+# 7. Email
+
+Valide estruturalmente:
+
+- obrigatório
+- formato
+- tamanho máximo coerente
+
+Não aplique regras mais restritivas que o backend.
+
+---
+
+# 8. Password no login
+
+Valide apenas estrutura necessária.
+
+No login, NÃO reaplique toda a política de criação de senha.
+
+Uma senha existente deve poder ser autenticada mesmo se uma política futura mudar.
+
+No mínimo:
+
+- obrigatório
+- não vazio
+
+Não aplicar `trim()`.
+
+---
+
+# 9. Autocomplete
+
+Email:
+
+`autocomplete="email"`
+
+Senha:
+
+`autocomplete="current-password"`
+
+---
+
+# 10. Mostrar senha
+
+Implemente botão acessível para mostrar/ocultar senha.
+
+Utilize:
+
+- aria-label
+- tooltip quando apropriado
+- ícone consistente
+
+---
+
+# 11. AuthApiService
+
+Evolua o serviço criado na TASK-1.7.
+
+Adicione operação tipada:
+
+`login(...)`
+
+correspondente ao contrato real do backend.
+
+Não duplique services de autenticação sem necessidade.
+
+---
+
+# 12. Login DTO
+
+Crie tipos explícitos.
+
+Conceitualmente:
+
+`LoginRequest`
+
+- email
+- password
+
+`LoginResponse`
+
+- accessToken
+- tokenType
+- expiresIn
+
+Adapte aos nomes REAIS.
+
+---
+
+# 13. Current User DTO
+
+Modele a resposta REAL de:
+
+`GET /api/users/me`
+
+Exemplo conceitual:
+
+`CurrentUser`
+
+- id
+- email
+
+Não invente campos.
+
+---
+
+# 14. AuthService
+
+Crie uma camada responsável pelo estado de autenticação do frontend.
+
+Exemplo:
+
+`AuthService`
+
+Responsabilidades:
+
+- autenticar
+- manter token em memória
+- carregar usuário atual
+- expor estado de autenticação
+- limpar estado quando necessário
+
+Não misture esse serviço com apresentação visual.
+
+---
+
+# 15. Estado
+
+Utilize Signals quando apropriado.
+
+Exemplo conceitual:
+
+- accessToken
+- currentUser
+- authenticationStatus
+
+Estados possíveis:
+
+- unauthenticated
+- authenticating
+- authenticated
+
+Pode existir estado inicial equivalente se necessário.
+
+Não instale NgRx.
+
+---
+
+# 16. Token — decisão obrigatória
+
+Nesta TASK, o access token deve permanecer SOMENTE EM MEMÓRIA.
+
+É PROIBIDO armazená-lo em:
+
+- localStorage
+- sessionStorage
+- IndexedDB
+- cookie JavaScript
+- arquivo
+- URL
+- query parameter
+
+Não criar persistência silenciosa.
+
+---
+
+# 17. Consequência da estratégia
+
+Como não existe refresh token e o access token vive apenas em memória:
+
+**recarregar a página encerra a sessão do frontend.**
+
+Esse comportamento é ACEITO nesta fase.
+
+Documente explicitamente.
+
+Não tente contornar armazenando JWT no browser.
+
+---
+
+# 18. Não decodificar JWT para confiar em identidade
+
+O frontend não deve utilizar payload JWT como fonte autoritativa do perfil.
+
+Após login:
+
+1. receba token
+2. utilize token para chamar `/api/users/me`
+3. obtenha usuário atual do backend
+
+O `/me` é a fonte da representação atual do usuário.
+
+---
+
+# 19. JWT parsing
+
+Evite adicionar biblioteca para decodificar JWT.
+
+O frontend não precisa validar criptograficamente o token.
+
+Essa responsabilidade é do backend.
+
+---
+
+# 20. Chamada `/me`
+
+Como o interceptor Authorization ainda pertence à TASK-1.9, nesta TASK implemente a chamada autenticada de maneira mínima e localizada.
+
+Envie:
+
+`Authorization: Bearer <token>`
+
+somente na operação necessária para carregar `/me`.
+
+NÃO crie ainda interceptor global.
+
+Deixe a estrutura preparada para remover essa lógica localizada na TASK-1.9.
+
+---
+
+# 21. Sequência do login
+
+Fluxo obrigatório:
+
+1. usuário envia formulário
+2. estado = authenticating
+3. POST login
+4. recebe access token
+5. guarda token em memória
+6. GET `/me`
+7. recebe usuário
+8. guarda usuário em memória
+9. estado = authenticated
+10. navega para área principal
+
+---
+
+# 22. Falha ao carregar `/me`
+
+Se login retornar token válido, mas `/me` falhar:
+
+- NÃO considerar autenticação concluída
+- limpar token da memória
+- limpar currentUser
+- voltar para estado unauthenticated
+- apresentar erro apropriado
+
+Não deixar estado parcialmente autenticado.
+
+---
+
+# 23. Login inválido
+
+Para:
+
+`401 Unauthorized`
+
+apresente mensagem genérica equivalente a:
+
+"E-mail ou senha inválidos."
+
+Não informar:
+
+- email inexistente
+- senha incorreta
+- usuário desativado
+
+Preserve a proteção contra enumeração implementada no backend.
+
+---
+
+# 24. Request inválido
+
+Para 400:
+
+apresente erros de validação quando apropriado.
+
+Não mostrar JSON bruto.
+
+---
+
+# 25. Erro de rede
+
+Apresente mensagem amigável.
+
+Exemplo:
+
+"Não foi possível conectar ao serviço. Tente novamente."
+
+Não exibir URL interna.
+
+---
+
+# 26. Erro 500
+
+Apresente mensagem genérica.
+
+Não exibir:
+
+- stack trace
+- exception
+- detalhes internos
+
+---
+
+# 27. Loading
+
+Durante autenticação:
+
+- botão desabilitado
+- indicador visual
+- impedir múltiplos submits
+
+Não permitir múltiplas requisições de login por clique repetido.
+
+---
+
+# 28. Feedback
+
+Erros relacionados ao formulário podem aparecer próximos aos campos.
+
+Falhas gerais podem utilizar snackbar ou área de feedback apropriada.
+
+Não utilizar alert() nativo.
+
+---
+
+# 29. Navegação após sucesso
+
+Após autenticação completa:
+
+navegue para a rota principal existente.
+
+Preferencialmente:
+
+`/dashboard`
+
+se essa já for a convenção.
+
+Caso o dashboard real ainda não exista, utilize a página principal temporária existente dentro do shell.
+
+Não implemente Dashboard financeiro nesta TASK.
+
+---
+
+# 30. Cadastro
+
+Na tela de login:
+
+"Não possui conta? Criar conta"
+
+deve navegar para:
+
+`/register`
+
+utilizando Angular Router.
+
+---
+
+# 31. Após cadastro
+
+A TASK-1.7 já encaminha o usuário para `/login`.
+
+Preserve esse fluxo.
+
+Não faça auto-login após cadastro.
+
+---
+
+# 32. Auth state API
+
+O restante da aplicação deverá futuramente conseguir consultar de maneira simples:
+
+- usuário atual
+- está autenticado?
+- estado de autenticação
+
+Exemplo conceitual:
+
+`currentUser()`
+
+`isAuthenticated()`
+
+Não exponha senha.
+
+---
+
+# 33. Token encapsulado
+
+Evite expor publicamente o token como Signal mutável.
+
+O token deve permanecer encapsulado no AuthService.
+
+Quando a TASK-1.9 implementar interceptor, forneça uma forma mínima e controlada de obter o access token.
+
+Não permita que componentes alterem token diretamente.
+
+---
+
+# 34. Expiração
+
+O backend retorna `expiresIn`.
+
+Armazene metadados necessários em memória se forem úteis.
+
+Não implemente refresh automático.
+
+Não implemente timer complexo.
+
+Na TASK-1.9, respostas 401 de APIs protegidas poderão limpar a sessão.
+
+---
+
+# 35. Token expirado durante sessão
+
+Não implemente renovação.
+
+Se token expirar, a aplicação futuramente deverá retornar ao login.
+
+A infraestrutura completa desse comportamento será finalizada na TASK-1.9.
+
+---
+
+# 36. Logout interno
+
+O AuthService poderá possuir método interno/público simples:
+
+`clearSession()`
+
+ou equivalente, que:
+
+- apaga token em memória
+- apaga currentUser
+- define unauthenticated
+
+Isso prepara TASK-1.10.
+
+NÃO implemente ainda botão/fluxo completo de logout.
+
+---
+
+# 37. Reload
+
+Após reload:
+
+- AuthService inicia sem token
+- estado é unauthenticated
+
+Não tente restaurar sessão.
+
+Documente esse comportamento.
+
+---
+
+# 38. Segurança
+
+NUNCA:
+
+- logar password
+- logar JWT
+- mostrar JWT na UI
+- colocar token em URL
+- colocar token em localStorage
+- colocar token em sessionStorage
+
+---
+
+# 39. Console
+
+Remova logs temporários.
+
+Não utilizar:
+
+`console.log(loginResponse)`
+
+pois isso poderia registrar o JWT.
+
+---
+
+# 40. XSS
+
+Mantenha templates Angular normais.
+
+Não introduza:
+
+`innerHTML`
+
+ou bypasses de sanitização para mensagens do backend.
+
+Não renderize Problem Details como HTML.
+
+---
+
+# 41. Request ID
+
+Reutilize infraestrutura existente.
+
+A autenticação continua participando de:
+
+`X-Request-ID`
+
+Não implementar manualmente no componente.
+
+---
+
+# 42. Problem Details
+
+Reutilize o modelo criado na TASK-0.8.
+
+Não criar estrutura paralela de erro.
+
+---
+
+# 43. Guard
+
+NÃO implementar Route Guard nesta TASK.
+
+Isso será TASK-1.9.
+
+Portanto, se rotas internas ainda forem tecnicamente acessíveis digitando URL, registre essa limitação temporária.
+
+A segurança real continua no backend.
+
+---
+
+# 44. Authorization Interceptor
+
+NÃO implementar interceptor global nesta TASK.
+
+Somente `/me` poderá receber Bearer explicitamente durante o bootstrap pós-login.
+
+---
+
+# 45. Backend
+
+Não altere backend salvo incompatibilidade real encontrada no contrato.
+
+Se houver problema real:
+
+- documente
+- faça correção mínima se necessária
+- execute testes backend relacionados
+
+Não refatore segurança backend sem motivo.
+
+---
+
+# 46. Testes do formulário
+
+Cubra:
+
+### Inicial
+
+formulário inválido.
+
+### Email inválido
+
+rejeitado.
+
+### Email válido
+
+aceito.
+
+### Password vazio
+
+rejeitado.
+
+### Password não sofre trim
+
+confirmado.
+
+---
+
+# 47. Teste do AuthApiService
+
+Confirme:
+
+- POST correto
+- URL correta
+- body contém somente email/password
+- response tipada
+
+---
+
+# 48. Teste do AuthService — sucesso
+
+Simule:
+
+login
+→ token
+→ `/me`
+→ usuário
+
+Confirme:
+
+- estado final authenticated
+- currentUser correto
+- token mantido em memória
+
+---
+
+# 49. Teste AuthService — login inválido
+
+401 no login:
+
+- estado unauthenticated
+- token ausente
+- currentUser ausente
+
+---
+
+# 50. Teste AuthService — falha `/me`
+
+Login retorna token.
+
+`/me` falha.
+
+Confirme:
+
+- token apagado
+- usuário apagado
+- estado unauthenticated
+
+---
+
+# 51. Teste de armazenamento
+
+Crie teste ou inspeção adequada garantindo que autenticação NÃO escreva em:
+
+- localStorage
+- sessionStorage
+
+Não dependa somente de documentação.
+
+---
+
+# 52. Teste de Bearer em `/me`
+
+Confirme que a chamada `/me` contém:
+
+`Authorization: Bearer <token>`
+
+Não confirme/logue token real.
+
+Utilize valor fictício em teste.
+
+---
+
+# 53. Teste de submit duplicado
+
+Durante request em andamento:
+
+segunda tentativa não deverá gerar outro login.
+
+---
+
+# 54. Teste de navegação
+
+Após autenticação completa:
+
+navegar para área principal.
+
+Não navegar se `/me` falhar.
+
+---
+
+# 55. E2E
+
+Se Playwright estiver configurado, crie fluxo integrado:
+
+1. cadastrar usuário único
+2. chegar ao login
+3. preencher credenciais
+4. entrar
+5. confirmar navegação para área principal
+6. confirmar representação básica de usuário quando disponível
+
+Não inspecionar JWT no relatório.
+
+---
+
+# 56. E2E credenciais inválidas
+
+Teste:
+
+- email válido estruturalmente
+- senha incorreta
+- 401
+- mensagem genérica
+
+Não tornar suíte excessivamente longa.
+
+---
+
+# 57. E2E reload
+
+Valide explicitamente o comportamento atual:
+
+1. login
+2. usuário autenticado
+3. reload
+4. sessão frontend não é restaurada
+
+Esse comportamento é esperado nesta arquitetura temporária.
+
+Não classifique como bug.
+
+---
+
+# 58. Acessibilidade
+
+Valide:
+
+- labels
+- teclado
+- foco
+- mensagens de erro
+- botão mostrar senha
+- loading
+- contraste
+
+---
+
+# 59. Responsividade
+
+Valide visualmente:
+
+- 360px
+- 768px
+- 1280px
+- 1920px
+
+Confirme ausência de scroll horizontal.
+
+---
+
+# 60. Documentação frontend
+
+Atualize `docs/frontend-architecture.md`.
+
+Documente:
+
+## Authentication state
+
+- AuthService
+- Signals
+- currentUser
+- estado
+
+## Token storage
+
+- access token somente em memória
+- nunca localStorage/sessionStorage
+- reload encerra sessão nesta fase
+
+## Login flow
+
+login
+→ token
+→ `/me`
+→ authenticated
+
+---
+
+# 61. Security documentation
+
+Atualize `docs/security.md` somente com decisões relevantes ao cliente:
+
+- token não persistido
+- não logar JWT
+- frontend não valida identidade pelo payload
+- `/me` fornece identidade atual
+
+---
+
+# 62. CLAUDE.md
+
+Adicione somente regras permanentes, se ainda não existirem:
+
+- JWT nunca deve ser logado
+- access token não deve ser persistido em localStorage/sessionStorage sem nova decisão arquitetural explícita
+- frontend obtém usuário atual via `/me`
+
+Não duplicar documentação.
+
+---
+
+# 63. Build
+
+Execute:
+
+- lint
+- testes
+- build Angular produção
+
+Utilize scripts reais.
+
+---
+
+# 64. Integração real
+
+Quando ambiente permitir:
+
+MySQL
+↓
+Spring Boot
+↓
+Angular
+
+Execute:
+
+1. cadastrar usuário
+2. login
+3. receber token
+4. `/me`
+5. estado authenticated
+6. navegação
+
+Depois teste:
+
+7. senha incorreta
+8. 401
+9. mensagem genérica
+
+---
+
+# 65. Critérios de aceite
+
+A TASK-1.8 estará concluída quando:
+
+- `/login` existir
+- layout público for reutilizado
+- Reactive Forms for utilizado
+- email/password forem enviados corretamente
+- `/api/auth/login` for consumido
+- JWT for recebido
+- JWT permanecer somente em memória
+- localStorage não for utilizado
+- sessionStorage não for utilizado
+- JWT não for logado
+- `/me` for chamado após login
+- `/me` receber Bearer token
+- currentUser for carregado
+- estado authenticated existir
+- falha de `/me` limpar sessão
+- 401 apresentar mensagem genérica
+- submit duplicado for impedido
+- sucesso navegar para área principal
+- reload resultar em sessão frontend encerrada
+- testes passarem
+- E2E relevante passar quando configurado
+- lint passar
+- build produção passar
+
+---
+
+# 66. Restrições
+
+NÃO implementar:
+
+- interceptor global Authorization
+- Route Guard
+- refresh token
+- localStorage
+- sessionStorage
+- cookies de autenticação
+- refresh automático
+- logout completo na UI
+- recuperação de senha
+- OAuth
+- MFA
+- Dashboard financeiro
+
+NÃO iniciar TASK-1.9.
+
+---
+
+# 67. Relatório final
+
+Ao concluir apresente:
+
+## TASK-1.8
+
+Status:
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## Login
+
+Informe rota e fluxo implementado.
+
+## AuthService
+
+Explique estado mantido.
+
+## Token
+
+Confirme:
+
+- somente memória
+- não localStorage
+- não sessionStorage
+- não logado
+
+## Current User
+
+Explique integração com `/me`.
+
+## Estado
+
+Informe estados implementados.
+
+## Erros
+
+Resultados:
+
+- 400
+- 401
+- rede
+- 500
+- falha `/me`
+
+## Reload
+
+Confirme comportamento após reload.
+
+## Segurança
+
+Informe verificações realizadas.
+
+## Responsividade
+
+- 360px
+- 768px
+- 1280px
+- 1920px
+
+## Acessibilidade
+
+Resultado.
+
+## Testes
+
+Liste comandos e resultados.
+
+## E2E
+
+PASS / FAIL / NÃO CONFIGURADO
+
+## Lint
+
+PASS / FAIL
+
+## Build Angular
+
+PASS / FAIL
+
+## Integração real
+
+PASS / FAIL / NÃO EXECUTADA
+
+## Backend alterado
+
+SIM / NÃO
+
+Se SIM, justifique.
+
+## Arquivos criados
+
+Liste.
+
+## Arquivos modificados
+
+Liste.
+
+## Pendências
+
+Liste somente problemas reais.
+
+## Próxima tarefa
+
+Informe prontidão para:
+
+**TASK-1.9 — Authorization Interceptor, Route Guards e proteção de navegação**
+
+NÃO implemente TASK-1.9.
