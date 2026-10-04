@@ -1,0 +1,127 @@
+<app-public-layout>
+  <div class="register-card" role="main">
+    <header class="card-header">
+      <h1>Crie sua conta</h1>
+      <p>Preencha os dados abaixo para começar a usar o Equilibra.</p>
+    </header>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="register-form">
+      <!-- Email -->
+      <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+        <mat-label>Email</mat-label>
+        <input
+          matInput
+          type="email"
+          formControlName="email"
+          autocomplete="email"
+          aria-describedby="email-hint email-error"
+        />
+        <mat-hint id="email-hint" *ngIf="!form.controls.email.errors?.['required']"
+          >Ex: usuario&#64;exemplo.com</mat-hint
+        >
+        <mat-error id="email-error" *ngIf="form.controls.email.hasError('required')">
+          Email é obrigatório.
+        </mat-error>
+        <mat-error id="email-error" *ngIf="form.controls.email.hasError('email')">
+          Formato de email inválido.
+        </mat-error>
+        <mat-error id="email-error" *ngIf="form.controls.email.hasError('maxlength')">
+          Email não pode exceder 255 caracteres.
+        </mat-error>
+        <mat-error id="email-error" *ngIf="form.controls.email.hasError('server')">
+          {{ form.controls.email.getError('server') }}
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Senha -->
+      <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+        <mat-label>Senha</mat-label>
+        <input
+          matInput
+          [type]="showPassword() ? 'text' : 'password'"
+          formControlName="password"
+          autocomplete="new-password"
+          aria-describedby="password-hint password-error"
+        />
+        <button
+          type="button"
+          matSuffix
+          mat-icon-button
+          (click)="togglePassword()"
+          [attr.aria-label]="showPassword() ? 'Ocultar senha' : 'Mostrar senha'"
+          [attr.aria-pressed]="showPassword()"
+        >
+          <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        <mat-hint id="password-hint" *ngIf="!form.controls.password.errors?.['required']"
+          >Use pelo menos 8 caracteres. Máximo 128.</mat-hint
+        >
+        <mat-error id="password-error" *ngIf="form.controls.password.hasError('required')">
+          Senha é obrigatória.
+        </mat-error>
+        <mat-error id="password-error" *ngIf="form.controls.password.hasError('minlength')">
+          Senha deve possuir pelo menos 8 caracteres.
+        </mat-error>
+        <mat-error id="password-error" *ngIf="form.controls.password.hasError('maxlength')">
+          Senha excede o tamanho máximo de 128 caracteres.
+        </mat-error>
+        <mat-error id="password-error" *ngIf="form.controls.password.hasError('onlyWhitespace')">
+          Senha não pode conter apenas espaços em branco.
+        </mat-error>
+        <mat-error id="password-error" *ngIf="form.controls.password.hasError('server')">
+          {{ form.controls.password.getError('server') }}
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Confirmar Senha -->
+      <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+        <mat-label>Confirmar senha</mat-label>
+        <input
+          matInput
+          [type]="showConfirmPassword() ? 'text' : 'password'"
+          formControlName="confirmPassword"
+          autocomplete="new-password"
+          aria-describedby="confirm-error"
+        />
+        <button
+          type="button"
+          matSuffix
+          mat-icon-button
+          (click)="toggleConfirmPassword()"
+          [attr.aria-label]="showConfirmPassword() ? 'Ocultar senha' : 'Mostrar senha'"
+          [attr.aria-pressed]="showConfirmPassword()"
+        >
+          <mat-icon>{{ showConfirmPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+        <mat-error id="confirm-error" *ngIf="form.controls.confirmPassword.hasError('required')">
+          Confirmação de senha é obrigatória.
+        </mat-error>
+        <mat-error id="confirm-error" *ngIf="isPasswordMismatch()">
+          As senhas não coincidem.
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Server Error Global -->
+      <div class="server-error" *ngIf="serverError()" role="alert">
+        <mat-icon>error</mat-icon>
+        <span>{{ serverError() }}</span>
+      </div>
+
+      <!-- Submit Button -->
+      <button
+        mat-flat-button
+        color="primary"
+        type="submit"
+        [disabled]="form.invalid || isSubmitting()"
+        class="submit-button full-width"
+      >
+        <mat-spinner diameter="20" *ngIf="isSubmitting()" />
+        <span *ngIf="!isSubmitting()">Criar conta</span>
+      </button>
+    </form>
+
+    <footer class="card-footer">
+      <p>Já possui uma conta? <a routerLink="/login">Entrar</a></p>
+    </footer>
+  </div>
+</app-public-layout>

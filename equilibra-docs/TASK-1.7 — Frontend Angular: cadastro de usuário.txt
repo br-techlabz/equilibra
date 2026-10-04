@@ -1,0 +1,1099 @@
+# TASK-1.7 — Frontend Angular: cadastro de usuário
+
+As TASK-1.1 até TASK-1.6 foram concluídas.
+
+Estamos na:
+
+**Sprint 1 — Identidade, Usuários e Autenticação**
+
+Nesta TASK implemente a primeira funcionalidade real de identidade no frontend:
+
+**Criação de conta**
+
+Fluxo:
+
+Usuário
+→ página de cadastro
+→ formulário Angular
+→ POST /api/auth/register
+→ conta criada
+→ feedback
+→ redirecionamento para login
+
+NÃO implemente autenticação JWT no frontend nesta TASK.
+
+---
+
+# 1. Preparação obrigatória
+
+Antes de modificar qualquer arquivo, leia:
+
+- `CLAUDE.md`
+- `README.md`
+- `docs/architecture.md`
+- `docs/api-guidelines.md`
+- `docs/frontend-architecture.md`
+- `docs/security.md`
+- ADRs existentes
+
+Analise especificamente:
+
+## Frontend
+
+- Angular 19 efetivamente instalado
+- estrutura `core/shared/layout/features`
+- Standalone Components
+- Angular Material
+- tema
+- responsividade
+- Router
+- HttpClient
+- configuração da API
+- proxy/CORS
+- Problem Details
+- tratamento HTTP
+- Request ID interceptor
+- página temporária
+- testes
+- Playwright
+
+## Backend
+
+Confirme o contrato REAL de:
+
+`POST /api/auth/register`
+
+Analise:
+
+- request
+- response
+- 201
+- 400
+- 409
+- Problem Details
+- erros de campo
+- política real de senha
+
+NÃO suponha contratos.
+
+Implemente o frontend contra a API existente.
+
+Apresente um plano resumido antes das alterações.
+
+---
+
+# 2. Objetivo
+
+Criar rota pública para cadastro.
+
+Sugestão:
+
+`/register`
+
+A página deverá permitir informar:
+
+- email
+- senha
+- confirmação da senha
+
+IMPORTANTE:
+
+`confirmPassword` existe apenas no frontend.
+
+NÃO enviar `confirmPassword` para o backend.
+
+---
+
+# 3. Feature
+
+Crie/organize:
+
+`features/auth`
+
+seguindo a arquitetura existente.
+
+Estrutura conceitual:
+
+auth/
+├── data-access/
+├── pages/
+└── ...
+
+Não crie camadas desnecessárias apenas para obedecer essa estrutura.
+
+Adapte ao projeto real.
+
+---
+
+# 4. Standalone
+
+Utilize Standalone Components.
+
+Não introduza NgModule para autenticação.
+
+---
+
+# 5. Lazy loading
+
+Carregue a feature/rota de cadastro de forma lazy quando apropriado.
+
+Evite colocar toda autenticação no bundle inicial sem necessidade.
+
+---
+
+# 6. Layout público
+
+Cadastro não deverá utilizar necessariamente o mesmo shell autenticado com sidebar financeira.
+
+Crie ou prepare um layout público simples para:
+
+- login
+- cadastro
+
+Visual conceitual:
+
++--------------------------------+
+|                                |
+|           Equilibra            |
+|                                |
+|       Crie sua conta           |
+|                                |
+|  Email                         |
+|  [________________________]    |
+|                                |
+|  Senha                         |
+|  [________________________]    |
+|                                |
+|  Confirmar senha               |
+|  [________________________]    |
+|                                |
+|       [ Criar conta ]          |
+|                                |
+|  Já possui conta? Entrar       |
+|                                |
++--------------------------------+
+
+Não implemente login funcional nesta TASK.
+
+O link poderá apontar para a futura rota `/login`, desde que isso não exija criar login fake.
+
+---
+
+# 7. Identidade visual
+
+Preserve a identidade definida na TASK-0.7.
+
+A tela deve parecer parte do Equilibra.
+
+Utilize:
+
+- Angular Material
+- tema existente
+- espaçamento consistente
+- tipografia existente
+- design tokens existentes
+
+Não crie uma segunda identidade visual para autenticação.
+
+---
+
+# 8. Responsividade
+
+A página deverá funcionar adequadamente em:
+
+- 360px
+- 768px
+- 1280px
+- 1920px
+
+No desktop:
+
+formulário centralizado com largura confortável.
+
+No mobile:
+
+usar largura disponível com margens adequadas.
+
+Não gerar scroll horizontal.
+
+---
+
+# 9. Reactive Forms
+
+Utilize:
+
+`ReactiveForms`
+
+Não utilize template-driven forms.
+
+Crie formulário tipado quando suportado pela configuração atual.
+
+Evite `any`.
+
+---
+
+# 10. Campos
+
+## Email
+
+Tipo apropriado:
+
+`email`
+
+## Senha
+
+Tipo:
+
+`password`
+
+## Confirmar senha
+
+Tipo:
+
+`password`
+
+Utilize autocomplete apropriado.
+
+Para criação de senha, considere:
+
+`autocomplete="new-password"`
+
+---
+
+# 11. Email — validação frontend
+
+Valide coerentemente com o backend:
+
+- obrigatório
+- formato
+- tamanho máximo
+
+Não crie regras frontend mais restritivas sem necessidade.
+
+O backend continua sendo autoridade final.
+
+---
+
+# 12. Senha — política
+
+Utilize a política REAL definida na TASK-1.2.
+
+Não invente valores.
+
+Se a política atual for, por exemplo:
+
+- mínimo 8
+- máximo 128
+
+o frontend deverá refletir exatamente isso.
+
+Não exigir:
+
+- maiúscula
+- símbolo
+- número
+
+se o backend não exige.
+
+---
+
+# 13. Confirmação
+
+`password` e `confirmPassword` deverão coincidir.
+
+A validação deve ocorrer no frontend.
+
+Se diferentes:
+
+- impedir submit
+- apresentar mensagem acessível
+
+Não enviar confirmação ao backend.
+
+---
+
+# 14. Espaços da senha
+
+NÃO utilizar `trim()` na senha.
+
+NÃO modificar a senha.
+
+Preserve exatamente o valor digitado.
+
+Isso deve ser consistente com TASK-1.2.
+
+---
+
+# 15. Email
+
+Pode aplicar a normalização visual apropriada quando coerente, mas o backend continua responsável pela normalização definitiva.
+
+Evite alterar o email de maneira surpreendente enquanto o usuário digita.
+
+---
+
+# 16. Mostrar/ocultar senha
+
+Implemente botão para alternar visibilidade da senha se isso puder ser feito de forma simples e acessível.
+
+Faça o mesmo para confirmação.
+
+Botões devem possuir:
+
+- nome acessível
+- `aria-label` adequado
+
+Não depender apenas do ícone.
+
+---
+
+# 17. Indicador de força
+
+NÃO implemente medidor complexo de força de senha nesta TASK.
+
+Pode apresentar texto simples sobre os requisitos reais.
+
+Exemplo:
+
+"Use pelo menos 8 caracteres."
+
+Somente se corresponder à política real.
+
+---
+
+# 18. Submit
+
+Botão:
+
+`Criar conta`
+
+Durante envio:
+
+- desabilitar submit
+- impedir envio duplicado
+- mostrar indicador de carregamento
+
+Não permitir múltiplos POST acidentais por clique repetido.
+
+---
+
+# 19. Register API service
+
+Crie serviço frontend específico para autenticação/registro.
+
+Exemplo conceitual:
+
+`AuthApiService`
+
+ou equivalente.
+
+Responsabilidade nesta TASK:
+
+`register(request)`
+
+Não implemente login ainda.
+
+---
+
+# 20. DTO frontend
+
+Crie tipos explícitos correspondentes à API real.
+
+Exemplo conceitual:
+
+`RegisterRequest`
+
+com:
+
+- email
+- password
+
+e response de acordo com backend.
+
+NÃO incluir:
+
+`confirmPassword`
+
+no DTO enviado à API.
+
+---
+
+# 21. API URL
+
+Utilize infraestrutura central criada na TASK-0.8.
+
+NÃO escrever:
+
+`http://localhost:8080`
+
+no service.
+
+---
+
+# 22. Request ID
+
+Reutilize interceptor existente.
+
+Não implemente request ID manualmente no componente.
+
+---
+
+# 23. Problem Details
+
+Reutilize os tipos e tratamento criados na TASK-0.8.
+
+Não crie uma segunda representação incompatível de Problem Details.
+
+---
+
+# 24. Erro 400
+
+Quando backend retornar validação:
+
+- associe erros de campo aos campos correspondentes quando possível
+- apresente mensagem adequada
+
+Não mostrar JSON bruto.
+
+Não mostrar stack trace.
+
+---
+
+# 25. Erro 409
+
+Email já cadastrado:
+
+apresente mensagem clara, por exemplo:
+
+"Já existe uma conta cadastrada com este e-mail."
+
+Utilize o Problem Details real quando possível.
+
+Não trate todo 409 como email duplicado se a API puder ter outros conflitos.
+
+---
+
+# 26. Enumeração
+
+Cadastro necessariamente informa que um email já existe através do 409 definido no backend.
+
+Mantenha comportamento consistente com a API.
+
+Não revele qualquer informação adicional sobre a conta.
+
+---
+
+# 27. Erro de rede
+
+Se backend estiver indisponível:
+
+apresente mensagem amigável.
+
+Exemplo:
+
+"Não foi possível conectar ao serviço. Tente novamente."
+
+Não mostrar:
+
+- URL interna
+- status 0
+- stack trace
+
+---
+
+# 28. Erro 500
+
+Apresente mensagem genérica.
+
+Exemplo:
+
+"Não foi possível criar sua conta. Tente novamente."
+
+Preserve request ID internamente quando infraestrutura existente permitir diagnóstico.
+
+---
+
+# 29. Feedback de sucesso
+
+Após `201 Created`:
+
+apresente confirmação clara.
+
+Exemplo:
+
+"Conta criada com sucesso."
+
+Depois encaminhe o usuário para:
+
+`/login`
+
+Não autenticar automaticamente.
+
+---
+
+# 30. Redirecionamento
+
+Evite delay artificial longo.
+
+Pode:
+
+1. mostrar snackbar
+2. navegar imediatamente para login
+
+ou estratégia equivalente consistente.
+
+Não utilizar `setTimeout` desnecessariamente.
+
+---
+
+# 31. Login ainda inexistente
+
+Se `/login` ainda não existir, crie apenas a rota/página mínima necessária para receber o redirecionamento.
+
+Essa página deve indicar de forma limpa que o login será implementado na próxima TASK.
+
+NÃO criar formulário de login funcional nesta TASK.
+
+NÃO consumir `/api/auth/login`.
+
+---
+
+# 32. Navegação
+
+Na página de cadastro:
+
+"Já possui uma conta? Entrar"
+
+deve apontar para `/login`.
+
+Não utilizar `<a href>` causando reload completo quando Angular Router for apropriado.
+
+---
+
+# 33. Shell autenticado
+
+Usuário não autenticado NÃO deverá ver:
+
+- Dashboard
+- Contas
+- Categorias
+- Transações
+- Relatórios
+
+na tela de cadastro.
+
+Use layout público.
+
+Guards reais serão implementados posteriormente.
+
+---
+
+# 34. Dashboard
+
+NÃO modificar Dashboard financeiro.
+
+Ele ainda não existe funcionalmente.
+
+---
+
+# 35. Autofill
+
+Utilize atributos HTML adequados.
+
+Email:
+
+`autocomplete="email"`
+
+Senha nova:
+
+`autocomplete="new-password"`
+
+Confirmação:
+
+`autocomplete="new-password"`
+
+---
+
+# 36. Acessibilidade
+
+Garanta:
+
+- labels visíveis
+- associação label/input
+- erros acessíveis
+- foco visível
+- navegação por teclado
+- botão mostrar senha acessível
+- submit acessível
+- contraste adequado
+
+Não utilize placeholder como único label.
+
+---
+
+# 37. Erros
+
+Mensagens devem aparecer próximas aos campos.
+
+Não exibir erro antes que faça sentido, por exemplo antes de interação, salvo após tentativa de submit.
+
+Evite experiência agressiva de validação.
+
+---
+
+# 38. Focus management
+
+Após erro de submit causado por formulário inválido, avalie focar o primeiro campo inválido.
+
+Após erro retornado pelo backend, mantenha navegação previsível.
+
+Não implemente solução excessivamente complexa.
+
+---
+
+# 39. Snackbar
+
+Utilize Angular Material Snackbar para feedback global quando apropriado.
+
+Exemplos:
+
+- sucesso
+- falha de rede
+
+Erros de campo devem permanecer próximos ao campo.
+
+---
+
+# 40. Segurança frontend
+
+NUNCA registrar:
+
+- password
+- confirmPassword
+
+Não utilizar:
+
+`console.log(form.value)`
+
+Não armazenar senha em:
+
+- localStorage
+- sessionStorage
+- IndexedDB
+
+---
+
+# 41. JWT
+
+NÃO implementar JWT frontend.
+
+Mesmo que backend retorne JWT no login, login ainda não será chamado.
+
+Não criar token storage.
+
+---
+
+# 42. Auth state
+
+NÃO criar estado global complexo de autenticação nesta TASK.
+
+Isso será definido nas próximas tarefas.
+
+---
+
+# 43. Guards
+
+NÃO implementar route guards ainda.
+
+---
+
+# 44. Interceptor Authorization
+
+NÃO implementar:
+
+`Authorization: Bearer`
+
+nesta TASK.
+
+---
+
+# 45. Testes do formulário
+
+Cubra pelo menos:
+
+### Inicial
+
+Formulário inválido.
+
+### Email válido
+
+Aceito.
+
+### Email inválido
+
+Rejeitado.
+
+### Senha válida
+
+Aceita.
+
+### Senha abaixo do mínimo
+
+Rejeitada.
+
+### Confirmação igual
+
+Aceita.
+
+### Confirmação diferente
+
+Rejeitada.
+
+---
+
+# 46. Teste de espaços da senha
+
+Confirme que senha não sofre `trim()`.
+
+---
+
+# 47. Teste do DTO
+
+Confirme que request enviado contém apenas:
+
+- email
+- password
+
+E NÃO contém:
+
+- confirmPassword
+
+---
+
+# 48. Teste de submit
+
+Com formulário válido:
+
+- service chamado uma vez
+- botão bloqueado durante request
+
+Evite chamadas duplicadas.
+
+---
+
+# 49. Teste 201
+
+Simule sucesso.
+
+Confirme:
+
+- feedback
+- navegação para `/login`
+
+---
+
+# 50. Teste 400
+
+Simule Problem Details de validação.
+
+Confirme associação adequada de erro.
+
+---
+
+# 51. Teste 409
+
+Simule email duplicado.
+
+Confirme mensagem adequada.
+
+---
+
+# 52. Teste de rede
+
+Simule indisponibilidade.
+
+Confirme que componente continua estável.
+
+---
+
+# 53. Teste 500
+
+Confirme feedback genérico e ausência de detalhes técnicos.
+
+---
+
+# 54. Testes AuthApiService
+
+Utilize infraestrutura HTTP de testes apropriada.
+
+Confirme:
+
+- método POST
+- URL correta
+- body correto
+- tipagem
+
+Não depender do backend real nos testes unitários.
+
+---
+
+# 55. E2E
+
+Atualize Playwright, se configurado.
+
+Crie cenário de cadastro quando ambiente integrado permitir.
+
+Fluxo:
+
+1. abrir `/register`
+2. preencher email fictício único
+3. preencher senha válida
+4. confirmar senha
+5. enviar
+6. backend retornar 201
+7. usuário ser encaminhado para `/login`
+
+Evite email fixo que gere conflito em execuções repetidas.
+
+Gere valor único de teste.
+
+---
+
+# 56. E2E duplicidade
+
+Se apropriado:
+
+1. registrar email
+2. tentar novamente
+3. confirmar mensagem de conta existente
+
+Não torne suíte excessivamente lenta.
+
+---
+
+# 57. Responsividade
+
+Valide visualmente:
+
+- 360px
+- 768px
+- 1280px
+- 1920px
+
+Confirme:
+
+- campos não cortados
+- card/form não excede tela
+- botão acessível
+- mensagens não quebram layout
+- mostrar senha funciona
+- sem scroll horizontal
+
+---
+
+# 58. Build
+
+Execute scripts reais do projeto para:
+
+- lint
+- testes
+- build produção
+
+Não invente comandos.
+
+---
+
+# 59. Integração real
+
+Quando ambiente permitir:
+
+MySQL
+↓
+Spring Boot
+↓
+Angular
+
+Teste cadastro real.
+
+Confirme no backend:
+
+- usuário criado
+- email normalizado
+- passwordHash armazenado
+- senha original não persistida
+
+Não consultar/exibir hash no frontend.
+
+---
+
+# 60. Documentação
+
+Atualize documentação frontend quando necessário.
+
+Documente:
+
+- feature auth
+- layout público
+- Reactive Forms
+- tratamento de erros
+- integração register
+
+Não documente JWT frontend ainda.
+
+---
+
+# 61. Critérios de aceite
+
+A TASK-1.7 estará concluída quando:
+
+- `/register` existir
+- layout público existir
+- formulário for responsivo
+- Reactive Forms for utilizado
+- email for validado
+- senha seguir política real
+- confirmação funcionar
+- senha não sofrer trim
+- mostrar/ocultar senha funcionar
+- submit duplicado for impedido
+- API service existir
+- DTO não enviar confirmPassword
+- POST `/api/auth/register` funcionar
+- 201 produzir feedback
+- usuário for encaminhado para `/login`
+- 400 for tratado
+- 409 for tratado
+- falha de rede for tratada
+- 500 for tratado
+- Problem Details existente for reutilizado
+- Request ID existente for reutilizado
+- nenhuma senha for logada
+- nenhuma senha for armazenada no browser
+- testes unitários passarem
+- E2E relevante passar quando configurado
+- lint passar
+- build produção passar
+
+---
+
+# 62. Restrições
+
+NÃO implementar:
+
+- login funcional
+- chamada `/api/auth/login`
+- armazenamento JWT
+- Authorization interceptor
+- route guard
+- refresh token
+- logout
+- Dashboard financeiro
+- recuperação de senha
+- OAuth
+- MFA
+- CAPTCHA
+- confirmação de email
+
+NÃO iniciar TASK-1.8.
+
+---
+
+# 63. Relatório final
+
+Ao concluir apresente:
+
+## TASK-1.7
+
+Status:
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## Rota
+
+Informe a rota criada.
+
+## Layout público
+
+Descreva brevemente.
+
+## Formulário
+
+Informe:
+
+- campos
+- validações
+- política de senha utilizada
+
+## Integração
+
+Informe contrato utilizado com `/api/auth/register`.
+
+## Tratamento de erros
+
+Informe:
+
+- 400
+- 409
+- rede
+- 500
+
+## Segurança
+
+Confirme:
+
+- senha não logada
+- senha não armazenada
+- confirmPassword não enviado
+- JWT ainda não armazenado
+
+## Responsividade
+
+Resultados:
+
+- 360px
+- 768px
+- 1280px
+- 1920px
+
+## Acessibilidade
+
+Informe verificações realizadas.
+
+## Testes
+
+Liste comandos e resultados.
+
+## E2E
+
+PASS / FAIL / NÃO CONFIGURADO
+
+## Lint
+
+PASS / FAIL
+
+## Build Angular
+
+PASS / FAIL
+
+## Integração real
+
+PASS / FAIL / NÃO EXECUTADA
+
+## Arquivos criados
+
+Liste.
+
+## Arquivos modificados
+
+Liste.
+
+## Pendências
+
+Somente pendências reais.
+
+## Próxima tarefa
+
+Informe prontidão para:
+
+**TASK-1.8 — Frontend: login e estado de autenticação**
+
+NÃO implemente TASK-1.8.
