@@ -1,0 +1,1132 @@
+# TASK-1.9 — Authorization Interceptor, Route Guards e proteção de navegação
+
+As TASK-1.1 até TASK-1.8 foram concluídas.
+
+Estamos na:
+
+**Sprint 1 — Identidade, Usuários e Autenticação**
+
+Nesta TASK implemente a infraestrutura frontend responsável por:
+
+- adicionar JWT automaticamente às chamadas autenticadas da API
+- proteger rotas privadas
+- impedir usuário autenticado de acessar login/cadastro
+- tratar expiração/invalidação de sessão
+- remover o Bearer manual utilizado na TASK-1.8
+- proteger o shell autenticado
+
+NÃO implemente refresh token.
+
+---
+
+# 1. Preparação obrigatória
+
+Antes de modificar qualquer arquivo, leia:
+
+- `CLAUDE.md`
+- `README.md`
+- `docs/architecture.md`
+- `docs/api-guidelines.md`
+- `docs/frontend-architecture.md`
+- `docs/security.md`
+- ADRs existentes
+
+Analise especialmente:
+
+## Auth
+
+- `AuthService`
+- estado de autenticação
+- access token em memória
+- `currentUser`
+- `clearSession()`
+- fluxo login → `/me`
+- implementação manual atual do Bearer em `/me`
+
+## Routing
+
+- rotas públicas
+- `/login`
+- `/register`
+- rota principal
+- shell/layout autenticado
+- lazy loading
+
+## HTTP
+
+- HttpClient
+- interceptors existentes
+- Request ID interceptor
+- Problem Details
+- API base URL
+
+## Backend
+
+Confirme:
+
+- Bearer JWT
+- 401
+- 403
+- `/api/users/me`
+
+Apresente plano resumido antes de implementar.
+
+---
+
+# 2. Objetivo
+
+Após esta TASK, o fluxo deverá ser:
+
+AuthService
+↓
+access token em memória
+↓
+Authorization Interceptor
+↓
+Authorization: Bearer <token>
+↓
+API Equilibra
+
+E:
+
+Router
+↓
+Auth Guard
+↓
+estado de autenticação
+↓
+rota privada
+
+---
+
+# 3. Functional interceptors
+
+Se o projeto estiver utilizando APIs funcionais modernas do Angular, prefira:
+
+`HttpInterceptorFn`
+
+Não introduza classe antiga de interceptor sem necessidade.
+
+Siga a arquitetura já adotada.
+
+---
+
+# 4. Authorization Interceptor
+
+Crie interceptor responsável por adicionar:
+
+`Authorization: Bearer <accessToken>`
+
+quando:
+
+- existir access token
+- request for destinado à API do Equilibra
+- endpoint não exigir exclusão específica
+
+Não modificar request quando não houver token.
+
+---
+
+# 5. Escopo do token
+
+REGRA DE SEGURANÇA:
+
+JWT do Equilibra NUNCA deverá ser enviado automaticamente para domínio/serviço externo.
+
+Exemplo:
+
+requisição para API Equilibra
+→ Bearer permitido
+
+requisição futura para CDN/API externa
+→ Bearer NÃO enviado
+
+Determine o escopo utilizando a configuração central da API.
+
+Não utilize simplesmente:
+
+`if (token) add header`
+
+para qualquer URL.
+
+---
+
+# 6. URLs relativas
+
+Considere corretamente a forma como a aplicação constrói URLs.
+
+Se todas as chamadas utilizam base URL central, reutilize essa infraestrutura.
+
+Evite comparação frágil de strings quando possível.
+
+---
+
+# 7. Login
+
+`POST /api/auth/login`
+
+não necessita Bearer.
+
+Mesmo que algum token residual exista durante uma nova tentativa, não envie Authorization ao login.
+
+---
+
+# 8. Register
+
+`POST /api/auth/register`
+
+não necessita Bearer.
+
+Não enviar token.
+
+---
+
+# 9. `/me`
+
+Remova a implementação manual da TASK-1.8.
+
+Antes:
+
+AuthService/AuthApiService
+→ adicionava Authorization manualmente
+
+Depois:
+
+AuthApiService
+→ GET `/me`
+→ Authorization Interceptor
+→ Bearer
+
+Deve existir apenas UMA responsabilidade para inserir Authorization.
+
+---
+
+# 10. Imutabilidade
+
+Lembre que HttpRequest é imutável.
+
+Utilize clone adequadamente.
+
+Não modifique headers de maneira incorreta.
+
+---
+
+# 11. Ordem dos interceptors
+
+Analise interceptors existentes, principalmente:
+
+- Request ID
+- Authorization
+- tratamento de erros, se houver
+
+Defina ordem conscientemente.
+
+Documente brevemente.
+
+---
+
+# 12. Request ID
+
+Authorization interceptor não deverá interferir no:
+
+`X-Request-ID`
+
+Os dois devem funcionar simultaneamente.
+
+---
+
+# 13. Tratamento central de 401
+
+Implemente estratégia central para respostas:
+
+`401 Unauthorized`
+
+de endpoints autenticados.
+
+Quando ocorrer 401 em requisição protegida:
+
+1. limpar estado de autenticação
+2. remover token da memória
+3. remover currentUser
+4. navegar para `/login`
+
+---
+
+# 14. Não tratar 401 do login como expiração
+
+Um:
+
+`401`
+
+de:
+
+`POST /api/auth/login`
+
+significa credenciais inválidas.
+
+Esse erro deve continuar sendo tratado pela tela de login.
+
+NÃO executar redirecionamento redundante.
+
+NÃO sobrescrever mensagem:
+
+"E-mail ou senha inválidos."
+
+---
+
+# 15. Outros endpoints públicos
+
+Se `/register` produzir erro, não interpretar como expiração de sessão.
+
+Mantenha lista/regra clara de endpoints públicos.
+
+Evite espalhar strings por múltiplos arquivos.
+
+---
+
+# 16. 403
+
+`403 Forbidden` NÃO significa automaticamente sessão inválida.
+
+Não apagar token em todo 403.
+
+Um usuário autenticado pode simplesmente não possuir autorização para determinada operação.
+
+Prepare tratamento apropriado.
+
+Nesta fase, pode preservar o erro para camada de apresentação.
+
+---
+
+# 17. Loops
+
+Evite loops como:
+
+401
+→ navigate login
+→ chamada HTTP
+→ 401
+→ navigate login
+→ ...
+
+A lógica deve ser idempotente.
+
+---
+
+# 18. Requests simultâneos
+
+Se várias requests retornarem 401 simultaneamente:
+
+não gerar múltiplos efeitos destrutivos ou navegações desnecessárias.
+
+`clearSession()` deve ser seguro para chamadas repetidas.
+
+Não implemente infraestrutura complexa de concorrência sem necessidade.
+
+---
+
+# 19. Auth Guard
+
+Crie guard para rotas autenticadas.
+
+Prefira API funcional:
+
+`CanActivateFn`
+
+ou mecanismo moderno equivalente.
+
+---
+
+# 20. Regra do Auth Guard
+
+Se autenticado:
+
+→ permitir navegação
+
+Se não autenticado:
+
+→ redirecionar para `/login`
+
+Não renderizar página protegida antes de redirecionar.
+
+---
+
+# 21. UrlTree
+
+Prefira retornar:
+
+`UrlTree`
+
+ou equivalente moderno em vez de:
+
+`router.navigate()` + `false`
+
+quando apropriado.
+
+Evite efeitos colaterais desnecessários dentro do guard.
+
+---
+
+# 22. Return URL
+
+Ao redirecionar usuário não autenticado, preserve opcionalmente a rota desejada.
+
+Exemplo:
+
+`/login?returnUrl=/dashboard`
+
+Implemente somente se puder fazê-lo de forma segura e simples.
+
+---
+
+# 23. Validação de returnUrl
+
+Se implementar `returnUrl`:
+
+NÃO permita open redirect.
+
+Aceite somente rotas internas da aplicação.
+
+Nunca redirecione para:
+
+`https://...`
+
+fornecido pelo usuário.
+
+---
+
+# 24. Login com returnUrl
+
+Após login bem-sucedido:
+
+se existir returnUrl interno válido:
+
+→ navegar para ele
+
+senão:
+
+→ `/dashboard`
+
+ou rota principal existente.
+
+---
+
+# 25. Guest Guard
+
+Crie guard para páginas exclusivas de usuário não autenticado:
+
+- `/login`
+- `/register`
+
+Se usuário NÃO autenticado:
+
+→ permitir
+
+Se usuário autenticado:
+
+→ redirecionar para área principal.
+
+---
+
+# 26. Benefício
+
+Usuário autenticado não deverá poder abrir normalmente:
+
+`/login`
+
+ou:
+
+`/register`
+
+enquanto a sessão em memória estiver ativa.
+
+---
+
+# 27. Reload
+
+Mantenha a decisão da TASK-1.8:
+
+JWT existe somente em memória.
+
+Portanto:
+
+F5/reload
+→ token perdido
+→ estado unauthenticated
+→ rota privada redireciona para login
+
+Esse comportamento continua esperado.
+
+NÃO persistir token para "corrigir" isso.
+
+---
+
+# 28. Estado inicial
+
+Analise o estado inicial do AuthService.
+
+Como não existe restauração de sessão, a aplicação deve conseguir determinar rapidamente que não há sessão após bootstrap.
+
+Evite spinner infinito de autenticação.
+
+---
+
+# 29. Proteção do shell
+
+Rotas pertencentes ao shell autenticado deverão ficar sob proteção do Auth Guard.
+
+Prefira proteger o nível pai quando possível.
+
+Exemplo conceitual:
+
+authenticated-layout
+  canActivate
+  children:
+    dashboard
+    accounts
+    transactions
+
+Não repita guard em dezenas de rotas se proteção no pai resolver.
+
+---
+
+# 30. Rotas públicas
+
+Mantenha fora do shell protegido:
+
+- `/login`
+- `/register`
+
+e páginas públicas futuras quando existirem.
+
+---
+
+# 31. Dashboard temporário
+
+Se `/dashboard` ainda for placeholder, preserve.
+
+Não implementar dashboard financeiro nesta TASK.
+
+---
+
+# 32. Menu
+
+Não implemente ainda lógica financeira.
+
+Se menu autenticado já existir, ele somente deverá aparecer dentro do shell protegido.
+
+---
+
+# 33. Segurança real
+
+Documente claramente:
+
+Route Guards NÃO são mecanismo de segurança do backend.
+
+Eles são controle de navegação/UX.
+
+A segurança real continua sendo:
+
+JWT
++
+Spring Security
++
+ownership backend
+
+Nunca confiar em guard para autorização de dados.
+
+---
+
+# 34. Token accessor
+
+O Authorization Interceptor precisará obter o token.
+
+Forneça no AuthService uma API mínima e somente leitura.
+
+Exemplo conceitual:
+
+`getAccessToken()`
+
+ou Signal readonly apropriado.
+
+Componentes não devem conseguir substituir o token diretamente.
+
+---
+
+# 35. Encapsulamento
+
+Mantenha privados:
+
+- setters de token
+- mutações de currentUser
+- mudanças arbitrárias do estado
+
+Apenas AuthService controla sessão.
+
+---
+
+# 36. Logout técnico
+
+`clearSession()` deverá:
+
+- remover token em memória
+- remover currentUser
+- definir estado unauthenticated
+
+Ainda NÃO é necessário criar experiência completa de logout na UI.
+
+Isso pertence à TASK-1.10.
+
+---
+
+# 37. Interceptor de erro
+
+Decida se:
+
+- Authorization e tratamento de 401 ficam no mesmo interceptor
+
+ou:
+
+- são interceptors separados
+
+Prefira responsabilidades claras.
+
+Uma boa separação conceitual seria:
+
+`authTokenInterceptor`
+`authErrorInterceptor`
+
+mas não crie abstrações extras se um interceptor simples for suficiente.
+
+Documente a escolha.
+
+---
+
+# 38. Dependência circular
+
+Evite dependência circular entre:
+
+- AuthService
+- AuthApiService
+- interceptor
+- Router
+
+Analise DI cuidadosamente.
+
+Se necessário, reorganize responsabilidades.
+
+Não use hacks globais para contornar DI.
+
+---
+
+# 39. Token no log
+
+NUNCA registre:
+
+- Authorization header
+- JWT
+- HttpRequest completo contendo Authorization
+
+Revise interceptors/loggers existentes.
+
+---
+
+# 40. Erros HTTP
+
+Se houver interceptor genérico de logging:
+
+confirme que não serializa headers sensíveis.
+
+---
+
+# 41. Testes do Authorization Interceptor
+
+Cubra:
+
+### API + token
+
+Adiciona:
+
+`Authorization: Bearer ...`
+
+### API sem token
+
+Não adiciona Authorization.
+
+### Login
+
+Não adiciona Authorization.
+
+### Register
+
+Não adiciona Authorization.
+
+### URL externa
+
+NÃO adiciona Authorization.
+
+---
+
+# 42. Teste de não vazamento
+
+Crie teste explícito:
+
+token em memória
++
+request para:
+
+`https://example.com/...`
+
+Resultado:
+
+SEM Authorization.
+
+Esse teste é obrigatório.
+
+---
+
+# 43. Teste `/me`
+
+Confirme que `/me` recebe Authorization automaticamente.
+
+Confirme que código manual anterior foi removido.
+
+---
+
+# 44. Testes 401
+
+### Endpoint protegido retorna 401
+
+Confirme:
+
+- clearSession
+- redirecionamento `/login`
+
+### Login retorna 401
+
+Confirme:
+
+- erro propagado para login
+- mensagem de credenciais inválidas continua possível
+- não há tratamento de "sessão expirada"
+
+---
+
+# 45. Teste 403
+
+Confirme que:
+
+403
+→ NÃO limpa automaticamente a sessão.
+
+---
+
+# 46. Teste Auth Guard
+
+### autenticado
+
+permite rota.
+
+### não autenticado
+
+retorna redirecionamento para login.
+
+---
+
+# 47. Teste Guest Guard
+
+### não autenticado
+
+permite login/register.
+
+### autenticado
+
+redireciona para área principal.
+
+---
+
+# 48. Teste returnUrl
+
+Se implementado:
+
+rota interna válida
+→ preservada
+
+URL externa
+→ rejeitada/ignorada
+
+---
+
+# 49. Teste reload conceitual
+
+Confirme arquitetura:
+
+nova instância AuthService
+→ nenhum token
+→ rota protegida negada.
+
+Não usar localStorage/sessionStorage.
+
+---
+
+# 50. Teste do shell
+
+Usuário não autenticado não deve renderizar shell privado ao navegar diretamente para rota protegida.
+
+---
+
+# 51. E2E — acesso sem login
+
+Com Playwright:
+
+1. abrir rota privada diretamente
+2. confirmar redirecionamento para `/login`
+
+---
+
+# 52. E2E — login
+
+1. criar usuário de teste
+2. login
+3. confirmar acesso à área privada
+
+---
+
+# 53. E2E — guest guard
+
+Após login:
+
+1. navegar para `/login`
+2. confirmar redirecionamento para área principal
+
+Faça também `/register` quando apropriado.
+
+---
+
+# 54. E2E — reload
+
+1. login
+2. confirmar área privada
+3. reload
+4. confirmar redirecionamento para login
+
+Esse resultado é esperado.
+
+---
+
+# 55. E2E — token inválido/expirado
+
+Se puder ser testado de maneira estável:
+
+1. autenticação ativa
+2. backend responder 401 para recurso protegido
+3. frontend limpar sessão
+4. navegar para login
+
+Não manipule criptografia manualmente apenas para fabricar E2E.
+
+---
+
+# 56. Responsividade
+
+Confirme que alterações de routing não quebraram:
+
+- login
+- register
+- shell
+
+em:
+
+- 360px
+- 768px
+- 1280px
+- 1920px
+
+---
+
+# 57. Acessibilidade
+
+Guards/interceptors não devem produzir overlays ou estados inacessíveis.
+
+Ao chegar ao login após redirecionamento, a página deve continuar navegável por teclado.
+
+---
+
+# 58. Documentação frontend
+
+Atualize `docs/frontend-architecture.md`.
+
+Documente:
+
+## Authentication
+
+Fluxo:
+
+login
+→ token em memória
+→ Authorization interceptor
+→ API
+
+## Guards
+
+- Auth Guard
+- Guest Guard
+
+## 401
+
+- limpa sessão para endpoints protegidos
+- login 401 continua sendo erro de credenciais
+
+## Reload
+
+- sessão não persiste nesta fase
+
+---
+
+# 59. Security documentation
+
+Atualize `docs/security.md`.
+
+Documente:
+
+- Bearer enviado somente à API Equilibra
+- proteção contra vazamento para domínio externo
+- guards não substituem segurança backend
+- 401 limpa sessão
+- 403 não limpa sessão automaticamente
+
+---
+
+# 60. CLAUDE.md
+
+Adicione somente regras permanentes relevantes:
+
+- nunca enviar JWT a domínios externos
+- rotas privadas devem utilizar Auth Guard
+- login/register devem permanecer públicos
+- Route Guard não substitui autorização backend
+
+Não duplicar documentação extensa.
+
+---
+
+# 61. Backend
+
+NÃO alterar backend nesta TASK salvo incompatibilidade real.
+
+Não alterar JWT para facilitar testes frontend.
+
+---
+
+# 62. Dependências
+
+Não adicione biblioteca de autenticação frontend.
+
+Angular já fornece infraestrutura necessária.
+
+Não adicionar:
+
+- jwt-decode
+- auth0 client
+- NgRx
+
+sem requisito real.
+
+---
+
+# 63. Build
+
+Execute scripts reais do projeto para:
+
+- lint
+- testes
+- build produção
+
+---
+
+# 64. Integração real
+
+Quando possível:
+
+1. iniciar MySQL
+2. iniciar backend
+3. iniciar Angular
+4. cadastrar usuário
+5. login
+6. acessar rota privada
+7. confirmar `/me` com Bearer automático
+8. tentar `/login` autenticado
+9. confirmar Guest Guard
+10. recarregar página privada
+11. confirmar retorno ao login
+
+---
+
+# 65. Critérios de aceite
+
+A TASK-1.9 estará concluída quando:
+
+- Authorization interceptor existir
+- Bearer for inserido automaticamente
+- `/me` não adicionar Bearer manualmente
+- login não receber Bearer
+- register não receber Bearer
+- URL externa nunca receber Bearer
+- teste explícito de não vazamento passar
+- Auth Guard existir
+- Guest Guard existir
+- shell privado estiver protegido
+- 401 protegido limpar sessão
+- 401 do login continuar sendo credencial inválida
+- 403 não limpar sessão
+- returnUrl for seguro, caso implementado
+- JWT continuar somente em memória
+- reload continuar encerrando sessão frontend
+- Request ID continuar funcionando
+- testes unitários passarem
+- E2E relevante passar
+- lint passar
+- build produção passar
+
+---
+
+# 66. Restrições
+
+NÃO implementar:
+
+- refresh token
+- persistência do JWT
+- localStorage
+- sessionStorage
+- cookie de autenticação
+- blacklist
+- renovação automática
+- logout completo de UI
+- recuperação de senha
+- OAuth
+- MFA
+- Dashboard financeiro
+- módulos financeiros
+
+NÃO iniciar TASK-1.10.
+
+---
+
+# 67. Relatório final
+
+Ao concluir apresente:
+
+## TASK-1.9
+
+Status:
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## Authorization Interceptor
+
+Explique:
+
+- quando adiciona Bearer
+- quando não adiciona
+- como restringe à API Equilibra
+
+## Proteção contra vazamento
+
+Confirme teste com URL externa.
+
+PASS / FAIL
+
+## Auth Guard
+
+Explique comportamento.
+
+## Guest Guard
+
+Explique comportamento.
+
+## 401
+
+Explique:
+
+- endpoint protegido
+- login
+
+## 403
+
+Explique comportamento.
+
+## `/me`
+
+Confirme remoção do Bearer manual.
+
+## Token
+
+Confirme:
+
+- memória apenas
+- não localStorage
+- não sessionStorage
+
+## Reload
+
+Informe comportamento.
+
+## Request ID
+
+PASS / FAIL
+
+## Responsividade
+
+- 360px
+- 768px
+- 1280px
+- 1920px
+
+## Acessibilidade
+
+PASS / FAIL
+
+## Testes
+
+Liste comandos e resultados.
+
+## E2E
+
+PASS / FAIL / NÃO CONFIGURADO
+
+## Lint
+
+PASS / FAIL
+
+## Build Angular
+
+PASS / FAIL
+
+## Integração real
+
+PASS / FAIL / NÃO EXECUTADA
+
+## Backend alterado
+
+SIM / NÃO
+
+Se SIM, justifique.
+
+## Arquivos criados
+
+Liste.
+
+## Arquivos modificados
+
+Liste.
+
+## Pendências
+
+Liste somente problemas reais.
+
+## Próxima tarefa
+
+Informe prontidão para:
+
+**TASK-1.10 — Logout, experiência de sessão e Gate da Sprint 1**
+
+NÃO implemente TASK-1.10.

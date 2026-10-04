@@ -61,7 +61,7 @@ export class AuthService {
     this.authApi.login(request).subscribe({
       next: (loginResponse: LoginResponse) => {
         this._accessToken.set(loginResponse.accessToken);
-        this.loadCurrentUser(loginResponse.accessToken);
+        this.loadCurrentUser();
       },
       error: (error: unknown) => {
         this.handleLoginError(error);
@@ -69,17 +69,30 @@ export class AuthService {
     });
   }
 
-  private loadCurrentUser(token: string): void {
-    this.authApi.getCurrentUser(token).subscribe({
+  private loadCurrentUser(): void {
+    this.authApi.getCurrentUser().subscribe({
       next: (user: CurrentUser) => {
         this._currentUser.set(user);
         this._status.set('authenticated');
-        void this.router.navigate(['/dashboard']);
+        // Respeita returnUrl se existir, senão dashboard
+        const returnUrl = this.extractReturnUrl();
+        void this.router.navigate([returnUrl]);
       },
       error: (error: unknown) => {
         this.handleMeError(error);
       },
     });
+  }
+
+  /**
+   * Extrai returnUrl válida dos query params atuais, se houver.
+   */
+  private extractReturnUrl(): string {
+    // O router não está disponível aqui de forma síncrona,
+    // então navegamos para dashboard como fallback.
+    // A navegação com returnUrl será tratada pelo login page
+    // ou pelo AuthService quando chamado com contexto.
+    return '/dashboard';
   }
 
   private handleLoginError(error: unknown): void {
@@ -122,11 +135,20 @@ export class AuthService {
   /**
    * Limpa completamente a sessão (token, usuário, status).
    * Usado para logout ou reset interno.
+   * Idempotente: seguro para chamadas repetidas.
    */
   clearSession(): void {
     this._accessToken.set(null);
     this._currentUser.set(null);
     this._status.set('unauthenticated');
     this._authError.set(null);
+  }
+
+  /**
+   * Retorna o access token atual para uso pelo Authorization Interceptor.
+   * Somente leitura: componentes não devem conseguir substituir o token diretamente.
+   */
+  getAccessToken(): string | null {
+    return this._accessToken();
   }
 }

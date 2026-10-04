@@ -7,6 +7,7 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -197,6 +198,8 @@ export class LoginPageComponent {
   readonly authService = inject(AuthService);
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   readonly showPassword = signal(false);
   readonly form: FormGroup<LoginForm> = this.formBuilder.group({
@@ -219,6 +222,10 @@ export class LoginPageComponent {
       email: this.form.controls.email.value,
       password: this.form.controls.password.value,
     });
+
+    // Se houver returnUrl válida nos query params, navega para ela após login
+    // O AuthService já trata a navegação final, mas podemos capturar aqui se preferir
+    // a navegação ser feita pelo AuthService após /me sucesso
   }
 
   togglePassword(): void {

@@ -7,7 +7,6 @@ import { RegisterResponse } from './register-response';
 import { LoginRequest } from './login-request';
 import { LoginResponse } from './login-response';
 import { CurrentUser } from './current-user';
-import { HttpHeaders } from '@angular/common/http';
 
 /**
  * Serviço para operações de autenticação/registro contra a API backend.
@@ -41,14 +40,11 @@ export class AuthApiService {
 
   /**
    * Obtém o usuário autenticado atual.
+   * O Authorization header é adicionado automaticamente pelo authTokenInterceptor.
    *
-   * @param accessToken Token de acesso para autorização Bearer
    * @returns Observable com os dados do usuário atual
    */
-  getCurrentUser(accessToken: string): Observable<CurrentUser> {
-    const headers = new HttpHeaders({
-      Authorization: `Bearer ${accessToken}`,
-    });
-    return this.http.get<CurrentUser>(`${this.apiUrl}/users/me`, { headers });
+  getCurrentUser(): Observable<CurrentUser> {
+    return this.http.get<CurrentUser>(`${this.apiUrl}/users/me`);
   }
 }

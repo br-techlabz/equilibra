@@ -61,7 +61,7 @@ describe('AuthService', () => {
 
     // With synchronous observables, the full flow completes synchronously
     expect(authApi.login).toHaveBeenCalledOnceWith(request);
-    expect(authApi.getCurrentUser).toHaveBeenCalledOnceWith(mockLoginResponse.accessToken);
+    expect(authApi.getCurrentUser).toHaveBeenCalledOnceWith();
 
     // Final state after async operations complete
     expect(service.accessToken()).toBe(mockLoginResponse.accessToken);
