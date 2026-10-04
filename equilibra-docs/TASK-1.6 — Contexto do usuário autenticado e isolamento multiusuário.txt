@@ -1,0 +1,1119 @@
+# TASK-1.6 — Contexto do usuário autenticado e isolamento multiusuário
+
+As TASK-1.1 até TASK-1.5 foram concluídas.
+
+Estamos na:
+
+**Sprint 1 — Identidade, Usuários e Autenticação**
+
+Nesta TASK implemente a infraestrutura central para obtenção segura da identidade do usuário autenticado e estabeleça as regras arquiteturais de isolamento multiusuário do Equilibra.
+
+NÃO implemente ainda contas, categorias, transações ou outras entidades financeiras.
+
+---
+
+# 1. Preparação obrigatória
+
+Antes de modificar qualquer arquivo, leia integralmente:
+
+- `CLAUDE.md`
+- `README.md`
+- `docs/architecture.md`
+- `docs/api-guidelines.md`
+- `docs/security.md`
+- ADRs existentes
+
+Analise especificamente:
+
+- implementação JWT da TASK-1.5
+- claims efetivamente utilizados
+- `sub`
+- representação do principal
+- JwtDecoder
+- Resource Server
+- SecurityContext
+- SecurityFilterChain
+- entidade User
+- UserRepository
+- endpoints `/register` e `/login`
+- Problem Details
+- Request ID
+- testes de segurança existentes
+
+Apresente um plano resumido antes de implementar.
+
+Não duplique mecanismos de identidade existentes.
+
+---
+
+# 2. Objetivo
+
+Criar um mecanismo central e seguro através do qual código de aplicação possa descobrir:
+
+**qual usuário está executando esta requisição?**
+
+Exemplo conceitual:
+
+`CurrentUser`
+
+ou:
+
+`AuthenticatedUserProvider`
+
+ou nomenclatura equivalente coerente com a arquitetura.
+
+O mecanismo deverá obter a identidade exclusivamente do contexto autenticado do Spring Security.
+
+---
+
+# 3. Regra arquitetural fundamental
+
+Dados pertencentes ao usuário deverão futuramente ser associados ao usuário autenticado.
+
+O cliente NÃO deverá determinar arbitrariamente o proprietário do recurso.
+
+Evitar contratos como:
+
+`POST /api/expenses?userId=<uuid>`
+
+ou:
+
+{
+  "userId": "...",
+  "description": "..."
+}
+
+quando o `userId` representa o proprietário da operação.
+
+O proprietário deverá ser derivado de:
+
+JWT
+↓
+Spring Security
+↓
+SecurityContext
+↓
+CurrentUser
+↓
+caso de uso
+
+Documente esta regra como permanente.
+
+---
+
+# 4. Subject do JWT
+
+A TASK-1.5 definiu o UUID do usuário como `sub`.
+
+Reutilize essa decisão.
+
+Não crie um segundo claim como:
+
+`userId`
+
+se `sub` já representa corretamente essa informação.
+
+Evite duplicação.
+
+---
+
+# 5. Principal
+
+Analise a representação efetivamente criada na TASK-1.5.
+
+Se já existe principal tipado contendo o UUID, reutilize-o.
+
+Não crie múltiplas representações concorrentes da mesma identidade sem necessidade.
+
+---
+
+# 6. CurrentUser
+
+Crie uma abstração pequena para obtenção da identidade atual.
+
+Exemplo conceitual:
+
+interface CurrentUser {
+
+    UUID id();
+
+}
+
+ou estrutura equivalente.
+
+Adapte à arquitetura real.
+
+O objetivo é impedir que cada caso de uso precise interpretar diretamente:
+
+- SecurityContextHolder
+- Jwt
+- claims
+- strings
+
+---
+
+# 7. Dependência do Spring Security
+
+Idealmente, regras de negócio futuras não deverão conhecer detalhes de JWT.
+
+Uma feature como:
+
+`AccountService`
+
+deverá poder fazer conceitualmente:
+
+`currentUser.id()`
+
+em vez de:
+
+`SecurityContextHolder.getContext()...`
+
+Isso reduz acoplamento com infraestrutura de segurança.
+
+---
+
+# 8. Implementação
+
+Crie implementação baseada no Spring Security.
+
+Exemplo conceitual:
+
+`SpringSecurityCurrentUser`
+
+Responsabilidades:
+
+1. acessar Authentication atual
+2. confirmar autenticação
+3. obter principal/subject
+4. obter UUID
+5. retornar identidade
+
+Não consultar banco sem necessidade.
+
+---
+
+# 9. Ausência de autenticação
+
+Se código que exige usuário autenticado tentar obter CurrentUser sem autenticação válida:
+
+NÃO retornar:
+
+`null`
+
+NÃO retornar UUID fictício.
+
+NÃO utilizar usuário padrão.
+
+Falhe de maneira explícita e segura.
+
+---
+
+# 10. UUID inválido
+
+Se por algum problema a identidade autenticada não puder ser convertida para UUID:
+
+trate como falha de autenticação/estado de segurança.
+
+Não aceite silenciosamente valor inválido.
+
+Isso normalmente não deveria acontecer se JwtDecoder e validações estiverem corretos.
+
+---
+
+# 11. Não confiar em headers alternativos
+
+É PROIBIDO utilizar como identidade:
+
+`X-User-ID`
+
+`User-ID`
+
+`X-Authenticated-User`
+
+ou header customizado enviado pelo cliente.
+
+A única fonte confiável será a autenticação estabelecida pelo Spring Security.
+
+---
+
+# 12. Não confiar em request body
+
+Se futuramente um DTO contiver `userId` por outro motivo legítimo, ele nunca deverá substituir a identidade do proprietário autenticado.
+
+Para recursos privados do usuário:
+
+owner = CurrentUser.id()
+
+e não:
+
+owner = request.userId()
+
+---
+
+# 13. Não confiar em query parameters
+
+O mesmo vale para:
+
+`?userId=...`
+
+O cliente não escolhe o tenant/proprietário dos dados.
+
+---
+
+# 14. Conceito de ownership
+
+Formalize o conceito:
+
+Todo recurso financeiro privado possui um proprietário.
+
+Exemplos futuros:
+
+- AssetAccount
+- ExpenseAccount, caso permaneça no modelo
+- Category
+- Tag
+- Expense
+- Income
+- Transfer
+- Attachment
+- Report preferences
+
+A propriedade deverá estar vinculada ao usuário autenticado.
+
+NÃO implemente essas entidades nesta TASK.
+
+---
+
+# 15. Estratégia multiusuário
+
+O Equilibra utilizará inicialmente:
+
+**isolamento lógico por usuário no mesmo banco/schema**
+
+e não:
+
+- database per user
+- schema per user
+
+Cada registro privado deverá possuir vínculo explícito com seu proprietário quando as entidades forem implementadas.
+
+Documente essa decisão.
+
+---
+
+# 16. Segurança em profundidade
+
+A existência de `CurrentUser` NÃO elimina a necessidade de filtrar consultas pelo proprietário.
+
+Futuramente, evite:
+
+`findById(accountId)`
+
+seguido apenas de validação tardia.
+
+Prefira consultas conceitualmente equivalentes a:
+
+`findByIdAndUserId(accountId, currentUserId)`
+
+ou estratégia igualmente segura.
+
+Isso reduz risco de IDOR/BOLA.
+
+---
+
+# 17. IDOR / BOLA
+
+Documente explicitamente que recursos privados devem ser protegidos contra:
+
+**Insecure Direct Object Reference / Broken Object Level Authorization**
+
+Exemplo futuro:
+
+Usuário A possui conta X.
+
+Usuário B descobre UUID de X.
+
+Usuário B solicita:
+
+`GET /api/accounts/X`
+
+O sistema NÃO poderá retornar a conta.
+
+---
+
+# 18. Estratégia para recurso de outro usuário
+
+Defina convenção para recursos privados.
+
+Quando um recurso não pertence ao usuário autenticado, prefira geralmente:
+
+`404 Not Found`
+
+em vez de revelar:
+
+`403 Forbidden`
+
+quando 403 confirmaria a existência de recurso pertencente a outro usuário.
+
+Documente a decisão.
+
+A aplicação poderá usar 403 em cenários onde existência do recurso já não seja sensível.
+
+---
+
+# 19. Repository pattern futuro
+
+Documente a convenção de que repositories de dados privados devem favorecer métodos ownership-aware.
+
+Exemplos conceituais:
+
+`findByIdAndOwnerId(...)`
+
+`findAllByOwnerId(...)`
+
+`existsByIdAndOwnerId(...)`
+
+Não crie repositories financeiros nesta TASK.
+
+---
+
+# 20. Create
+
+Para criação futura:
+
+owner deverá vir de:
+
+`CurrentUser`
+
+Exemplo conceitual:
+
+request
+↓
+use case
+↓
+currentUser.id()
+↓
+entity.ownerId
+
+Nunca confiar em owner enviado pelo frontend.
+
+---
+
+# 21. Read
+
+Para leitura:
+
+query deverá restringir pelo usuário atual.
+
+Exemplo:
+
+`findAllByOwnerId(currentUser.id())`
+
+---
+
+# 22. Update
+
+Para alteração:
+
+localizar recurso dentro do escopo do usuário.
+
+Não:
+
+1. buscar qualquer recurso por ID
+2. aceitar owner do request
+
+---
+
+# 23. Delete
+
+Para exclusão:
+
+aplicar a mesma regra de ownership.
+
+Não permitir exclusão de recurso apenas porque UUID é válido.
+
+---
+
+# 24. Transferências futuras
+
+Transferências serão especialmente sensíveis.
+
+Tanto:
+
+- conta de origem
+- conta de destino
+
+deverão pertencer ao usuário autenticado.
+
+Não implementar agora.
+
+Apenas documente a invariável.
+
+---
+
+# 25. Anexos futuros
+
+Anexos deverão herdar o ownership da transação/recurso ao qual pertencem.
+
+Conhecer UUID/nome do arquivo não poderá conceder acesso.
+
+Não implementar armazenamento nesta TASK.
+
+---
+
+# 26. Relatórios futuros
+
+Relatórios deverão consultar somente dados pertencentes ao CurrentUser.
+
+Filtros de contas deverão ser validados dentro do mesmo ownership.
+
+---
+
+# 27. Auditoria futura
+
+A auditoria deverá utilizar identidade autenticada para atribuir ações.
+
+Não aceite `performedByUserId` vindo do frontend.
+
+Não implementar auditoria funcional nesta TASK.
+
+---
+
+# 28. Endpoint `/me`
+
+Implemente um endpoint autenticado mínimo para representar o usuário atual.
+
+Sugestão:
+
+`GET /api/users/me`
+
+ou rota coerente com a convenção existente.
+
+Objetivos:
+
+- provar o contexto autenticado
+- fornecer identidade básica ao frontend futuramente
+- validar JWT → SecurityContext → CurrentUser
+
+---
+
+# 29. Response de `/me`
+
+Retorne somente informações seguras e úteis.
+
+Sugestão:
+
+{
+  "id": "<uuid>",
+  "email": "user@example.com"
+}
+
+Pode incluir:
+
+- createdAt
+
+somente se houver benefício claro.
+
+Não retornar:
+
+- password
+- passwordHash
+- informações de segurança
+- claims internos desnecessários
+
+---
+
+# 30. Origem do ID em `/me`
+
+O ID deverá vir da identidade autenticada.
+
+Não aceite:
+
+`GET /api/users/me?userId=...`
+
+---
+
+# 31. Email em `/me`
+
+Como email não precisa estar no JWT, o endpoint poderá consultar UserRepository utilizando:
+
+`CurrentUser.id()`
+
+para carregar informações do perfil.
+
+Essa consulta é apropriada porque `/me` precisa de dados atuais do usuário.
+
+Isso NÃO significa que toda requisição autenticada deve consultar o banco.
+
+---
+
+# 32. Usuário removido/inconsistente
+
+Caso o JWT seja criptograficamente válido mas o usuário correspondente não exista mais no banco ao chamar `/me`:
+
+trate de forma segura.
+
+Não retorne 500 por simples ausência do usuário.
+
+Escolha comportamento coerente e documente.
+
+---
+
+# 33. Usuário desativado após emissão
+
+A TASK-1.5 provavelmente adotou access token curto sem consulta ao banco em toda requisição.
+
+Mantenha essa decisão salvo problema real.
+
+Portanto, um token emitido antes da desativação poderá permanecer válido até expirar.
+
+Porém `/me`, ao consultar usuário atual, poderá detectar `active=false`.
+
+Defina comportamento consistente.
+
+Não implemente blacklist.
+
+---
+
+# 34. Segurança do `/me`
+
+`GET /api/users/me`
+
+deve exigir autenticação.
+
+Sem token:
+
+`401`
+
+Token inválido:
+
+`401`
+
+Token válido:
+
+`200`
+
+---
+
+# 35. Não criar GET por usuário
+
+NÃO implemente:
+
+`GET /api/users/{id}`
+
+nesta TASK.
+
+O usuário comum não precisa consultar outros usuários.
+
+---
+
+# 36. Não criar listagem
+
+NÃO implemente:
+
+`GET /api/users`
+
+Não existe requisito administrativo.
+
+---
+
+# 37. Não criar update
+
+NÃO implemente alteração de email/perfil nesta TASK.
+
+---
+
+# 38. Não criar delete
+
+NÃO implemente exclusão de conta nesta TASK.
+
+---
+
+# 39. DTO
+
+Crie DTO específico para `/me`.
+
+Exemplo:
+
+`CurrentUserResponse`
+
+Não exponha entidade JPA.
+
+---
+
+# 40. Application service
+
+Se necessário, crie caso de uso:
+
+`GetCurrentUserService`
+
+ou equivalente.
+
+Fluxo conceitual:
+
+controller
+↓
+currentUser.id()
+↓
+repository
+↓
+response
+
+Não coloque consulta JPA diretamente no controller.
+
+---
+
+# 41. Transação read-only
+
+Quando apropriado:
+
+`@Transactional(readOnly = true)`
+
+para consulta do usuário atual.
+
+Siga as convenções existentes.
+
+---
+
+# 42. Testes de CurrentUser
+
+Crie testes cobrindo:
+
+### Usuário autenticado
+
+SecurityContext contém identidade válida.
+
+Resultado:
+
+UUID correto.
+
+### Sem autenticação
+
+Falha segura.
+
+### Principal inválido
+
+Falha segura.
+
+Não utilizar usuário fictício default.
+
+---
+
+# 43. Teste de header malicioso
+
+Envie:
+
+`X-User-ID: <outro UUID>`
+
+junto com JWT válido.
+
+Confirme que:
+
+CurrentUser continua sendo o usuário do JWT.
+
+O header deverá ser ignorado.
+
+---
+
+# 44. Teste de query maliciosa
+
+Quando aplicável ao endpoint criado, tente fornecer:
+
+`?userId=<outro UUID>`
+
+Isso não deverá alterar a identidade.
+
+Preferencialmente o endpoint nem deve aceitar esse parâmetro.
+
+---
+
+# 45. Testes `/me`
+
+Cubra:
+
+### Sem token
+
+→ 401
+
+### Token inválido
+
+→ 401
+
+### Token válido
+
+→ 200
+
+Response contém:
+
+- id correto
+- email correto
+
+Response NÃO contém:
+
+- password
+- passwordHash
+
+---
+
+# 46. Teste integrado
+
+Com Testcontainers/MySQL:
+
+1. cadastrar usuário A
+2. login A
+3. obter JWT A
+4. chamar `/me`
+5. confirmar identidade A
+
+Depois:
+
+6. cadastrar usuário B
+7. login B
+8. obter JWT B
+9. chamar `/me`
+10. confirmar identidade B
+
+Confirme que identidades não se misturam.
+
+---
+
+# 47. Teste de spoofing
+
+Com JWT do usuário A:
+
+tente enviar em header/query/body, quando aplicável, UUID do usuário B.
+
+O backend deverá continuar identificando A.
+
+---
+
+# 48. Teste de isolamento conceitual
+
+Como ainda não existem recursos financeiros, não crie entidades artificiais somente para testar ownership.
+
+Teste a infraestrutura de identidade agora.
+
+O isolamento de dados será testado novamente em cada feature futura.
+
+---
+
+# 49. Request ID
+
+`/me` deverá continuar participando do mecanismo existente de:
+
+`X-Request-ID`
+
+---
+
+# 50. Problem Details
+
+Erros relacionados ao contexto autenticado deverão seguir a infraestrutura existente quando aplicável.
+
+Não retornar:
+
+- stack trace
+- claims completos
+- JWT
+- detalhes criptográficos
+
+---
+
+# 51. OpenAPI
+
+Documente `/me`.
+
+Marque-o como protegido por Bearer JWT.
+
+Não adicione parâmetros `userId`.
+
+---
+
+# 52. Swagger UI
+
+Com Bearer token válido, deve ser possível testar `/me` através da configuração existente.
+
+---
+
+# 53. Frontend
+
+NÃO alterar Angular nesta TASK.
+
+O frontend consumirá `/me` posteriormente.
+
+---
+
+# 54. Banco
+
+Nenhuma migration deverá ser necessária.
+
+Não adicionar `owner_id` em tabelas inexistentes.
+
+Não criar tabelas financeiras antecipadamente.
+
+---
+
+# 55. Documentação arquitetural
+
+Atualize:
+
+`docs/architecture.md`
+
+e/ou documento apropriado.
+
+Crie uma seção:
+
+## Multi-user data isolation
+
+Documente:
+
+- banco/schema compartilhado
+- ownership lógico por usuário
+- CurrentUser como fonte da identidade
+- `sub` do JWT como UUID
+- cliente não fornece owner
+- repositories ownership-aware
+- proteção contra IDOR/BOLA
+- preferência por 404 para recurso de outro usuário quando apropriado
+
+---
+
+# 56. API Guidelines
+
+Atualize `docs/api-guidelines.md` com regra permanente:
+
+Requests de recursos privados não devem aceitar `userId` como identificador do proprietário quando ele puder ser derivado da autenticação.
+
+---
+
+# 57. Security documentation
+
+Atualize `docs/security.md`.
+
+Documente:
+
+- fonte confiável da identidade
+- SecurityContext
+- CurrentUser
+- anti-spoofing
+- IDOR/BOLA
+- ownership
+
+---
+
+# 58. CLAUDE.md
+
+Adicione regras permanentes, de forma concisa:
+
+- nunca confiar em userId enviado pelo cliente para ownership
+- obter usuário atual do contexto autenticado
+- consultas privadas devem ser ownership-aware
+- usuário não pode acessar recursos de outro usuário
+
+Não duplicar documentação extensa.
+
+---
+
+# 59. Arquitetura futura
+
+O padrão esperado para futuras features será conceitualmente:
+
+Controller
+↓
+Application Service
+↓
+CurrentUser
+↓
+Repository ownership-aware
+↓
+Database
+
+E não:
+
+Controller
+↓
+request.userId
+↓
+Repository.findById()
+
+---
+
+# 60. Critérios de aceite
+
+A TASK-1.6 estará concluída quando:
+
+- existir abstração central de CurrentUser
+- CurrentUser obtiver identidade do Spring Security
+- UUID vier da autenticação/JWT
+- ausência de autenticação falhar seguramente
+- headers customizados não puderem substituir identidade
+- query parameters não puderem substituir identidade
+- `/me` existir
+- `/me` exigir JWT
+- `/me` retornar usuário correto
+- `/me` não expuser passwordHash
+- endpoint não aceitar userId
+- regra de ownership estiver documentada
+- prevenção de IDOR/BOLA estiver documentada
+- padrão de repository ownership-aware estiver definido
+- testes CurrentUser passarem
+- testes `/me` passarem
+- teste com usuários A/B passar
+- teste anti-spoofing passar
+- testes anteriores continuarem passando
+- build Maven passar
+
+---
+
+# 61. Restrições
+
+NÃO implementar:
+
+- Account
+- AssetAccount
+- ExpenseAccount
+- Category
+- Tag
+- Expense
+- Income
+- Transfer
+- Attachment
+- Report
+- Audit funcional
+- frontend
+- refresh token
+- blacklist
+- Redis
+- roles fictícias
+- administração de usuários
+- alteração de perfil
+- exclusão de usuário
+
+NÃO iniciar TASK-1.7.
+
+---
+
+# 62. Validação manual
+
+Quando possível:
+
+1. iniciar infraestrutura
+2. cadastrar usuário A
+3. login A
+4. obter JWT A
+5. chamar `/me`
+6. confirmar A
+7. cadastrar usuário B
+8. login B
+9. obter JWT B
+10. chamar `/me`
+11. confirmar B
+12. chamar `/me` com JWT A e `X-User-ID` contendo UUID B
+13. confirmar que resposta continua sendo A
+14. chamar `/me` sem token
+15. confirmar 401
+16. confirmar X-Request-ID
+
+Não registre tokens completos no relatório.
+
+---
+
+# 63. Relatório final
+
+Ao concluir apresente:
+
+## TASK-1.6
+
+Status:
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## CurrentUser
+
+Explique a abstração criada.
+
+## Fonte da identidade
+
+Confirme:
+
+JWT `sub`
+→ Spring Security
+→ SecurityContext
+→ CurrentUser
+
+## Endpoint `/me`
+
+Informe:
+
+- método
+- rota
+- response
+
+## Multiusuário
+
+Explique a estratégia adotada.
+
+## Ownership
+
+Confirme que o cliente não determina o proprietário.
+
+## IDOR/BOLA
+
+Explique as regras estabelecidas para features futuras.
+
+## Anti-spoofing
+
+Informe resultados dos testes com:
+
+- header
+- query parameter, quando aplicável
+
+## Usuários A/B
+
+PASS / FAIL
+
+## Problem Details
+
+PASS / FAIL
+
+## Request ID
+
+PASS / FAIL
+
+## OpenAPI
+
+PASS / FAIL
+
+## Testes
+
+Liste comandos executados e resultados.
+
+## Testcontainers/MySQL
+
+PASS / FAIL
+
+## Build Maven
+
+PASS / FAIL
+
+## Arquivos criados
+
+Liste.
+
+## Arquivos modificados
+
+Liste.
+
+## Migrations
+
+Confirme que nenhuma migration foi necessária ou explique eventual exceção.
+
+## Pendências
+
+Liste somente problemas reais.
+
+## Próxima tarefa
+
+Informe prontidão para:
+
+**TASK-1.7 — Frontend: cadastro de usuário**
+
+NÃO implemente TASK-1.7.

@@ -212,6 +212,9 @@ Não aplicar essa estrutura mecanicamente quando ela não trouxer benefício. O 
 5. Repositories e services deverão garantir isolamento por usuário quando apropriado.
 6. A implementação efetiva da autenticação ocorrerá na Sprint correspondente.
 7. O frontend nunca será considerado uma barreira de segurança.
+8. **O proprietário de recursos privados deve vir exclusivamente de `CurrentUser.id()` (contexto autenticado), nunca do request.**
+9. **Consultas de recursos privados devem ser ownership-aware (ex: `findByIdAndOwnerId`, `findAllByOwnerId`).**
+10. **Usuário não pode acessar recursos de outro usuário; preferir `404` quando a existência não deve ser revelada.**
 
 ---
 

@@ -206,6 +206,9 @@ O frontend não é barreira de segurança.
 
 Endpoints futuros não devem confiar em `userId` informado pelo frontend para autorização ou propriedade de dados.
 
+**Regra permanente (TASK-1.6):**
+Requests de recursos privados não devem aceitar `userId` como identificador do proprietário quando ele puder ser derivado da autenticação. O proprietário deve vir exclusivamente de `CurrentUser.id()` (obtido do contexto autenticado Spring Security). Parâmetros como `?userId=...`, headers como `X-User-ID` ou campos no corpo da requisição como `{ "userId": "..." }` **não devem ser usados** para determinar ownership de recursos privados. A identidade autenticada via JWT é a única fonte confiável.
+
 ## OpenAPI
 
 A documentação OpenAPI deve permanecer compatível com o contrato REST.

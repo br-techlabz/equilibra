@@ -274,7 +274,36 @@ A estratégia atual utiliza:
 - `.env.example` para exemplos de desenvolvimento;
 - `.env` real ignorado pelo Git.
 
-## Testabilidade
+## Multi-user data isolation
+
+O Equilibra utiliza **isolamento lógico por usuário no mesmo banco/schema**, e não database-per-user ou schema-per-user.
+
+### Princípios
+
+1. A identidade confiável vem do `sub` do JWT, que contém o UUID do usuário, e é disponibilizada pelo Spring Security no `SecurityContext` através de `AuthenticatedPrincipal`.
+2. Código de aplicação deve obter a identidade por `CurrentUser`, sem interpretar diretamente `SecurityContextHolder`, JWT ou claims.
+3. O cliente nunca determina o proprietário via `userId` em query parameter, header ou request body. A propriedade é derivada de `CurrentUser.id()`.
+4. Recursos privados devem possuir vínculo explícito com seu proprietário quando forem implementados.
+5. Repositories privados devem usar consultas ownership-aware, como `findByIdAndOwnerId`, `findAllByOwnerId` e `existsByIdAndOwnerId`, evitando buscar por ID global e validar ownership apenas depois.
+6. Criação, leitura, alteração e exclusão devem operar dentro do escopo do usuário autenticado.
+
+Essa estratégia protege contra **IDOR/BOLA** (Insecure Direct Object Reference / Broken Object Level Authorization). Um usuário que conheça o UUID de recurso pertencente a outro usuário não poderá acessá-lo. Para recursos privados, a convenção preferencial é `404 Not Found` quando negar acesso também evita revelar a existência do recurso; `403 Forbidden` poderá ser usado quando a existência não for sensível.
+
+Transferências futuras exigirão que origem e destino pertençam ao usuário autenticado. Anexos herdarão o ownership do recurso pai, relatórios consultarão apenas dados do `CurrentUser` e auditoria atribuirá ações à identidade autenticada, nunca a um `performedByUserId` enviado pelo cliente.
+
+## Evolução
+
+Decisões arquiteturais importantes futuras poderão ser documentadas por ADRs em:
+
+```text
+docs/adr/
+```
+
+O ADR inicial é:
+
+```text
+docs/adr/0001-modular-monolith.md
+```
 
 A arquitetura deve facilitar testes unitários e de integração.
 
@@ -283,6 +312,23 @@ Regras de negócio importantes devem poder ser testadas sem iniciar todo o servi
 Integrações com banco devem usar Testcontainers quando apropriado.
 
 Não utilizar H2 para substituir comportamentos específicos do MySQL.
+
+## Multi-user data isolation
+
+O Equilibra utiliza **isolamento lógico por usuário no mesmo banco/schema**, e não database-per-user ou schema-per-user.
+
+### Princípios
+
+1. A identidade confiável vem do `sub` do JWT, que contém o UUID do usuário, e é disponibilizada pelo Spring Security no `SecurityContext` através de `AuthenticatedPrincipal`.
+2. Código de aplicação deve obter a identidade por `CurrentUser`, sem interpretar diretamente `SecurityContextHolder`, JWT ou claims.
+3. O cliente nunca determina o proprietário via `userId` em query parameter, header ou request body. A propriedade é derivada de `CurrentUser.id()`.
+4. Recursos privados devem possuir vínculo explícito com seu proprietário quando forem implementados.
+5. Repositories privados devem usar consultas ownership-aware, como `findByIdAndOwnerId`, `findAllByOwnerId` e `existsByIdAndOwnerId`, evitando buscar por ID global e validar ownership apenas depois.
+6. Criação, leitura, alteração e exclusão devem operar dentro do escopo do usuário autenticado.
+
+Essa estratégia protege contra **IDOR/BOLA** (Insecure Direct Object Reference / Broken Object Level Authorization). Um usuário que conheça o UUID de recurso pertencente a outro usuário não poderá acessá-lo. Para recursos privados, a convenção preferencial é `404 Not Found` quando negar acesso também evita revelar a existência do recurso; `403 Forbidden` poderá ser usado quando a existência não for sensível.
+
+Transferências futuras exigirão que origem e destino pertençam ao usuário autenticado. Anexos herdarão o ownership do recurso pai, relatórios consultarão apenas dados do `CurrentUser` e auditoria atribuirá ações à identidade autenticada, nunca a um `performedByUserId` enviado pelo cliente.
 
 ## Evolução
 

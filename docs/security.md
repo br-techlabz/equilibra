@@ -176,6 +176,66 @@ Requisito futuro: avaliar rate limiting para endpoints públicos sensíveis, esp
 
 ---
 
+## Contexto do Usuário Autenticado e Isolamento Multiusuário (TASK-1.6)
+
+### Fonte Confiável da Identidade
+
+A identidade do usuário autenticado deriva exclusivamente do JWT validado pelo Spring Security:
+
+```
+JWT (sub = UUID)
+    ↓
+Spring Security (Resource Server)
+    ↓
+SecurityContext (Authentication)
+    ↓
+AuthenticatedPrincipal (userId)
+    ↓
+CurrentUser.id() → UUID
+```
+
+### CurrentUser
+
+Interface centralizada em `shared/api/CurrentUser` com implementação `SpringSecurityCurrentUser`:
+- Obtém o UUID do `AuthenticatedPrincipal` no `SecurityContext`
+- Falha explicitamente se não houver autenticação válida, for anônima, ou o principal for inválido
+- Não consulta banco de dados (stateless)
+
+### Anti-spoofing
+
+É proibido utilizar identidades alternativas enviadas pelo cliente:
+- ❌ `X-User-ID`, `User-ID`, `X-Authenticated-User`
+- ❌ `?userId=...`
+- ❌ `{ "userId": "..." }` no body
+
+Testes confirmam que `/me` ignora header/query maliciosos e responde com o usuário do JWT.
+
+### Ownership e IDOR/BOLA
+
+**Regra fundamental**: Todo recurso financeiro privado possui um proprietário derivado de `CurrentUser.id()`. O cliente não determina ownership.
+
+**Proteção contra IDOR/BOLA**:
+- Repositories privados devem usar métodos ownership-aware: `findByIdAndOwnerId`, `findAllByOwnerId`, `existsByIdAndOwnerId`
+- Evitar `findById(id)` + validação tardia
+- Criação: `owner = CurrentUser.id()`
+- Leitura: `findAllByOwnerId(CurrentUser.id())`
+- Atualização/Exclusão: buscar recurso dentro do escopo do usuário autenticado
+
+**Convenção para recurso de outro usuário**: Preferir `404 Not Found` sobre `403 Forbidden` quando negar acesso também evita confirmar a existência do recurso. `403` pode ser usado quando a existência não for sensível.
+
+### Endpoint `/me`
+
+`GET /api/users/me`:
+- Requer autenticação (Bearer JWT)
+- Retorna `200` com `{ "id", "email", "createdAt" }`
+- Não expõe `password`, `passwordHash`, claims internos
+- Consulta `UserRepository` usando `CurrentUser.id()`
+- Retorna `401` se token ausente/inválido/expirado
+- Retorna `404` se usuário autenticado não existir mais no banco
+- Participa do mecanismo `X-Request-ID`
+
+---
+
 ## Testes
 
 ### Cobertura Obrigatória
