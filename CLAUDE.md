@@ -131,6 +131,15 @@ Não aplicar essa estrutura mecanicamente quando ela não trouxer benefício. O 
 13. Toda tarefa deverá terminar com build e testes relevantes.
 14. Segredos, senhas e tokens nunca deverão ser versionados.
 
+## Regras de Segurança (Senhas)
+
+15. **Senha nunca pode ser logada** (raw, hash ou qualquer derivada).
+16. **passwordHash nunca pode ser retornado pela API** (DTOs, responses, toString).
+17. **PasswordEncoder é obrigatório** para toda operação de hash/verificação.
+18. **Algoritmo próprio é proibido** (não usar SHA-256, MD5, Base64, AES para senhas).
+19. **Comparação de senha exclusivamente via `PasswordEncoder.matches()`**.
+20. **Não aplicar `trim()` silenciosamente** em senhas antes de hash.
+
 ---
 
 ## Regras de API e DTOs

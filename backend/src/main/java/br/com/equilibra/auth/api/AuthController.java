@@ -1,0 +1,70 @@
+package br.com.equilibra.auth.api;
+
+import br.com.equilibra.auth.application.RegisterUserCommand;
+import br.com.equilibra.auth.application.RegisterUserResult;
+import br.com.equilibra.auth.application.RegisterUserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * Endpoints públicos de autenticação e identidade.
+ */
+@RestController
+@RequestMapping("/auth")
+@Tag(name = "Auth", description = "Fluxos públicos de identidade e autenticação")
+public class AuthController {
+
+    private final RegisterUserService registerUserService;
+
+    public AuthController(RegisterUserService registerUserService) {
+        this.registerUserService = registerUserService;
+    }
+
+    @PostMapping("/register")
+    @Operation(
+        summary = "Cadastrar usuário",
+        description = "Cria uma nova conta de usuário com email e senha. Não realiza login automático."
+    )
+    @SecurityRequirements
+    @ApiResponse(
+        responseCode = "201",
+        description = "Usuário cadastrado com sucesso",
+        content = @Content(schema = @Schema(implementation = RegisteredUserResponse.class))
+    )
+    @ApiResponse(
+        responseCode = "400",
+        description = "Request inválido ou senha fora da política",
+        content = @Content(schema = @Schema(implementation = ProblemDetail.class))
+    )
+    @ApiResponse(
+        responseCode = "409",
+        description = "Email já cadastrado",
+        content = @Content(schema = @Schema(implementation = ProblemDetail.class))
+    )
+    @ApiResponse(
+        responseCode = "500",
+        description = "Erro inesperado",
+        content = @Content(schema = @Schema(implementation = ProblemDetail.class))
+    )
+    public ResponseEntity<RegisteredUserResponse> register(@Valid @RequestBody RegisterUserRequest request) {
+        RegisterUserResult result = registerUserService.register(
+            new RegisterUserCommand(request.email(), request.password())
+        );
+
+        return ResponseEntity
+            .status(HttpStatus.CREATED)
+            .body(new RegisteredUserResponse(result.id(), result.email(), result.createdAt()));
+    }
+}

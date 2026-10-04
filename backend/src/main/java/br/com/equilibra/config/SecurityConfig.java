@@ -2,6 +2,7 @@ package br.com.equilibra.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -33,6 +34,9 @@ public class SecurityConfig {
 
             // Autorização de endpoints
             .authorizeHttpRequests(auth -> auth
+                // Endpoint público de cadastro
+                .requestMatchers(HttpMethod.POST, "/auth/register").permitAll()
+
                 // Endpoints públicos (health, actuator, docs)
                 .requestMatchers(
                     "/actuator/health/**",
@@ -44,9 +48,9 @@ public class SecurityConfig {
                     "/swagger-ui.html"
                 ).permitAll()
 
-                // Demais endpoints - por enquanto permitidos para desenvolvimento
-                // TODO: Substituir por autenticação JWT na Sprint de Auth
-                .anyRequest().permitAll()
+                // Demais endpoints exigem autenticação por padrão.
+                // TODO: Substituir por autenticação JWT na Sprint de Auth.
+                .anyRequest().authenticated()
             )
 
             // Headers de segurança básicos
