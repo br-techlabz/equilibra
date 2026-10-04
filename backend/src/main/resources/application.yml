@@ -88,6 +88,15 @@ logging:
   file:
     name: logs/equilibra-api.log
 
+# Segurança / JWT
+# Secret padrão é apenas para desenvolvimento local/testes; em produção use EQUILIBRA_JWT_SECRET externo e com alta entropia.
+equilibra:
+  security:
+    jwt:
+      issuer: ${EQUILIBRA_JWT_ISSUER:equilibra-api}
+      access-token-ttl: ${EQUILIBRA_JWT_ACCESS_TOKEN_TTL:15m}
+      secret: ${EQUILIBRA_JWT_SECRET:dev-only-change-me-not-for-production-32-bytes-minimum}
+
 # OpenAPI/Swagger
 springdoc:
   api-docs:
@@ -178,3 +187,11 @@ logging:
   level:
     br.com.equilibra: DEBUG
     org.testcontainers: INFO
+
+# Segurança / JWT - Test profile
+equilibra:
+  security:
+    jwt:
+      issuer: equilibra-api
+      access-token-ttl: 15m
+      secret: test-secret-with-at-least-32-bytes-for-hs256-algorithm

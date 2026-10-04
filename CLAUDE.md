@@ -139,6 +139,10 @@ Não aplicar essa estrutura mecanicamente quando ela não trouxer benefício. O 
 18. **Algoritmo próprio é proibido** (não usar SHA-256, MD5, Base64, AES para senhas).
 19. **Comparação de senha exclusivamente via `PasswordEncoder.matches()`**.
 20. **Não aplicar `trim()` silenciosamente** em senhas antes de hash.
+21. **JWT nunca pode ser logado** completo ou parcialmente como credencial.
+22. **Secrets/chaves de JWT nunca devem ser versionados**; use configuração externa.
+23. **JWT não deve transportar dados financeiros, passwordHash ou dados sensíveis desnecessários**.
+24. **APIs de negócio devem ser protegidas por padrão**, liberando publicamente apenas endpoints explicitamente aprovados.
 
 ---
 

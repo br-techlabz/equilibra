@@ -1,0 +1,1193 @@
+# TASK-1.5 — JWT e autorização stateless
+
+As TASK-1.1 até TASK-1.4 foram concluídas.
+
+Estamos na:
+
+**Sprint 1 — Identidade, Usuários e Autenticação**
+
+Nesta TASK transforme a autenticação de credenciais já existente em autenticação HTTP stateless utilizando access token JWT.
+
+Fluxo alvo:
+
+email + senha
+↓
+autenticação
+↓
+identidade autenticada
+↓
+access token JWT assinado
+↓
+cliente envia Authorization: Bearer <token>
+↓
+Spring Security valida token
+↓
+SecurityContext
+↓
+endpoint protegido
+
+NÃO implemente refresh token nesta TASK.
+
+---
+
+# 1. Preparação obrigatória
+
+Antes de modificar qualquer arquivo, leia integralmente:
+
+- `CLAUDE.md`
+- `README.md`
+- `docs/architecture.md`
+- `docs/api-guidelines.md`
+- `docs/security.md`
+- ADRs existentes
+
+Analise especificamente:
+
+- Spring Boot e Spring Security efetivamente instalados
+- configuração SecurityFilterChain
+- endpoint `/api/auth/register`
+- endpoint `/api/auth/login`
+- AuthenticationManager/Provider
+- UserDetailsService/adapters existentes
+- `AuthenticatedUser`
+- entidade User
+- UUID
+- PasswordEncoder
+- Problem Details
+- Request ID
+- OpenAPI
+- profiles
+- configuração por environment variables
+- testes existentes
+
+Apresente um plano resumido antes de implementar.
+
+Não duplique infraestrutura existente.
+
+---
+
+# 2. Objetivo
+
+Implementar:
+
+- geração de access token JWT
+- assinatura criptográfica
+- expiração
+- validação do token
+- autenticação Bearer
+- criação do SecurityContext
+- proteção de endpoints
+- respostas 401/403 consistentes
+- integração com OpenAPI
+
+A API deverá permanecer stateless.
+
+---
+
+# 3. Utilizar Spring Security
+
+Utilize recursos oficiais do Spring Security para processamento JWT sempre que possível.
+
+Prefira mecanismos modernos suportados pela versão instalada, como:
+
+- OAuth2 Resource Server
+- JwtEncoder
+- JwtDecoder
+
+quando apropriado.
+
+Evite implementar manualmente:
+
+- parsing JWT
+- validação de assinatura
+- Base64
+- comparação de assinatura
+- filtro criptográfico próprio
+
+Não adicione biblioteca JWT externa se Spring Security já atender adequadamente ao requisito.
+
+---
+
+# 4. Dependências
+
+Verifique primeiro as dependências existentes.
+
+Caso necessário, adicione dependência oficial do ecossistema Spring para Resource Server/JWT.
+
+Evite bibliotecas concorrentes como várias implementações JWT simultaneamente.
+
+Não sobrescreva versões gerenciadas pelo Spring Boot sem necessidade.
+
+---
+
+# 5. Algoritmo de assinatura
+
+Avalie a estratégia de assinatura mais adequada para esta aplicação.
+
+Prefira assinatura assimétrica quando ela puder ser configurada de maneira simples, segura e compatível com a infraestrutura atual.
+
+Exemplos possíveis:
+
+- RSA
+- EC
+
+Caso escolha assinatura simétrica, documente claramente:
+
+- motivo
+- requisitos de tamanho/entropia do secret
+- estratégia de configuração
+
+NUNCA:
+
+- hardcode chave
+- versionar private key
+- versionar secret real
+- utilizar senha humana como JWT secret
+
+Documente a decisão tomada.
+
+---
+
+# 6. Chaves
+
+Se utilizar assinatura assimétrica:
+
+private key:
+- usada para assinatura
+- nunca versionada
+- nunca enviada ao frontend
+
+public key:
+- usada para validação
+
+Configure através de mecanismo seguro e apropriado ao ambiente.
+
+Para desenvolvimento, forneça instruções de geração/configuração.
+
+Não coloque chave privada real no Git.
+
+Se forem necessários arquivos de exemplo, eles NÃO podem representar segredo utilizável em produção.
+
+---
+
+# 7. Configuração
+
+Centralize configurações JWT.
+
+Exemplo conceitual:
+
+`JwtProperties`
+
+Propriedades possíveis:
+
+- issuer
+- access-token-ttl
+- chave/configuração criptográfica
+
+Não espalhe strings e durações pelo código.
+
+Utilize configuração externa.
+
+---
+
+# 8. Issuer
+
+Defina um issuer consistente.
+
+Exemplo conceitual:
+
+`equilibra-api`
+
+Não invente domínio público inexistente.
+
+O decoder deverá validar issuer quando tecnicamente apropriado.
+
+---
+
+# 9. Expiração
+
+Access token deve possuir duração limitada.
+
+Adote inicialmente duração curta e razoável.
+
+Sugestão:
+
+15 minutos
+
+ou outro valor justificado.
+
+A duração deverá ser configurável.
+
+Não crie token sem expiração.
+
+---
+
+# 10. Claims mínimos
+
+Inclua somente claims necessários.
+
+Considere:
+
+- `iss`
+- `sub`
+- `iat`
+- `exp`
+- `jti`
+
+Para `sub`, prefira identificador imutável do usuário, como UUID.
+
+Não utilize email como identidade principal do token se o UUID estiver disponível.
+
+---
+
+# 11. Email no JWT
+
+Evite incluir email se ele não for necessário para autorização.
+
+O token deve minimizar dados pessoais.
+
+Se o frontend futuramente precisar do email, ele poderá obtê-lo através de endpoint autenticado apropriado.
+
+Não transforme JWT em perfil de usuário.
+
+---
+
+# 12. Claims proibidos
+
+NUNCA colocar no JWT:
+
+- password
+- passwordHash
+- secrets
+- dados bancários
+- saldos
+- transações
+- anexos
+- informações sensíveis desnecessárias
+
+---
+
+# 13. Roles/authorities
+
+O Equilibra ainda não possui requisito de múltiplos papéis administrativos.
+
+Não invente:
+
+- ROLE_ADMIN
+- ROLE_PREMIUM
+- ROLE_MANAGER
+
+se eles não existem no produto.
+
+Todo usuário autenticado pode inicialmente possuir a autoridade mínima necessária, ou a autorização pode depender apenas de autenticação.
+
+Documente a escolha.
+
+---
+
+# 14. JTI
+
+Avalie incluir `jti` único no token.
+
+Pode utilizar UUID.
+
+Não implemente blacklist/revocation store nesta TASK.
+
+O `jti` prepara a arquitetura para necessidades futuras sem obrigar armazenamento server-side.
+
+---
+
+# 15. Geração do token
+
+Crie componente responsável exclusivamente por geração de tokens.
+
+Exemplo conceitual:
+
+`JwtTokenService`
+
+Responsabilidades:
+
+- receber identidade autenticada
+- criar claims
+- definir timestamps
+- assinar token
+
+Não colocar geração JWT no controller.
+
+---
+
+# 16. Clock
+
+Evite chamadas dispersas a `Instant.now()` quando isso prejudicar testabilidade.
+
+Avalie injetar:
+
+`Clock`
+
+ou abstração equivalente.
+
+Isso permite testar:
+
+- issuedAt
+- expiration
+
+de maneira determinística.
+
+Não crie abstração exagerada.
+
+---
+
+# 17. Login response
+
+Evolua a resposta de:
+
+`POST /api/auth/login`
+
+para retornar access token.
+
+Exemplo conceitual:
+
+{
+  "accessToken": "...",
+  "tokenType": "Bearer",
+  "expiresIn": 900
+}
+
+Adapte naming à convenção JSON existente.
+
+Não retornar:
+
+- password
+- passwordHash
+- private key
+- refresh token fictício
+
+---
+
+# 18. Informações adicionais no login
+
+Mantenha a resposta mínima.
+
+Se já houver `id` e `email` da TASK-1.4, avalie se ainda são necessários.
+
+Prefira evitar duplicação de identidade quando futuramente teremos endpoint `/me`.
+
+Documente a decisão.
+
+---
+
+# 19. Access token apenas
+
+Nesta TASK existe apenas:
+
+`accessToken`
+
+NÃO criar:
+
+`refreshToken`
+
+NÃO criar token vazio ou placeholder.
+
+---
+
+# 20. Bearer Authentication
+
+Requisições autenticadas deverão utilizar:
+
+`Authorization: Bearer <access-token>`
+
+Utilize suporte padrão Spring Security.
+
+Não crie header proprietário.
+
+---
+
+# 21. Validação
+
+O backend deverá validar pelo menos:
+
+- estrutura JWT
+- assinatura
+- issuer
+- expiration
+- claims obrigatórios relevantes
+
+Token inválido NÃO autentica.
+
+---
+
+# 22. Token expirado
+
+Token expirado:
+
+→ `401 Unauthorized`
+
+Não retornar stack trace.
+
+Não retornar detalhes criptográficos.
+
+Mensagem poderá indicar autenticação inválida/expirada sem revelar internals.
+
+---
+
+# 23. Token adulterado
+
+Qualquer modificação no payload sem nova assinatura válida:
+
+→ `401 Unauthorized`
+
+Crie teste explícito.
+
+---
+
+# 24. Token malformado
+
+Valor Bearer que não seja JWT válido:
+
+→ `401 Unauthorized`
+
+Sem:
+
+- stack trace
+- Base64 errors
+- detalhes internos
+
+---
+
+# 25. Token ausente
+
+Endpoint protegido sem token:
+
+→ `401 Unauthorized`
+
+Endpoint público continua funcionando normalmente.
+
+---
+
+# 26. SecurityContext
+
+Após validação, o Spring Security deverá possuir identidade autenticada disponível no:
+
+`SecurityContext`
+
+A identidade deverá permitir obter no mínimo:
+
+`userId`
+
+Isso será fundamental na TASK-1.6.
+
+---
+
+# 27. Principal
+
+Defina representação clara do principal autenticado.
+
+Prefira identidade imutável.
+
+Exemplo conceitual:
+
+`AuthenticatedPrincipal`
+
+contendo:
+
+- userId
+
+e somente outros campos realmente necessários.
+
+Não coloque entidade JPA completa no SecurityContext sem necessidade.
+
+---
+
+# 28. Banco por request
+
+Evite consultar `users` em TODA requisição apenas para reconstruir uma identidade que já está validamente representada no JWT, salvo se houver requisito de segurança que justifique.
+
+Entretanto, considere a implicação do campo:
+
+`active`
+
+Um usuário desativado após emissão do token poderá continuar autenticado até o token expirar.
+
+Com access token curto, esse trade-off pode ser aceitável para o MVP.
+
+Documente explicitamente essa decisão.
+
+Não implemente blacklist nesta TASK.
+
+---
+
+# 29. Endpoints públicos
+
+Mantenha públicos somente os endpoints necessários.
+
+No mínimo:
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+
+Além dos endpoints técnicos explicitamente aprovados na Sprint 0, como health/OpenAPI conforme configuração existente.
+
+Não liberar:
+
+`/api/**`
+
+indiscriminadamente.
+
+---
+
+# 30. Endpoints protegidos
+
+Todos os endpoints de negócio futuros deverão ser autenticados por padrão.
+
+Adote estratégia:
+
+**deny/protect by default**
+
+e permita explicitamente apenas endpoints públicos.
+
+Isso reduz risco de novos endpoints nascerem públicos acidentalmente.
+
+---
+
+# 31. Endpoint técnico protegido para teste
+
+Não crie endpoint permanente como:
+
+`/api/test/protected`
+
+somente para testar segurança.
+
+Utilize controller restrito aos testes quando necessário.
+
+---
+
+# 32. 401 vs 403
+
+Defina corretamente:
+
+### 401 Unauthorized
+
+Usuário não autenticado ou credencial/token inválido.
+
+### 403 Forbidden
+
+Usuário autenticado, mas sem autorização para determinada operação.
+
+Não utilizar 403 para token ausente.
+
+---
+
+# 33. Problem Details
+
+Integre 401 e 403 ao padrão de erros existente quando tecnicamente compatível com Spring Security.
+
+IMPORTANTE:
+
+Erros produzidos dentro do filter chain podem não passar pelo `@RestControllerAdvice`.
+
+Implemente mecanismos apropriados, como:
+
+- AuthenticationEntryPoint
+- AccessDeniedHandler
+
+quando necessário.
+
+As respostas devem ser coerentes com Problem Details.
+
+---
+
+# 34. Request ID
+
+401 e 403 produzidos pela camada de segurança também deverão preservar:
+
+`X-Request-ID`
+
+e, quando a arquitetura atual fizer isso, incluir request ID no Problem Details.
+
+Garanta ordem correta dos filtros.
+
+---
+
+# 35. Ordem dos filtros
+
+Analise:
+
+- RequestIdFilter
+- Spring Security
+- Resource Server
+
+Garanta que request ID esteja disponível durante tratamento de erros de autenticação.
+
+Não registre filtros duplicados acidentalmente.
+
+---
+
+# 36. Stateless
+
+Configure:
+
+`SessionCreationPolicy.STATELESS`
+
+ou mecanismo atual equivalente.
+
+A autenticação não deverá depender de:
+
+`JSESSIONID`
+
+Confirme em testes.
+
+---
+
+# 37. CSRF
+
+Como a API utilizará Bearer token no header e será stateless, avalie a política de CSRF de acordo com as recomendações atuais do Spring Security.
+
+Documente a decisão.
+
+Não copie configuração antiga sem compreender o contexto.
+
+---
+
+# 38. CORS
+
+Preserve a política definida na Sprint 0.
+
+Não ampliar origins apenas para JWT.
+
+O Angular ainda não possui login nesta TASK.
+
+---
+
+# 39. Token no backend
+
+Não registre JWT completo nos logs.
+
+Evite inclusive DEBUG.
+
+Não inclua token em exceptions.
+
+---
+
+# 40. Token no frontend
+
+NÃO alterar Angular nesta TASK.
+
+Portanto, ainda NÃO decidir armazenamento do token no browser.
+
+Essa decisão será tratada junto à integração frontend nas TASK-1.8/1.9.
+
+Não criar localStorage agora.
+
+---
+
+# 41. Refresh token
+
+NÃO implementar:
+
+- refresh endpoint
+- refresh table
+- refresh cookie
+- token rotation
+- revocation list
+
+A necessidade será avaliada posteriormente.
+
+---
+
+# 42. Logout
+
+JWT stateless sem refresh token não possui logout server-side tradicional.
+
+NÃO implemente blacklist.
+
+Logout frontend será tratado futuramente como descarte das credenciais locais, de acordo com a estratégia escolhida.
+
+---
+
+# 43. Testes do JwtTokenService
+
+Cubra:
+
+### Geração
+
+Token válido é produzido.
+
+### Subject
+
+`sub` contém o identificador correto.
+
+### Issuer
+
+Issuer correto.
+
+### Issued At
+
+`iat` correto.
+
+### Expiration
+
+`exp` respeita TTL.
+
+### JTI
+
+Quando implementado, existe e é único.
+
+---
+
+# 44. Teste de assinatura
+
+Token gerado deve ser validado pelo decoder configurado.
+
+---
+
+# 45. Teste de expiração
+
+Utilize Clock controlável quando apropriado.
+
+Confirme que token expirado é rejeitado.
+
+Evite `Thread.sleep()`.
+
+---
+
+# 46. Teste de adulteração
+
+Modifique parte do token e confirme:
+
+`401`
+
+Não tente gerar token adulterado com a chave válida.
+
+O objetivo é verificar integridade criptográfica.
+
+---
+
+# 47. Testes do login
+
+### Credenciais válidas
+
+`POST /api/auth/login`
+
+→ 200
+
+Response contém:
+
+- accessToken
+- tokenType
+- expiresIn
+
+Access token deve ser validável.
+
+### Credenciais inválidas
+
+→ 401
+
+Nenhum token retornado.
+
+---
+
+# 48. Teste de endpoint protegido
+
+Utilize endpoint/controller de teste.
+
+Cenários:
+
+sem token
+→ 401
+
+token válido
+→ acesso permitido
+
+token expirado
+→ 401
+
+token malformado
+→ 401
+
+token adulterado
+→ 401
+
+---
+
+# 49. Teste de sessão
+
+Confirme que autenticação não cria sessão HTTP como mecanismo de persistência.
+
+Não deve ser necessário reutilizar:
+
+`JSESSIONID`
+
+para acessar endpoint protegido.
+
+---
+
+# 50. Teste de principal
+
+Com token válido, confirme que:
+
+`SecurityContext`
+
+contém principal autenticado com o UUID correto.
+
+---
+
+# 51. Teste 403
+
+Se existir forma legítima de testar autorização nesta arquitetura, cubra 403.
+
+Não invente roles apenas para fabricar o teste.
+
+Pode utilizar configuração/controller restrito ao contexto de teste.
+
+---
+
+# 52. Testcontainers
+
+Execute os testes de integração existentes com MySQL.
+
+JWT em si não precisa de banco.
+
+Entretanto, o fluxo real:
+
+register
+→ login
+→ token
+
+deverá ser testado de forma integrada quando apropriado.
+
+---
+
+# 53. Teste integrado
+
+Utilizando Testcontainers:
+
+1. registrar usuário
+2. autenticar
+3. receber access token
+4. validar token
+5. utilizar token contra recurso protegido de teste
+6. confirmar principal correto
+
+---
+
+# 54. OpenAPI
+
+Configure esquema de segurança:
+
+Bearer JWT.
+
+Documente `/api/auth/login`.
+
+Indique que endpoints protegidos utilizam:
+
+`Authorization: Bearer <token>`
+
+Não marque `/register` e `/login` como exigindo Bearer.
+
+---
+
+# 55. Swagger UI
+
+Quando tecnicamente suportado, Swagger UI deverá permitir inserir Bearer token para testar endpoints protegidos.
+
+Não configure token real automaticamente.
+
+---
+
+# 56. Documentação de segurança
+
+Atualize:
+
+`docs/security.md`
+
+Documente:
+
+- algoritmo JWT
+- issuer
+- TTL
+- claims
+- estratégia de chaves
+- Resource Server
+- stateless
+- 401/403
+- trade-off de usuário desativado
+- ausência de refresh token
+
+NÃO documente chave privada ou secret real.
+
+---
+
+# 57. CLAUDE.md
+
+Adicione somente regras permanentes relevantes.
+
+Exemplos:
+
+- APIs de negócio são protegidas por padrão
+- userId vem da identidade autenticada
+- JWT nunca é logado
+- secrets/chaves nunca são versionados
+- JWT não transporta dados financeiros
+
+Não copie toda `security.md`.
+
+---
+
+# 58. Configuração de desenvolvimento
+
+Atualize `.env.example` somente se necessário.
+
+Se houver variáveis para JWT/chaves:
+
+- utilize placeholders
+- nunca valores reais
+- explique como gerar configuração local
+
+Confirme `.env` ignorado.
+
+---
+
+# 59. Migration
+
+JWT não deverá exigir alteração de banco.
+
+NÃO criar tabela:
+
+`tokens`
+
+NÃO criar tabela:
+
+`sessions`
+
+NÃO criar tabela:
+
+`refresh_tokens`
+
+---
+
+# 60. Performance
+
+Não faça consulta ao banco desnecessária durante validação criptográfica de cada token se a arquitetura não exigir.
+
+Mantenha validação stateless.
+
+---
+
+# 61. Segurança criptográfica
+
+Revise especificamente:
+
+- algoritmo
+- tamanho de chave
+- origem da chave
+- assinatura
+- validação
+- issuer
+- expiração
+
+Nunca aceitar algoritmo arbitrariamente informado pelo token sem política de validação adequada.
+
+Não aceitar:
+
+`alg=none`
+
+---
+
+# 62. Critérios de aceite
+
+A TASK-1.5 estará concluída quando:
+
+- login emitir access token JWT
+- token possuir assinatura válida
+- token possuir expiração
+- token possuir issuer
+- token possuir subject com UUID do usuário
+- token possuir issuedAt
+- JTI existir se adotado
+- JWT não contiver dados sensíveis
+- Resource Server validar token
+- SecurityContext receber identidade
+- API for stateless
+- JSESSIONID não for necessário
+- endpoints públicos permanecerem públicos
+- demais endpoints forem protegidos por padrão
+- token ausente retornar 401
+- token inválido retornar 401
+- token expirado retornar 401
+- token adulterado retornar 401
+- 401/403 forem tratados adequadamente
+- Request ID funcionar também em erros de segurança
+- OpenAPI possuir Bearer JWT
+- testes JWT passarem
+- testes de segurança passarem
+- testes anteriores passarem
+- build Maven passar
+
+---
+
+# 63. Restrições
+
+NÃO implementar:
+
+- refresh token
+- refresh endpoint
+- token blacklist
+- Redis
+- logout server-side
+- frontend
+- localStorage
+- sessionStorage
+- cookies de autenticação
+- Angular AuthService
+- Angular Guard
+- Angular interceptor Authorization
+- recuperação de senha
+- MFA
+- OAuth
+- roles fictícias
+
+NÃO iniciar TASK-1.6.
+
+---
+
+# 64. Validação manual
+
+Quando possível:
+
+1. iniciar MySQL
+2. iniciar backend
+3. cadastrar usuário fictício
+4. fazer login
+5. receber JWT
+6. inspecionar somente claims não sensíveis
+7. confirmar `iss`
+8. confirmar `sub`
+9. confirmar `iat`
+10. confirmar `exp`
+11. acessar recurso protegido de teste/ambiente de teste
+12. testar sem token → 401
+13. testar token adulterado → 401
+14. confirmar ausência de sessão
+15. confirmar X-Request-ID
+
+Não imprimir private key ou secret.
+
+Não registrar token completo em relatório.
+
+---
+
+# 65. Relatório final
+
+Ao concluir apresente:
+
+## TASK-1.5
+
+Status:
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## Estratégia JWT
+
+Informe:
+
+- biblioteca/framework
+- algoritmo
+- issuer
+- TTL
+- estratégia de chave
+
+NÃO mostre chave/secret.
+
+## Claims
+
+Liste os claims implementados.
+
+## Login Response
+
+Descreva o contrato sem fornecer token real.
+
+## Resource Server
+
+Explique como validação ocorre.
+
+## Principal
+
+Explique como userId chega ao SecurityContext.
+
+## Stateless
+
+PASS / FAIL
+
+Confirme ausência de dependência de sessão.
+
+## Segurança
+
+Confirme:
+
+- JWT não logado
+- chave privada/secret não versionado
+- passwordHash não incluído
+- dados financeiros não incluídos
+- `alg=none` não aceito
+
+## HTTP
+
+- sem token:
+- token inválido:
+- token expirado:
+- acesso negado:
+
+## Problem Details
+
+PASS / FAIL
+
+## Request ID
+
+PASS / FAIL
+
+## OpenAPI
+
+PASS / FAIL
+
+## Testes
+
+Liste testes executados e resultados.
+
+## Testcontainers/MySQL
+
+PASS / FAIL
+
+## Build Maven
+
+PASS / FAIL
+
+## Arquivos criados
+
+Liste.
+
+## Arquivos modificados
+
+Liste.
+
+## Dependências adicionadas
+
+Liste e justifique.
+
+## Configurações adicionadas
+
+Liste nomes das propriedades, sem seus secrets.
+
+## Migrations
+
+Confirme que nenhuma migration JWT foi necessária ou explique eventual exceção.
+
+## Pendências
+
+Liste somente problemas reais.
+
+## Próxima tarefa
+
+Informe prontidão para:
+
+**TASK-1.6 — Contexto do usuário autenticado e isolamento multiusuário**
+
+NÃO implemente TASK-1.6.

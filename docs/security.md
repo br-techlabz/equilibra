@@ -105,11 +105,72 @@ public PasswordEncoder passwordEncoder() {
 
 O endpoint `POST /api/auth/register` é público para permitir criação de conta, mas não autentica automaticamente o usuário criado.
 
-O endpoint `POST /api/auth/login` é público para validar credenciais e retornar uma identidade temporária segura. Ele não emite JWT, access token, refresh token, cookie de sessão ou token fictício; a emissão de tokens será definida na TASK-1.5.
+O endpoint `POST /api/auth/login` é público para validar credenciais e emitir um access token JWT Bearer com expiração curta (padrão 15 min).
 
-Falhas de autenticação retornam resposta genérica para evitar enumeração de contas: usuário inexistente, senha incorreta e usuário inativo resultam externamente em `401 Unauthorized` com `Invalid email or password.`. Quando o usuário não existe ou não está autenticável, o fluxo executa verificação contra hash BCrypt fictício precomputado para reduzir diferenças triviais de caminho sem sleeps artificiais.
+Falhas de autenticação retornam resposta genérica para evitar enumeração de contas: usuário inexistente, senha incorreta e usuário inativo resultam externamente em `401 Unauthorized` com `Invalid email or password.`.
 
-A API permanece stateless; o login não cria autenticação baseada em `JSESSIONID`. Não há configuração de `WWW-Authenticate` específica nesta etapa porque ainda não existe esquema final de autenticação Bearer/JWT.
+A API permanece stateless (`SessionCreationPolicy.STATELESS`); não há `JSESSIONID`. Autenticação via `Authorization: Bearer <access-token>`.
+
+---
+
+## JWT (Access Token)
+
+### Algoritmo e Chaves
+- **Algoritmo**: HS256 (HMAC SHA-256) — assinatura simétrica.
+- **Secret**: configurado via `EQUILIBRA_JWT_SECRET` (mínimo 32 bytes / 256 bits). Não versionado; use variável de ambiente.
+- **Issuer**: `equilibra-api` (configurável via `EQUILIBRA_JWT_ISSUER`).
+- **TTL**: 15 minutos (configurável via `EQUILIBRA_JWT_ACCESS_TOKEN_TTL`).
+
+### Claims Mínimos
+| Claim | Valor | Descrição |
+|-------|-------|-----------|
+| `iss` | `equilibra-api` | Issuer |
+| `sub` | UUID do usuário | Subject (identificador imutável) |
+| `iat` | timestamp | Issued At (segundos desde epoch) |
+| `exp` | timestamp | Expiration (iat + TTL) |
+| `jti` | UUID | ID único do token (prepara para revogação futura) |
+
+### Claims Proibidos
+NUNCA incluídos no JWT:
+- `password`, `passwordHash`
+- Secrets, chaves privadas
+- Dados financeiros (saldos, transações, anexos)
+- Informações sensíveis desnecessárias
+
+### Validação
+O Resource Server valida em cada request:
+1. Estrutura JWT válida (3 segmentos Base64URL)
+2. Assinatura HS256 com secret configurado
+3. Issuer corresponde ao configurado
+4. Expiração (`exp`) não passou
+5. Claims obrigatórios presentes
+
+Falhas → `401 Unauthorized` (Problem Details) sem detalhes criptográficos.
+
+### SecurityContext / Principal
+Após validação, o `SecurityContext` recebe `AuthenticatedPrincipal` contendo apenas `userId` (UUID). Não há consulta ao banco a cada request (stateless).
+
+**Trade-off documentado**: usuário desativado após emissão do token continua autenticado até o token expirar (TTL curto mitiga). Não há blacklist nesta etapa.
+
+### Endpoints Públicos
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- Health/Actuator/OpenAPI (conforme Sprint 0)
+
+Demais endpoints → `401` se token ausente/inválido/expirado.
+
+### 401 vs 403
+- **401 Unauthorized**: não autenticado, token inválido/ausente/expirado/adulterado.
+- **403 Forbidden**: autenticado mas sem autorização para a operação (não usado nesta etapa).
+
+### Problem Details + Request ID
+Erros de segurança (401/403) retornam `application/problem+json` com `requestId` (correlação via `X-Request-ID` / MDC). Filtros na ordem: `RequestIdFilter` → Spring Security.
+
+### OpenAPI
+Security scheme `bearerAuth` (HTTP Bearer JWT) configurado globalmente; `/register` e `/login` marcados como públicos (`@SecurityRequirements`).
+
+### Logs
+JWT completo **nunca** logado. `SecurityProblemSupport` não expõe token em erros.
 
 Requisito futuro: avaliar rate limiting para endpoints públicos sensíveis, especialmente cadastro, login e recuperação de senha. Não há Redis, CAPTCHA ou infraestrutura dedicada nesta etapa.
 

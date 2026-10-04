@@ -68,11 +68,12 @@ class AuthLoginIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(header().exists(RequestIdFilter.REQUEST_ID_HEADER))
             .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE))
-            .andExpect(jsonPath("$.id").isNotEmpty())
-            .andExpect(jsonPath("$.email").value("login.valid@example.com"))
+            .andExpect(jsonPath("$.accessToken").isNotEmpty())
+            .andExpect(jsonPath("$.tokenType").value("Bearer"))
+            .andExpect(jsonPath("$.expiresIn").value(900))
             .andExpect(content().string(not(containsString("password"))))
             .andExpect(content().string(not(containsString("passwordHash"))))
-            .andExpect(content().string(not(containsString("token"))))
+            .andExpect(content().string(not(containsString("refreshToken"))))
             .andExpect(content().string(not(containsString("senhaValida123"))));
     }
 
@@ -157,7 +158,8 @@ class AuthLoginIntegrationTest {
                     }
                     """))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.email").value("login.normalized@example.com"));
+            .andExpect(jsonPath("$.accessToken").isNotEmpty())
+            .andExpect(jsonPath("$.tokenType").value("Bearer"));
     }
 
     @Test

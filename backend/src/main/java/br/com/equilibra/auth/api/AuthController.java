@@ -3,6 +3,8 @@ package br.com.equilibra.auth.api;
 import br.com.equilibra.auth.application.AuthenticateUserCommand;
 import br.com.equilibra.auth.application.AuthenticateUserService;
 import br.com.equilibra.auth.application.AuthenticatedUser;
+import br.com.equilibra.auth.application.JwtTokenService;
+import br.com.equilibra.auth.application.LoginTokenResponse;
 import br.com.equilibra.auth.application.RegisterUserCommand;
 import br.com.equilibra.auth.application.RegisterUserResult;
 import br.com.equilibra.auth.application.RegisterUserService;
@@ -31,22 +33,28 @@ public class AuthController {
 
     private final RegisterUserService registerUserService;
     private final AuthenticateUserService authenticateUserService;
+    private final JwtTokenService jwtTokenService;
 
-    public AuthController(RegisterUserService registerUserService, AuthenticateUserService authenticateUserService) {
+    public AuthController(
+        RegisterUserService registerUserService,
+        AuthenticateUserService authenticateUserService,
+        JwtTokenService jwtTokenService
+    ) {
         this.registerUserService = registerUserService;
         this.authenticateUserService = authenticateUserService;
+        this.jwtTokenService = jwtTokenService;
     }
 
     @PostMapping("/login")
     @Operation(
         summary = "Autenticar usuário",
-        description = "Valida email e senha e retorna uma identidade temporária. A emissão de tokens será adicionada em tarefa futura."
+        description = "Valida email e senha e retorna um access token JWT Bearer."
     )
     @SecurityRequirements
     @ApiResponse(
         responseCode = "200",
         description = "Credenciais válidas",
-        content = @Content(schema = @Schema(implementation = AuthenticatedUserResponse.class))
+        content = @Content(schema = @Schema(implementation = LoginResponse.class))
     )
     @ApiResponse(
         responseCode = "400",
@@ -58,13 +66,14 @@ public class AuthController {
         description = "Credenciais inválidas",
         content = @Content(schema = @Schema(implementation = ProblemDetail.class))
     )
-    public ResponseEntity<AuthenticatedUserResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthenticatedUser authenticatedUser = authenticateUserService.authenticate(
             new AuthenticateUserCommand(request.email(), request.password())
         );
+        LoginTokenResponse tokenResponse = jwtTokenService.issueAccessToken(authenticatedUser);
 
         return ResponseEntity.ok(
-            new AuthenticatedUserResponse(authenticatedUser.userId(), authenticatedUser.email())
+            new LoginResponse(tokenResponse.accessToken(), tokenResponse.tokenType(), tokenResponse.expiresIn())
         );
     }
 

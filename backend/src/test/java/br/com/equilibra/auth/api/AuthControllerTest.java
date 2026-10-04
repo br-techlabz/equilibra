@@ -4,6 +4,8 @@ import br.com.equilibra.auth.application.AuthenticateUserCommand;
 import br.com.equilibra.auth.application.AuthenticateUserService;
 import br.com.equilibra.auth.application.AuthenticatedUser;
 import br.com.equilibra.auth.application.InvalidCredentialsException;
+import br.com.equilibra.auth.application.JwtTokenService;
+import br.com.equilibra.auth.application.LoginTokenResponse;
 import br.com.equilibra.auth.application.RegisterUserCommand;
 import br.com.equilibra.auth.application.RegisterUserResult;
 import br.com.equilibra.auth.application.RegisterUserService;
@@ -36,18 +38,20 @@ class AuthControllerTest {
 
     private RegisterUserService registerUserService;
     private AuthenticateUserService authenticateUserService;
+    private JwtTokenService jwtTokenService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         registerUserService = mock(RegisterUserService.class);
         authenticateUserService = mock(AuthenticateUserService.class);
+        jwtTokenService = mock(JwtTokenService.class);
 
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
         mockMvc = MockMvcBuilders
-            .standaloneSetup(new AuthController(registerUserService, authenticateUserService))
+            .standaloneSetup(new AuthController(registerUserService, authenticateUserService, jwtTokenService))
             .setControllerAdvice(new GlobalExceptionHandler())
             .setMessageConverters(new MappingJackson2HttpMessageConverter())
             .setValidator(validator)
@@ -57,8 +61,10 @@ class AuthControllerTest {
 
     @Test
     void shouldReturnOkForValidLoginWithoutSensitiveFields() throws Exception {
-        when(authenticateUserService.authenticate(any(AuthenticateUserCommand.class))).thenReturn(
-            new AuthenticatedUser("123e4567-e89b-12d3-a456-426614174000", "bill@example.com")
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser("123e4567-e89b-12d3-a456-426614174000", "bill@example.com");
+        when(authenticateUserService.authenticate(any(AuthenticateUserCommand.class))).thenReturn(authenticatedUser);
+        when(jwtTokenService.issueAccessToken(authenticatedUser)).thenReturn(
+            new LoginTokenResponse("jwt-token-ficticio", "Bearer", 900)
         );
 
         mockMvc.perform(post("/auth/login")
@@ -71,11 +77,12 @@ class AuthControllerTest {
                     """))
             .andExpect(status().isOk())
             .andExpect(header().exists(RequestIdFilter.REQUEST_ID_HEADER))
-            .andExpect(jsonPath("$.id").value("123e4567-e89b-12d3-a456-426614174000"))
-            .andExpect(jsonPath("$.email").value("bill@example.com"))
+            .andExpect(jsonPath("$.accessToken").value("jwt-token-ficticio"))
+            .andExpect(jsonPath("$.tokenType").value("Bearer"))
+            .andExpect(jsonPath("$.expiresIn").value(900))
             .andExpect(content().string(not(containsString("password"))))
             .andExpect(content().string(not(containsString("passwordHash"))))
-            .andExpect(content().string(not(containsString("token"))))
+            .andExpect(content().string(not(containsString("refreshToken"))))
             .andExpect(content().string(not(containsString("senhaValida123"))));
 
         verify(authenticateUserService).authenticate(new AuthenticateUserCommand(" Bill@Example.com ", "senhaValida123"));

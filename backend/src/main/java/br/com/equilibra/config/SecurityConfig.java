@@ -1,5 +1,7 @@
 package br.com.equilibra.config;
 
+import br.com.equilibra.auth.infrastructure.security.JwtAuthenticationConverter;
+import br.com.equilibra.shared.web.security.SecurityProblemSupport;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -23,7 +25,11 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(
+        HttpSecurity http,
+        JwtAuthenticationConverter jwtAuthenticationConverter,
+        SecurityProblemSupport securityProblemSupport
+    ) throws Exception {
         http
             // Desabilita CSRF para APIs REST stateless
             .csrf(csrf -> csrf.disable())
@@ -49,8 +55,20 @@ public class SecurityConfig {
                 ).permitAll()
 
                 // Demais endpoints exigem autenticação por padrão.
-                // TODO: Substituir por autenticação JWT na Sprint de Auth.
                 .anyRequest().authenticated()
+            )
+
+            // Tratamento de erros de segurança em Problem Details
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint(securityProblemSupport)
+                .accessDeniedHandler(securityProblemSupport)
+            )
+
+            // Resource Server JWT stateless
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .authenticationEntryPoint(securityProblemSupport)
+                .accessDeniedHandler(securityProblemSupport)
+                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
             )
 
             // Headers de segurança básicos
