@@ -28,7 +28,10 @@ public class CorsConfig {
         if (allowedOrigins != null && !allowedOrigins.isBlank()) {
             configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
         } else {
-            configuration.setAllowedOrigins(List.of("http://localhost:4200"));
+            configuration.setAllowedOrigins(List.of(
+                "http://localhost:4200",
+                "http://localhost:4201"
+            ));
         }
 
         // Métodos HTTP permitidos

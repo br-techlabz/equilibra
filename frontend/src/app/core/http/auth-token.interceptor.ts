@@ -23,12 +23,17 @@ export const authTokenInterceptor: HttpInterceptorFn = (req, next) => {
   }
 
   const apiBaseUrl = environment.apiUrl;
+  const requestUrl = req.url.startsWith('http')
+    ? req.url
+    : `${location.origin}${req.url}`;
 
-  // Verifica se a requisição é para a API do Equilibra
-  // req.url pode ser relativa ou absoluta; normaliza para comparação segura
-  const requestUrl = req.url.startsWith('http') ? req.url : `${location.origin}${req.url}`;
+  // A configuração local usa `/api`, então URLs relativas já pertencem à API.
+  // Para URLs absolutas, compara somente com a origem/base configuradas.
+  const isApiRequest = apiBaseUrl.startsWith('/')
+    ? req.url.startsWith(apiBaseUrl)
+    : requestUrl.startsWith(apiBaseUrl);
 
-  if (!requestUrl.startsWith(apiBaseUrl)) {
+  if (!isApiRequest) {
     // Domínio externo -> NUNCA envia token (proteção contra vazamento)
     return next(req);
   }

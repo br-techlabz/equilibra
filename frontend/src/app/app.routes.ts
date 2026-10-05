@@ -10,18 +10,20 @@ export const routes: Routes = [
   {
     path: 'login',
     canActivate: [guestGuard],
-    loadChildren: () =>
-      import('./features/auth/auth.routes').then((m) => m.AUTH_ROUTES),
+    loadComponent: () =>
+      import('./features/auth/pages/login/login.page').then((m) => m.LoginPageComponent),
   },
   {
     path: 'register',
     canActivate: [guestGuard],
-    loadChildren: () =>
-      import('./features/auth/auth.routes').then((m) => m.AUTH_ROUTES),
+    loadComponent: () =>
+      import('./features/auth/pages/register/register.page').then((m) => m.RegisterPageComponent),
   },
   {
     path: '',
     canActivate: [authGuard],
+    loadComponent: () =>
+      import('./layout/shell/shell.component').then((m) => m.ShellComponent),
     children: [
       {
         path: 'dashboard',

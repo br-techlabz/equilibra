@@ -1,0 +1,1 @@
+export { ContentPanelComponent } from './content-panel/content-panel.component';

@@ -1,4 +1,4 @@
-import { Component, HostBinding, HostListener, signal, computed, OnInit, inject } from '@angular/core';
+import { Component, HostBinding, HostListener, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -8,9 +8,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatMenuModule } from '@angular/material/menu';
 import { HeaderComponent } from '../header/header.component';
 import { SidebarComponent } from '../sidebar/sidebar.component';
+import { BreadcrumbComponent } from '../../shared/ui/breadcrumb/breadcrumb.component';
 import { AuthService } from '../../features/auth/data-access/auth.service';
 
 @Component({
@@ -26,9 +26,9 @@ import { AuthService } from '../../features/auth/data-access/auth.service';
     MatListModule,
     MatDividerModule,
     MatTooltipModule,
-    MatMenuModule,
     HeaderComponent,
     SidebarComponent,
+    BreadcrumbComponent,
   ],
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
@@ -38,31 +38,18 @@ export class ShellComponent implements OnInit {
 
   @HostBinding('class') class = 'app-shell';
 
-  readonly isSidebarOpen = signal(false);
+  readonly sidebarOpened = signal(true);
+  readonly sidebarCollapsed = signal(false);
   readonly isMobile = signal(false);
 
   readonly sidenavMode = computed(() => (this.isMobile() ? 'over' : 'side'));
-  readonly sidenavOpened = computed(() => (this.isMobile() ? this.isSidebarOpen() : true));
+  readonly sidenavOpened = computed(() => (this.isMobile() ? this.sidebarOpened() : true));
 
-  // User info for display
   readonly currentUserEmail = computed(() => this.authService.currentUser()?.email ?? '');
   readonly isAuthenticated = computed(() => this.authService.isAuthenticated());
 
-  onMenuToggle(): void {
-    this.isSidebarOpen.update((open) => !open);
-  }
-
-  onSidebarClose(): void {
-    if (this.isMobile()) {
-      this.isSidebarOpen.set(false);
-    }
-  }
-
-  onLogout(): void {
-    this.authService.logout();
-    if (this.isMobile()) {
-      this.isSidebarOpen.set(false);
-    }
+  ngOnInit(): void {
+    this.checkMobile();
   }
 
   @HostListener('window:resize')
@@ -70,14 +57,33 @@ export class ShellComponent implements OnInit {
     this.checkMobile();
   }
 
-  ngOnInit(): void {
-    this.checkMobile();
+  onMenuToggle(): void {
+    this.sidebarOpened.update((open) => !open);
+  }
+
+  onSidebarClose(): void {
+    if (this.isMobile()) {
+      this.sidebarOpened.set(false);
+    }
+  }
+
+  onSidebarCollapseToggle(): void {
+    if (!this.isMobile()) {
+      this.sidebarCollapsed.update((collapsed) => !collapsed);
+    }
+  }
+
+  onLogout(): void {
+    this.authService.logout();
+    if (this.isMobile()) {
+      this.sidebarOpened.set(false);
+    }
   }
 
   private checkMobile(): void {
-    this.isMobile.set(window.innerWidth < 960);
+    this.isMobile.set(window.innerWidth < 768);
     if (!this.isMobile()) {
-      this.isSidebarOpen.set(false);
+      this.sidebarOpened.set(true);
     }
   }
 }

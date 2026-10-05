@@ -1,98 +1,77 @@
 <div class="dashboard-page">
-  <header class="page-header">
-    <h1 class="page-title">Dashboard</h1>
-    <p class="page-subtitle">Visão geral das suas finanças</p>
-  </header>
+  <!-- Page Header -->
+  <app-page-header
+    title="Dashboard"
+    subtitle="Visão geral das suas finanças"
+    [actions]="headerActions">
+  </app-page-header>
 
-  <!-- Status da API -->
-  <section class="api-status-section" aria-label="Status da API">
-    <mat-card appearance="outlined" class="api-status-card">
-      <mat-card-content>
-        <div class="api-status-content">
-          <mat-icon
-            class="status-icon"
-            [color]="getStatusColor()"
-            [matTooltip]="getStatusText()">
-            {{ getStatusIcon() }}
-          </mat-icon>
-          <div class="status-info">
-            <span class="status-label">Status da API</span>
-            <span class="status-text">{{ getStatusText() }}</span>
-          </div>
-          @if (apiStatus() === 'loading') {
-            <mat-progress-spinner
-              diameter="24"
-              mode="indeterminate"
-              color="accent">
-            </mat-progress-spinner>
-          } @else {
-            <button
-              mat-icon-button
-              (click)="checkApiStatus()"
-              matTooltip="Verificar novamente"
-              aria-label="Verificar status da API novamente">
-              <mat-icon>refresh</mat-icon>
-            </button>
+  <!-- KPI Cards Row -->
+  <div class="kpi-grid card-grid">
+    @for (kpi of kpiCards; track kpi.label) {
+      <app-stat-card
+        [label]="kpi.label"
+        [value]="kpi.value"
+        [icon]="kpi.icon"
+        [variant]="kpi.variant"
+        [trend]="kpi.trend"
+        [trendPositive]="kpi.trendPositive">
+      </app-stat-card>
+    }
+  </div>
+
+  <!-- Main Content Grid: Chart (65-70%) + Recent Transactions (30-35%) -->
+  <div class="dashboard-grid panel-grid">
+    <!-- Chart Panel -->
+    <app-content-panel
+      title="Evolução do saldo"
+      subtitle="Últimos 30 dias"
+      [actions]="chartActions">
+      <app-empty-state
+        icon="show_chart"
+        iconVariant="chart"
+        title="Gráfico de evolução"
+        description="O gráfico de evolução do saldo será exibido aqui quando houver dados de transações."
+        [centered]="true">
+      </app-empty-state>
+    </app-content-panel>
+
+    <!-- Recent Transactions Panel -->
+    <app-content-panel
+      title="Transações recentes"
+      subtitle="Últimos lançamentos"
+      [actions]="transactionsActions">
+      @if (recentTransactions.length === 1 && recentTransactions[0].type === 'empty') {
+        <app-empty-state
+          icon="receipt_long"
+          iconVariant="inbox"
+          title="Nenhuma transação registrada"
+          description="Suas transações aparecerão aqui conforme você for cadastrando."
+          [centered]="true"
+          [actions]="[
+            { label: 'Nova transação', icon: 'add', handler: onNewTransaction, color: 'primary', variant: 'flat' }
+          ]">
+        </app-empty-state>
+      } @else {
+        <div class="transactions-list">
+          @for (transaction of recentTransactions; track transaction.id) {
+            <div class="transaction-item">
+              <div class="transaction-icon" [class]="'transaction-icon--' + transaction.type">
+                <mat-icon>{{ transaction.icon }}</mat-icon>
+              </div>
+              <div class="transaction-details">
+                <span class="transaction-description">{{ transaction.description }}</span>
+                <span class="transaction-meta">
+                  {{ transaction.category }} • {{ transaction.account }} • {{ transaction.date }}
+                </span>
+              </div>
+              <span class="transaction-value" [class.positive]="transaction.type === 'income'" [class.negative]="transaction.type === 'expense'">
+                {{ transaction.value }}
+              </span>
+            </div>
           }
         </div>
-      </mat-card-content>
-    </mat-card>
-  </section>
-
-  <section class="dashboard-cards" aria-label="Resumo financeiro">
-    <mat-card class="dashboard-card" appearance="outlined">
-      <mat-card-header>
-        <mat-card-title class="card-title">Saldo Total</mat-card-title>
-        <mat-card-subtitle class="card-subtitle">Todos os seus ativos</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content>
-        <div class="card-value">R$ 0,00</div>
-        <mat-icon class="card-icon">account_balance_wallet</mat-icon>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card class="dashboard-card" appearance="outlined">
-      <mat-card-header>
-        <mat-card-title class="card-title">Receitas do Mês</mat-card-title>
-        <mat-card-subtitle class="card-subtitle">Entradas registradas</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content>
-        <div class="card-value positive">R$ 0,00</div>
-        <mat-icon class="card-icon">arrow_downward</mat-icon>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card class="dashboard-card" appearance="outlined">
-      <mat-card-header>
-        <mat-card-title class="card-title">Despesas do Mês</mat-card-title>
-        <mat-card-subtitle class="card-subtitle">Saídas registradas</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content>
-        <div class="card-value negative">R$ 0,00</div>
-        <mat-icon class="card-icon">arrow_upward</mat-icon>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card class="dashboard-card" appearance="outlined">
-      <mat-card-header>
-        <mat-card-title class="card-title">Saldo Projetado</mat-card-title>
-        <mat-card-subtitle class="card-subtitle">Estimativa fim do mês</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content>
-        <div class="card-value">R$ 0,00</div>
-        <mat-icon class="card-icon">trending_up</mat-icon>
-      </mat-card-content>
-    </mat-card>
-  </section>
-
-  <section class="dashboard-empty" aria-label="Estado vazio">
-    <mat-card appearance="outlined">
-      <mat-card-content class="empty-content">
-        <mat-icon class="empty-icon">info</mat-icon>
-        <h2>Bem-vindo ao Equilibra</h2>
-        <p>Seu ambiente de gestão financeira está configurado e pronto para uso.</p>
-        <p>As funcionalidades financeiras serão implementadas nas próximas sprints.</p>
-      </mat-card-content>
-    </mat-card>
-  </section>
+      }
+    </app-content-panel>
+  </div>
 </div>

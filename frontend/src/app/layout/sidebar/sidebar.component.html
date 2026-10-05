@@ -1,54 +1,119 @@
-<nav class="sidebar-nav" aria-label="Navegação principal">
-  <div class="sidebar-header">
-    <span class="sidebar-brand">Equilibra</span>
+<nav class="sidebar" [class.collapsed]="collapsed()" [class.mobile]="isMobile()" aria-label="Navegação principal">
+  <!-- Brand / Logo -->
+  <div class="sidebar-brand" [class.collapsed]="collapsed()">
+    <div class="brand-icon">
+      <mat-icon>account_balance_wallet</mat-icon>
+    </div>
+    <div class="brand-text" [class.hidden]="collapsed()">
+      <span class="brand-name">Equilibra</span>
+      <span class="brand-tagline">Finanças Domésticas</span>
+    </div>
   </div>
 
-  <mat-divider />
+  <mat-divider class="sidebar-divider"></mat-divider>
 
-  <mat-nav-list class="nav-list" role="list" aria-label="Menu de navegação">
-    @for (item of navigationItems; track item.label) {
-      @if (item.children && item.children.length > 0) {
-        <mat-expansion-panel
-          class="nav-group"
-          [expanded]="item.expanded"
-          (opened)="item.expanded = true"
-          (closed)="item.expanded = false"
-          hideToggle>
-          <mat-expansion-panel-header class="nav-group-header">
-            <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
-            <span class="nav-label">{{ item.label }}</span>
-            <mat-icon class="expand-icon">expand_more</mat-icon>
-          </mat-expansion-panel-header>
+  <!-- Navigation Menu -->
+  <div class="sidebar-nav" [class.collapsed]="collapsed()">
+    <mat-nav-list dense>
+      @for (item of navigationItems; track trackByRoute($index, item)) {
+        @if (item.children && item.children.length > 0) {
+          <!-- Expandable Menu Item -->
+          <mat-expansion-panel
+            [expanded]="hasActiveChildren(item) || isActive(item.route)"
+            [disabled]="collapsed()"
+            class="nav-expansion-panel"
+            [class.active]="hasActiveChildren(item)"
+            (opened)="onNavigationClick()"
+            (closed)="onNavigationClick()">
+            <mat-expansion-panel-header class="nav-expansion-header">
+              <mat-icon class="nav-icon" matPanelTitle>
+                {{ item.icon }}
+              </mat-icon>
+              <span class="nav-label" matPanelTitle>
+                {{ item.label }}
+              </span>
+              <mat-icon class="expand-icon" matPanelDescription>
+                expand_more
+              </mat-icon>
+            </mat-expansion-panel-header>
 
-          @for (child of item.children; track child.label) {
-            <a
-              mat-list-item
-              class="nav-child-item"
-              [routerLink]="child.route"
-              routerLinkActive="active"
-              [routerLinkActiveOptions]="{ exact: true }"
-              (click)="onNavigationClick()"
-              [matTooltip]="child.label"
-              matTooltipPosition="right">
-              <mat-icon matListItemIcon class="nav-child-icon">{{ child.icon }}</mat-icon>
-              <span class="nav-child-label">{{ child.label }}</span>
-            </a>
-          }
-        </mat-expansion-panel>
-      } @else {
-        <a
-          mat-list-item
-          class="nav-item"
-          [routerLink]="item.route"
-          routerLinkActive="active"
-          [routerLinkActiveOptions]="{ exact: true }"
-          (click)="onNavigationClick()"
-          [matTooltip]="item.label"
-          matTooltipPosition="right">
-          <mat-icon matListItemIcon class="nav-icon">{{ item.icon }}</mat-icon>
-          <span class="nav-label">{{ item.label }}</span>
-        </a>
+            @for (child of item.children; track trackByChildRoute($index, child)) {
+              <a
+                mat-list-item
+                [routerLink]="child.route"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: false }"
+                class="nav-child-item"
+                (click)="onNavigationClick()">
+                <mat-icon class="nav-child-icon" matListItemIcon>
+                  {{ child.icon }}
+                </mat-icon>
+                <span class="nav-child-label" matListItemTitle>
+                  {{ child.label }}
+                </span>
+              </a>
+            }
+          </mat-expansion-panel>
+        } @else if (item.route) {
+          <!-- Simple Navigation Item -->
+          <a
+            mat-list-item
+            [routerLink]="item.route"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
+            class="nav-item"
+            [class.active]="isActive(item.route)"
+            (click)="onNavigationClick()"
+            matTooltip="{{ collapsed() ? item.label : '' }}"
+            [matTooltipPosition]="'right'"
+            [matTooltipDisabled]="!collapsed()">
+            <mat-icon class="nav-icon" matListItemIcon>
+              {{ item.icon }}
+            </mat-icon>
+            <span class="nav-label" matListItemTitle>
+              {{ item.label }}
+            </span>
+          </a>
+        }
       }
+    </mat-nav-list>
+  </div>
+
+  <!-- User Area (Bottom) -->
+  <div class="sidebar-user" [class.collapsed]="collapsed()">
+    <mat-divider class="sidebar-divider"></mat-divider>
+    @if (!collapsed()) {
+      <div class="user-info">
+        <div class="user-avatar">
+          <mat-icon>account_circle</mat-icon>
+        </div>
+        <div class="user-details">
+          <span class="user-email">{{ userEmail() }}</span>
+          <span class="user-action-label">Minha conta</span>
+        </div>
+      </div>
+    } @else {
+      <button
+        mat-icon-button
+        class="user-avatar-button"
+        [matMenuTriggerFor]="userMenu"
+        aria-label="Menu do usuário"
+        matTooltip="Minha conta"
+        matTooltipPosition="right">
+        <mat-icon>account_circle</mat-icon>
+      </button>
+
+      <mat-menu #userMenu="matMenu" xPosition="before">
+        <div class="menu-user-info">
+          <mat-icon>account_circle</mat-icon>
+          <span>{{ userEmail() }}</span>
+        </div>
+        <mat-divider></mat-divider>
+        <button mat-menu-item (click)="logout.emit()">
+          <mat-icon>logout</mat-icon>
+          <span>Sair</span>
+        </button>
+      </mat-menu>
     }
-  </mat-nav-list>
+  </div>
 </nav>

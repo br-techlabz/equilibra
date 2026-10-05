@@ -1,34 +1,77 @@
-<mat-toolbar class="header-toolbar" color="primary">
+<mat-toolbar class="topbar" color="primary" role="navigation" aria-label="Barra de ferramentas principal">
+  <!-- Mobile Menu Button -->
   <button
     mat-icon-button
     class="menu-button"
     (click)="onMenuClick()"
     matTooltip="Abrir menu"
-    aria-label="Abrir menu de navegação">
-    <mat-icon>menu</mat-icon>
+    aria-label="Abrir menu de navegação"
+    [attr.aria-expanded]="!sidebarCollapsed()">
+    <mat-icon>{{ sidebarCollapsed() ? 'menu_open' : 'menu' }}</mat-icon>
   </button>
 
-  <span class="header-title">Equilibra</span>
+  <!-- Sidebar Collapse Toggle (Desktop) -->
+  <button
+    mat-icon-button
+    class="collapse-toggle"
+    (click)="onSidebarCollapseToggle()"
+    [matTooltip]="sidebarCollapsed() ? 'Expandir sidebar' : 'Recolher sidebar'"
+    [attr.aria-label]="sidebarCollapsed() ? 'Expandir sidebar' : 'Recolher sidebar'"
+    *ngIf="!sidebarCollapsed()">
+    <mat-icon>chevron_left</mat-icon>
+  </button>
 
-  <span class="header-spacer"></span>
+  <button
+    mat-icon-button
+    class="collapse-toggle expand"
+    (click)="onSidebarCollapseToggle()"
+    matTooltip="Expandir sidebar"
+    aria-label="Expandir sidebar"
+    *ngIf="sidebarCollapsed()">
+    <mat-icon>chevron_right</mat-icon>
+  </button>
 
-  <div class="header-user-area">
+  <!-- Brand / App Title -->
+  <span class="toolbar-brand" [class.hidden]="sidebarCollapsed()">
+    <mat-icon class="brand-icon">account_balance_wallet</mat-icon>
+    <span class="brand-text">Equilibra</span>
+  </span>
+
+  <span class="toolbar-spacer"></span>
+
+  <!-- Breadcrumbs (Desktop) -->
+  <div class="breadcrumbs" [class.hidden]="sidebarCollapsed()">
+    <ng-content select="[breadcrumb]"></ng-content>
+  </div>
+
+  <span class="toolbar-spacer"></span>
+
+  <!-- User Menu -->
+  <div class="user-area">
     <button
       mat-icon-button
+      class="user-button"
       [matMenuTriggerFor]="userMenu"
       aria-label="Menu do usuário"
-      matTooltip="Conta do usuário"
-      class="user-button">
-      <mat-icon>account_circle</mat-icon>
+      matTooltip="Conta do usuário">
+      <div class="user-avatar">
+        <mat-icon>account_circle</mat-icon>
+      </div>
+      <span class="user-name" [class.hidden]="sidebarCollapsed()">{{ userEmail() }}</span>
     </button>
 
-    <mat-menu #userMenu="matMenu" xPosition="before" yPosition="below">
-      <div class="menu-user-info">
-        <mat-icon>account_circle</mat-icon>
-        <span class="menu-user-email">{{ userEmail() }}</span>
+    <mat-menu #userMenu="matMenu" xPosition="before" yPosition="below" class="user-menu">
+      <div class="menu-header">
+        <div class="menu-user-avatar">
+          <mat-icon>account_circle</mat-icon>
+        </div>
+        <div class="menu-user-info">
+          <span class="menu-user-email">{{ userEmail() }}</span>
+          <span class="menu-user-role">Usuário</span>
+        </div>
       </div>
       <mat-divider></mat-divider>
-      <button mat-menu-item (click)="logout.emit()">
+      <button mat-menu-item (click)="onLogout()">
         <mat-icon>logout</mat-icon>
         <span>Sair</span>
       </button>

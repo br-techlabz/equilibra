@@ -4,149 +4,337 @@
 
 O frontend do Equilibra é uma aplicação Angular 19+ construída com as seguintes tecnologias:
 
-- **Angular 19** - Framework principal
-- **Angular Material** - Biblioteca de componentes UI
-- **TypeScript** - Linguagem principal
-- **SCSS** - Estilos
-- **Standalone Components** - Arquitetura moderna sem NgModules
-- **Angular Router** - Roteamento com lazy loading
-- **Signals** - Estado reativo quando apropriado
-- **Reactive Forms** - Formulários reativos para formulários futuros
-- **RxJS** - Programação reativa quando apropriado
+- **Angular 19** — Framework principal
+- **Angular Material** — Biblioteca de componentes UI
+- **TypeScript** — Linguagem principal
+- **SCSS** — Estilos
+- **Standalone Components** — Arquitetura moderna sem NgModules
+- **Angular Router** — Roteamento com lazy loading
+- **Signals** — Estado reativo quando apropriado
+- **Reactive Forms** — Formulários reativos
+- **RxJS** — Programação reativa quando apropriado
+
+---
 
 ## Estrutura de Diretórios
 
 ```
 src/app/
-├── core/                    # Infraestrutura global (futuro)
-├── shared/                  # Componentes/pipes/diretivas/utilitários reutilizáveis
-├── layout/                  # Estrutura visual principal
-│   ├── shell/               # Application shell principal
-│   ├── header/              # Header/Toolbar
-│   └── sidebar/             # Sidebar/Drawer de navegação
-├── features/                # Funcionalidades de negócio
-│   └── dashboard/           # Dashboard (placeholder)
-└── app.routes.ts            # Configuração de rotas
+├── core/                      # Infraestrutura global (HTTP, auth, etc.)
+│   ├── http/                  # ProblemDetails, interceptors
+│   └── guards/                # AuthGuard, GuestGuard
+├── shared/                    # Componentes/pipes/diretivas/utilitários reutilizáveis
+│   └── ui/                    # Componentes de UI compartilhados
+│       ├── breadcrumb/        # Breadcrumb (navegação estrutural)
+│       ├── content-panel/     # Painel de conteúdo reutilizável
+│       ├── empty-state/       # Estado vazio padronizado
+│       ├── page-header/       # Cabeçalho de página padrão
+│       └── stat-card/         # Card de KPI financeiro
+├── layout/                    # Estrutura visual principal
+│   ├── shell/                 # AuthenticatedLayout (sidebar + header + outlet)
+│   ├── header/                # Topbar (menu toggle, user menu, logout)
+│   ├── sidebar/               # Sidebar escura (marca, menu hierárquico, user area)
+│   └── public-layout/         # PublicLayout (login, register)
+├── features/                  # Funcionalidades de negócio (lazy loaded)
+│   ├── auth/
+│   │   ├── data-access/       # AuthService, AuthApiService
+│   │   └── pages/
+│   │       ├── login/         # Login page (split layout desktop)
+│   │       └── register/      # Register page (split layout desktop)
+│   └── dashboard/
+│       └── dashboard.page.*   # Dashboard com KPIs, chart panel, transactions panel
+├── app.config.ts              # Providers globais
+├── app.routes.ts              # Configuração de rotas (lazy loading)
+└── app.component.ts           # Componente raiz
 ```
 
-## Componentes Principais
+---
 
-### ShellComponent
-O componente raiz que orquestra o layout da aplicação:
-- Toolbar/Header fixo no topo
-- Sidebar/Drawer responsiva (side no desktop, drawer no mobile)
-- Área principal com `<router-outlet>`
-- Gerencia estado mobile/desktop via `@HostListener('window:resize')`
+## Design System
 
-### HeaderComponent
-- Logo/identidade "Equilibra"
-- Botão de menu hamburger para mobile
-- Área reservada para usuário autenticado (placeholder)
+O Equilibra possui um **Design System completo** documentado em [`docs/design-system.md`](design-system.md).
 
-### SidebarComponent
-- Navegação principal com itens expansíveis
-- Grupos: Dashboard, Cadastros, Transações, Relatórios
-- Navegação por teclado e acessível
-- Indicador visual de item ativo
+### Tokens Visuais (CSS Custom Properties)
 
-### DashboardPageComponent
-Página inicial temporária com:
-- 4 cards de resumo (Saldo Total, Receitas, Despesas, Saldo Projetado)
-- Estado vazio informativo
-- Layout responsivo (1/2/4 colunas conforme breakpoint)
+Todos os valores visuais são centralizados em `src/styles.scss` como variáveis CSS:
 
-## Identidade Visual
+- **Cores**: Paletas semânticas (primary, success, danger, warning, info, asset, grey)
+- **Cores de UI**: `--card-bg`, `--card-border`, `--sidebar-bg`, `--topbar-bg`, `--text-primary`, etc.
+- **Tipografia**: `--font-family-base`, escala `--font-size-*`, pesos, line-heights
+- **Espaçamento**: Base 4px (`--space-1` a `--space-16`)
+- **Raio**: `--radius-sm` a `--radius-2xl`, `--radius-full`
+- **Sombras**: `--shadow-sm` a `--shadow-2xl`
+- **Transições**: `--transition-fast/normal/slow`
+- **Breakpoints**: `--bp-mobile` (768px), `--bp-tablet` (1024px), `--bp-desktop` (1280px), `--bp-wide` (1920px)
 
-### Cores
-- **Primária (Teal)**: #009688 (confiança, equilíbrio)
-- **Accent (Green)**: #4caf50 (positivo, finanças)
-- **Warn (Red)**: #f44336 (negativo, alertas)
-- **Neutros**: Escala de cinza para superfícies e textos
+**Regra obrigatória:** Nunca use valores hexadecimais, pixels ou rem hardcoded nos componentes. Use sempre os tokens.
 
-### Tipografia
-- Fonte base: Roboto (sistema)
-- Hierarquia: 3xl (títulos), xl (subtítulos), base (corpo), sm (labels)
+### Componentes Compartilhados (Shared UI)
 
-### Espaçamento
-- Sistema baseado em 0.25rem (xs, sm, md, lg, xl, 2xl)
+| Componente | Seletor | Descrição |
+|------------|---------|-----------|
+| `PageHeaderComponent` | `app-page-header` | Título + subtítulo + ações |
+| `StatCardComponent` | `app-stat-card` | KPI com variante (income, expense, balance, asset, neutral) |
+| `ContentPanelComponent` | `app-content-panel` | Painel com header, conteúdo (projection), footer |
+| `EmptyStateComponent` | `app-empty-state` | Estado vazio com ícone variante, título, descrição, ações |
+| `BreadcrumbComponent` | `app-breadcrumb` | Navegação estrutural auto-gerada da rota |
 
-### Responsividade
-- **Mobile**: < 600px (drawer, 1 coluna)
-- **Tablet**: 600-959px (drawer, 2 colunas)
-- **Desktop**: ≥ 960px (sidebar fixa, 4 colunas)
+---
 
-## Estratégia de Roteamento
+## Layouts
+
+### AuthenticatedLayout (`app-shell`)
+
+Layout para páginas autenticadas. Composto por:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ TOPBAR (app-header) — 56px                                  │
+├──────────────────┬──────────────────────────────────────────┤
+│                  │                                          │
+│   SIDEBAR        │         MAIN CONTENT                     │
+│   (app-sidebar)  │         (router-outlet)                  │
+│   256px / 72px   │                                          │
+│                  │                                          │
+└──────────────────┴──────────────────────────────────────────┘
+```
+
+- **Desktop (≥ 1024px):** Sidebar persistente (`mode="side"`), topbar fixa
+- **Mobile (< 768px):** Sidebar vira drawer overlay (`mode="over"`), abre via botão da topbar, fecha ao navegar
+- **Tablet (768–1023px):** Sidebar recolhível, comporta-se como desktop
+
+### PublicLayout (`app-public-layout`)
+
+Layout para páginas públicas (login, register):
+- Centraliza conteúdo vertical/horizontalmente
+- Fundo cinza claro (`--color-canvas`)
+- Sem sidebar/topbar
+- Usado por `/login` e `/register`
+
+---
+
+## Componentes Principais de Layout
+
+### ShellComponent (`app-shell`)
+- Orquestra `mat-sidenav-container` com sidebar, header e `<router-outlet>`
+- Gerencia estado mobile/desktop via `@HostListener('window:resize')` (breakpoint 768px)
+- Conecta outputs da sidebar/header (logout, toggle, navigation)
+- Expõe `currentUserEmail` e `isAuthenticated` via `AuthService` (computed signals)
+
+### HeaderComponent (`app-header`)
+- **Seletor:** `app-header`
+- Topbar escura (`--topbar-bg`)
+- Toggle sidebar (hamburger no mobile, chevron no desktop recolhido)
+- Slot `[breadcrumb]` para projeção do breadcrumb
+- Área do usuário: avatar + email + menu dropdown (logout)
+- Inputs: `userEmail`, `sidebarCollapsed`
+- Outputs: `menuToggle`, `sidebarCollapseToggle`, `logout`
+
+### SidebarComponent (`app-sidebar`)
+- **Seletor:** `app-sidebar`
+- Fundo escuro (`--sidebar-bg`), largura 256px (expandida) / 72px (recolhida)
+- **Marca:** Ícone + "Equilibra" + tagline "Finanças Domésticas"
+- **Menu hierárquico** com `MatExpansionPanel`:
+  - Dashboard
+  - Contas → Contas de ativos, Contas de despesas
+  - Categorias
+  - Transações → Despesas, Receitas, Transferências
+  - Relatórios
+- Item ativo: barra lateral accent + background `--sidebar-active`
+- Tooltip automático em modo recolhido
+- **Área do usuário (bottom):** Email + "Minha conta" + menu com logout
+- Inputs: `collapsed`, `isMobile`
+- Outputs: `navigationClick`, `logout`
+- Navegação por teclado acessível
+
+### BreadcrumbComponent (`app-breadcrumb`)
+- **Seletor:** `app-breadcrumb`
+- Gerado automaticamente a partir do `Router` + `NavigationEnd`
+- Mapeia segmentos de URL para labels legíveis (ex: `Home / Transações / Despesas`)
+- Oculto em mobile (< 768px)
+- Home link com ícone, separadores `chevron_right`
+
+---
+
+## Páginas de Autenticação
+
+### LoginPageComponent (`/login`)
+- **Layout desktop:** Split — branding à esquerda (gradiente primary), formulário à direita (card)
+- **Mobile/Tablet:** Card centralizado full-width
+- **Formulário:** Reactive Forms, email + senha, mostrar/ocultar senha
+- **Validação:** Required, email, min/max length
+- **Erros:** Inline (mat-error) + server errors via ProblemDetails
+- **Loading:** Spinner no botão, disabled durante submit
+- **Link para register**
+
+### RegisterPageComponent (`/register`)
+- Mesmo layout split do login
+- **Branding:** Ícone, título, tagline, 3 feature items com check icons
+- **Formulário:** Email, senha, confirmar senha (validator custom `passwordsMatchValidator`)
+- **Validação:** Required, email, min 8 / max 128 chars, not only whitespace, match
+- **Erros:** Inline + server (400, 409, 0)
+- **Link para login**
+
+---
+
+## Dashboard
+
+### DashboardPageComponent (`/dashboard`)
+Estrutura visual completa (dados mockados como `R$ 0,00`):
+
+1. **PageHeader** — "Dashboard" + "Visão geral das suas finanças" + ação "Nova transação"
+2. **KPI Grid** (4 cards `app-stat-card`):
+   - Entradas (income, verde) — `trending_up`
+   - Saídas (expense, coral) — `trending_down`
+   - Saldo (balance, azul) — `account_balance`
+   - Patrimônio (asset, teal) — `savings`
+3. **Painel Principal** (grid 65/35% no desktop):
+   - **Chart Panel** (`app-content-panel`) — "Evolução do saldo" + `app-empty-state` (chart variant)
+   - **Transactions Panel** (`app-content-panel`) — "Transações recentes" + `app-empty-state` (inbox variant) com ação "Nova transação"
+
+**Responsividade:**
+- KPIs: 1 coluna (mobile) → 2 (tablet) → 4 (desktop)
+- Painéis: empilhados (mobile/tablet) → lado a lado (desktop)
+
+---
+
+## Roteamento
 
 ```typescript
-// Lazy loading para features
+// app.routes.ts — Lazy loading para features
+{
+  path: 'auth',
+  loadChildren: () => import('./features/auth/auth.routes'),
+},
 {
   path: 'dashboard',
   loadComponent: () => import('./features/dashboard/dashboard.page')
     .then(m => m.DashboardPageComponent),
-}
+  canActivate: [authGuard],
+},
+{
+  path: '',
+  redirectTo: '/dashboard',
+  pathMatch: 'full',
+},
 ```
 
-- Rota raiz redireciona para `/dashboard`
-- Lazy loading preparado para features futuras
-- Shell contém o `<router-outlet>` principal
+- **Auth routes** (`/login`, `/register`): `PublicLayout`, `guestGuard`
+- **Protected routes** (`/dashboard`, futuras): `AuthenticatedLayout` (via `app-shell`), `authGuard`
+- **Root redirect:** `/` → `/dashboard`
+
+---
+
+## Serviços de Autenticação
+
+### AuthService
+- **Signal-based state:** `currentUser` (User | null), `isAuthenticated` (computed)
+- **Token:** Armazenado **apenas em memória** (variável privada), NUNCA em localStorage/sessionStorage
+- **Métodos:** `login()`, `register()`, `logout()`, `clearSession()`, `getToken()`, `setSession()`
+- **Logout:** Limpa token + usuário + navega para `/login`
+
+### AuthApiService
+- HTTP calls para `/api/auth/login`, `/api/auth/register`, `/api/users/me`
+- Retorna `ProblemDetails` tipado para erros
+- Usa `HttpClient` com interceptors (JWT, Request-ID)
+
+---
+
+## Guards
+
+### AuthGuard (`canActivate`)
+- Verifica `authService.isAuthenticated()`
+- Se false: `clearSession()` + redirect `/login`
+- Usado em rotas protegidas
+
+### GuestGuard (`canActivate`)
+- Verifica `!authService.isAuthenticated()`
+- Se true: redirect `/dashboard`
+- Usado em `/login`, `/register`
+
+---
+
+## Interceptors HTTP
+
+### JwtInterceptor
+- Adiciona `Authorization: Bearer <token>` se `AuthService.getToken()` existir
+- Skip para URLs de auth públicas (`/api/auth/**`)
+
+### RequestIdInterceptor
+- Adiciona `X-Request-ID` (UUID v4) a toda requisição
+- Propaga `X-Request-ID` do response para correlação
+
+---
 
 ## Configuração de Ambiente
 
 ```
 src/environments/
-├── environment.ts         # Desenvolvimento (localhost:8080/api)
-└── environment.prod.ts    # Produção (api.equilibra.com.br)
+├── environment.ts         # Desenvolvimento (http://localhost:8080/api)
+└── environment.prod.ts    # Produção (https://api.equilibra.com.br/api)
 ```
 
-- Configuração via `fileReplacements` no angular.json
+- Configuração via `fileReplacements` no `angular.json`
 - URL da API centralizada em `environment.apiUrl`
 
-## HTTP Client
-
-Preparado para uso futuro com:
-- `provideHttpClient(withInterceptorsFromDi())` no `app.config.ts`
-- Interceptors JWT futuros
-- Request ID propagation (TASK-0.8)
+---
 
 ## Estado
 
-- **Signals** para estado local/síncrono
-- **RxJS** para fluxos assíncronos/HTTP
-- **Services** para lógica compartilhada
-- **NgRx/Akita** - NÃO instalado (só quando complexidade justificar)
+- **Signals** — Estado local/síncrono (formulários, UI state, currentUser)
+- **RxJS** — Fluxos assíncronos/HTTP (login, register, logout)
+- **Services** — Lógica compartilhada (AuthService, AuthApiService)
+- **NgRx/Akita** — NÃO instalado (só quando complexidade justificar)
+
+---
 
 ## Formulários
 
-- **Reactive Forms** como padrão
-- `Validators` do Angular para validação
-- Integração futura com `ProblemDetail` do backend
+- **Reactive Forms** como padrão (`NonNullableFormBuilder`)
+- `Validators` do Angular + validators customizados
+- Integração com `ProblemDetails` do backend para erros de servidor
+- Acessibilidade: labels, `aria-describedby` nos erros, `autocomplete`
+
+---
 
 ## Testes
 
 - **Karma + Jasmine** para testes unitários
 - **TestBed** com `provideRouter([])` para componentes standalone
-- Testes de componente: shell, header, sidebar, dashboard
+- Testes existentes: `AppComponent`, `AuthService`, `AuthApiService`, `RegisterPageComponent`
+- Comando: `npm test -- --watch=false --browsers=ChromeHeadless`
+
+---
 
 ## Qualidade de Código
 
 - **ESLint** com `@angular-eslint` (strict)
 - **Prettier** para formatação
 - **TypeScript strict** mode
-- Lint: `npm run lint`
+- Lint: `npm run lint` ✅
 - Format: `npm run format`
+- Build: `npm run build` ✅
+
+---
 
 ## Build
 
-- `npm run build` - Build de produção (output: `dist/frontend/`)
-- Budgets: 600kB warning, 1MB error
-- Lazy loading para dashboard (chunk separado)
+- `npm run build` — Build de produção (output: `dist/frontend/`)
+- **Budgets:** Initial 600kB (warning), 1MB (error); Component styles 4kB (warning)
+- **Lazy loading chunks:** `auth-routes`, `login-page`, `register-page`, `dashboard-page`
+- **Atual status:** Build passing, 21 testes passing, lint clean
 
-## Próximos Passos (TASK-0.8)
+---
 
-1. Integração HTTP real com backend
-2. Autenticação JWT
-3. Interceptors HTTP
-3. Páginas de features reais (Contas, Categorias, Transações)
-4. Testes E2E com Playwright
-5. Dark mode
-6. Internacionalização (i18n)
+## Próximos Passos (Próximas Sprints)
+
+1. **Contas** — CRUD de contas de ativos/despesas, saldos
+2. **Categorias** — Hierarquia de categorias receita/despesa
+3. **Transações** — Lançamentos, listagem, filtros, paginação
+4. **Transferências** — Entre contas, atômicas
+5. **Relatórios** — Gráficos reais (bibliotecas de chart), exportação
+6. **Anexos** — Upload de comprovantes
+7. **Dashboard funcional** — Dados reais via API, gráficos interativos
+8. **Testes E2E** — Playwright (desktop + mobile flows)
+9. **Dark mode** — Toggle de tema
+10. **Internacionalização** — i18n (pt-BR base, preparado para outros)

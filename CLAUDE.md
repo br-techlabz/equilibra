@@ -292,8 +292,22 @@ Não aplicar essa estrutura mecanicamente quando ela não trouxer benefício. O 
 
 1. A arquitetura base está documentada em `docs/architecture.md`.
 2. A arquitetura frontend está documentada em `docs/frontend-architecture.md`.
-3. Decisões arquiteturais importantes poderão ser registradas em ADRs dentro de `docs/adr/`.
-4. O ADR inicial do monólito modular é `docs/adr/0001-modular-monolith.md`.
+3. O Design System está documentado em `docs/design-system.md`.
+4. Decisões arquiteturais importantes poderão ser registradas em ADRs dentro de `docs/adr/`.
+5. O ADR inicial do monólito modular é `docs/adr/0001-modular-monolith.md`.
+
+---
+
+## Regras de UI / Design System (TASK-UI-1)
+
+1. **Utilizar design tokens do Equilibra** — Todas as cores, espaçamentos, tipografia, raios, sombras e transições devem vir de `src/styles.scss` (CSS custom properties). Nunca hardcode valores visuais.
+2. **Evitar valores visuais hardcoded** — Não usar hex, px, rem arbitrários em componentes. Usar `var(--token-name)`.
+3. **Novas páginas privadas utilizam AuthenticatedLayout** — Via `app-shell` (sidebar + header + router-outlet).
+4. **Páginas públicas utilizam PublicLayout** — Via `app-public-layout` (login, register, futuras páginas públicas).
+5. **UI deve ser responsiva** — Testar em 360px, 768px, 1280px, 1920px. Breakpoints definidos em tokens (`--bp-*`).
+6. **Componentes devem respeitar design system** — Reutilizar `PageHeader`, `StatCard`, `ContentPanel`, `EmptyState`, `Breadcrumb` em vez de reimplementar.
+7. **Acessibilidade básica** — Contraste WCAG AA, foco visível, navegação por teclado, ARIA labels, landmarks semânticos.
+8. **Não persistir JWT no frontend** — Token permanece apenas em memória (AuthService), sem localStorage/sessionStorage.
 
 ---
 

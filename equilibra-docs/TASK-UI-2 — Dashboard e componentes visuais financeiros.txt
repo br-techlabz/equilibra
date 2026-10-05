@@ -1,0 +1,1342 @@
+# TASK-UI-2 — Dashboard e componentes visuais financeiros
+
+A TASK-UI-1 foi concluída.
+
+A aplicação Equilibra já possui agora:
+
+- Design System
+- design tokens
+- AuthenticatedLayout
+- PublicLayout
+- Sidebar
+- Topbar
+- estrutura responsiva
+- identidade visual baseada na referência fornecida
+- autenticação existente preservada
+
+Agora implemente:
+
+# Dashboard visual do Equilibra
+
+Esta tarefa ainda NÃO implementará o domínio financeiro nem APIs de Dashboard.
+
+O objetivo é construir componentes visuais reutilizáveis e deixar o Dashboard preparado para receber dados reais posteriormente.
+
+---
+
+# 1. Preparação obrigatória
+
+Antes de alterar código, leia:
+
+- `CLAUDE.md`
+- `README.md`
+- `docs/design-system.md`
+- `docs/frontend-architecture.md`
+- `docs/architecture.md`
+- `docs/security.md`
+
+Analise a implementação REAL da TASK-UI-1:
+
+- design tokens
+- CSS/SCSS
+- sidebar
+- topbar
+- AuthenticatedLayout
+- PageHeader
+- ContentPanel
+- StatCard
+- EmptyState
+- componentes compartilhados existentes
+- breakpoints
+- Angular Material
+- Dashboard atual
+- testes
+- Playwright
+
+Não recrie componentes que já existem.
+
+Antes de implementar, apresente:
+
+1. diagnóstico do Dashboard atual;
+2. componentes existentes que serão reutilizados;
+3. componentes que precisam ser criados;
+4. dependências eventualmente necessárias;
+5. plano de implementação.
+
+---
+
+# 2. Referência visual
+
+Continue utilizando como referência a imagem fornecida anteriormente.
+
+Preserve principalmente:
+
+- quatro cards superiores;
+- painel principal de gráfico;
+- painel lateral de informações;
+- alta legibilidade;
+- organização modular;
+- hierarquia visual.
+
+Porém mantenha a identidade moderna definida na TASK-UI-1.
+
+NÃO tente transformar o Equilibra em uma cópia pixel-perfect do template da imagem.
+
+---
+
+# 3. Objetivo visual
+
+O Dashboard deverá possuir esta organização conceitual:
+
+┌──────────────────────────────────────────────────────────┐
+│ Dashboard                                                │
+│ Visão geral das suas finanças                            │
+│                                      [ Período ▼ ]       │
+├────────────┬────────────┬────────────┬────────────────────┤
+│ Entradas   │ Saídas     │ Saldo      │ Patrimônio líquido│
+│ R$ 0,00    │ R$ 0,00    │ R$ 0,00    │ R$ 0,00           │
+├─────────────────────────────────────┬────────────────────┤
+│                                     │                    │
+│ Evolução do saldo                   │ Transações         │
+│                                     │ recentes           │
+│       gráfico                       │                    │
+│                                     │                    │
+├─────────────────────────────────────┴────────────────────┤
+│ Resumo das contas / espaço futuro                        │
+└──────────────────────────────────────────────────────────┘
+
+Adapte proporcionalmente ao layout real.
+
+---
+
+# 4. Page Header
+
+Utilize o padrão criado na UI-1.
+
+Título:
+
+`Dashboard`
+
+Subtítulo:
+
+`Visão geral das suas finanças`
+
+Adicione área de ações à direita.
+
+---
+
+# 5. Filtro de período
+
+Adicione controle visual:
+
+`Período`
+
+Opções iniciais:
+
+- Este mês
+- Mês anterior
+- Últimos 3 meses
+- Últimos 6 meses
+- Este ano
+
+Como não existe API financeira ainda, a seleção deverá alterar apenas o estado local da página.
+
+NÃO simule recálculos financeiros.
+
+---
+
+# 6. Preparação para período customizado
+
+Estruture o componente para permitir futuramente:
+
+- data inicial
+- data final
+
+Não implemente date-range picker complexo nesta TASK.
+
+---
+
+# 7. KPI — Entradas
+
+Primeiro card:
+
+**Entradas**
+
+Valor:
+
+`R$ 0,00`
+
+Ícone conceitual:
+
+`trending_up`
+
+ou equivalente já utilizado.
+
+Sem dados reais:
+
+não exibir percentuais falsos.
+
+---
+
+# 8. KPI — Saídas
+
+Segundo card:
+
+**Saídas**
+
+Valor:
+
+`R$ 0,00`
+
+Ícone:
+
+`trending_down`
+
+---
+
+# 9. KPI — Saldo
+
+Terceiro card:
+
+**Saldo**
+
+Valor:
+
+`R$ 0,00`
+
+A definição funcional futura será:
+
+receitas - despesas
+
+Não implementar cálculo nesta TASK.
+
+---
+
+# 10. KPI — Patrimônio líquido
+
+Quarto card:
+
+**Patrimônio líquido**
+
+Valor:
+
+`R$ 0,00`
+
+Conceitualmente:
+
+saldo atual das contas de ativo.
+
+Não implementar cálculo real.
+
+---
+
+# 11. Terminologia
+
+Utilize:
+
+**Entradas**
+**Saídas**
+**Saldo**
+**Patrimônio líquido**
+
+Não misture terminologias diferentes sem necessidade.
+
+---
+
+# 12. StatCard
+
+Reutilize o componente da UI-1, caso exista.
+
+Se precisar evoluí-lo, faça-o genericamente.
+
+O componente poderá receber conceitualmente:
+
+- label
+- value
+- icon
+- variant
+- optional trend
+
+Não codifique regras como:
+
+`if label === 'Entradas'`
+
+dentro do componente.
+
+---
+
+# 13. Variantes
+
+Suporte variantes semânticas:
+
+- success
+- danger
+- primary
+- warning/info
+
+Utilize design tokens.
+
+Não espalhe cores hardcoded.
+
+---
+
+# 14. Valores monetários
+
+Prepare os componentes para receber números.
+
+Utilize mecanismo adequado para:
+
+BRL
++
+pt-BR
+
+Resultado:
+
+`R$ 1.234,56`
+
+Evite armazenar valor financeiro como string formatada dentro do componente quando não for necessário.
+
+---
+
+# 15. Valores zero
+
+Zero deverá aparecer:
+
+`R$ 0,00`
+
+e não:
+
+`-`
+
+`0`
+
+`R$0`
+
+---
+
+# 16. Responsividade dos KPIs
+
+Desktop grande:
+
+4 colunas.
+
+Desktop/tablet intermediário:
+
+2 colunas quando necessário.
+
+Mobile:
+
+1 coluna ou 2 colunas somente se houver espaço adequado.
+
+Priorize legibilidade.
+
+---
+
+# 17. Gráfico principal
+
+Crie painel:
+
+**Evolução do saldo**
+
+Subtítulo opcional:
+
+`Saldo das contas ao longo do período`
+
+O painel deverá ocupar a maior área horizontal no desktop.
+
+---
+
+# 18. Biblioteca de gráficos
+
+Primeiro verifique se o projeto JÁ possui biblioteca de charts.
+
+Se existir e for adequada:
+
+REUTILIZE.
+
+Se NÃO existir:
+
+avalie Apache ECharts.
+
+Preferência:
+
+`echarts`
+
+Não adicione múltiplas bibliotecas de gráfico.
+
+---
+
+# 19. Integração ECharts
+
+Se ECharts for adotado:
+
+encapsule a integração.
+
+Evite espalhar configuração ECharts diretamente por páginas.
+
+Estrutura conceitual:
+
+`BalanceEvolutionChartComponent`
+
+ou componente equivalente.
+
+---
+
+# 20. Wrapper Angular
+
+Antes de instalar wrapper adicional para ECharts, avalie se ele é realmente necessário e compatível com:
+
+Angular 19
+
+e com a arquitetura atual.
+
+Se integração direta com ECharts for simples e sustentável, prefira menor número de dependências.
+
+Documente a decisão.
+
+---
+
+# 21. Lazy loading da biblioteca
+
+Se tecnicamente razoável, evite adicionar toda a biblioteca de gráficos ao bundle inicial público.
+
+O Dashboard já é uma rota privada/lazy quando a arquitetura permitir.
+
+Não faça otimização prematura complexa.
+
+---
+
+# 22. Dados do gráfico nesta TASK
+
+NÃO crie série financeira fictícia.
+
+Enquanto não houver dados:
+
+o gráfico deverá apresentar um estado vazio elegante.
+
+Exemplo:
+
+`Ainda não há dados suficientes para exibir a evolução do saldo.`
+
+---
+
+# 23. Empty chart
+
+O painel deve continuar mantendo proporção adequada mesmo sem dados.
+
+Pode apresentar:
+
+- ícone
+- mensagem
+- pequena orientação
+
+Exemplo:
+
+`Cadastre contas e registre transações para acompanhar sua evolução financeira.`
+
+Não transforme isso em link para feature inexistente.
+
+---
+
+# 24. API visual do gráfico
+
+Prepare o componente para futuramente receber algo conceitualmente como:
+
+[
+  {
+    date: ...,
+    balance: ...
+  }
+]
+
+ou múltiplas séries por conta.
+
+Não implemente backend.
+
+---
+
+# 25. Múltiplas contas
+
+O requisito original prevê evolução do saldo das contas de ativo.
+
+Portanto, não construa componente tão específico que suporte somente uma série para sempre.
+
+Prepare arquitetura para futuramente receber:
+
+- conta A
+- conta B
+- conta C
+
+com séries independentes.
+
+---
+
+# 26. Tooltip futuro
+
+Prepare configuração para tooltip contendo:
+
+- data
+- conta
+- saldo BRL
+
+Não invente dados nesta TASK.
+
+---
+
+# 27. Acessibilidade do gráfico
+
+Gráficos não podem ser a única forma de transmitir informação.
+
+Prepare estrutura para fornecer:
+
+- aria-label
+- descrição
+- fallback textual
+
+Quando dados reais forem implementados, informação importante deverá possuir alternativa acessível.
+
+---
+
+# 28. Painel de transações
+
+À direita do gráfico, no desktop, crie:
+
+**Transações recentes**
+
+Este painel representa o histórico solicitado nos requisitos originais.
+
+---
+
+# 29. Estado vazio
+
+Como ainda não há transações:
+
+mostrar EmptyState.
+
+Exemplo:
+
+`Nenhuma transação registrada`
+
+`Suas receitas, despesas e transferências recentes aparecerão aqui.`
+
+---
+
+# 30. Estrutura futura de item
+
+Prepare componente/estrutura visual para um item conceitual:
+
+[ícone] Supermercado
+        Conta Corrente
+        05/10/2026
+
+                       - R$ 125,90
+
+Não renderize este exemplo como dado real.
+
+---
+
+# 31. Tipos visuais futuros
+
+Prepare variantes para:
+
+### Receita
+
+- ícone apropriado
+- indicação positiva
+
+### Despesa
+
+- ícone apropriado
+- indicação negativa
+
+### Transferência
+
+- indicação neutra
+
+Não implemente regras de domínio.
+
+---
+
+# 32. Não depender apenas de cores
+
+Receita/despesa/transferência deverão futuramente possuir:
+
+- ícone
+- texto
+- sinal
+- cor
+
+Não utilize somente verde/vermelho.
+
+---
+
+# 33. Agrupamento por conta
+
+O requisito original prevê histórico agrupado pela conta de ativo.
+
+Prepare o painel para suportar agrupamento futuro.
+
+Exemplo conceitual:
+
+Conta Corrente
+  transação
+  transação
+
+Carteira
+  transação
+
+Não implemente agrupamento com dados fictícios.
+
+---
+
+# 34. Painel inferior
+
+Crie uma seção inferior:
+
+**Minhas contas**
+
+ou:
+
+**Resumo das contas**
+
+Este painel servirá futuramente para exibir contas de ativo e seus saldos.
+
+---
+
+# 35. Minhas contas — estado atual
+
+Como Sprint 2 ainda não implementou contas:
+
+apresente EmptyState.
+
+Exemplo:
+
+`Nenhuma conta cadastrada`
+
+`Suas contas e respectivos saldos aparecerão aqui.`
+
+Não criar botão funcional para cadastro ainda, a menos que rota real já exista.
+
+---
+
+# 36. Estrutura futura de Account Card
+
+Prepare visualmente para algo como:
+
+Conta Corrente
+Banco
+R$ 3.250,00
+
+Carteira
+Dinheiro
+R$ 180,00
+
+Não renderize esses números como dados reais.
+
+---
+
+# 37. ContentPanel
+
+Reutilize o componente criado na UI-1.
+
+Evolua-o somente se necessário para suportar:
+
+- title
+- subtitle
+- actions
+- content
+- loading
+- empty state
+
+Não criar `DashboardPanel` duplicado se `ContentPanel` resolve.
+
+---
+
+# 38. Dashboard component
+
+O Dashboard deve atuar principalmente como composição.
+
+Evite concentrar:
+
+- formatação
+- configuração de chart
+- componentes de KPI
+- lógica de empty state
+
+em um arquivo gigantesco.
+
+---
+
+# 39. Responsabilidades
+
+Estrutura desejada conceitualmente:
+
+DashboardPage
+├── PageHeader
+├── PeriodFilter
+├── StatCard × 4
+├── BalanceEvolutionChart
+├── RecentTransactionsPanel
+└── AccountsSummaryPanel
+
+Adapte à arquitetura existente.
+
+---
+
+# 40. Sem backend fictício
+
+NÃO crie:
+
+- `/api/dashboard`
+- mocks permanentes
+- JSON fake em assets
+- services simulando API real
+
+A integração será feita quando o domínio financeiro existir.
+
+---
+
+# 41. Estado inicial
+
+Pode utilizar ViewModel local:
+
+entradas = 0
+saídas = 0
+saldo = 0
+patrimônio = 0
+transactions = []
+accounts = []
+
+Deixe explícito no código que se trata de estado vazio inicial, não mock de produção.
+
+---
+
+# 42. Não implementar matemática financeira
+
+NÃO calcular:
+
+- receitas
+- despesas
+- saldo
+- patrimônio
+
+a partir de dados inexistentes.
+
+---
+
+# 43. Sem porcentagens fictícias
+
+A imagem de referência possui textos como:
+
+`5% higher than last week`
+
+NÃO copie isso.
+
+Tendências somente serão exibidas quando houver cálculo real.
+
+---
+
+# 44. Sem notificações fictícias
+
+Não reproduza badges como:
+
+4
+5
+7
+
+da imagem original.
+
+Somente dados reais deverão gerar badges.
+
+---
+
+# 45. Sem "John Doe"
+
+Nenhum texto da referência deve permanecer.
+
+Use dados reais do `currentUser` quando necessário.
+
+---
+
+# 46. Cards clicáveis
+
+Os KPI cards NÃO precisam ser clicáveis nesta fase.
+
+Não crie navegação arbitrária.
+
+---
+
+# 47. Hover
+
+Cards podem possuir hover visual discreto somente se isso estiver de acordo com o Design System.
+
+Não faça elemento parecer clicável quando não é.
+
+---
+
+# 48. Dashboard grid
+
+Utilize CSS Grid preferencialmente para estrutura principal.
+
+Evite layout rígido baseado em pixels.
+
+---
+
+# 49. Layout desktop
+
+Em >= 1280px:
+
+KPIs:
+4 colunas
+
+Conteúdo:
+
+aproximadamente
+
+`2fr 1fr`
+
+para:
+
+gráfico | transações
+
+---
+
+# 50. Layout tablet
+
+Em aproximadamente 768–1279px:
+
+KPIs:
+2 × 2
+
+gráfico:
+largura total quando necessário
+
+transações:
+abaixo ou lateral conforme espaço real
+
+---
+
+# 51. Layout mobile
+
+Em 360px:
+
+ordem recomendada:
+
+PageHeader
+PeriodFilter
+Entradas
+Saídas
+Saldo
+Patrimônio
+Evolução
+Transações recentes
+Minhas contas
+
+Nenhum scroll horizontal.
+
+---
+
+# 52. Altura dos cards
+
+Evite cards com alturas muito diferentes na mesma linha.
+
+Mantenha alinhamento visual.
+
+---
+
+# 53. Números grandes
+
+Valores monetários podem crescer.
+
+Teste visualmente:
+
+`R$ 9.999.999,99`
+
+O card não deve quebrar de maneira inadequada.
+
+---
+
+# 54. Valores negativos
+
+Prepare:
+
+`-R$ 1.250,00`
+
+ou padrão monetário definido pelo projeto.
+
+Mantenha consistência.
+
+---
+
+# 55. Tooltips
+
+Ícones cuja função não seja óbvia devem possuir tooltip acessível.
+
+Não encher Dashboard de tooltips desnecessários.
+
+---
+
+# 56. Skeletons
+
+Se já existe padrão de skeleton na UI-1, prepare componentes para utilizá-lo futuramente.
+
+Não simule loading permanente.
+
+---
+
+# 57. Dark sidebar
+
+Preserve a sidebar/topbar estabelecida pela UI-1.
+
+Não redesenhe novamente o shell.
+
+A UI-2 deve construir sobre UI-1.
+
+---
+
+# 58. Public pages
+
+NÃO refatore login/register nesta TASK, salvo pequenos ajustes decorrentes de tokens compartilhados.
+
+Isso pertenceu/pertencerá à TASK-UI-3.
+
+---
+
+# 59. Design tokens
+
+Todas as novas cores devem usar tokens.
+
+Se faltar token:
+
+adicione semanticamente ao Design System.
+
+Não use:
+
+`#12ab34`
+
+diretamente em vários componentes.
+
+---
+
+# 60. Spacing
+
+Utilize a escala definida na UI-1.
+
+Não invente nova escala.
+
+---
+
+# 61. Radius
+
+Utilize os padrões existentes.
+
+Não misture:
+
+4px
+7px
+11px
+19px
+
+arbitrariamente.
+
+---
+
+# 62. Shadow
+
+Cards/painéis devem seguir shadow tokens.
+
+Evite sombras fortes.
+
+---
+
+# 63. Testes de componentes
+
+Cubra os componentes reutilizáveis criados/evoluídos.
+
+Exemplos:
+
+### StatCard
+
+- label
+- value
+- variant
+- icon
+
+### ContentPanel
+
+- title
+- conteúdo
+- empty state quando aplicável
+
+### PeriodFilter
+
+- opções
+- mudança de seleção
+
+---
+
+# 64. Testes monetários
+
+Teste formatação:
+
+0
+→ `R$ 0,00`
+
+1234.56
+→ `R$ 1.234,56`
+
+valor negativo
+→ formato consistente.
+
+Use infraestrutura de locale real do projeto.
+
+---
+
+# 65. Teste de estado vazio
+
+Dashboard sem dados:
+
+- nenhum valor fictício
+- quatro KPIs zero
+- gráfico empty state
+- transações empty state
+- contas empty state
+
+---
+
+# 66. Testes de autenticação
+
+Todos os testes existentes devem continuar passando:
+
+- login
+- register
+- AuthService
+- Auth Guard
+- Guest Guard
+- interceptor
+- logout
+
+---
+
+# 67. E2E Dashboard
+
+Com Playwright, quando configurado:
+
+1. autenticar
+2. entrar em `/dashboard`
+3. confirmar título
+4. confirmar 4 KPIs
+5. confirmar painel Evolução do saldo
+6. confirmar Transações recentes
+7. confirmar Resumo/Minhas contas
+8. confirmar ausência de dados falsos
+
+---
+
+# 68. E2E mobile
+
+Viewport:
+
+360 × 800
+
+Valide:
+
+- sidebar/drawer continua funcional
+- Dashboard não possui overflow horizontal
+- cards legíveis
+- painéis empilhados
+- filtro utilizável
+
+---
+
+# 69. Visual desktop
+
+Valide:
+
+1280 × 720
+
+e:
+
+1920 × 1080
+
+O Dashboard deverá lembrar estruturalmente a referência fornecida:
+
+- KPIs superiores
+- grande painel principal
+- painel lateral
+- organização administrativa
+
+mas com identidade Equilibra.
+
+---
+
+# 70. Acessibilidade
+
+Verifique:
+
+- heading hierarchy
+- labels
+- filtro de período
+- contraste
+- ícones decorativos
+- empty states
+- foco
+- navegação por teclado
+
+---
+
+# 71. Performance
+
+Se ECharts for adicionado:
+
+verifique impacto no build.
+
+Não adicionar simultaneamente:
+
+- Chart.js
+- ApexCharts
+- Highcharts
+
+ou outras bibliotecas.
+
+Uma solução apenas.
+
+---
+
+# 72. Bundle
+
+Registre no relatório se a nova dependência alterou significativamente o bundle.
+
+Não tente micro-otimização sem evidência.
+
+---
+
+# 73. Documentação Design System
+
+Atualize:
+
+`docs/design-system.md`
+
+com os componentes realmente implementados:
+
+- StatCard
+- ContentPanel
+- PeriodFilter
+- chart
+- RecentTransactionItem, caso criado
+- AccountSummary, caso criado
+
+Documente apenas API conceitual relevante.
+
+---
+
+# 74. Frontend Architecture
+
+Atualize:
+
+`docs/frontend-architecture.md`
+
+descrevendo composição do Dashboard.
+
+Não colocar detalhes CSS excessivos.
+
+---
+
+# 75. CLAUDE.md
+
+Somente adicione regras permanentes se necessário.
+
+Exemplos:
+
+- Dashboard não deve apresentar dados financeiros fictícios.
+- valores monetários utilizam locale pt-BR/BRL.
+- gráficos devem possuir fallback/descrição acessível.
+- componentes Dashboard devem reutilizar Design System.
+
+Evite duplicação.
+
+---
+
+# 76. Critérios de aceite
+
+A TASK-UI-2 estará concluída quando:
+
+- Dashboard utilizar novo Design System
+- PageHeader estiver consistente
+- filtro de período existir
+- Entradas estiver presente
+- Saídas estiver presente
+- Saldo estiver presente
+- Patrimônio líquido estiver presente
+- valores zero estiverem formatados em BRL
+- painel Evolução do saldo existir
+- solução de gráfico estiver definida
+- estado vazio do gráfico funcionar
+- painel Transações recentes existir
+- estado vazio de transações funcionar
+- painel Minhas contas/Resumo das contas existir
+- estado vazio de contas funcionar
+- nenhum dado financeiro falso for apresentado
+- layout desktop estiver consistente com a referência
+- tablet funcionar
+- mobile funcionar
+- autenticação continuar funcionando
+- testes passarem
+- lint passar
+- build produção passar
+
+---
+
+# 77. Restrições
+
+NÃO implementar:
+
+- APIs financeiras
+- Account backend
+- Category backend
+- Expense
+- Income
+- Transfer
+- cálculos financeiros reais
+- relatório
+- mocks permanentes
+- dados fictícios
+- percentuais falsos
+- notificações falsas
+- novas alterações de autenticação
+
+NÃO iniciar TASK-UI-3.
+
+---
+
+# 78. Relatório final
+
+Ao concluir apresente:
+
+## TASK-UI-2
+
+Status:
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## Dashboard
+
+Descreva a composição final.
+
+## KPI Cards
+
+Informe implementação de:
+
+- Entradas
+- Saídas
+- Saldo
+- Patrimônio líquido
+
+## Valores monetários
+
+Informe estratégia pt-BR / BRL.
+
+## Gráfico
+
+Informe:
+
+- biblioteca escolhida
+- versão
+- forma de integração
+- motivo da escolha
+- comportamento sem dados
+
+## Transações recentes
+
+Descreva estrutura/empty state.
+
+## Minhas contas
+
+Descreva estrutura/empty state.
+
+## Componentes criados
+
+Liste.
+
+## Componentes reutilizados
+
+Liste.
+
+## Dependências adicionadas
+
+Liste e justifique.
+
+Se nenhuma:
+
+`Nenhuma`
+
+## Bundle
+
+Informe impacto observado, especialmente se biblioteca de gráficos foi adicionada.
+
+## Responsividade
+
+### 360 × 800
+PASS / FAIL
+
+### 768 × 1024
+PASS / FAIL
+
+### 1280 × 720
+PASS / FAIL
+
+### 1920 × 1080
+PASS / FAIL
+
+## Acessibilidade
+
+PASS / FAIL
+
+## Auth regression
+
+PASS / FAIL
+
+## Testes
+
+Liste comandos e resultados.
+
+## E2E
+
+PASS / FAIL / NÃO CONFIGURADO
+
+## Lint
+
+PASS / FAIL
+
+## Build
+
+PASS / FAIL
+
+## Backend alterado
+
+SIM / NÃO
+
+Esperado:
+
+NÃO
+
+## Arquivos criados
+
+Liste.
+
+## Arquivos modificados
+
+Liste.
+
+## Pendências
+
+### Bloqueantes
+
+### Não bloqueantes
+
+## Próxima tarefa
+
+Informe prontidão para:
+
+**TASK-UI-3 — Refatoração visual das telas de Login e Cadastro**
+
+NÃO implemente TASK-UI-3.

@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
  * Endpoint autenticado para obter informações do usuário atual.
  */
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping({"/users", "/api/users"})
 @Tag(name = "Users", description = "Endpoints relacionados ao usuário autenticado")
 @SecurityRequirement(name = "bearerAuth")
 public class UserController {

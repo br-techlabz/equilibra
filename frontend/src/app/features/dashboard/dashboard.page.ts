@@ -1,87 +1,112 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { ApiStatusService, ApiStatus } from '../../core/http/api-status.service';
+import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
+import { StatCardComponent } from '../../shared/ui/stat-card/stat-card.component';
+import { ContentPanelComponent } from '../../shared/ui/content-panel/content-panel.component';
+import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.component';
+import { AuthService } from '../../features/auth/data-access/auth.service';
 
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
   imports: [
     CommonModule,
-    MatCardModule,
     MatIconModule,
-    MatProgressSpinnerModule,
-    MatTooltipModule,
+    PageHeaderComponent,
+    StatCardComponent,
+    ContentPanelComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './dashboard.page.html',
   styleUrl: './dashboard.page.scss',
 })
 export class DashboardPageComponent {
-  private readonly apiStatusService = inject(ApiStatusService);
+  private readonly authService = inject(AuthService);
 
-  // Estado reativo da API usando Signal
-  readonly apiStatus = signal<ApiStatus>('loading');
+  readonly currentUser = this.authService.currentUser;
 
-  constructor() {
-    // Efeito para verificar disponibilidade da API na inicialização
-    effect(() => {
-      this.checkApiStatus();
-    });
-  }
+  // Page header actions
+  readonly headerActions = [
+    {
+      label: 'Nova transação',
+      icon: 'add',
+      handler: () => console.log('Nova transação'),
+      tooltip: 'Adicionar nova transação',
+    },
+  ];
 
-  /**
-   * Verifica o status da API
-   */
-  checkApiStatus(): void {
-    this.apiStatus.set('loading');
-    this.apiStatusService.checkAvailability().subscribe({
-      next: (status) => this.apiStatus.set(status),
-      error: () => this.apiStatus.set('unavailable'),
-    });
-  }
+  readonly chartActions = [
+    {
+      label: 'Período',
+      icon: 'date_range',
+      handler: () => console.log('Selecionar período'),
+      variant: 'flat' as const,
+      color: 'primary' as const,
+    },
+  ];
 
-  /**
-   * Retorna ícone baseado no status
-   */
-  getStatusIcon(): string {
-    switch (this.apiStatus()) {
-      case 'available':
-        return 'check_circle';
-      case 'unavailable':
-        return 'error';
-      default:
-        return 'sync';
-    }
-  }
+  readonly transactionsActions = [
+    {
+      label: 'Ver todas',
+      icon: 'list',
+      handler: () => console.log('Ver todas transações'),
+      variant: 'flat' as const,
+      color: 'primary' as const,
+    },
+  ];
 
-  /**
-   * Retorna cor do ícone baseado no status
-   */
-  getStatusColor(): string {
-    switch (this.apiStatus()) {
-      case 'available':
-        return 'primary';
-      case 'unavailable':
-        return 'warn';
-      default:
-        return 'accent';
-    }
-  }
+  // KPI Cards data (placeholder values)
+  readonly kpiCards = [
+    {
+      label: 'Entradas',
+      value: 'R$ 0,00',
+      icon: 'trending_up',
+      variant: 'income' as const,
+      trend: '+12,5%',
+      trendPositive: true,
+    },
+    {
+      label: 'Saídas',
+      value: 'R$ 0,00',
+      icon: 'trending_down',
+      variant: 'expense' as const,
+      trend: '+8,2%',
+      trendPositive: false,
+    },
+    {
+      label: 'Saldo',
+      value: 'R$ 0,00',
+      icon: 'account_balance',
+      variant: 'balance' as const,
+      trend: 'R$ 0,00',
+      trendPositive: true,
+    },
+    {
+      label: 'Patrimônio',
+      value: 'R$ 0,00',
+      icon: 'savings',
+      variant: 'asset' as const,
+      trend: '+5,3%',
+      trendPositive: true,
+    },
+  ];
 
-  /**
-   * Retorna texto do status
-   */
-  getStatusText(): string {
-    switch (this.apiStatus()) {
-      case 'available':
-        return 'API conectada';
-      case 'unavailable':
-        return 'API indisponível';
-      default:
-        return 'Verificando conexão...';
-    }
+  // Recent transactions placeholder
+  readonly recentTransactions = [
+    {
+      id: 1,
+      description: 'Nenhuma transação registrada',
+      category: '',
+      account: '',
+      date: '',
+      value: '',
+      type: 'empty' as 'empty' | 'income' | 'expense',
+      icon: '',
+    },
+  ];
+
+  onNewTransaction(): void {
+    console.log('Nova transação');
   }
 }
