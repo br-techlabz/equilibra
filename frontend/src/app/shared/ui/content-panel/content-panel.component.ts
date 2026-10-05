@@ -1,4 +1,4 @@
-import { Component, input, contentChild, TemplateRef, computed } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -64,9 +64,6 @@ interface PanelAction {
         <ng-content />
       </mat-card-content>
 
-      <mat-card-footer *ngIf="footerTemplate()" class="panel-footer">
-        <ng-template [ngTemplateOutlet]="footerTemplate()!" />
-      </mat-card-footer>
     </mat-card>
   `,
   styles: `
@@ -163,8 +160,4 @@ export class ContentPanelComponent {
   readonly subtitle = input<string>('');
 
   readonly actions = input<Array<PanelAction>>([]);
-
-  readonly footerTemplate = contentChild(TemplateRef);
-
-  hasFooter = computed(() => this.footerTemplate() !== undefined);
 }

@@ -1,20 +1,15 @@
-import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatMenuModule } from '@angular/material/menu';
-import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
-import { ContentPanelComponent } from '../../../shared/ui/content-panel/content-panel.component';
-import { EmptyStateComponent } from '../../../shared/ui/empty-state/empty-state.component';
 import { AssetAccountsApiService } from '../data-access/asset-accounts-api.service';
 import {
   ASSET_ACCOUNT_TYPE_OPTIONS,
@@ -23,8 +18,11 @@ import {
   AssetAccountType,
   assetAccountTypeOption,
 } from '../models/asset-account.models';
+import { ContentPanelComponent } from '../../../shared/ui/content-panel/content-panel.component';
+import { EmptyStateComponent } from '../../../shared/ui/empty-state/empty-state.component';
+import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
 
-interface AssetAccountForm {
+interface AccountForm {
   name: FormControl<string>;
   type: FormControl<AssetAccountType>;
   initialBalance: FormControl<string>;
@@ -35,104 +33,82 @@ interface AssetAccountForm {
   standalone: true,
   imports: [
     CommonModule,
-    CurrencyPipe,
-    DatePipe,
     ReactiveFormsModule,
     MatButtonModule,
-    MatCardModule,
     MatCheckboxModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatProgressSpinnerModule,
+    MatMenuModule,
     MatSelectModule,
     MatSnackBarModule,
-    MatMenuModule,
-    PageHeaderComponent,
     ContentPanelComponent,
     EmptyStateComponent,
+    PageHeaderComponent,
   ],
   template: `
-    <div class="accounts-page">
+    <main class="accounts-page">
       <app-page-header
-        title="Contas"
-        subtitle="Gerencie onde seu dinheiro está."
-        [actions]="headerActions" />
-
-      <app-content-panel
         title="Contas de ativo"
-        subtitle="Contas utilizadas para acompanhar seus recursos financeiros.">
-        <div class="list-toolbar">
-          <mat-checkbox [checked]="includeInactive()" (change)="toggleInactive($event.checked)">
+        subtitle="Acompanhe as contas onde seus recursos estão disponíveis."
+        [actions]="pageActions" />
+
+      <app-content-panel title="Minhas contas" subtitle="Contas correntes, poupanças, dinheiro e investimentos.">
+        <div class="accounts-toolbar">
+          <mat-checkbox [checked]="includeInactive()" (change)="setIncludeInactive($event.checked)">
             Mostrar contas inativas
           </mat-checkbox>
+          <span class="account-count">{{ accounts().length }} {{ accounts().length === 1 ? 'conta' : 'contas' }}</span>
         </div>
 
-        @if (isLoading()) {
-          <div class="state-block" role="status" aria-live="polite">
-            <mat-spinner diameter="36" />
-            <span>Carregando contas...</span>
-          </div>
-        } @else if (errorMessage()) {
-          <div class="state-block error-block" role="alert">
-            <mat-icon>error_outline</mat-icon>
-            <p>{{ errorMessage() }}</p>
-            <button mat-stroked-button type="button" (click)="loadAccounts()">Tentar novamente</button>
-          </div>
-        } @else if (accounts().length === 0) {
+        @if (accountsLoaded() && accounts().length === 0) {
           <app-empty-state
             icon="account_balance_wallet"
             iconVariant="folder"
             title="Nenhuma conta cadastrada"
-            description="Cadastre sua primeira conta para começar a organizar seus recursos financeiros."
+            description="Cadastre sua primeira conta de ativo para começar."
             [centered]="false"
-            [actions]="[{ label: 'Nova conta', icon: 'add', handler: openCreateForm }]" />
-        } @else {
-          <div class="desktop-table-wrapper">
-            <table class="accounts-table">
-              <thead>
-                <tr>
-                  <th scope="col">Conta</th>
-                  <th scope="col">Tipo</th>
-                  <th scope="col">Saldo inicial</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Atualizada em</th>
-                  <th scope="col"><span class="sr-only">Ações</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (account of accounts(); track account.id) {
-                  <tr>
-                    <td><span class="account-name"><mat-icon aria-hidden="true">{{ typeOption(account.type).icon }}</mat-icon>{{ account.name }}</span></td>
-                    <td>{{ typeOption(account.type).label }}</td>
-                    <td>{{ account.initialBalance | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
-                    <td><span class="status-badge" [class.inactive]="!account.active">{{ account.active ? 'Ativa' : 'Inativa' }}</span></td>
-                    <td>{{ account.updatedAt | date:'dd/MM/yyyy HH:mm':'':'pt-BR' }}</td>
-                    <td class="actions-cell">
-                      <button mat-icon-button [matMenuTriggerFor]="actionsMenu" [matMenuTriggerData]="{ account }" [attr.aria-label]="'Ações da conta ' + account.name">
-                        <mat-icon>more_vert</mat-icon>
-                      </button>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-
-          <div class="mobile-account-list">
+            [actions]="emptyActions" />
+        } @else if (accounts().length > 0) {
+          <div class="account-list" role="list">
             @for (account of accounts(); track account.id) {
-              <article class="account-card">
-                <div class="account-card-header">
-                  <span class="account-name"><mat-icon aria-hidden="true">{{ typeOption(account.type).icon }}</mat-icon>{{ account.name }}</span>
-                  <button mat-icon-button [matMenuTriggerFor]="actionsMenu" [matMenuTriggerData]="{ account }" [attr.aria-label]="'Ações da conta ' + account.name"><mat-icon>more_vert</mat-icon></button>
+              <article class="account-row" role="listitem">
+                <div class="account-identity">
+                  <span class="account-icon" aria-hidden="true">
+                    <mat-icon>{{ typeOption(account.type).icon }}</mat-icon>
+                  </span>
+                  <div class="account-title">
+                    <strong>{{ account.name }}</strong>
+                    <span>{{ typeOption(account.type).label }}</span>
+                  </div>
                 </div>
-                <span class="account-type">{{ typeOption(account.type).label }}</span>
-                <span class="account-label">Saldo inicial</span>
-                <strong class="account-balance">{{ account.initialBalance | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong>
-                <div class="account-card-footer">
-                  <span class="status-badge" [class.inactive]="!account.active">{{ account.active ? 'Ativa' : 'Inativa' }}</span>
-                  <span>Atualizada em {{ account.updatedAt | date:'dd/MM/yyyy':'':'pt-BR' }}</span>
+
+                <div class="account-value">
+                  <span class="field-label">Saldo inicial</span>
+                  <strong>{{ formatMoney(account.initialBalance) }}</strong>
                 </div>
+
+                <div class="account-status">
+                  <span class="field-label">Status</span>
+                  <span class="status" [class.status-inactive]="!account.active">
+                    <span class="status-dot" aria-hidden="true"></span>
+                    {{ account.active ? 'Ativa' : 'Inativa' }}
+                  </span>
+                </div>
+
+                <div class="account-updated">
+                  <span class="field-label">Atualizada em</span>
+                  <span>{{ formatDate(account.updatedAt) }}</span>
+                </div>
+
+                <button
+                  mat-icon-button
+                  class="account-actions"
+                  [matMenuTriggerFor]="accountMenu"
+                  [matMenuTriggerData]="{ account: account }"
+                  [attr.aria-label]="'Ações da conta ' + account.name">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
               </article>
             }
           </div>
@@ -140,125 +116,217 @@ interface AssetAccountForm {
       </app-content-panel>
 
       @if (isFormOpen()) {
-        <button class="form-backdrop" type="button" aria-label="Fechar formulário" (click)="closeForm()"></button>
-        <aside class="account-form-drawer" role="dialog" aria-modal="true" aria-labelledby="account-form-title">
-          <div class="drawer-header">
+        <button class="drawer-backdrop" type="button" aria-label="Fechar formulário" (click)="closeForm()"></button>
+        <aside class="account-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+          <header class="drawer-header">
             <div>
-              <span class="panel-kicker">Contas</span>
-              <h2 id="account-form-title">{{ editingAccount() ? 'Editar conta' : 'Nova conta' }}</h2>
+              <span class="eyebrow">Contas de ativo</span>
+              <h2 id="drawer-title">{{ editingAccount() ? 'Editar conta' : 'Nova conta' }}</h2>
             </div>
-            <button mat-icon-button type="button" (click)="closeForm()" aria-label="Fechar formulário"><mat-icon>close</mat-icon></button>
-          </div>
-          <form [formGroup]="form" (ngSubmit)="saveAccount()" class="account-form" novalidate>
+            <button mat-icon-button type="button" aria-label="Fechar formulário" (click)="closeForm()">
+              <mat-icon>close</mat-icon>
+            </button>
+          </header>
+
+          <form class="account-form" [formGroup]="form" (ngSubmit)="saveAccount()" novalidate>
             <mat-form-field appearance="outline">
               <mat-label>Nome da conta</mat-label>
               <input matInput formControlName="name" placeholder="Ex.: Conta corrente" />
-              @if (form.controls.name.hasError('required')) { <mat-error>Nome é obrigatório.</mat-error> }
+              @if (form.controls.name.hasError('required')) { <mat-error>Informe o nome da conta.</mat-error> }
               @if (form.controls.name.hasError('maxlength')) { <mat-error>Use no máximo 100 caracteres.</mat-error> }
             </mat-form-field>
+
             <mat-form-field appearance="outline">
               <mat-label>Tipo de conta</mat-label>
               <mat-select formControlName="type">
-                @for (option of typeOptions; track option.value) { <mat-option [value]="option.value">{{ option.label }}</mat-option> }
+                @for (option of typeOptions; track option.value) {
+                  <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                }
               </mat-select>
-              @if (form.controls.type.hasError('required')) { <mat-error>Tipo é obrigatório.</mat-error> }
             </mat-form-field>
+
             <mat-form-field appearance="outline">
               <mat-label>Saldo inicial</mat-label>
-              <input matInput inputmode="decimal" formControlName="initialBalance" placeholder="0,00" aria-describedby="balance-help" />
-              <mat-hint id="balance-help">Informe o saldo no momento do cadastro.</mat-hint>
-              @if (form.controls.initialBalance.hasError('required')) { <mat-error>Saldo inicial é obrigatório.</mat-error> }
-              @if (form.controls.initialBalance.hasError('pattern')) { <mat-error>Informe um valor com até duas casas decimais.</mat-error> }
+              <input matInput formControlName="initialBalance" inputmode="decimal" placeholder="0,00" />
+              <mat-hint>Use até duas casas decimais.</mat-hint>
+              @if (form.controls.initialBalance.hasError('required')) { <mat-error>Informe o saldo inicial.</mat-error> }
+              @if (form.controls.initialBalance.hasError('pattern')) { <mat-error>Informe um valor válido.</mat-error> }
             </mat-form-field>
-            @if (formError()) { <div class="form-error" role="alert"><mat-icon>error_outline</mat-icon>{{ formError() }}</div> }
+
+            @if (formError()) {
+              <p class="form-error" role="alert"><mat-icon aria-hidden="true">error_outline</mat-icon>{{ formError() }}</p>
+            }
+
             <div class="drawer-actions">
               <button mat-button type="button" (click)="closeForm()">Cancelar</button>
               <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || isSaving()">
-                @if (isSaving()) { <mat-spinner diameter="18" /> } @else { {{ editingAccount() ? 'Salvar alterações' : 'Salvar conta' }} }
+                {{ editingAccount() ? 'Salvar alterações' : 'Cadastrar conta' }}
               </button>
             </div>
           </form>
         </aside>
       }
 
-      <mat-menu #actionsMenu="matMenu">
+      <mat-menu #accountMenu="matMenu">
         <ng-template matMenuContent let-account="account">
-          <button mat-menu-item (click)="openEditForm(account)"><mat-icon>edit</mat-icon><span>Editar</span></button>
-          @if (account.active) { <button mat-menu-item (click)="deactivate(account)"><mat-icon>pause_circle</mat-icon><span>Desativar</span></button> }
-          @else { <button mat-menu-item (click)="activate(account)"><mat-icon>play_circle</mat-icon><span>Reativar</span></button> }
+          <button mat-menu-item (click)="openEditForm(account)">
+            <mat-icon>edit</mat-icon><span>Editar</span>
+          </button>
+          @if (account.active) {
+            <button mat-menu-item (click)="deactivate(account)">
+              <mat-icon>pause_circle</mat-icon><span>Desativar</span>
+            </button>
+          } @else {
+            <button mat-menu-item (click)="activate(account)">
+              <mat-icon>play_circle</mat-icon><span>Reativar</span>
+            </button>
+          }
         </ng-template>
       </mat-menu>
-    </div>
+    </main>
   `,
   styleUrl: './asset-accounts.page.scss',
 })
-export class AssetAccountsPageComponent {
+export class AssetAccountsPageComponent implements OnInit {
   private readonly api = inject(AssetAccountsApiService);
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly snackBar = inject(MatSnackBar);
 
   readonly accounts = signal<AssetAccount[]>([]);
+  readonly accountsLoaded = signal(false);
   readonly includeInactive = signal(false);
-  readonly isLoading = signal(true);
-  readonly isSaving = signal(false);
-  readonly errorMessage = signal<string | null>(null);
-  readonly formError = signal<string | null>(null);
   readonly isFormOpen = signal(false);
   readonly editingAccount = signal<AssetAccount | null>(null);
+  readonly isSaving = signal(false);
+  readonly formError = signal<string | null>(null);
   readonly typeOptions = ASSET_ACCOUNT_TYPE_OPTIONS;
 
-  readonly form: FormGroup<AssetAccountForm> = this.formBuilder.group({
+  readonly form: FormGroup<AccountForm> = this.formBuilder.group({
     name: this.formBuilder.control('', [Validators.required, Validators.maxLength(100)]),
     type: this.formBuilder.control<AssetAccountType>('CHECKING', Validators.required),
-    initialBalance: this.formBuilder.control('0,00', [Validators.required, Validators.pattern(/^-?\d+(?:[,.]\d{1,2})?$/)]),
+    initialBalance: this.formBuilder.control('0,00', [
+      Validators.required,
+      Validators.pattern(/^-?\d+(?:[,.]\d{1,2})?$/),
+    ]),
   });
 
-  readonly headerActions = [{ label: 'Nova conta', icon: 'add', handler: () => this.openCreateForm() }];
+  readonly pageActions = [{ label: 'Nova conta', icon: 'add', handler: () => this.openCreateForm() }];
+  readonly emptyActions = [{ label: 'Nova conta', icon: 'add', handler: () => this.openCreateForm() }];
 
-  constructor() { this.loadAccounts(); }
+  ngOnInit(): void {
+    this.loadAccounts();
+  }
 
   loadAccounts(): void {
-    this.isLoading.set(true);
-    this.errorMessage.set(null);
+    this.accountsLoaded.set(false);
     this.api.list(this.includeInactive()).subscribe({
-      next: (accounts) => { this.accounts.set(accounts); this.isLoading.set(false); },
-      error: () => { this.errorMessage.set('Não foi possível carregar suas contas.'); this.isLoading.set(false); },
+      next: (accounts) => {
+        this.accounts.set(accounts);
+        this.accountsLoaded.set(true);
+      },
+      error: () => {
+        this.accounts.set([]);
+        this.snackBar.open('Não foi possível carregar as contas.', 'Fechar', { duration: 4000 });
+      },
     });
   }
 
-  toggleInactive(value: boolean): void { this.includeInactive.set(value); this.loadAccounts(); }
-  typeOption(type: AssetAccountType) { return assetAccountTypeOption(type); }
+  setIncludeInactive(value: boolean): void {
+    this.includeInactive.set(value);
+    this.loadAccounts();
+  }
+
+  typeOption(type: AssetAccountType) {
+    return assetAccountTypeOption(type);
+  }
+
+  formatMoney(value: number): string {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+  }
+
+  formatDate(value: string): string {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat('pt-BR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    }).format(date);
+  }
 
   openCreateForm(): void {
-    this.editingAccount.set(null); this.formError.set(null); this.form.reset({ name: '', type: 'CHECKING', initialBalance: '0,00' }); this.isFormOpen.set(true);
+    this.editingAccount.set(null);
+    this.formError.set(null);
+    this.form.reset({ name: '', type: 'CHECKING', initialBalance: '0,00' });
+    this.isFormOpen.set(true);
   }
 
   openEditForm(account: AssetAccount): void {
-    this.editingAccount.set(account); this.formError.set(null); this.form.reset({ name: account.name, type: account.type, initialBalance: account.initialBalance.toFixed(2).replace('.', ',') }); this.isFormOpen.set(true);
+    this.editingAccount.set(account);
+    this.formError.set(null);
+    this.form.reset({
+      name: account.name,
+      type: account.type,
+      initialBalance: account.initialBalance.toFixed(2).replace('.', ','),
+    });
+    this.isFormOpen.set(true);
   }
 
-  closeForm(): void { if (!this.isSaving()) this.isFormOpen.set(false); }
+  closeForm(): void {
+    if (!this.isSaving()) this.isFormOpen.set(false);
+  }
 
   saveAccount(): void {
-    if (this.form.invalid || this.isSaving()) { this.form.markAllAsTouched(); return; }
-    const raw = this.form.getRawValue();
-    const initialBalance = Number(raw.initialBalance.replace(',', '.'));
-    const request: AssetAccountRequest = { name: raw.name, type: raw.type, initialBalance };
-    this.isSaving.set(true); this.formError.set(null);
-    const account = this.editingAccount();
-    const operation = account ? this.api.update(account.id, request) : this.api.create(request);
+    if (this.form.invalid || this.isSaving()) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    const values = this.form.getRawValue();
+    const request: AssetAccountRequest = {
+      name: values.name,
+      type: values.type,
+      initialBalance: Number(values.initialBalance.replace(',', '.')),
+    };
+    const current = this.editingAccount();
+    const operation = current ? this.api.update(current.id, request) : this.api.create(request);
+
+    this.isSaving.set(true);
+    this.formError.set(null);
     operation.subscribe({
-      next: () => { this.isSaving.set(false); this.isFormOpen.set(false); this.snackBar.open(account ? 'Conta atualizada com sucesso.' : 'Conta criada com sucesso.', 'Fechar', { duration: 3500 }); this.loadAccounts(); },
-      error: (error: HttpErrorResponse) => { this.isSaving.set(false); this.formError.set(error.status === 409 ? 'Já existe uma conta ativa com esse nome.' : 'Não foi possível concluir a operação. Tente novamente.'); },
+      next: () => {
+        this.isSaving.set(false);
+        this.isFormOpen.set(false);
+        this.snackBar.open(current ? 'Conta atualizada.' : 'Conta cadastrada.', 'Fechar', { duration: 3500 });
+        this.loadAccounts();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.isSaving.set(false);
+        this.formError.set(error.status === 409 ? 'Já existe uma conta ativa com esse nome.' : 'Não foi possível concluir a operação.');
+      },
     });
   }
 
   deactivate(account: AssetAccount): void {
-    if (!window.confirm('A conta deixará de estar disponível para novos lançamentos, mas permanecerá no seu histórico.')) return;
-    this.api.deactivate(account.id).subscribe({ next: () => { this.snackBar.open('Conta desativada.', 'Fechar', { duration: 3000 }); this.loadAccounts(); }, error: () => this.snackBar.open('Não foi possível desativar a conta.', 'Fechar', { duration: 3500 }) });
+    if (!window.confirm('Deseja desativar esta conta?')) return;
+    this.api.deactivate(account.id).subscribe({
+      next: () => {
+        this.snackBar.open('Conta desativada.', 'Fechar', { duration: 3000 });
+        this.loadAccounts();
+      },
+      error: () => this.snackBar.open('Não foi possível desativar a conta.', 'Fechar', { duration: 3500 }),
+    });
   }
 
   activate(account: AssetAccount): void {
-    this.api.activate(account.id).subscribe({ next: () => { this.snackBar.open('Conta reativada.', 'Fechar', { duration: 3000 }); this.loadAccounts(); }, error: (error: HttpErrorResponse) => this.snackBar.open(error.status === 409 ? 'Não é possível reativar: já existe uma conta ativa com o mesmo nome.' : 'Não foi possível reativar a conta.', 'Fechar', { duration: 4000 }) });
+    this.api.activate(account.id).subscribe({
+      next: () => {
+        this.snackBar.open('Conta reativada.', 'Fechar', { duration: 3000 });
+        this.loadAccounts();
+      },
+      error: (error: HttpErrorResponse) => this.snackBar.open(
+        error.status === 409 ? 'Já existe uma conta ativa com esse nome.' : 'Não foi possível reativar a conta.',
+        'Fechar',
+        { duration: 4000 },
+      ),
+    });
   }
 }
