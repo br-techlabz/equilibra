@@ -56,9 +56,9 @@ interface StatCardAction {
   `,
   styles: `
     .stat-card {
-      border: 1px solid var(--card-border);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--card-shadow);
+      border: 0;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
       transition: box-shadow var(--transition-normal), transform var(--transition-fast);
       overflow: hidden;
     }
@@ -102,23 +102,28 @@ interface StatCardAction {
     }
 
     .stat-card-icon--income {
-      background: linear-gradient(135deg, var(--color-success-500), var(--color-success-700));
+      background: var(--color-primary-50);
+      color: var(--color-primary-600);
     }
 
     .stat-card-icon--expense {
-      background: linear-gradient(135deg, var(--color-danger-500), var(--color-danger-700));
+      background: var(--color-danger-50);
+      color: var(--color-danger-600);
     }
 
     .stat-card-icon--balance {
-      background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700));
+      background: var(--color-info-50);
+      color: var(--color-info-600);
     }
 
     .stat-card-icon--asset {
-      background: linear-gradient(135deg, var(--color-asset), var(--color-info-700));
+      background: #faf5ff;
+      color: #7e22ce;
     }
 
     .stat-card-icon--neutral {
-      background: linear-gradient(135deg, var(--text-tertiary), var(--text-secondary));
+      background: var(--color-grey-100);
+      color: var(--color-grey-600);
     }
 
     .stat-card-text {
@@ -194,24 +199,12 @@ interface StatCardAction {
     }
 
     /* Variant backgrounds */
-    .stat-card--income {
-      border-left: 4px solid var(--color-success-500);
-    }
-
-    .stat-card--expense {
-      border-left: 4px solid var(--color-danger-500);
-    }
-
-    .stat-card--balance {
-      border-left: 4px solid var(--color-primary-500);
-    }
-
-    .stat-card--asset {
-      border-left: 4px solid var(--color-asset);
-    }
-
+    .stat-card--income,
+    .stat-card--expense,
+    .stat-card--balance,
+    .stat-card--asset,
     .stat-card--neutral {
-      border-left: 4px solid var(--text-tertiary);
+      border-left: 0;
     }
 
     @media (max-width: 767px) {

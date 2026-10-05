@@ -58,7 +58,9 @@ export class ShellComponent implements OnInit {
   }
 
   onMenuToggle(): void {
-    this.sidebarOpened.update((open) => !open);
+    if (this.isMobile()) {
+      this.sidebarOpened.update((open) => !open);
+    }
   }
 
   onSidebarClose(): void {

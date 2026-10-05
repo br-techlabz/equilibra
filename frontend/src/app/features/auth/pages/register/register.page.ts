@@ -69,24 +69,13 @@ const passwordsMatchValidator: ValidatorFn = (
           </div>
           <div class="branding-content">
             <h1 class="branding-title">Equilibra</h1>
-            <p class="branding-tagline">Finanças Domésticas</p>
+            <p class="branding-tagline">Organize suas finanças. Encontre seu equilíbrio.</p>
             <p class="branding-description">
-              Crie sua conta e comece a organizar suas finanças hoje mesmo.
-              Controle receitas, despesas e patrimônio com facilidade.
+              Crie sua conta e comece a cuidar das suas finanças com mais clareza.
             </p>
-            <div class="branding-features">
-              <div class="feature-item">
-                <mat-icon>check_circle</mat-icon>
-                <span>Gratuito para começar</span>
-              </div>
-              <div class="feature-item">
-                <mat-icon>check_circle</mat-icon>
-                <span>Dados seguros e privados</span>
-              </div>
-              <div class="feature-item">
-                <mat-icon>check_circle</mat-icon>
-                <span>Acesso em qualquer dispositivo</span>
-              </div>
+            <div class="branding-visual" aria-hidden="true">
+              <mat-icon>account_balance_wallet</mat-icon>
+              <span></span><span></span><span></span><span></span><span></span>
             </div>
           </div>
         </div>
@@ -282,6 +271,41 @@ const passwordsMatchValidator: ValidatorFn = (
       text-align: center;
     }
 
+    .branding-visual {
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      gap: var(--space-3);
+      width: 220px;
+      height: 110px;
+      margin: var(--space-8) auto 0;
+      padding: var(--space-5);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: var(--radius-xl);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .branding-visual mat-icon {
+      position: absolute;
+      top: var(--space-4);
+      left: var(--space-4);
+      color: var(--text-on-primary);
+      font-size: 24px;
+    }
+
+    .branding-visual span {
+      flex: 1;
+      min-width: 18px;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .branding-visual span:nth-of-type(1) { height: 28%; }
+    .branding-visual span:nth-of-type(2) { height: 44%; }
+    .branding-visual span:nth-of-type(3) { height: 58%; }
+    .branding-visual span:nth-of-type(4) { height: 76%; }
+    .branding-visual span:nth-of-type(5) { height: 92%; }
+
     .branding-title {
       font-size: var(--font-size-3xl);
       font-weight: var(--font-bold);
@@ -368,6 +392,12 @@ const passwordsMatchValidator: ValidatorFn = (
       margin: 0;
       color: var(--text-secondary);
       font-size: var(--font-size-body);
+    }
+
+    .register-form .mat-mdc-form-field {
+      --mdc-outlined-text-field-outline-color: var(--input-border);
+      --mdc-outlined-text-field-hover-outline-color: var(--color-primary-300);
+      --mdc-outlined-text-field-focus-outline-color: var(--color-primary-500);
     }
 
     .register-form {
@@ -458,7 +488,7 @@ const passwordsMatchValidator: ValidatorFn = (
       }
 
       .branding-description,
-      .branding-features {
+      .branding-visual {
         display: none;
       }
 

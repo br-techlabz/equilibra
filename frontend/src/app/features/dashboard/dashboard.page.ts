@@ -1,6 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSelectModule } from '@angular/material/select';
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { StatCardComponent } from '../../shared/ui/stat-card/stat-card.component';
 import { ContentPanelComponent } from '../../shared/ui/content-panel/content-panel.component';
@@ -12,7 +14,9 @@ import { AuthService } from '../../features/auth/data-access/auth.service';
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MatIconModule,
+    MatSelectModule,
     PageHeaderComponent,
     StatCardComponent,
     ContentPanelComponent,
@@ -25,6 +29,15 @@ export class DashboardPageComponent {
   private readonly authService = inject(AuthService);
 
   readonly currentUser = this.authService.currentUser;
+
+  readonly periodOptions = [
+    { value: 'current-month', label: 'Este mês' },
+    { value: 'previous-month', label: 'Mês anterior' },
+    { value: 'three-months', label: 'Últimos 3 meses' },
+    { value: 'six-months', label: 'Últimos 6 meses' },
+    { value: 'current-year', label: 'Este ano' },
+  ] as const;
+  readonly selectedPeriod = signal<(typeof this.periodOptions)[number]['value']>('current-month');
 
   // Page header actions
   readonly headerActions = [
@@ -63,7 +76,7 @@ export class DashboardPageComponent {
       value: 'R$ 0,00',
       icon: 'trending_up',
       variant: 'income' as const,
-      trend: '+12,5%',
+      trend: '',
       trendPositive: true,
     },
     {
@@ -71,15 +84,15 @@ export class DashboardPageComponent {
       value: 'R$ 0,00',
       icon: 'trending_down',
       variant: 'expense' as const,
-      trend: '+8,2%',
-      trendPositive: false,
+      trend: '',
+      trendPositive: true,
     },
     {
       label: 'Saldo',
       value: 'R$ 0,00',
       icon: 'account_balance',
       variant: 'balance' as const,
-      trend: 'R$ 0,00',
+      trend: '',
       trendPositive: true,
     },
     {
@@ -87,7 +100,7 @@ export class DashboardPageComponent {
       value: 'R$ 0,00',
       icon: 'savings',
       variant: 'asset' as const,
-      trend: '+5,3%',
+      trend: '',
       trendPositive: true,
     },
   ];
@@ -108,5 +121,9 @@ export class DashboardPageComponent {
 
   onNewTransaction(): void {
     console.log('Nova transação');
+  }
+
+  onPeriodChange(value: (typeof this.periodOptions)[number]['value']): void {
+    this.selectedPeriod.set(value);
   }
 }

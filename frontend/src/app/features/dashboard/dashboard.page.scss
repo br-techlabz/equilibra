@@ -2,14 +2,45 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
+  padding-bottom: var(--space-8);
+  color: #ffffff;
+}
+
+.dashboard-page app-page-header,
+.dashboard-page app-page-header ::ng-deep .page-title {
+  color: var(--color-primary-500);
+}
+
+.dashboard-page app-page-header ::ng-deep .page-subtitle {
+  color: #ffffff;
+}
+
+.dashboard-page app-page-header {
+  display: block;
+  margin-bottom: var(--space-2);
 }
 
 .kpi-grid {
   margin-bottom: var(--space-2);
 }
 
+.dashboard-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: calc(var(--space-6) * -1);
+}
+
+.period-filter {
+  width: 180px;
+}
+
+.accounts-panel {
+  margin-top: 0;
+}
+
 .dashboard-grid {
   gap: var(--space-6);
+  align-items: start;
 }
 
 .transactions-list {
@@ -51,18 +82,18 @@
 }
 
 .transaction-icon--income {
-  background: linear-gradient(135deg, var(--color-success-500), var(--color-success-700));
-  color: var(--text-on-primary);
+  background: var(--color-primary-50);
+  color: var(--color-primary-600);
 }
 
 .transaction-icon--expense {
-  background: linear-gradient(135deg, var(--color-danger-500), var(--color-danger-700));
-  color: var(--text-on-primary);
+  background: var(--color-danger-50);
+  color: var(--color-danger-600);
 }
 
 .transaction-icon--transfer {
-  background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-700));
-  color: var(--text-on-primary);
+  background: var(--color-info-50);
+  color: var(--color-info-600);
 }
 
 .transaction-icon--empty {
@@ -113,6 +144,15 @@
 }
 
 @media (max-width: 767px) {
+  .dashboard-toolbar {
+    justify-content: stretch;
+    margin-top: calc(var(--space-4) * -1);
+  }
+
+  .period-filter {
+    width: 100%;
+  }
+
   .transaction-item {
     padding: var(--space-3);
   }

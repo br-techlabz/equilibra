@@ -7,35 +7,8 @@
     matTooltip="Abrir menu"
     aria-label="Abrir menu de navegação"
     [attr.aria-expanded]="!sidebarCollapsed()">
-    <mat-icon>{{ sidebarCollapsed() ? 'menu_open' : 'menu' }}</mat-icon>
+    <mat-icon>menu</mat-icon>
   </button>
-
-  <!-- Sidebar Collapse Toggle (Desktop) -->
-  <button
-    mat-icon-button
-    class="collapse-toggle"
-    (click)="onSidebarCollapseToggle()"
-    [matTooltip]="sidebarCollapsed() ? 'Expandir sidebar' : 'Recolher sidebar'"
-    [attr.aria-label]="sidebarCollapsed() ? 'Expandir sidebar' : 'Recolher sidebar'"
-    *ngIf="!sidebarCollapsed()">
-    <mat-icon>chevron_left</mat-icon>
-  </button>
-
-  <button
-    mat-icon-button
-    class="collapse-toggle expand"
-    (click)="onSidebarCollapseToggle()"
-    matTooltip="Expandir sidebar"
-    aria-label="Expandir sidebar"
-    *ngIf="sidebarCollapsed()">
-    <mat-icon>chevron_right</mat-icon>
-  </button>
-
-  <!-- Brand / App Title -->
-  <span class="toolbar-brand" [class.hidden]="sidebarCollapsed()">
-    <mat-icon class="brand-icon">account_balance_wallet</mat-icon>
-    <span class="brand-text">Equilibra</span>
-  </span>
 
   <span class="toolbar-spacer"></span>
 

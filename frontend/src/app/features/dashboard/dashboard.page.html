@@ -6,6 +6,20 @@
     [actions]="headerActions">
   </app-page-header>
 
+  <div class="dashboard-toolbar" aria-label="Filtros do dashboard">
+    <mat-form-field appearance="outline" class="period-filter" subscriptSizing="dynamic">
+      <mat-label>Período</mat-label>
+      <mat-select
+        [ngModel]="selectedPeriod()"
+        (ngModelChange)="onPeriodChange($event)"
+        aria-label="Selecionar período">
+        @for (period of periodOptions; track period.value) {
+          <mat-option [value]="period.value">{{ period.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </div>
+
   <!-- KPI Cards Row -->
   <div class="kpi-grid card-grid">
     @for (kpi of kpiCards; track kpi.label) {
@@ -30,8 +44,8 @@
       <app-empty-state
         icon="show_chart"
         iconVariant="chart"
-        title="Gráfico de evolução"
-        description="O gráfico de evolução do saldo será exibido aqui quando houver dados de transações."
+        title="Ainda não há dados suficientes"
+        description="Cadastre contas e registre transações para acompanhar a evolução do saldo."
         [centered]="true">
       </app-empty-state>
     </app-content-panel>
@@ -46,7 +60,7 @@
           icon="receipt_long"
           iconVariant="inbox"
           title="Nenhuma transação registrada"
-          description="Suas transações aparecerão aqui conforme você for cadastrando."
+          description="Suas receitas, despesas e transferências recentes aparecerão aqui."
           [centered]="true"
           [actions]="[
             { label: 'Nova transação', icon: 'add', handler: onNewTransaction, color: 'primary', variant: 'flat' }
@@ -74,4 +88,17 @@
       }
     </app-content-panel>
   </div>
+
+  <app-content-panel
+    title="Minhas contas"
+    subtitle="Resumo das contas de ativos"
+    class="accounts-panel">
+    <app-empty-state
+      icon="account_balance_wallet"
+      iconVariant="folder"
+      title="Nenhuma conta cadastrada"
+      description="Suas contas e respectivos saldos aparecerão aqui."
+      [centered]="false">
+    </app-empty-state>
+  </app-content-panel>
 </div>

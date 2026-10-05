@@ -90,6 +90,8 @@ Todas as cores são definidas como variáveis CSS em `src/styles.scss`. Nunca ut
 ```
 
 #### Paleta de Ativo/Patrimônio (Teal/Petróleo)
+
+A identidade administrativa utiliza uma paleta roxa suave, com fundo lavanda-claro, navegação branca e destaques em `--color-primary-500`. A tela pública de autenticação compartilha a mesma família de cor.
 ```scss
 --color-asset-50:  #f0fdfa;
 --color-asset-100: #ccfbf1;
@@ -494,6 +496,12 @@ Layout autenticado completo: `mat-sidenav-container` com sidebar, header e `rout
 Layout para páginas públicas (login, register). Centraliza conteúdo verticalmente, fundo cinza claro, sem sidebar/topbar.
 
 ---
+
+## Public authentication experience
+
+As páginas públicas usam um split layout responsivo com aproximadamente 45% de branding e 55% de formulário em desktop. O painel de branding usa os tokens primários do Equilibra, uma tagline curta e composição abstrata em CSS/Material Icons, sem imagens externas. Em tablet e mobile o branding é compacto e o formulário permanece acessível em uma coluna.
+
+Login e cadastro reutilizam tipografia, campos, botões, mensagens de erro, foco e espaçamento do Design System. Não exibem funcionalidades de autenticação que ainda não existem, como recuperação de senha, OAuth ou lembrar sessão.
 
 ## Responsiveness
 

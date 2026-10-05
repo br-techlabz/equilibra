@@ -26,17 +26,17 @@ $equilibra-theme: mat.define-theme((
   // COLOR PALETTE - Semantic Tokens
   // -----------------------------------------------------------------
 
-  // Primary - Financial Teal (brand color)
-  --color-primary-50: #e6f4f3;
-  --color-primary-100: #b8e3e0;
-  --color-primary-200: #87d0ca;
-  --color-primary-300: #56bdb4;
-  --color-primary-400: #33aa9f;
-  --color-primary-500: #169688;  // Main brand
-  --color-primary-600: #128477;
-  --color-primary-700: #0e6d63;
-  --color-primary-800: #0a574f;
-  --color-primary-900: #063f38;
+  // Primary - Equilibra Purple (admin identity)
+  --color-primary-50: #f5f3ff;
+  --color-primary-100: #ede9fe;
+  --color-primary-200: #ddd6fe;
+  --color-primary-300: #c4b5fd;
+  --color-primary-400: #a78bfa;
+  --color-primary-500: #7c3aed;
+  --color-primary-600: #6d28d9;
+  --color-primary-700: #5b21b6;
+  --color-primary-800: #4c1d95;
+  --color-primary-900: #2e1065;
 
   // Accent - Warm Amber (secondary actions, highlights)
   --color-accent-50: #fff8e1;
@@ -102,25 +102,25 @@ $equilibra-theme: mat.define-theme((
   // LAYOUT SURFACES - Semantic Backgrounds
   // -----------------------------------------------------------------
 
-  // Sidebar (dark slate)
-  --sidebar-bg: #0f172a;           // slate-950
-  --sidebar-bg-elevated: #1e293b;  // slate-800
-  --sidebar-border: #334155;       // slate-700
-  --sidebar-text: #f1f5f9;         // slate-50
-  --sidebar-text-muted: #94a3b8;   // slate-400
-  --sidebar-hover: #1e293b;        // slate-800
-  --sidebar-active: #1e3a5f;       // blue-900 with opacity
-  --sidebar-active-border: #3b82f6; // blue-500
+  // Light navigation panel and topbar from the new admin identity
+  --sidebar-bg: #ffffff;
+  --sidebar-bg-elevated: #f5f3ff;
+  --sidebar-border: #f1f5f9;
+  --sidebar-text: #475569;
+  --sidebar-text-muted: #64748b;
+  --sidebar-hover: #f5f3ff;
+  --sidebar-active: #ede9fe;
+  --sidebar-active-border: #7c3aed;
 
-  // Topbar (dark slate)
-  --topbar-bg: #0f172a;            // slate-950
-  --topbar-border: #334155;        // slate-700
-  --topbar-text: #f1f5f9;          // slate-50
-  --topbar-text-muted: #94a3b8;    // slate-400
+  // Topbar
+  --topbar-bg: #ffffff;
+  --topbar-border: #f1f5f9;
+  --topbar-text: #334155;
+  --topbar-text-muted: #64748b;
 
-  // Main Canvas (very light gray)
-  --canvas-bg: #f8fafc;            // slate-50
-  --canvas-bg-alt: #f1f5f9;        // slate-100
+  // Main Canvas (lavender-tinted white)
+  --canvas-bg: #faf9ff;
+  --canvas-bg-alt: #f5f3ff;
 
   // Cards (white)
   --card-bg: #ffffff;
@@ -131,7 +131,7 @@ $equilibra-theme: mat.define-theme((
   --input-bg: #ffffff;
   --input-border: #cbd5e1;         // slate-300
   --input-border-hover: #94a3b8;   // slate-400
-  --input-border-focus: #169688;   // primary-500
+  --input-border-focus: #7c3aed;   // primary-500
   --input-placeholder: #94a3b8;    // slate-400
 
   // -----------------------------------------------------------------
@@ -143,8 +143,8 @@ $equilibra-theme: mat.define-theme((
   --text-tertiary: #64748b;        // slate-500
   --text-muted: #94a3b8;           // slate-400
   --text-inverse: #f1f5f9;         // slate-50
-  --text-link: #169688;            // primary-500
-  --text-link-hover: #0e6d63;      // primary-700
+  --text-link: #7c3aed;            // primary-500
+  --text-link-hover: #5b21b6;      // primary-700
   --text-on-primary: #ffffff;
   --text-on-dark: #f1f5f9;         // slate-50
 
@@ -152,25 +152,25 @@ $equilibra-theme: mat.define-theme((
   // SEMANTIC STATUS COLORS (for financial values)
   // -----------------------------------------------------------------
 
-  --color-income: #169688;         // primary-500 (teal)
-  --color-income-bg: #e6f4f3;      // primary-50
-  --color-income-text: #0e6d63;    // primary-700
+  --color-income: #7c3aed;         // primary-500 (purple)
+  --color-income-bg: #f5f3ff;      // primary-50
+  --color-income-text: #5b21b6;    // primary-700
 
   --color-expense: #e54848;        // danger-500 (coral)
   --color-expense-bg: #fdf2f2;     // danger-50
   --color-expense-text: #b82e2e;   // danger-700
 
-  --color-balance-positive: #169688;
+  --color-balance-positive: #7c3aed;
   --color-balance-negative: #e54848;
   --color-balance-neutral: #334155;
 
-  --color-asset: #3b82f6;          // blue-500
-  --color-asset-bg: #eff6ff;       // blue-50
-  --color-asset-text: #1d4ed8;     // blue-700
+  --color-asset: #a855f7;          // purple-500
+  --color-asset-bg: #faf5ff;       // purple-50
+  --color-asset-text: #7e22ce;     // purple-700
 
-  --color-equity: #f59e0b;         // amber-500
-  --color-equity-bg: #fffbeb;      // amber-50
-  --color-equity-text: #b45309;    // amber-700
+  --color-equity: #ec4899;         // pink-500
+  --color-equity-bg: #fdf2f8;      // pink-50
+  --color-equity-text: #be185d;    // pink-700
 
   // -----------------------------------------------------------------
   // SPACING SCALE

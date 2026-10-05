@@ -30,15 +30,10 @@ export class HeaderComponent {
   readonly sidebarCollapsed = input(false);
 
   @Output() menuToggle = new EventEmitter<void>();
-  @Output() sidebarCollapseToggle = new EventEmitter<void>();
   @Output() logout = new EventEmitter<void>();
 
   onMenuClick(): void {
     this.menuToggle.emit();
-  }
-
-  onSidebarCollapseToggle(): void {
-    this.sidebarCollapseToggle.emit();
   }
 
   onLogout(): void {

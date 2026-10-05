@@ -26,15 +26,13 @@
             (opened)="onNavigationClick()"
             (closed)="onNavigationClick()">
             <mat-expansion-panel-header class="nav-expansion-header">
-              <mat-icon class="nav-icon" matPanelTitle>
-                {{ item.icon }}
-              </mat-icon>
-              <span class="nav-label" matPanelTitle>
-                {{ item.label }}
+              <span class="nav-header-icon" aria-hidden="true">
+                <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
               </span>
-              <mat-icon class="expand-icon" matPanelDescription>
-                expand_more
-              </mat-icon>
+              <span class="nav-label">{{ item.label }}</span>
+              <span class="nav-header-chevron" aria-hidden="true">
+                <mat-icon class="expand-icon">expand_more</mat-icon>
+              </span>
             </mat-expansion-panel-header>
 
             @for (child of item.children; track trackByChildRoute($index, child)) {
@@ -77,43 +75,5 @@
         }
       }
     </mat-nav-list>
-  </div>
-
-  <!-- User Area (Bottom) -->
-  <div class="sidebar-user" [class.collapsed]="collapsed()">
-    <mat-divider class="sidebar-divider"></mat-divider>
-    @if (!collapsed()) {
-      <div class="user-info">
-        <div class="user-avatar">
-          <mat-icon>account_circle</mat-icon>
-        </div>
-        <div class="user-details">
-          <span class="user-email">{{ userEmail() }}</span>
-          <span class="user-action-label">Minha conta</span>
-        </div>
-      </div>
-    } @else {
-      <button
-        mat-icon-button
-        class="user-avatar-button"
-        [matMenuTriggerFor]="userMenu"
-        aria-label="Menu do usuário"
-        matTooltip="Minha conta"
-        matTooltipPosition="right">
-        <mat-icon>account_circle</mat-icon>
-      </button>
-
-      <mat-menu #userMenu="matMenu" xPosition="before">
-        <div class="menu-user-info">
-          <mat-icon>account_circle</mat-icon>
-          <span>{{ userEmail() }}</span>
-        </div>
-        <mat-divider></mat-divider>
-        <button mat-menu-item (click)="logout.emit()">
-          <mat-icon>logout</mat-icon>
-          <span>Sair</span>
-        </button>
-      </mat-menu>
-    }
   </div>
 </nav>

@@ -47,15 +47,15 @@ interface LoginForm {
             <mat-icon>account_balance_wallet</mat-icon>
           </div>
           <div class="branding-content">
-            <div class="branding-icon">
-              <mat-icon>account_balance_wallet</mat-icon>
-            </div>
             <h1 class="branding-title">Equilibra</h1>
-            <p class="branding-tagline">Finanças Domésticas</p>
+            <p class="branding-tagline">Organize suas finanças. Encontre seu equilíbrio.</p>
             <p class="branding-description">
-              Organize suas finanças com clareza e controle.
-              Acompanhe receitas, despesas e patrimônio em um só lugar.
+              Acompanhe suas receitas, despesas e patrimônio em um só lugar.
             </p>
+            <div class="branding-visual" aria-hidden="true">
+              <mat-icon>trending_up</mat-icon>
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
           </div>
         </div>
 
@@ -204,9 +204,40 @@ interface LoginForm {
       text-align: center;
     }
 
-    .branding-icon {
-      display: none;
+    .branding-visual {
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      gap: var(--space-3);
+      width: 220px;
+      height: 110px;
+      margin: var(--space-8) auto 0;
+      padding: var(--space-5);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: var(--radius-xl);
+      background: rgba(255, 255, 255, 0.1);
     }
+
+    .branding-visual mat-icon {
+      position: absolute;
+      top: var(--space-4);
+      left: var(--space-4);
+      color: var(--text-on-primary);
+      font-size: 24px;
+    }
+
+    .branding-visual span {
+      flex: 1;
+      min-width: 18px;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .branding-visual span:nth-of-type(1) { height: 28%; }
+    .branding-visual span:nth-of-type(2) { height: 44%; }
+    .branding-visual span:nth-of-type(3) { height: 58%; }
+    .branding-visual span:nth-of-type(4) { height: 76%; }
+    .branding-visual span:nth-of-type(5) { height: 92%; }
 
     .branding-title {
       font-size: var(--font-size-3xl);
@@ -266,6 +297,12 @@ interface LoginForm {
       margin: 0;
       color: var(--text-secondary);
       font-size: var(--font-size-body);
+    }
+
+    .login-form .mat-mdc-form-field {
+      --mdc-outlined-text-field-outline-color: var(--input-border);
+      --mdc-outlined-text-field-hover-outline-color: var(--color-primary-300);
+      --mdc-outlined-text-field-focus-outline-color: var(--color-primary-500);
     }
 
     .login-form {
@@ -355,7 +392,8 @@ interface LoginForm {
         font-size: var(--font-size-2xl);
       }
 
-      .branding-description {
+      .branding-description,
+      .branding-visual {
         display: none;
       }
 

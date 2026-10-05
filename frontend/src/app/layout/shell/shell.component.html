@@ -6,7 +6,8 @@
     (closed)="onSidebarClose()"
     class="shell-sidenav"
     role="navigation"
-    aria-label="Navegação principal">
+    aria-label="Navegação principal"
+    [attr.aria-hidden]="isMobile() && !sidebarOpened()">
     <app-sidebar
       [collapsed]="sidebarCollapsed()"
       [isMobile]="isMobile()"
@@ -19,7 +20,6 @@
       [userEmail]="currentUserEmail()"
       [sidebarCollapsed]="sidebarCollapsed()"
       (menuToggle)="onMenuToggle()"
-      (sidebarCollapseToggle)="onSidebarCollapseToggle()"
       (logout)="onLogout()">
       <app-breadcrumb></app-breadcrumb>
     </app-header>
