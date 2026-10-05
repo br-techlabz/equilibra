@@ -58,7 +58,7 @@ export class SidebarComponent implements OnInit {
       label: 'Contas',
       icon: 'account_balance_wallet',
       children: [
-        { label: 'Contas de ativos', icon: 'account_balance', route: '/contas/ativos' },
+        { label: 'Contas de ativos', icon: 'account_balance', route: '/accounts' },
         { label: 'Contas de despesas', icon: 'credit_card', route: '/contas/despesas' },
       ],
     },

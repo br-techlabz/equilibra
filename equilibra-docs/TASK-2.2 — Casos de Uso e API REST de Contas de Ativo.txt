@@ -1,0 +1,1760 @@
+# TASK-2.2 — Casos de Uso e API REST de Contas de Ativo
+
+A TASK-2.1 foi concluída.
+
+Estamos na:
+
+# Sprint 2 — Contas e Categorias
+
+A TASK-2.1 implementou a fundação de domínio e persistência de:
+
+`AssetAccount`
+
+Agora implemente:
+
+# Casos de Uso e API REST de Contas de Ativo
+
+Esta tarefa deverá disponibilizar operações seguras para:
+
+- criar;
+- listar;
+- consultar;
+- atualizar;
+- desativar;
+- reativar;
+
+Contas de Ativo pertencentes ao usuário autenticado.
+
+---
+
+# 1. Regra de escopo
+
+Nesta TASK implemente somente backend/API.
+
+NÃO implemente:
+
+- frontend de contas;
+- categorias;
+- despesas;
+- receitas;
+- transferências;
+- relatórios;
+- cálculo real do Dashboard;
+- saldo atual baseado em transações;
+- exclusão física de contas.
+
+A interface será implementada na TASK-2.3.
+
+---
+
+# 2. Preparação obrigatória
+
+Antes de alterar código, leia:
+
+- `CLAUDE.md`
+- `README.md`
+- `docs/architecture.md`
+- `docs/api-guidelines.md`
+- `docs/security.md`
+- ADRs existentes;
+- migration criada na TASK-2.1.
+
+Analise a implementação REAL de:
+
+- `AssetAccount`;
+- `AssetAccountType`;
+- `AssetAccountRepository`;
+- normalização de nomes;
+- constraints;
+- ownership;
+- `CurrentUser`;
+- autenticação JWT;
+- Spring Security;
+- Problem Details;
+- Request ID;
+- OpenAPI;
+- testes de integração;
+- Testcontainers/MySQL.
+
+Não suponha que a TASK-2.1 tenha seguido exatamente o planejamento original.
+
+O código implementado é a fonte de verdade.
+
+---
+
+# 3. Relatório antes da implementação
+
+Antes de modificar arquivos, apresente:
+
+## Estado encontrado
+
+Resuma:
+
+- modelo AssetAccount;
+- repository;
+- constraints;
+- normalização;
+- estratégia monetária;
+- ownership.
+
+## Plano
+
+Informe:
+
+- casos de uso;
+- endpoints;
+- DTOs;
+- validações;
+- estratégia de erros;
+- testes.
+
+Depois implemente.
+
+---
+
+# 4. Arquitetura
+
+Siga a arquitetura já adotada pelo Equilibra.
+
+O fluxo conceitual deve permanecer próximo de:
+
+Controller
+↓
+Application Service / Use Case
+↓
+Domain
+↓
+Repository
+↓
+MySQL
+
+Não coloque toda regra de negócio diretamente no Controller.
+
+---
+
+# 5. Base URL
+
+Utilize:
+
+`/api/asset-accounts`
+
+salvo se a convenção real da API justificar outro padrão.
+
+Não utilize nomes de rota em português se o restante da API estiver em inglês.
+
+---
+
+# 6. Endpoints
+
+Implemente conceitualmente:
+
+`POST /api/asset-accounts`
+
+`GET /api/asset-accounts`
+
+`GET /api/asset-accounts/{id}`
+
+`PUT /api/asset-accounts/{id}`
+
+`PATCH /api/asset-accounts/{id}/deactivate`
+
+`PATCH /api/asset-accounts/{id}/activate`
+
+Adapte verbos somente se houver convenção REST diferente já documentada.
+
+---
+
+# 7. Segurança
+
+TODOS os endpoints de AssetAccount são privados.
+
+Sem JWT:
+
+→ `401 Unauthorized`
+
+Nenhum endpoint de conta deve ser público.
+
+---
+
+# 8. Identidade
+
+A identidade deve vir exclusivamente de:
+
+`CurrentUser`
+
+Fluxo:
+
+JWT
+↓
+SecurityContext
+↓
+CurrentUser
+↓
+ownerId
+
+---
+
+# 9. Proibição absoluta
+
+NENHUM request DTO poderá aceitar:
+
+- ownerId;
+- userId;
+- username;
+- email do owner.
+
+O cliente não escolhe proprietário.
+
+---
+
+# 10. Criação
+
+Endpoint:
+
+`POST /api/asset-accounts`
+
+Request conceitual:
+
+```json
+{
+  "name": "Nubank",
+  "type": "DIGITAL",
+  "initialBalance": 1250.35
+}
+```
+
+Não incluir:
+
+- id;
+- ownerId;
+- active;
+- createdAt;
+- updatedAt;
+- currentBalance.
+
+---
+
+# 11. Owner na criação
+
+Ao criar:
+
+`ownerId = CurrentUser.id()`
+
+Essa regra é obrigatória.
+
+---
+
+# 12. Active
+
+Nova conta deverá nascer:
+
+`active = true`
+
+O cliente não deve escolher `active` no POST.
+
+---
+
+# 13. initialBalance
+
+Se a TASK-2.1 definiu default:
+
+`0.00`
+
+preserve-o.
+
+Se a implementação real exige valor explicitamente, respeite a decisão existente.
+
+Não crie comportamento contraditório.
+
+---
+
+# 14. Valores negativos
+
+Saldo inicial negativo continua permitido.
+
+Exemplo:
+
+```json
+{
+  "initialBalance": -350.25
+}
+```
+
+deve ser válido se respeitar precisão/escala.
+
+---
+
+# 15. Precisão
+
+Valores com mais de duas casas decimais devem seguir exatamente a política definida na TASK-2.1.
+
+Não introduza arredondamento silencioso na API.
+
+---
+
+# 16. Type
+
+Aceite somente valores definidos em:
+
+`AssetAccountType`
+
+Valores desconhecidos:
+
+→ `400 Bad Request`
+
+---
+
+# 17. Nome
+
+Valide:
+
+- obrigatório;
+- não vazio;
+- limite definido;
+- normalização definida na TASK-2.1.
+
+Não duplique lógica de normalização no Controller.
+
+---
+
+# 18. Duplicidade
+
+Mesmo usuário:
+
+`Nubank`
++
+`nubank`
+
+ativas simultaneamente:
+
+→ conflito.
+
+Resposta:
+
+`409 Conflict`
+
+---
+
+# 19. Usuários diferentes
+
+Usuário A:
+
+Nubank
+
+Usuário B:
+
+Nubank
+
+→ permitido.
+
+---
+
+# 20. Conta inativa e reutilização
+
+Preserve a regra implementada na TASK-2.1.
+
+Se uma conta inativa permitir reutilização do nome, POST deverá respeitar isso.
+
+---
+
+# 21. Response de criação
+
+Sucesso:
+
+`201 Created`
+
+Retorne representação segura da conta.
+
+Exemplo conceitual:
+
+```json
+{
+  "id": "uuid",
+  "name": "Nubank",
+  "type": "DIGITAL",
+  "initialBalance": 1250.35,
+  "active": true,
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+```
+
+---
+
+# 22. Location
+
+Quando consistente com a arquitetura existente, retorne header:
+
+`Location: /api/asset-accounts/{id}`
+
+---
+
+# 23. Response DTO
+
+Crie DTO de resposta explícito.
+
+Não exponha entidade JPA diretamente.
+
+---
+
+# 24. ownerId na resposta
+
+Por padrão, NÃO há necessidade de expor `ownerId`.
+
+O usuário já é o proprietário do recurso.
+
+Evite expor identificadores internos sem necessidade.
+
+---
+
+# 25. currentBalance
+
+NÃO retorne `currentBalance` fictício.
+
+Se o domínio ainda não possui cálculo real baseado em transações, não invente o campo.
+
+---
+
+# 26. Listagem
+
+Endpoint:
+
+`GET /api/asset-accounts`
+
+deve retornar somente contas do usuário autenticado.
+
+Nunca contas globais.
+
+---
+
+# 27. Ordenação
+
+Utilize ordenação previsível.
+
+Preferência:
+
+nome ASC
+
+salvo decisão existente diferente.
+
+---
+
+# 28. Contas inativas
+
+Por padrão, a listagem principal deverá retornar:
+
+contas ativas.
+
+---
+
+# 29. Inclusão de inativas
+
+Suporte opcional simples:
+
+`GET /api/asset-accounts?includeInactive=true`
+
+Default:
+
+`false`
+
+Não implemente linguagem complexa de filtros.
+
+---
+
+# 30. includeInactive
+
+Valores inválidos devem seguir comportamento padrão e previsível da API.
+
+Não crie parsing manual frágil.
+
+---
+
+# 31. Listagem vazia
+
+Quando usuário não possui contas:
+
+`200 OK`
+
+com:
+
+```json
+[]
+```
+
+Não retornar 404.
+
+---
+
+# 32. Paginação
+
+NÃO implemente paginação nesta versão.
+
+Um usuário doméstico normalmente terá poucas contas.
+
+Evite complexidade desnecessária.
+
+---
+
+# 33. Consulta individual
+
+Endpoint:
+
+`GET /api/asset-accounts/{id}`
+
+Busca obrigatoriamente por:
+
+`id + ownerId`
+
+---
+
+# 34. Conta inexistente
+
+Se ID não existe:
+
+→ `404 Not Found`
+
+---
+
+# 35. Conta de outro usuário
+
+Se ID existe, mas pertence a outro usuário:
+
+→ `404 Not Found`
+
+e NÃO:
+
+`403 Forbidden`
+
+Isso reduz exposição da existência de recursos.
+
+---
+
+# 36. IDOR/BOLA
+
+Esta regra é crítica.
+
+Usuário A nunca poderá descobrir, consultar ou modificar conta de B utilizando UUID conhecido.
+
+Todas as operações por ID devem ser ownership-aware.
+
+---
+
+# 37. UUID inválido
+
+Path com UUID malformado:
+
+→ `400 Bad Request`
+
+seguindo Problem Details existente.
+
+Não retornar stack trace.
+
+---
+
+# 38. Atualização
+
+Endpoint:
+
+`PUT /api/asset-accounts/{id}`
+
+Request conceitual:
+
+```json
+{
+  "name": "Conta principal",
+  "type": "CHECKING",
+  "initialBalance": 1500.00
+}
+```
+
+---
+
+# 39. PUT
+
+Trate PUT como atualização completa dos campos editáveis definidos.
+
+Não aceite:
+
+- ownerId;
+- active;
+- createdAt;
+- updatedAt;
+- id.
+
+---
+
+# 40. Alteração do saldo inicial
+
+Nesta fase, permitir alteração de:
+
+`initialBalance`
+
+porque ainda não existem transações financeiras implementadas.
+
+DOCUMENTE que essa regra deverá ser revisitada quando transações existirem.
+
+---
+
+# 41. Regra futura importante
+
+Após existirem transações, editar livremente `initialBalance` pode alterar retrospectivamente o histórico financeiro.
+
+Registre uma pendência arquitetural explícita para a Sprint de Transações.
+
+Não tente resolver agora.
+
+---
+
+# 42. Atualização ownership-aware
+
+Antes de alterar:
+
+buscar:
+
+`id + CurrentUser.id()`
+
+Se não encontrado:
+
+→ 404.
+
+---
+
+# 43. Conflito de nome no update
+
+Ao renomear:
+
+Conta A:
+Nubank
+
+Conta B:
+Carteira
+
+renomear B para:
+
+`nubank`
+
+→ `409 Conflict`
+
+quando ambas pertencem ao mesmo usuário e estão ativas.
+
+---
+
+# 44. Mesmo nome da própria conta
+
+Atualizar:
+
+`Nubank`
+
+para:
+
+`NUBANK`
+
+não deve gerar conflito consigo mesma.
+
+Considere ID na verificação.
+
+---
+
+# 45. UpdatedAt
+
+Atualização deve alterar:
+
+`updatedAt`
+
+conforme infraestrutura existente.
+
+---
+
+# 46. Desativação
+
+Endpoint:
+
+`PATCH /api/asset-accounts/{id}/deactivate`
+
+Não utilize DELETE para isso.
+
+---
+
+# 47. Deactivate
+
+Regras:
+
+- buscar por id + owner;
+- se não existir → 404;
+- se ativa → desativar;
+- preservar registro.
+
+---
+
+# 48. Idempotência da desativação
+
+Preferência:
+
+desativar uma conta já inativa não deve gerar erro desnecessário.
+
+Pode retornar estado atual.
+
+Documente decisão.
+
+---
+
+# 49. Response deactivate
+
+Prefira retornar:
+
+`200 OK`
+
+com representação atualizada
+
+ou:
+
+`204 No Content`
+
+conforme convenção existente.
+
+Use um padrão consistente também para activate.
+
+---
+
+# 50. Reativação
+
+Endpoint:
+
+`PATCH /api/asset-accounts/{id}/activate`
+
+deve reativar conta pertencente ao usuário.
+
+---
+
+# 51. Conflito na reativação
+
+Cenário:
+
+1. `Nubank` antiga foi desativada;
+2. usuário criou nova `Nubank`;
+3. tenta reativar a antiga.
+
+Não podem existir duas contas ativas com o mesmo nome normalizado.
+
+Resultado:
+
+`409 Conflict`
+
+---
+
+# 52. Idempotência da ativação
+
+Ativar conta já ativa:
+
+não deve falhar desnecessariamente.
+
+---
+
+# 53. Exclusão física
+
+NÃO implemente:
+
+`DELETE /api/asset-accounts/{id}`
+
+nesta TASK.
+
+Desativação preserva histórico futuro.
+
+---
+
+# 54. DTOs
+
+Separe claramente:
+
+- CreateAssetAccountRequest
+- UpdateAssetAccountRequest
+- AssetAccountResponse
+
+ou nomes coerentes com convenção real.
+
+Não reutilize entidade como DTO.
+
+---
+
+# 55. Records
+
+Se o projeto usa Java records para DTOs, mantenha o padrão.
+
+Não introduza estilo diferente sem necessidade.
+
+---
+
+# 56. Bean Validation
+
+Utilize Jakarta Validation quando apropriado.
+
+Exemplos:
+
+- `@NotBlank`
+- `@Size`
+- `@NotNull`
+- validação de digits/scale
+
+Não tente expressar toda regra de negócio apenas com annotations.
+
+---
+
+# 57. BigDecimal JSON
+
+Confirme serialização adequada.
+
+`1250.35`
+
+deve permanecer numericamente correto.
+
+Não converter dinheiro para double internamente.
+
+---
+
+# 58. Mapper
+
+Faça mapeamento DTO ↔ domínio de maneira clara.
+
+Se o projeto possui padrão de mapper, reutilize.
+
+Não adicione MapStruct apenas para esta TASK se ele não existe.
+
+---
+
+# 59. Application Service
+
+Implemente casos de uso claros.
+
+Exemplo conceitual:
+
+- create
+- list
+- get
+- update
+- deactivate
+- activate
+
+Todos recebem identidade obtida via CurrentUser na fronteira apropriada.
+
+---
+
+# 60. Transações
+
+Use `@Transactional` conscientemente.
+
+Operações de escrita:
+
+transacionais.
+
+Leituras:
+
+read-only quando apropriado.
+
+Não espalhe transações no Controller.
+
+---
+
+# 61. Concorrência de nome
+
+Não dependa somente de:
+
+`existsBy...`
+
+antes do save.
+
+A constraint do banco deve continuar sendo a última linha de defesa contra corrida.
+
+---
+
+# 62. Tradução de constraint
+
+Quando banco rejeitar duplicidade:
+
+traduza para resposta:
+
+`409 Conflict`
+
+Não exponha:
+
+- nome da constraint;
+- SQL;
+- stack trace.
+
+---
+
+# 63. Problem Details
+
+Use padrão existente.
+
+Erros devem seguir:
+
+`application/problem+json`
+
+quando essa for a arquitetura adotada.
+
+---
+
+# 64. 400
+
+Use para:
+
+- body inválido;
+- enum inválido;
+- UUID inválido;
+- nome inválido;
+- escala monetária inválida.
+
+---
+
+# 65. 401
+
+Sem autenticação:
+
+→ 401.
+
+---
+
+# 66. 403
+
+Não use 403 para indicar conta pertencente a outro usuário.
+
+Para recursos ownership-aware:
+
+→ 404.
+
+---
+
+# 67. 404
+
+Use para:
+
+- conta inexistente;
+- conta de outro owner.
+
+Externamente, ambos devem ser indistinguíveis.
+
+---
+
+# 68. 409
+
+Use para conflitos como:
+
+- nome ativo duplicado;
+- reativação que violaria unicidade.
+
+---
+
+# 69. 500
+
+Erros inesperados:
+
+→ resposta genérica.
+
+Nunca expor stack trace.
+
+---
+
+# 70. Request ID
+
+Todos os endpoints devem preservar infraestrutura existente de Request ID.
+
+Problem Details também deve manter correlação conforme padrão atual.
+
+---
+
+# 71. Logging
+
+Pode registrar eventos úteis como:
+
+- conta criada;
+- conta atualizada;
+- conta desativada;
+
+mas NÃO registre:
+
+- JWT;
+- Authorization;
+- payload inteiro sem necessidade.
+
+Evite logging excessivo de valores financeiros.
+
+---
+
+# 72. OpenAPI
+
+Documente os endpoints.
+
+Inclua:
+
+- summary;
+- responses;
+- Bearer security;
+- schemas;
+- erros principais.
+
+---
+
+# 73. Swagger
+
+Confirme que todos os endpoints aparecem como protegidos.
+
+---
+
+# 74. Enum OpenAPI
+
+`AssetAccountType`
+
+deve aparecer corretamente no schema.
+
+---
+
+# 75. Exemplos OpenAPI
+
+Se arquitetura atual utiliza exemplos, use valores neutros.
+
+Não coloque informações reais.
+
+---
+
+# 76. Teste POST
+
+Autenticado:
+
+POST válido
+
+→ 201.
+
+Confirme:
+
+- owner correto;
+- active true;
+- dados persistidos.
+
+---
+
+# 77. Teste POST sem JWT
+
+→ 401.
+
+---
+
+# 78. Teste owner spoofing
+
+Tente enviar adicionalmente:
+
+```json
+{
+  "ownerId": "UUID-DE-OUTRO-USUARIO"
+}
+```
+
+A API não deve permitir controlar owner.
+
+Dependendo da política JSON atual:
+
+- campo desconhecido rejeitado;
+
+ou:
+
+- ignorado.
+
+Preferência de segurança:
+
+rejeitar propriedades desconhecidas se essa já for a política da API.
+
+Em qualquer caso, owner final deve ser CurrentUser.
+
+---
+
+# 79. Teste listagem A/B
+
+Crie:
+
+Usuário A:
+- A1
+- A2
+
+Usuário B:
+- B1
+
+GET como A:
+
+retorna apenas A1/A2.
+
+---
+
+# 80. Teste includeInactive
+
+A possui:
+
+- Conta ativa
+- Conta inativa
+
+Default:
+
+retorna somente ativa.
+
+`includeInactive=true`
+
+retorna ambas.
+
+---
+
+# 81. Teste GET individual
+
+A consulta própria conta:
+
+→ 200.
+
+---
+
+# 82. Teste IDOR GET
+
+Usuário B tenta:
+
+GET conta de A.
+
+Esperado:
+
+`404`
+
+---
+
+# 83. Teste PUT
+
+Usuário A atualiza própria conta:
+
+→ sucesso.
+
+Confirme persistência.
+
+---
+
+# 84. Teste IDOR PUT
+
+Usuário B tenta atualizar conta de A:
+
+→ 404.
+
+Dados da conta A devem permanecer inalterados.
+
+---
+
+# 85. Teste IDOR deactivate
+
+B tenta desativar conta de A:
+
+→ 404.
+
+Conta permanece ativa.
+
+---
+
+# 86. Teste IDOR activate
+
+B tenta reativar conta de A:
+
+→ 404.
+
+---
+
+# 87. Teste duplicidade POST
+
+Mesmo owner:
+
+Nubank
++
+nubank
+
+→ 409.
+
+---
+
+# 88. Teste duplicidade entre usuários
+
+A:
+Nubank
+
+B:
+Nubank
+
+→ ambos permitidos.
+
+---
+
+# 89. Teste update conflict
+
+A possui:
+
+Nubank
+Carteira
+
+renomear Carteira → nubank
+
+→ 409.
+
+---
+
+# 90. Teste self rename
+
+Nubank → NUBANK
+
+deve funcionar conforme normalização, sem conflito consigo mesma.
+
+---
+
+# 91. Teste reactivation conflict
+
+Conta antiga:
+
+Nubank inactive.
+
+Nova:
+
+Nubank active.
+
+Reativar antiga:
+
+→ 409.
+
+---
+
+# 92. Teste deactivate
+
+Conta ativa:
+
+→ desativar.
+
+Depois:
+
+GET list default
+
+→ não aparece.
+
+GET includeInactive
+
+→ aparece como inactive.
+
+---
+
+# 93. Teste activate
+
+Conta inativa sem conflito:
+
+→ ativa novamente.
+
+---
+
+# 94. Teste idempotência
+
+Teste:
+
+deactivate duas vezes.
+
+activate duas vezes.
+
+Confirme comportamento documentado.
+
+---
+
+# 95. Testes monetários
+
+POST/PUT:
+
+`0.00`
+→ válido.
+
+`100.25`
+→ válido.
+
+`-350.50`
+→ válido.
+
+`10.999`
+→ rejeitado conforme regra da TASK-2.1.
+
+---
+
+# 96. Valor grande
+
+Teste valor dentro do limite DECIMAL.
+
+Confirme ausência de perda de precisão.
+
+---
+
+# 97. Enum inválido
+
+Exemplo:
+
+`"type": "BITCOIN_SUPER_ACCOUNT"`
+
+→ 400.
+
+Não mapear silenciosamente para OTHER.
+
+---
+
+# 98. Nome vazio
+
+`""`
+
+ou somente espaços:
+
+→ 400.
+
+---
+
+# 99. Nome longo
+
+Acima do limite:
+
+→ 400.
+
+---
+
+# 100. JSON malformado
+
+→ 400 Problem Details.
+
+---
+
+# 101. Testcontainers
+
+Testes de integração devem utilizar MySQL/Testcontainers conforme infraestrutura existente.
+
+Não use H2 para substituir comportamento relevante de:
+
+- collation;
+- unique constraint;
+- DECIMAL;
+- FK.
+
+---
+
+# 102. Security integration tests
+
+Use autenticação real ou infraestrutura de teste que passe pelo Spring Security.
+
+Não teste apenas Controller diretamente para cenários de segurança.
+
+---
+
+# 103. Banco limpo
+
+Confirme migrations aplicam corretamente antes dos testes.
+
+---
+
+# 104. Regression
+
+Execute testes existentes:
+
+- register;
+- login;
+- JWT;
+- `/me`;
+- CurrentUser;
+- Request ID;
+- Problem Details.
+
+---
+
+# 105. Frontend
+
+NÃO alterar frontend.
+
+Nenhum botão ou tela de contas deve ser criado nesta TASK.
+
+---
+
+# 106. Dashboard
+
+Permanece mostrando estado vazio/zero.
+
+Não conecte AssetAccount ao Dashboard ainda.
+
+---
+
+# 107. Documentação da API
+
+Atualize:
+
+`docs/api-guidelines.md`
+
+somente se surgir regra geral nova.
+
+Não transforme documentação geral em documentação exclusiva de AssetAccount.
+
+---
+
+# 108. Documentação de arquitetura
+
+Atualize documentação relevante com:
+
+AssetAccount
+↓
+Application Service
+↓
+ownership-aware repository
+
+---
+
+# 109. Security documentation
+
+Registre/valide explicitamente o padrão:
+
+recursos privados por ID:
+
+`resourceId + CurrentUser.id()`
+
+Outro owner:
+
+`404`
+
+Esse padrão será reutilizado nas próximas entidades financeiras.
+
+---
+
+# 110. CLAUDE.md
+
+Adicione apenas regras permanentes ainda ausentes, por exemplo:
+
+- endpoints de recursos financeiros nunca recebem ownerId do cliente;
+- acesso por ID deve ser ownership-aware;
+- recurso pertencente a outro usuário deve ser tratado como não encontrado quando apropriado;
+- entidades JPA não são retornadas diretamente pela API.
+
+---
+
+# 111. Não alterar modelo sem necessidade
+
+A TASK-2.1 já foi concluída.
+
+Não redesenhe `AssetAccount` nesta TASK salvo se encontrar problema real que impeça a API.
+
+Qualquer alteração no modelo deve ser justificada no relatório.
+
+---
+
+# 112. Não criar saldo atual
+
+Ainda NÃO crie:
+
+`currentBalance`
+
+persistido.
+
+---
+
+# 113. Não criar transações fake
+
+Não crie receitas/despesas para testar saldo.
+
+Esse domínio ainda não existe.
+
+---
+
+# 114. Maven tests
+
+Execute a suíte completa.
+
+Resultado esperado:
+
+PASS.
+
+---
+
+# 115. Maven build
+
+Execute build completo.
+
+Resultado esperado:
+
+PASS.
+
+---
+
+# 116. Definition of Done
+
+A TASK-2.2 estará concluída quando:
+
+- POST funcionar;
+- GET collection funcionar;
+- GET by ID funcionar;
+- PUT funcionar;
+- deactivate funcionar;
+- activate funcionar;
+- todos exigirem autenticação;
+- owner vier exclusivamente de CurrentUser;
+- nenhum DTO aceitar ownerId;
+- listagem estiver isolada por usuário;
+- consulta estiver isolada por usuário;
+- update estiver isolado por usuário;
+- activate/deactivate estiver isolado por usuário;
+- IDOR/BOLA estiver coberto por testes;
+- duplicidade retornar 409;
+- reativação conflitante retornar 409;
+- validações monetárias funcionarem;
+- Problem Details estiver consistente;
+- Request ID estiver preservado;
+- OpenAPI estiver atualizado;
+- Testcontainers passarem;
+- regressão de autenticação passar;
+- Maven tests passar;
+- Maven build passar;
+- frontend permanecer inalterado.
+
+---
+
+# 117. Relatório final
+
+Apresente:
+
+# TASK-2.2
+
+Status:
+
+**CONCLUÍDA**
+
+ou
+
+**NÃO CONCLUÍDA**
+
+---
+
+# 118. Endpoints
+
+Liste em tabela:
+
+| Método | Endpoint | Resultado |
+|---|---|---|
+
+Inclua todos os endpoints implementados.
+
+---
+
+# 119. DTOs
+
+Liste:
+
+- requests;
+- responses;
+
+e seus campos.
+
+---
+
+# 120. Ownership
+
+Explique como CurrentUser é utilizado.
+
+Confirme explicitamente:
+
+`ownerId NÃO é recebido do cliente.`
+
+---
+
+# 121. IDOR/BOLA
+
+Informe resultado:
+
+## GET de outro usuário
+PASS / FAIL
+
+## PUT de outro usuário
+PASS / FAIL
+
+## deactivate de outro usuário
+PASS / FAIL
+
+## activate de outro usuário
+PASS / FAIL
+
+Esperado em todos:
+
+`404`
+
+---
+
+# 122. HTTP status
+
+Informe:
+
+## 200
+Casos utilizados.
+
+## 201
+Casos utilizados.
+
+## 400
+Casos utilizados.
+
+## 401
+Casos utilizados.
+
+## 404
+Casos utilizados.
+
+## 409
+Casos utilizados.
+
+---
+
+# 123. Duplicidade
+
+Informe resultado de:
+
+## Mesmo owner + mesmo nome normalizado
+PASS / FAIL
+
+## Owners diferentes + mesmo nome
+PASS / FAIL
+
+## Reativação com conflito
+PASS / FAIL
+
+---
+
+# 124. Valores monetários
+
+Informe:
+
+## BigDecimal
+PASS / FAIL
+
+## Valores negativos
+PASS / FAIL
+
+## >2 casas
+PASS / FAIL
+
+## Valor grande
+PASS / FAIL
+
+---
+
+# 125. Segurança
+
+Informe:
+
+## Endpoints privados
+PASS / FAIL
+
+## CurrentUser
+PASS / FAIL
+
+## owner spoofing
+PASS / FAIL
+
+## Entity exposure
+PASS / FAIL
+
+## JWT regression
+PASS / FAIL
+
+---
+
+# 126. Infraestrutura
+
+Informe:
+
+## Problem Details
+PASS / FAIL
+
+## Request ID
+PASS / FAIL
+
+## OpenAPI
+PASS / FAIL
+
+## MySQL/Testcontainers
+PASS / FAIL
+
+---
+
+# 127. Testes
+
+Liste comandos executados e resultados.
+
+Informe:
+
+## Unit tests
+PASS / FAIL
+
+## Integration tests
+PASS / FAIL
+
+## Security tests
+PASS / FAIL
+
+## Existing regression
+PASS / FAIL
+
+---
+
+# 128. Build
+
+## Maven tests
+PASS / FAIL
+
+## Maven build
+PASS / FAIL
+
+---
+
+# 129. Backend model changes
+
+Informe:
+
+`NENHUMA`
+
+ou liste e justifique alterações feitas em `AssetAccount`/migration.
+
+---
+
+# 130. Frontend
+
+Confirme:
+
+**NÃO ALTERADO**
+
+Se alterado, justifique.
+
+---
+
+# 131. Arquivos
+
+Liste:
+
+## Criados
+
+## Modificados
+
+## Removidos
+
+---
+
+# 132. Pendências
+
+Classifique:
+
+## Bloqueantes
+
+## Não bloqueantes
+
+Inclua explicitamente, quando aplicável:
+
+**Reavaliar edição de initialBalance após introdução de transações.**
+
+---
+
+# 133. Próxima tarefa
+
+Se a TASK-2.2 estiver aprovada, informe prontidão para:
+
+# TASK-2.3 — Interface de Contas de Ativo
+
+Ela deverá utilizar o Design System aprovado na Sprint UI e integrar-se exclusivamente à API criada nesta TASK.
+
+NÃO implemente TASK-2.3.

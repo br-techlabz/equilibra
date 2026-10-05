@@ -1,0 +1,38 @@
+.accounts-page { display: flex; flex-direction: column; gap: var(--space-6); padding-bottom: var(--space-8); }
+.list-toolbar { display: flex; justify-content: flex-end; margin-bottom: var(--space-4); color: var(--text-secondary); }
+.desktop-table-wrapper { overflow-x: auto; }
+.accounts-table { width: 100%; border-collapse: collapse; color: var(--text-primary); }
+.accounts-table th, .accounts-table td { padding: var(--space-4); border-bottom: 1px solid var(--card-border); text-align: left; white-space: nowrap; }
+.accounts-table th { color: var(--text-tertiary); font-size: var(--font-size-caption); font-weight: var(--font-semibold); text-transform: uppercase; letter-spacing: .04em; }
+.account-name { display: inline-flex; align-items: center; gap: var(--space-3); font-weight: var(--font-medium); }
+.account-name mat-icon { color: var(--color-primary-600); }
+.actions-cell { width: 1%; text-align: right !important; }
+.status-badge { display: inline-flex; align-items: center; min-height: 24px; padding: 0 var(--space-3); border-radius: var(--radius-full); background: var(--color-primary-50); color: var(--color-primary-700); font-size: var(--font-size-caption); font-weight: var(--font-medium); }
+.status-badge.inactive { background: var(--color-grey-100); color: var(--color-grey-600); }
+.mobile-account-list { display: none; }
+.state-block { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3); min-height: 220px; color: var(--text-secondary); text-align: center; }
+.state-block p { margin: 0; }
+.error-block { color: var(--color-danger-700); }
+.error-block mat-icon { color: var(--color-danger-600); }
+.form-backdrop { position: fixed; inset: 0; z-index: var(--z-index-modal-backdrop); width: 100%; height: 100%; border: 0; background: rgba(15, 23, 42, .45); cursor: default; }
+.account-form-drawer { position: fixed; inset: 0 0 0 auto; z-index: var(--z-index-modal); width: min(100%, 480px); overflow-y: auto; padding: var(--space-8); background: var(--card-bg); box-shadow: var(--shadow-xl); }
+.drawer-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-8); }
+.drawer-header h2 { margin: 0; color: var(--text-primary); font-size: var(--font-size-h2); }
+.panel-kicker { display: block; margin-bottom: var(--space-2); color: var(--color-primary-600); font-size: var(--font-size-caption); font-weight: var(--font-semibold); letter-spacing: .1em; text-transform: uppercase; }
+.account-form { display: flex; flex-direction: column; gap: var(--space-4); }
+.drawer-actions { display: flex; justify-content: flex-end; gap: var(--space-3); padding-top: var(--space-4); }
+.form-error { display: flex; align-items: flex-start; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--color-danger-200); border-radius: var(--radius-md); background: var(--color-danger-50); color: var(--color-danger-700); font-size: var(--font-size-body-sm); }
+.form-error mat-icon { flex: 0 0 auto; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+@media (max-width: 767px) {
+  .desktop-table-wrapper { display: none; }
+  .mobile-account-list { display: flex; flex-direction: column; gap: var(--space-3); }
+  .account-card { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4); border: 1px solid var(--card-border); border-radius: var(--radius-lg); background: var(--card-bg); }
+  .account-card-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+  .account-type, .account-label, .account-card-footer { color: var(--text-tertiary); font-size: var(--font-size-body-sm); }
+  .account-label { margin-top: var(--space-3); font-size: var(--font-size-caption); }
+  .account-balance { color: var(--text-primary); font-size: var(--font-size-h3); }
+  .account-card-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-top: var(--space-3); }
+  .list-toolbar { justify-content: flex-start; }
+  .account-form-drawer { width: 100%; padding: var(--space-6) var(--space-4); }
+}

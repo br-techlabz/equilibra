@@ -1,0 +1,1353 @@
+# TASK-UI-3 — Refatoração visual das telas de Login e Cadastro
+
+As seguintes tarefas já foram concluídas:
+
+- TASK-UI-1 — Design System e refatoração visual global
+- TASK-UI-2 — Dashboard e componentes visuais financeiros
+
+Agora implemente:
+
+# Experiência visual pública do Equilibra
+
+Refatore as telas:
+
+- Login
+- Cadastro
+
+para utilizar integralmente a nova identidade visual do Equilibra.
+
+IMPORTANTE:
+
+A autenticação já está funcional.
+
+Esta TASK NÃO deverá alterar contratos, estratégia JWT, guards ou regras de segurança, salvo correção de regressão diretamente relacionada à interface.
+
+---
+
+# 1. Preparação obrigatória
+
+Antes de modificar código, leia:
+
+- `CLAUDE.md`
+- `README.md`
+- `docs/design-system.md`
+- `docs/frontend-architecture.md`
+- `docs/architecture.md`
+- `docs/security.md`
+
+Analise a implementação REAL atual de:
+
+- PublicLayout
+- Login
+- Register
+- AuthService
+- AuthApiService
+- Guest Guard
+- Auth Guard
+- Authorization interceptor
+- Request ID interceptor
+- Problem Details
+- design tokens
+- typography
+- buttons
+- inputs
+- breakpoints
+- componentes compartilhados
+- Angular Material
+- testes
+- Playwright
+
+Antes de implementar, apresente:
+
+1. diagnóstico visual das telas atuais;
+2. componentes que serão reutilizados;
+3. alterações propostas;
+4. plano resumido.
+
+---
+
+# 2. Objetivo
+
+Criar uma experiência pública visualmente coerente com:
+
+- sidebar escura;
+- topbar;
+- cards;
+- cores;
+- tipografia;
+- Dashboard;
+
+implementados nas TASK-UI-1 e UI-2.
+
+O usuário deve perceber Login, Cadastro e Dashboard como partes do mesmo produto.
+
+---
+
+# 3. PublicLayout
+
+Refatore o `PublicLayout` existente.
+
+Ele deverá ser responsável pela estrutura visual das páginas públicas.
+
+Não coloque lógica de autenticação complexa no layout.
+
+Estrutura desktop conceitual:
+
+┌──────────────────────────┬──────────────────────────┐
+│                          │                          │
+│        EQUILIBRA         │                          │
+│                          │      FORMULÁRIO          │
+│   Finanças domésticas    │                          │
+│   com mais equilíbrio    │                          │
+│                          │                          │
+│   elementos visuais      │                          │
+│   discretos              │                          │
+│                          │                          │
+└──────────────────────────┴──────────────────────────┘
+
+---
+
+# 4. Proporções desktop
+
+Utilize aproximadamente:
+
+45% branding
+55% formulário
+
+ou proporção visual semelhante.
+
+Não trate esses números como obrigação pixel-perfect.
+
+O resultado deve permanecer equilibrado em diferentes resoluções.
+
+---
+
+# 5. Painel de branding
+
+No desktop, o lado esquerdo deverá utilizar a identidade escura do Equilibra.
+
+Use os mesmos tokens da sidebar/topbar.
+
+Não crie uma nova paleta.
+
+---
+
+# 6. Marca
+
+Apresente:
+
+**Equilibra**
+
+com destaque.
+
+Subtítulo possível:
+
+**Suas finanças em equilíbrio.**
+
+ou:
+
+**Organize suas finanças. Encontre seu equilíbrio.**
+
+Escolha UMA frase curta e consistente.
+
+Não utilizar marketing exagerado.
+
+---
+
+# 7. Elemento gráfico
+
+O painel de branding poderá possuir uma composição visual abstrata relacionada a:
+
+- equilíbrio
+- evolução financeira
+- organização
+- gráficos
+
+Prefira construir com:
+
+- CSS
+- formas geométricas
+- ícones Material
+- pequenos elementos do design system
+
+NÃO adicionar imagem stock.
+
+NÃO baixar ilustração externa.
+
+---
+
+# 8. Mini visual financeiro
+
+Pode existir uma representação puramente decorativa, por exemplo:
+
+┌──────────────────────────┐
+│ Visão financeira         │
+│                          │
+│     ╭────╮               │
+│  ╭──╯    ╰──╮            │
+│──╯           ╰──         │
+│                          │
+│ Organize • Planeje       │
+└──────────────────────────┘
+
+Não apresente números financeiros fictícios.
+
+---
+
+# 9. Elementos decorativos
+
+Elementos decorativos devem possuir:
+
+`aria-hidden="true"`
+
+quando apropriado.
+
+Não poluir leitores de tela.
+
+---
+
+# 10. Área do formulário
+
+O lado direito deverá utilizar:
+
+- background claro
+- conteúdo centralizado
+- largura confortável
+- bastante espaço negativo
+
+Evite formulário ocupando 100% da largura em desktop.
+
+---
+
+# 11. Largura do formulário
+
+Utilize aproximadamente:
+
+400–460px
+
+como largura máxima conceitual.
+
+Adapte ao Design System existente.
+
+---
+
+# 12. Login — header
+
+Estrutura:
+
+**Bem-vindo ao Equilibra**
+
+`Entre na sua conta para continuar.`
+
+Mantenha texto simples.
+
+---
+
+# 13. Login — campos
+
+Preserve:
+
+- E-mail
+- Senha
+
+Não adicionar campos.
+
+---
+
+# 14. Login — e-mail
+
+Utilize:
+
+- label visível
+- ícone opcional
+- autocomplete apropriado
+- validação existente
+
+Não substituir label por placeholder.
+
+---
+
+# 15. Login — senha
+
+Preserve:
+
+- mostrar/ocultar senha
+- `autocomplete="current-password"`
+- ausência de trim
+- validações existentes
+
+---
+
+# 16. Botão Entrar
+
+A ação principal:
+
+**Entrar**
+
+deve ocupar largura apropriada do formulário.
+
+Durante autenticação:
+
+- mostrar loading
+- desabilitar botão
+- impedir duplo submit
+
+Preserve comportamento existente.
+
+---
+
+# 17. Criar conta
+
+Abaixo do formulário:
+
+`Ainda não possui uma conta? Criar conta`
+
+"criar conta" deverá utilizar RouterLink para:
+
+`/register`
+
+---
+
+# 18. Recuperação de senha
+
+NÃO adicionar:
+
+"Esqueci minha senha"
+
+se a funcionalidade ainda não existe.
+
+Não criar link morto.
+
+---
+
+# 19. Login social
+
+NÃO adicionar:
+
+- Google
+- Microsoft
+- Facebook
+- Apple
+
+Não existem requisitos OAuth.
+
+---
+
+# 20. Remember me
+
+NÃO adicionar:
+
+`Lembrar de mim`
+
+A arquitetura atual mantém token apenas em memória.
+
+Esse controle seria enganoso.
+
+---
+
+# 21. Cadastro — header
+
+Utilize:
+
+**Crie sua conta**
+
+Subtítulo:
+
+`Comece a organizar suas finanças com o Equilibra.`
+
+ou equivalente curto.
+
+---
+
+# 22. Cadastro — campos
+
+Preserve exatamente os campos funcionais existentes:
+
+- E-mail
+- Senha
+- Confirmar senha
+
+Não adicionar:
+
+- nome
+- telefone
+- CPF
+- data de nascimento
+
+---
+
+# 23. Cadastro — senha
+
+Preserve a política REAL implementada.
+
+Não invente novos requisitos visuais.
+
+Se existe mensagem de requisitos, apresente-a discretamente abaixo do campo.
+
+---
+
+# 24. Confirmação
+
+Mantenha validação:
+
+password == confirmPassword
+
+Erro deverá aparecer próximo ao campo.
+
+---
+
+# 25. Botão cadastro
+
+Texto:
+
+**Criar conta**
+
+Durante submit:
+
+- loading
+- disabled
+- proteção contra duplicidade
+
+---
+
+# 26. Voltar ao login
+
+Abaixo:
+
+`Já possui uma conta? Entrar`
+
+→ `/login`
+
+---
+
+# 27. Feedback de sucesso
+
+Após cadastro:
+
+preserve comportamento existente:
+
+- feedback
+- navegação para login
+
+Não implementar auto-login.
+
+---
+
+# 28. Erros
+
+Padronize visualmente:
+
+### Campo
+
+mensagem próxima ao input.
+
+### Credenciais inválidas
+
+mensagem clara.
+
+### Rede
+
+feedback global.
+
+### 409
+
+email já cadastrado.
+
+### 500
+
+mensagem genérica.
+
+Não alterar semântica funcional existente.
+
+---
+
+# 29. Problem Details
+
+Continue utilizando infraestrutura existente.
+
+NÃO mostrar:
+
+- JSON
+- stack trace
+- endpoint interno
+- detalhes técnicos
+
+---
+
+# 30. Mensagens globais
+
+Utilize padrão já definido:
+
+- snackbar
+- alert component
+
+Escolha o mecanismo existente.
+
+Não introduza terceiro padrão de notificação.
+
+---
+
+# 31. Ícones dos inputs
+
+Ícones podem ser utilizados para:
+
+- email
+- password
+
+desde que não prejudiquem simplicidade.
+
+Use Material Icons existente.
+
+---
+
+# 32. Mostrar/ocultar senha
+
+O botão deve permanecer acessível.
+
+Utilize:
+
+- icon button
+- aria-label dinâmico
+
+Exemplo:
+
+`Mostrar senha`
+
+`Ocultar senha`
+
+---
+
+# 33. Autofill
+
+Login:
+
+email
+→ `autocomplete="email"`
+
+senha
+→ `autocomplete="current-password"`
+
+Cadastro:
+
+email
+→ `autocomplete="email"`
+
+senha
+→ `autocomplete="new-password"`
+
+confirmação
+→ `autocomplete="new-password"`
+
+---
+
+# 34. Autofill visual
+
+Teste autofill do navegador.
+
+Inputs preenchidos automaticamente não devem ficar visualmente quebrados ou ilegíveis devido ao tema.
+
+---
+
+# 35. Focus
+
+Utilize foco visível consistente com o Design System.
+
+Não remova outline sem substituição acessível.
+
+---
+
+# 36. Tab order
+
+Ordem do login:
+
+email
+→ senha
+→ mostrar/ocultar, conforme comportamento natural
+→ Entrar
+→ Criar conta
+
+Cadastro equivalente.
+
+Não criar tabindex arbitrários positivos.
+
+---
+
+# 37. Enter
+
+Pressionar Enter com formulário válido deverá enviar normalmente.
+
+Preserve semântica `<form>`.
+
+---
+
+# 38. Loading
+
+Loading não deve provocar grande alteração de largura do botão.
+
+Exemplo:
+
+spinner + Entrando...
+
+ou estratégia equivalente.
+
+---
+
+# 39. Layout mobile
+
+Em telas pequenas:
+
+NÃO manter divisão 45/55.
+
+Estrutura:
+
+┌─────────────────────────┐
+│ Equilibra               │
+│ Suas finanças...        │
+├─────────────────────────┤
+│                         │
+│ formulário              │
+│                         │
+└─────────────────────────┘
+
+O branding deverá ficar compacto.
+
+---
+
+# 40. Branding mobile
+
+No mobile:
+
+- marca
+- frase curta
+- elemento visual mínimo
+
+Não ocupar metade da tela apenas com decoração.
+
+O formulário deve aparecer rapidamente.
+
+---
+
+# 41. 360px
+
+Valide especificamente:
+
+`360 × 800`
+
+Todos os campos devem caber sem:
+
+- corte
+- overflow horizontal
+- botões fora da viewport
+
+Scroll vertical é aceitável quando necessário.
+
+---
+
+# 42. Tablet
+
+Em:
+
+`768 × 1024`
+
+decida visualmente entre:
+
+- split layout
+- layout vertical
+
+com base no resultado real.
+
+Não force desktop comprimido.
+
+---
+
+# 43. Desktop
+
+Em:
+
+`1280 × 720`
+
+split layout deverá utilizar bem a largura disponível.
+
+Formulário deve permanecer centralizado na sua coluna.
+
+---
+
+# 44. Full HD
+
+Em:
+
+`1920 × 1080`
+
+não deixe formulário excessivamente distante ou pequeno.
+
+Use max-width e alinhamento apropriados.
+
+---
+
+# 45. Altura pequena
+
+Teste desktop com altura próxima de:
+
+720px.
+
+Cadastro não deve ficar cortado.
+
+Se necessário:
+
+scroll vertical na área adequada.
+
+---
+
+# 46. Branding consistente
+
+As cores do painel público devem utilizar:
+
+- sidebar-bg
+- primary
+- accent
+- surface
+- text
+
+ou tokens equivalentes da UI-1.
+
+Não criar:
+
+`--login-blue`
+
+`--register-green`
+
+sem necessidade.
+
+---
+
+# 47. Componentes compartilhados
+
+Analise se Login/Register possuem estrutura duplicada.
+
+Extraia somente o que for realmente útil.
+
+Possíveis candidatos:
+
+- AuthFormHeader
+- PasswordField
+- PublicAuthCard
+
+Não crie abstrações excessivas.
+
+---
+
+# 48. Password field
+
+Se Login/Register duplicarem muita lógica de show/hide password, considere componente compartilhado.
+
+Mas preserve Reactive Forms e tipagem.
+
+---
+
+# 49. PublicLayout e conteúdo
+
+O PublicLayout deve controlar:
+
+- branding
+- background
+- estrutura responsiva
+
+As páginas devem controlar:
+
+- formulário
+- validação
+- submit
+- mensagens
+
+---
+
+# 50. Sem lógica de negócio no layout
+
+PublicLayout NÃO deve conhecer:
+
+- password
+- login request
+- register request
+- JWT
+
+---
+
+# 51. Animações
+
+Pode utilizar transições discretas de entrada.
+
+Não utilizar animação que atrase o acesso ao formulário.
+
+Respeite:
+
+`prefers-reduced-motion`
+
+---
+
+# 52. Material Card
+
+Avalie se um card explícito ao redor do formulário melhora a UI.
+
+Em desktop com área clara dedicada, pode nem ser necessário.
+
+Não empilhe:
+
+background
++ card
++ outro card
+
+sem benefício.
+
+---
+
+# 53. Elevação
+
+Se usar card:
+
+shadow discreta do Design System.
+
+Não criar modal visual pesado.
+
+---
+
+# 54. Segurança — senha
+
+Confirme novamente:
+
+- password não logada
+- confirmPassword não logada
+- não armazenadas
+- não aparecem em URL
+
+---
+
+# 55. Segurança — JWT
+
+Refatoração visual NÃO poderá alterar:
+
+- token somente em memória
+- interceptor
+- AuthService
+- logout
+
+---
+
+# 56. Guest Guard
+
+Login e Register continuam protegidos por Guest Guard.
+
+Usuário autenticado:
+
+`/login`
+→ área privada
+
+`/register`
+→ área privada
+
+---
+
+# 57. Auth Guard
+
+Nenhuma alteração funcional.
+
+---
+
+# 58. Request ID
+
+Preserve interceptor existente.
+
+---
+
+# 59. E-mail inválido
+
+Confirme mensagem visual consistente.
+
+Não dependa somente da borda vermelha.
+
+---
+
+# 60. Senhas diferentes
+
+Cadastro deve apresentar mensagem textual.
+
+Não dependa somente de cor.
+
+---
+
+# 61. Credenciais inválidas
+
+Mensagem:
+
+`E-mail ou senha inválidos.`
+
+ou texto real já definido.
+
+Não indicar qual campo está errado.
+
+---
+
+# 62. Email duplicado
+
+Cadastro:
+
+apresente mensagem clara sem expor informações adicionais da conta existente.
+
+---
+
+# 63. Testes existentes
+
+Todos os testes funcionais existentes de Login/Register devem continuar passando.
+
+Não remova teste porque seletor visual mudou.
+
+Atualize seletores E2E para mecanismos robustos:
+
+- role
+- label
+- accessible name
+
+em vez de classes CSS frágeis.
+
+---
+
+# 64. Testes PublicLayout
+
+Adicione testes úteis para:
+
+- conteúdo projetado/router outlet
+- branding
+- estrutura
+
+Evite testar valores exatos de pixels.
+
+---
+
+# 65. Teste Login
+
+Confirme:
+
+- heading
+- email
+- password
+- show/hide
+- Entrar
+- link cadastro
+- submit
+
+---
+
+# 66. Teste Register
+
+Confirme:
+
+- heading
+- email
+- password
+- confirmação
+- Criar conta
+- link login
+
+---
+
+# 67. Teste loading
+
+Login e Register:
+
+durante request:
+
+- botão disabled
+- feedback de loading
+
+---
+
+# 68. Teste erro
+
+Confirme que erros continuam acessíveis.
+
+Quando possível:
+
+`aria-describedby`
+
+ou mecanismos equivalentes.
+
+---
+
+# 69. E2E Login desktop
+
+Viewport:
+
+1280 × 720
+
+Fluxo:
+
+1. abrir login
+2. validar branding
+3. autenticar
+4. confirmar Dashboard
+
+---
+
+# 70. E2E Register desktop
+
+1. abrir register
+2. cadastrar usuário único
+3. confirmar redirecionamento
+4. autenticar
+
+---
+
+# 71. E2E mobile
+
+Viewport:
+
+360 × 800
+
+Teste:
+
+- login
+- cadastro
+- show/hide password
+- submit
+- navegação entre telas
+
+---
+
+# 72. Screenshot validation
+
+Se Playwright possuir infraestrutura para screenshot:
+
+capture localmente:
+
+- login desktop
+- login mobile
+- register desktop
+- register mobile
+
+Utilize para inspeção.
+
+Não versionar automaticamente se visual regression não estiver configurado.
+
+---
+
+# 73. Comparação com Dashboard
+
+Faça inspeção visual final.
+
+Confirme que:
+
+Login/Register
+e
+Dashboard
+
+compartilham:
+
+- paleta
+- tipografia
+- radius
+- botões
+- inputs
+- espaçamento
+- personalidade visual
+
+---
+
+# 74. Não copiar referência literalmente
+
+A referência visual inicial era um dashboard administrativo.
+
+Não tente colocar:
+
+- sidebar
+- menu de dashboard
+- widgets
+
+na página de login.
+
+Reutilize a identidade, não a estrutura privada.
+
+---
+
+# 75. Não adicionar funcionalidades
+
+NÃO implementar:
+
+- forgot password
+- remember me
+- OAuth
+- MFA
+- CAPTCHA
+- confirmação de email
+- termos complexos
+- perfil
+
+---
+
+# 76. Não alterar backend
+
+Backend não deverá ser modificado.
+
+Se descobrir incompatibilidade real, reporte antes de ampliar escopo.
+
+---
+
+# 77. Dependências
+
+Idealmente:
+
+**nenhuma nova dependência**
+
+A infraestrutura visual já deve ser suficiente.
+
+Não instalar biblioteca de formulário ou animação.
+
+---
+
+# 78. Documentação
+
+Atualize:
+
+`docs/design-system.md`
+
+com seção:
+
+## Public authentication experience
+
+Documente:
+
+- split layout
+- branding panel
+- auth form
+- comportamento mobile
+- regras de acessibilidade
+
+---
+
+# 79. Frontend Architecture
+
+Atualize somente se a arquitetura de PublicLayout mudou de maneira relevante.
+
+---
+
+# 80. CLAUDE.md
+
+Adicione somente regras permanentes que ainda não existam.
+
+Exemplo:
+
+- Login/Register devem utilizar PublicLayout.
+- Não adicionar funcionalidades de autenticação fictícias à UI.
+- Páginas públicas devem reutilizar tokens do Design System.
+
+---
+
+# 81. Lint
+
+Execute lint real.
+
+Resultado esperado:
+
+PASS.
+
+---
+
+# 82. Unit tests
+
+Execute suíte frontend.
+
+Resultado esperado:
+
+PASS.
+
+---
+
+# 83. Build
+
+Execute build Angular production.
+
+Resultado esperado:
+
+PASS.
+
+---
+
+# 84. E2E
+
+Execute Playwright quando configurado.
+
+Resultado esperado:
+
+PASS.
+
+---
+
+# 85. Critérios de aceite
+
+TASK-UI-3 estará concluída quando:
+
+- PublicLayout estiver visualmente integrado ao Design System
+- Login tiver nova identidade
+- Register tiver nova identidade
+- branding Equilibra estiver presente
+- layout desktop funcionar
+- layout tablet funcionar
+- layout mobile funcionar
+- login continuar funcional
+- cadastro continuar funcional
+- show/hide password funcionar
+- validações funcionarem
+- loading funcionar
+- erros continuarem seguros
+- Guest Guard funcionar
+- Auth Guard não sofrer regressão
+- JWT continuar somente em memória
+- nenhuma funcionalidade falsa for apresentada
+- nenhuma dependência desnecessária for adicionada
+- acessibilidade estiver validada
+- testes passarem
+- lint passar
+- build passar
+- E2E passar quando configurado
+
+---
+
+# 86. Relatório final
+
+Ao concluir apresente:
+
+## TASK-UI-3
+
+Status:
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## PublicLayout
+
+Descreva a estrutura final.
+
+## Branding
+
+Informe:
+
+- marca
+- tagline
+- elementos visuais
+
+## Login
+
+Descreva alterações.
+
+## Cadastro
+
+Descreva alterações.
+
+## Mobile
+
+Descreva adaptação.
+
+## Componentes criados
+
+Liste.
+
+## Componentes reutilizados
+
+Liste.
+
+## Design tokens
+
+Liste somente tokens novos/modificados.
+
+## Dependências adicionadas
+
+Esperado:
+
+Nenhuma.
+
+Caso exista, justifique.
+
+## Segurança
+
+Confirme:
+
+- password não logada
+- password não armazenada
+- JWT não persistido
+- AuthService preservado
+- interceptors preservados
+- guards preservados
+
+## Responsividade
+
+### 360 × 800
+PASS / FAIL
+
+### 768 × 1024
+PASS / FAIL
+
+### 1280 × 720
+PASS / FAIL
+
+### 1920 × 1080
+PASS / FAIL
+
+## Acessibilidade
+
+PASS / FAIL
+
+## Login regression
+
+PASS / FAIL
+
+## Register regression
+
+PASS / FAIL
+
+## Auth regression
+
+PASS / FAIL
+
+## Testes
+
+Informe comandos e resultados.
+
+## E2E
+
+PASS / FAIL / NÃO CONFIGURADO
+
+## Lint
+
+PASS / FAIL
+
+## Production Build
+
+PASS / FAIL
+
+## Backend alterado
+
+Esperado:
+
+NÃO
+
+## Arquivos criados
+
+Liste.
+
+## Arquivos modificados
+
+Liste.
+
+## Arquivos removidos
+
+Liste.
+
+## Pendências
+
+### Bloqueantes
+
+### Não bloqueantes
+
+## Próxima tarefa
+
+Informe prontidão para:
+
+**TASK-UI-4 — Gate Visual, Responsividade, Acessibilidade e Consistência**
+
+NÃO implemente TASK-UI-4.

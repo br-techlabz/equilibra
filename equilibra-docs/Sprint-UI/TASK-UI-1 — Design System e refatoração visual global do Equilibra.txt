@@ -1,0 +1,1486 @@
+# TASK-UI-1 — Design System e refatoração visual global do Equilibra
+
+O Equilibra já possui sua infraestrutura inicial, autenticação e frontend Angular funcionando.
+
+Antes de iniciar a próxima Sprint funcional, faça uma refatoração visual completa da aplicação.
+
+A imagem anexada fornecida ao Claude Code deverá ser utilizada como **principal referência visual e estrutural**.
+
+IMPORTANTE:
+
+A imagem é uma REFERÊNCIA DE DESIGN.
+
+Não copie:
+
+- nome "Perfect Admin"
+- textos
+- dados
+- logotipo
+- imagens de usuário
+- conteúdo específico
+- identidade da aplicação original
+
+Reinterprete o design para criar uma identidade própria do:
+
+**Equilibra — Gestão de Finanças Domésticas**
+
+---
+
+# 1. Objetivo
+
+Transformar a interface atual em um dashboard financeiro moderno inspirado estruturalmente na imagem de referência.
+
+A aplicação deverá possuir:
+
+- sidebar escura
+- topbar
+- área principal clara
+- breadcrumbs
+- cards financeiros
+- painéis
+- gráficos
+- tabelas/listas
+- menus hierárquicos
+- identidade visual consistente
+- responsividade completa
+
+A nova linguagem visual deverá ser utilizada como base para TODAS as telas futuras do Equilibra.
+
+---
+
+# 2. Antes de implementar
+
+Analise integralmente o frontend existente.
+
+Leia:
+
+- `CLAUDE.md`
+- `README.md`
+- `docs/frontend-architecture.md`
+- `docs/architecture.md`
+- `docs/security.md`
+- ADRs existentes
+
+Analise:
+
+- Angular 19
+- Angular Material
+- tema existente
+- layout
+- shell autenticado
+- sidebar
+- toolbar
+- login
+- register
+- dashboard atual
+- CSS/SCSS
+- design tokens
+- componentes compartilhados
+- responsividade
+- rotas
+- AuthService
+- currentUser
+- logout
+
+Antes de alterar código, apresente:
+
+1. diagnóstico da UI atual;
+2. componentes que serão preservados;
+3. componentes que serão refatorados;
+4. design system proposto;
+5. plano resumido da implementação.
+
+NÃO altere regras de negócio.
+
+---
+
+# 3. Princípio visual
+
+Utilize a imagem fornecida como referência principalmente para:
+
+- proporções
+- hierarquia
+- organização
+- sidebar
+- topbar
+- cards
+- painéis
+- distribuição de conteúdo
+- densidade visual
+
+O objetivo NÃO é reproduzir pixel a pixel.
+
+O objetivo é produzir:
+
+**uma interpretação moderna do mesmo estilo administrativo para o Equilibra.**
+
+---
+
+# 4. Estrutura geral
+
+No desktop, utilize estrutura semelhante a:
+
+┌──────────────────────────────────────────────┐
+│ TOPBAR                                       │
+├───────────┬──────────────────────────────────┤
+│           │                                  │
+│ SIDEBAR   │       MAIN CONTENT               │
+│           │                                  │
+│           │                                  │
+│           │                                  │
+└───────────┴──────────────────────────────────┘
+
+---
+
+# 5. Sidebar
+
+A sidebar será um dos principais elementos visuais.
+
+Utilize:
+
+- fundo azul-cinza muito escuro
+- texto claro
+- ícones discretos
+- divisores sutis
+- item ativo destacado
+- hover perceptível
+- largura aproximadamente entre 230px e 260px
+
+Não copie literalmente as cores da imagem.
+
+Crie tokens próprios.
+
+---
+
+# 6. Marca
+
+No topo da sidebar apresente:
+
+**Equilibra**
+
+Opcionalmente:
+
+`Finanças Domésticas`
+
+Use uma identidade tipográfica simples e profissional.
+
+Não reutilize "Perfect Admin".
+
+---
+
+# 7. Área do usuário
+
+A sidebar poderá apresentar área compacta do usuário.
+
+Exemplo:
+
+ícone/avatar
+Nome ou e-mail
+"Minha conta"
+
+Como atualmente possuímos apenas informações básicas do usuário, NÃO invente:
+
+- nome
+- cargo
+- fotografia
+
+Utilize email ou representação genérica.
+
+---
+
+# 8. Menu principal
+
+Prepare a sidebar para a arquitetura funcional real do Equilibra.
+
+Estrutura:
+
+Dashboard
+
+Contas
+  - Contas de ativos
+  - Contas de despesas
+
+Categorias
+
+Transações
+  - Despesas
+  - Receita / Renda
+  - Transferências
+
+Relatórios
+
+Os itens ainda não implementados poderão existir visualmente somente se isso estiver de acordo com a estratégia atual de navegação.
+
+Não crie funcionalidades fake.
+
+---
+
+# 9. Ícones
+
+Utilize preferencialmente:
+
+Angular Material Icons
+
+ou biblioteca já existente.
+
+NÃO adicionar nova biblioteca apenas para ícones.
+
+Sugestões conceituais:
+
+Dashboard
+→ dashboard
+
+Contas
+→ account_balance_wallet
+
+Categorias
+→ category
+
+Despesas
+→ trending_down
+
+Receitas
+→ trending_up
+
+Transferências
+→ swap_horiz
+
+Relatórios
+→ assessment
+
+Logout
+→ logout
+
+---
+
+# 10. Menu ativo
+
+A rota atual deverá produzir destaque claro.
+
+Exemplo:
+
+barra lateral de accent color
++
+background levemente mais claro
+
+Não depender apenas da cor do texto.
+
+---
+
+# 11. Submenus
+
+Transações deverá suportar expansão/recolhimento.
+
+Utilize animação curta e discreta.
+
+O submenu deve manter boa navegação por teclado.
+
+Não implemente animações exageradas.
+
+---
+
+# 12. Topbar
+
+Crie topbar horizontal inspirada na referência.
+
+Características:
+
+- fundo escuro
+- altura aproximada de 56–64px
+- botão para sidebar
+- espaço flexível
+- identificação do usuário
+- menu do usuário
+- logout
+
+Evite encher a topbar com notificações fictícias.
+
+Não crie:
+
+- mensagens
+- alertas
+- notificações
+
+sem funcionalidades reais.
+
+---
+
+# 13. Breadcrumbs
+
+Abaixo da topbar, ou no início da área de conteúdo, apresente breadcrumbs discretos.
+
+Exemplos:
+
+Home / Dashboard
+
+Home / Contas
+
+Home / Transações / Despesas
+
+Crie componente reutilizável somente se isso fizer sentido arquiteturalmente.
+
+---
+
+# 14. Área principal
+
+Use:
+
+- fundo cinza extremamente claro
+- cards/painéis brancos
+- espaçamento consistente
+- sombras discretas
+- bordas suaves
+
+Evite fundo branco absoluto em toda a página.
+
+O contraste entre canvas e cards deve organizar visualmente o conteúdo.
+
+---
+
+# 15. Content container
+
+Defina largura e espaçamento consistentes.
+
+Desktop:
+
+padding aproximado de 24px.
+
+Tablet:
+
+16–20px.
+
+Mobile:
+
+12–16px.
+
+Não deixe conteúdo encostado nas bordas.
+
+---
+
+# 16. Título da página
+
+Crie padrão reutilizável:
+
+Dashboard
+
+Visão geral das suas finanças
+
+ou:
+
+Contas de ativos
+
+Gerencie suas contas e saldos
+
+Estrutura:
+
+título
++
+subtítulo opcional
++
+ações à direita
+
+---
+
+# 17. Design tokens
+
+Centralize tokens visuais.
+
+Defina semanticamente:
+
+- primary
+- accent
+- success
+- danger
+- warning
+- info
+- surface
+- surface-alt
+- text-primary
+- text-secondary
+- border
+- sidebar-bg
+- sidebar-hover
+- sidebar-active
+
+Também:
+
+- spacing
+- radius
+- shadows
+- typography
+- transitions
+
+Não espalhe valores hexadecimais arbitrários por dezenas de componentes.
+
+---
+
+# 18. Paleta
+
+Use como inspiração a referência, porém com identidade própria.
+
+Direção sugerida:
+
+### Sidebar / Topbar
+
+azul ardósia / azul petróleo escuro.
+
+### Primary
+
+azul ou teal financeiro.
+
+### Success
+
+verde suave.
+
+### Danger
+
+coral/vermelho suave.
+
+### Warning
+
+âmbar.
+
+### Info
+
+azul claro.
+
+### Canvas
+
+cinza muito claro.
+
+### Cards
+
+branco.
+
+Evite cores excessivamente saturadas.
+
+---
+
+# 19. Cards financeiros
+
+Crie componente visual reutilizável de KPI.
+
+Ele será utilizado futuramente no Dashboard.
+
+Estrutura:
+
+┌──────────────────────┐
+│ Ícone                │
+│                      │
+│ R$ 4.250,00          │
+│ Entradas             │
+│                      │
+│ indicador opcional   │
+└──────────────────────┘
+
+Prepare variantes sem acoplar regra financeira.
+
+---
+
+# 20. Cards do Dashboard
+
+Prepare visualmente os quatro cards definidos nos requisitos:
+
+### Entradas
+
+Representa receitas.
+
+### Saídas
+
+Representa despesas.
+
+### Saldo
+
+Representa resultado financeiro do período.
+
+### Patrimônio líquido
+
+Representa saldo atual das contas de ativo.
+
+Nesta TASK, se backend ainda não fornece esses dados:
+
+NÃO invente números.
+
+Utilize:
+
+`R$ 0,00`
+
+ou estado vazio claramente identificado.
+
+---
+
+# 21. Cores dos cards
+
+Utilize variações semânticas.
+
+Sugestão:
+
+Entradas
+→ verde/teal
+
+Saídas
+→ coral
+
+Saldo
+→ azul
+
+Patrimônio
+→ âmbar/azul-petróleo
+
+Mantenha contraste WCAG adequado.
+
+---
+
+# 22. Aparência dos cards
+
+Inspirados nos cards da imagem:
+
+- área colorida
+- valor grande
+- label
+- ícone grande e discreto
+- cantos moderadamente arredondados
+- sombra mínima
+
+Modernize o estilo.
+
+Evite aparência de template de 2012.
+
+---
+
+# 23. Painéis
+
+Crie padrão visual reutilizável:
+
+┌──────────────────────────────┐
+│ Título                 ação  │
+├──────────────────────────────┤
+│                              │
+│ conteúdo                     │
+│                              │
+└──────────────────────────────┘
+
+Utilizaremos esse padrão para:
+
+- gráficos
+- histórico
+- relatórios
+- tabelas
+- formulários
+
+---
+
+# 24. Dashboard estrutural
+
+Prepare a página Dashboard seguindo aproximadamente:
+
+┌──────────────────────────────────────────────┐
+│ Dashboard                                    │
+│ Visão geral das suas finanças                │
+├──────────┬──────────┬──────────┬──────────────┤
+│ Entradas │ Saídas   │ Saldo    │ Patrimônio   │
+├────────────────────────────┬─────────────────┤
+│                            │                 │
+│ Evolução do saldo          │ Transações      │
+│                            │ recentes        │
+│                            │                 │
+└────────────────────────────┴─────────────────┘
+
+Essa composição é inspirada na referência.
+
+---
+
+# 25. Gráfico principal
+
+Reserve aproximadamente:
+
+65–70%
+
+da largura desktop para o gráfico.
+
+O painel lateral de transações:
+
+30–35%.
+
+No mobile:
+
+um abaixo do outro.
+
+---
+
+# 26. Gráficos
+
+Se já houver biblioteca de charts:
+
+reutilize-a.
+
+Se NÃO houver, NÃO adicione automaticamente uma biblioteca pesada nesta TASK apenas para preencher espaço.
+
+Pode criar o container/estado vazio.
+
+A biblioteca definitiva deverá ser escolhida quando implementarmos o Dashboard funcional.
+
+---
+
+# 27. Histórico de transações
+
+Crie aparência preparada para lista:
+
+ícone
+descrição
+conta
+data
+valor
+
+Receitas:
+
+sinalização positiva.
+
+Despesas:
+
+sinalização negativa.
+
+Não invente transações reais.
+
+Utilize estado vazio se necessário:
+
+"Nenhuma transação registrada."
+
+---
+
+# 28. Empty states
+
+Crie padrão visual consistente.
+
+Exemplo:
+
+ícone discreto
+
+"Nenhuma transação registrada."
+
+"Suas transações aparecerão aqui."
+
+Evite telas completamente vazias.
+
+---
+
+# 29. Loading states
+
+Crie padrão visual consistente.
+
+Utilize:
+
+- spinner
+- skeleton
+
+conforme infraestrutura existente.
+
+Não introduza loaders diferentes em cada tela.
+
+---
+
+# 30. Error states
+
+Crie padrão visual consistente para erros de carregamento.
+
+Não exiba JSON ou stack traces.
+
+---
+
+# 31. Botões
+
+Padronize:
+
+### Primary
+
+ação principal.
+
+### Secondary
+
+ação secundária.
+
+### Danger
+
+ações destrutivas.
+
+### Icon button
+
+ações compactas.
+
+Evite excesso de cores.
+
+---
+
+# 32. Formulários
+
+Todas as telas futuras deverão seguir padrão:
+
+- label claro
+- input consistente
+- erro abaixo
+- espaçamento vertical
+- ações no final
+
+Utilize Angular Material existente.
+
+---
+
+# 33. Login
+
+Refatore `/login` para combinar com a nova identidade.
+
+No desktop, considere:
+
+┌─────────────────────────┬────────────────────┐
+│                         │                    │
+│      branding           │      login         │
+│      Equilibra          │      form          │
+│                         │                    │
+└─────────────────────────┴────────────────────┘
+
+ou card centralizado se isso ficar mais coerente.
+
+Não force sidebar/topbar em páginas públicas.
+
+---
+
+# 34. Register
+
+Faça `/register` visualmente consistente com login.
+
+Compartilhe layout e tokens.
+
+Não duplique grandes blocos de CSS.
+
+---
+
+# 35. Mobile — sidebar
+
+Em telas pequenas:
+
+sidebar NÃO deve permanecer ocupando 240px permanentemente.
+
+Transforme-a em:
+
+- drawer
+- overlay
+- painel lateral temporário
+
+acionado pelo botão da topbar.
+
+---
+
+# 36. Breakpoints
+
+Utilize breakpoints coerentes com o projeto.
+
+Conceitualmente:
+
+mobile
+< 768px
+
+tablet
+768–1023px
+
+desktop
+>= 1024px
+
+Não espalhe media queries inconsistentes.
+
+---
+
+# 37. Tablet
+
+Em tablet:
+
+- sidebar pode recolher
+- cards podem utilizar 2 colunas
+- gráfico/lista podem empilhar dependendo da largura
+
+---
+
+# 38. Desktop
+
+Em desktop:
+
+- sidebar persistente
+- topbar
+- quatro KPIs em linha quando houver espaço
+- gráfico + painel lateral
+
+---
+
+# 39. Wide desktop
+
+Em 1920px:
+
+não estique indiscriminadamente todos os elementos.
+
+Utilize layout confortável e proporcional.
+
+---
+
+# 40. Tipografia
+
+Utilize fonte já adotada pelo projeto ou fonte segura disponível.
+
+Não adicione fonte remota sem necessidade.
+
+Defina hierarquia:
+
+H1
+→ página
+
+H2
+→ seções
+
+H3
+→ painéis
+
+body
+→ conteúdo
+
+caption
+→ metadados
+
+---
+
+# 41. Números financeiros
+
+Prepare estilo tabular/consistente para valores.
+
+Quando dados reais existirem:
+
+`R$ 1.234,56`
+
+Não utilizar formatação americana.
+
+Use mecanismos de internacionalização adequados.
+
+---
+
+# 42. Datas
+
+Prepare a UI para locale:
+
+`pt-BR`
+
+Não hardcode datas formatadas manualmente em componentes.
+
+---
+
+# 43. Angular Material
+
+Reutilize Angular Material de forma consistente.
+
+Avalie:
+
+- MatToolbar
+- MatSidenav
+- MatIcon
+- MatButton
+- MatMenu
+- MatCard
+- MatDivider
+- MatTooltip
+- MatProgressSpinner
+
+Não use componente Material apenas porque existe.
+
+---
+
+# 44. Evitar aparência Material padrão
+
+A aplicação não deve parecer apenas uma coleção de componentes Material sem identidade.
+
+Customize através do design system do Equilibra.
+
+---
+
+# 45. CSS/SCSS
+
+Siga a estratégia existente.
+
+Prefira:
+
+- CSS variables
+- SCSS variables/mixins, se já adotados
+- classes semânticas
+
+Evite:
+
+- estilos inline
+- `!important` excessivo
+- duplicação
+- seletores frágeis
+
+---
+
+# 46. Arquitetura de estilos
+
+Organize conceitualmente:
+
+styles/
+├── tokens
+├── typography
+├── layout
+├── utilities
+└── material-overrides
+
+Adapte à estrutura real.
+
+Não reorganize todo projeto se não for necessário.
+
+---
+
+# 47. Componentes compartilhados
+
+Extraia componentes somente quando houver reutilização real.
+
+Candidatos:
+
+- PageHeader
+- Breadcrumb
+- StatCard
+- ContentPanel
+- EmptyState
+
+Não transforme cada `<div>` em componente Angular.
+
+---
+
+# 48. Sidebar component
+
+Sidebar deve ser componente próprio ou parte bem delimitada do layout.
+
+Não coloque lógica de negócio dentro dela.
+
+---
+
+# 49. Topbar component
+
+Topbar deve concentrar:
+
+- toggle da sidebar
+- identificação do usuário
+- menu de usuário
+- logout
+
+Não concentrar regras financeiras.
+
+---
+
+# 50. Authenticated Layout
+
+Crie/refatore o shell conceitualmente:
+
+AuthenticatedLayout
+├── Topbar
+├── Sidebar
+└── RouterOutlet
+
+Preserve Auth Guard.
+
+---
+
+# 51. Public Layout
+
+Mantenha:
+
+PublicLayout
+└── RouterOutlet
+
+para:
+
+- login
+- register
+
+---
+
+# 52. Segurança
+
+A refatoração visual NÃO poderá quebrar:
+
+- Auth Guard
+- Guest Guard
+- Authorization interceptor
+- logout
+- token em memória
+- `/me`
+- Request ID
+
+---
+
+# 53. Não persistir JWT
+
+A alteração visual NÃO autoriza introduzir:
+
+- localStorage
+- sessionStorage
+
+Mantenha arquitetura atual.
+
+---
+
+# 54. Acessibilidade
+
+Garanta:
+
+- contraste adequado
+- foco visível
+- navegação por teclado
+- sidebar acessível
+- drawer acessível
+- ícones com labels quando necessário
+- menus acessíveis
+- campos com labels
+- estados não representados somente por cor
+
+---
+
+# 55. Sidebar keyboard
+
+Usuário deverá conseguir navegar pelo menu utilizando teclado.
+
+Não crie elementos clicáveis usando apenas `<div>`.
+
+---
+
+# 56. Motion
+
+Animações:
+
+- curtas
+- discretas
+- funcionais
+
+Considere `prefers-reduced-motion`.
+
+Não implemente animações decorativas excessivas.
+
+---
+
+# 57. Performance
+
+Evite:
+
+- imagens grandes desnecessárias
+- bibliotecas UI adicionais
+- bibliotecas de animação
+- bibliotecas de ícones extras
+
+sem justificativa.
+
+---
+
+# 58. Imagem de referência
+
+NÃO coloque a imagem fornecida dentro da aplicação.
+
+Ela serve apenas como referência de design.
+
+Não adicione ao bundle final sem necessidade.
+
+---
+
+# 59. Dashboard nesta TASK
+
+O objetivo é criar a ESTRUTURA VISUAL.
+
+Não implemente ainda consultas financeiras reais.
+
+Utilize:
+
+- zero
+- vazio
+- placeholders semanticamente neutros
+
+Nunca dados financeiros falsos apresentados como reais.
+
+---
+
+# 60. Não implementar domínio
+
+NÃO criar:
+
+- contas
+- categorias
+- despesas
+- receitas
+- transferências
+- relatórios funcionais
+
+Isso pertence às próximas Sprints.
+
+---
+
+# 61. Testes existentes
+
+Todos os testes de:
+
+- auth
+- guards
+- interceptors
+- login
+- register
+- logout
+
+devem continuar passando.
+
+---
+
+# 62. Testes de layout
+
+Adicione testes úteis para:
+
+- menu
+- logout
+- sidebar
+- toggle
+- rotas
+
+Evite testes frágeis baseados em pixels.
+
+---
+
+# 63. E2E
+
+Atualize Playwright quando necessário.
+
+Valide:
+
+### Desktop
+
+login
+→ dashboard
+→ menu
+→ logout
+
+### Mobile
+
+login
+→ dashboard
+→ abrir drawer
+→ navegar
+→ fechar drawer
+→ logout
+
+---
+
+# 64. Visual validation
+
+Valide manualmente:
+
+### 360 × 800
+
+PASS / FAIL
+
+### 768 × 1024
+
+PASS / FAIL
+
+### 1280 × 720
+
+PASS / FAIL
+
+### 1920 × 1080
+
+PASS / FAIL
+
+---
+
+# 65. Critérios visuais
+
+Em cada viewport confirme:
+
+- sem scroll horizontal
+- sidebar correta
+- topbar correta
+- conteúdo legível
+- cards organizados
+- menu acessível
+- logout acessível
+- formulários utilizáveis
+
+---
+
+# 66. Screenshots
+
+Se Playwright estiver configurado para screenshots, gere screenshots de validação para inspeção local.
+
+Não versionar screenshots automaticamente salvo se o projeto já utilizar visual regression testing.
+
+---
+
+# 67. Lint
+
+Execute lint completo.
+
+---
+
+# 68. Testes
+
+Execute testes Angular completos.
+
+---
+
+# 69. Build
+
+Execute build Angular de produção.
+
+---
+
+# 70. Backend
+
+NÃO modificar backend para esta refatoração visual salvo incompatibilidade estritamente necessária.
+
+---
+
+# 71. Documentação do Design System
+
+Crie:
+
+`docs/design-system.md`
+
+Documente:
+
+## Identity
+
+Equilibra.
+
+## Colors
+
+Tokens semânticos.
+
+## Typography
+
+Escala.
+
+## Spacing
+
+Escala utilizada.
+
+## Radius
+
+Padrões.
+
+## Shadows
+
+Padrões.
+
+## Layout
+
+Sidebar/topbar/content.
+
+## Components
+
+- PageHeader
+- StatCard
+- ContentPanel
+- EmptyState
+
+## Responsiveness
+
+Breakpoints.
+
+## Accessibility
+
+Regras.
+
+---
+
+# 72. Atualizar frontend architecture
+
+Atualize:
+
+`docs/frontend-architecture.md`
+
+com:
+
+- PublicLayout
+- AuthenticatedLayout
+- Sidebar
+- Topbar
+- estrutura visual
+- componentes compartilhados
+
+---
+
+# 73. CLAUDE.md
+
+Adicione regras permanentes e concisas:
+
+- utilizar design tokens do Equilibra
+- evitar valores visuais hardcoded
+- novas páginas privadas utilizam AuthenticatedLayout
+- páginas públicas utilizam PublicLayout
+- UI deve ser responsiva
+- componentes devem respeitar design system
+
+Não copie `design-system.md` inteiro.
+
+---
+
+# 74. Definition of Done
+
+A TASK estará concluída quando:
+
+- identidade visual tiver sido refatorada
+- sidebar estiver implementada
+- topbar estiver implementada
+- menu refletir arquitetura Equilibra
+- shell autenticado estiver moderno
+- public layout estiver consistente
+- login estiver estilizado
+- register estiver estilizado
+- Dashboard possuir estrutura visual nova
+- quatro KPI cards estiverem preparados
+- painel de gráfico estiver preparado
+- painel de transações estiver preparado
+- design tokens existirem
+- responsividade funcionar
+- mobile drawer funcionar
+- acessibilidade básica estiver validada
+- autenticação continuar funcionando
+- logout continuar funcionando
+- testes passarem
+- lint passar
+- build produção passar
+- design system estiver documentado
+
+---
+
+# 75. Restrições
+
+NÃO implementar funcionalidades da próxima Sprint.
+
+NÃO:
+
+- alterar contratos backend
+- implementar contas
+- implementar categorias
+- implementar transações
+- implementar relatórios
+- adicionar refresh token
+- alterar estratégia JWT
+- persistir JWT
+- adicionar biblioteca UI concorrente
+- adicionar biblioteca pesada sem justificativa
+
+---
+
+# 76. Relatório final
+
+Ao concluir apresente:
+
+## TASK-UI-1
+
+Status:
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## Referência visual
+
+Explique como a imagem foi reinterpretada para o Equilibra.
+
+## Design System
+
+Liste:
+
+- paleta
+- tipografia
+- spacing
+- radius
+- shadows
+
+## Layout
+
+Descreva:
+
+- sidebar
+- topbar
+- content
+- public layout
+
+## Dashboard
+
+Descreva estrutura criada.
+
+## Componentes reutilizáveis
+
+Liste.
+
+## Responsividade
+
+### 360 × 800
+PASS / FAIL
+
+### 768 × 1024
+PASS / FAIL
+
+### 1280 × 720
+PASS / FAIL
+
+### 1920 × 1080
+PASS / FAIL
+
+## Acessibilidade
+
+PASS / FAIL
+
+Informe verificações.
+
+## Autenticação
+
+Confirme:
+
+- Auth Guard funcionando
+- Guest Guard funcionando
+- interceptor funcionando
+- logout funcionando
+- token continua somente em memória
+
+## Testes
+
+Liste comandos/resultados.
+
+## E2E
+
+PASS / FAIL / NÃO CONFIGURADO
+
+## Lint
+
+PASS / FAIL
+
+## Build
+
+PASS / FAIL
+
+## Backend alterado
+
+SIM / NÃO
+
+Se SIM, justifique.
+
+## Arquivos criados
+
+Liste.
+
+## Arquivos modificados
+
+Liste.
+
+## Arquivos removidos
+
+Liste.
+
+## Pendências
+
+### Bloqueantes
+
+### Não bloqueantes
+
+## Próxima etapa
+
+Informe se a nova base visual está pronta para receber as próximas funcionalidades do Equilibra.
+
+NÃO inicie a próxima Sprint.

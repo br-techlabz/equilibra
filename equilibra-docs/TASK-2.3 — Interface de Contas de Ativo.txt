@@ -1,0 +1,1844 @@
+# TASK-2.3 — Interface de Contas de Ativo
+
+As seguintes etapas do Equilibra já foram concluídas:
+
+- Sprint 0 — Fundação técnica
+- Sprint 1 — Identidade, Usuários e Autenticação
+- Sprint UI — Design System e refatoração visual
+- TASK-2.1 — Domínio e persistência de Contas de Ativo
+- TASK-2.2 — Casos de Uso e API REST de Contas de Ativo
+
+Agora implemente:
+
+# Interface de Contas de Ativo
+
+Esta TASK deverá criar a primeira interface CRUD financeira completa do Equilibra utilizando exclusivamente a API de AssetAccount já implementada.
+
+A implementação desta tarefa deverá também estabelecer um padrão visual e arquitetural reutilizável para os próximos cadastros do sistema, sem criar abstrações CRUD genéricas prematuras.
+
+---
+
+# 1. Escopo
+
+Implementar no frontend:
+
+- acesso a "Contas";
+- listagem das Contas de Ativo;
+- criação;
+- edição;
+- desativação;
+- reativação;
+- visualização de contas inativas;
+- estados de loading;
+- estados vazios;
+- tratamento de erros;
+- responsividade;
+- acessibilidade;
+- integração real com a API da TASK-2.2.
+
+NÃO implementar:
+
+- Categorias;
+- Despesas;
+- Receitas;
+- Transferências;
+- Contas de Despesa;
+- saldo atual calculado;
+- transações;
+- relatórios;
+- integração do Dashboard com dados reais.
+
+---
+
+# 2. Regra fundamental
+
+Antes de escrever código, analise a implementação REAL existente.
+
+NÃO presuma que a TASK-2.2 foi implementada exatamente como o planejamento original.
+
+O código atual é a fonte de verdade.
+
+Descubra:
+
+- endpoints reais;
+- DTOs;
+- nomes dos campos;
+- enum AssetAccountType;
+- comportamento de includeInactive;
+- respostas HTTP;
+- Problem Details;
+- estratégia de autenticação;
+- componentes do Design System existentes.
+
+---
+
+# 3. Preparação obrigatória
+
+Leia:
+
+- CLAUDE.md
+- README.md
+- docs/design-system.md
+- docs/frontend-architecture.md
+- docs/architecture.md
+- docs/api-guidelines.md
+- docs/security.md
+
+Analise:
+
+- estrutura Angular atual;
+- routing;
+- lazy loading;
+- AuthenticatedLayout;
+- Sidebar;
+- PageHeader;
+- ContentPanel;
+- EmptyState;
+- componentes de botão;
+- inputs;
+- dialogs/drawers existentes;
+- snackbars;
+- loading;
+- error handling;
+- API services;
+- interceptors;
+- autenticação;
+- testes;
+- Playwright.
+
+Antes de implementar, apresente:
+
+## Diagnóstico
+
+1. API encontrada;
+2. componentes existentes que serão reutilizados;
+3. estrutura proposta para a feature;
+4. estratégia de formulário;
+5. estratégia responsiva;
+6. arquivos previstos.
+
+Depois implemente.
+
+---
+
+# 4. Navegação
+
+Adicione acesso às contas na navegação autenticada.
+
+Preferência de nomenclatura visível:
+
+"Contas"
+
+Não use "Asset Accounts" na UI.
+
+---
+
+# 5. Organização do menu
+
+Se a sidebar já possuir seção adequada para cadastros, utilize-a.
+
+Caso exista menu:
+
+Cadastros
+
+a estrutura poderá ser:
+
+Cadastros
+ └── Contas
+
+Não redesenhe a sidebar.
+
+Não crie nova estrutura de navegação sem verificar a existente.
+
+---
+
+# 6. Rota
+
+Preferência:
+
+/accounts
+
+ou rota equivalente coerente com a arquitetura existente.
+
+Evite URL em português se o projeto utiliza rotas técnicas em inglês.
+
+A rota deverá ser privada.
+
+---
+
+# 7. Lazy loading
+
+A feature deverá permanecer lazy-loaded se esse for o padrão arquitetural atual.
+
+Não aumente desnecessariamente o bundle inicial.
+
+---
+
+# 8. Página principal
+
+A tela deverá utilizar o padrão aprovado na Sprint UI:
+
+AuthenticatedLayout
+↓
+PageHeader
+↓
+ContentPanel
+↓
+conteúdo
+
+---
+
+# 9. PageHeader
+
+Título:
+
+Contas
+
+Subtítulo:
+
+Gerencie onde seu dinheiro está.
+
+ou texto equivalente curto.
+
+Ação principal:
+
++ Nova conta
+
+Use componente/botão existente.
+
+---
+
+# 10. Objetivo visual
+
+A tela deve parecer uma continuação natural do Dashboard.
+
+Não criar um estilo CRUD administrativo genérico desconectado da identidade do Equilibra.
+
+---
+
+# 11. ContentPanel
+
+Utilize ContentPanel existente para conter a listagem.
+
+Header conceitual:
+
+Contas de ativo
+
+Descrição opcional:
+
+Contas utilizadas para acompanhar seus recursos financeiros.
+
+---
+
+# 12. Toolbar da listagem
+
+Inclua apenas controles necessários.
+
+Nesta versão:
+
+- mostrar contas inativas;
+- eventualmente refresh somente se realmente necessário.
+
+NÃO adicionar:
+
+- busca;
+- ordenação avançada;
+- filtros complexos;
+- exportação;
+- paginação.
+
+Um usuário doméstico terá poucas contas.
+
+---
+
+# 13. Mostrar contas inativas
+
+Utilize controle simples:
+
+"Mostrar contas inativas"
+
+Pode ser:
+
+- checkbox;
+- switch;
+
+conforme Design System.
+
+Default:
+
+desativado.
+
+---
+
+# 14. Integração
+
+Default:
+
+GET da API conforme comportamento implementado na TASK-2.2.
+
+Ao habilitar contas inativas:
+
+utilize mecanismo real da API, por exemplo:
+
+?includeInactive=true
+
+se esse for o contrato efetivamente implementado.
+
+---
+
+# 15. Listagem desktop
+
+Em desktop, prefira tabela limpa.
+
+Colunas conceituais:
+
+Conta
+Tipo
+Saldo inicial
+Status
+Atualizada em
+Ações
+
+Não exiba ownerId.
+
+---
+
+# 16. Coluna Conta
+
+Exiba:
+
+- nome;
+- ícone representativo do tipo, quando útil.
+
+Não invente instituição bancária.
+
+---
+
+# 17. Tipo
+
+Traduza AssetAccountType para pt-BR.
+
+Exemplo:
+
+CHECKING → Conta corrente
+SAVINGS → Poupança
+CASH → Dinheiro
+INVESTMENT → Investimento
+DIGITAL → Conta digital
+OTHER → Outros
+
+Mas utilize os valores REAIS do enum encontrado no backend.
+
+---
+
+# 18. Não duplicar enum
+
+Evite espalhar mapeamentos de AssetAccountType pela aplicação.
+
+Centralize apresentação do enum em estrutura apropriada.
+
+Exemplo conceitual:
+
+ASSET_ACCOUNT_TYPE_OPTIONS
+
+com:
+
+value
+label
+icon
+
+Não replique switch em vários componentes.
+
+---
+
+# 19. Saldo inicial
+
+Formate:
+
+BRL + pt-BR
+
+Exemplo:
+
+R$ 1.250,35
+
+Utilize infraestrutura de locale já criada na Sprint UI.
+
+---
+
+# 20. Atenção ao significado
+
+A coluna é:
+
+Saldo inicial
+
+e NÃO:
+
+Saldo atual
+
+A aplicação ainda não possui transações.
+
+Não apresente initialBalance como se fosse saldo atual.
+
+---
+
+# 21. Status
+
+Conta ativa:
+
+Ativa
+
+Conta inativa:
+
+Inativa
+
+Utilize badge/chip consistente com Design System.
+
+Não dependa somente de cor.
+
+---
+
+# 22. Atualização
+
+Apresente updatedAt em formato pt-BR legível.
+
+Evite mostrar timestamp ISO cru.
+
+---
+
+# 23. Ações
+
+Cada conta poderá possuir:
+
+- Editar;
+- Desativar, se ativa;
+- Reativar, se inativa.
+
+Utilize menu contextual ou botões discretos conforme padrão existente.
+
+Evite poluir cada linha com muitos botões.
+
+---
+
+# 24. Menu contextual
+
+Preferência desktop:
+
+ícone de três pontos
+→ Editar
+→ Desativar/Reativar
+
+O botão deve possuir accessible name.
+
+Exemplo:
+
+"Ações da conta Nubank"
+
+---
+
+# 25. Listagem mobile
+
+NÃO force tabela desktop comprimida em 360px.
+
+Em viewport pequeno, apresente contas como cards/list items responsivos.
+
+Exemplo conceitual:
+
+┌──────────────────────────────┐
+│ Nubank                 Ativa │
+│ Conta digital                │
+│                              │
+│ Saldo inicial               │
+│ R$ 1.250,35                  │
+│                              │
+│ Atualizada em 05/10/2026     │
+│                       [ ⋮ ]  │
+└──────────────────────────────┘
+
+Não use os valores acima como dados fake.
+
+---
+
+# 26. Breakpoint
+
+Use breakpoint já estabelecido no Design System.
+
+Não criar breakpoint exclusivo arbitrário se desnecessário.
+
+---
+
+# 27. Empty state
+
+Quando não houver contas:
+
+Título:
+
+Nenhuma conta cadastrada
+
+Texto:
+
+Cadastre sua primeira conta para começar a organizar seus recursos financeiros.
+
+Ação:
+
++ Nova conta
+
+Use EmptyState existente.
+
+---
+
+# 28. Empty state com filtro
+
+Se não houver resultado porque apenas contas inativas estão sendo tratadas de determinada forma, a mensagem deve refletir o contexto.
+
+Não dizer "nenhuma conta cadastrada" se existem contas ocultas pelo filtro.
+
+---
+
+# 29. Loading
+
+Durante carregamento:
+
+utilize padrão existente.
+
+Pode ser:
+
+- skeleton;
+- spinner;
+- loading state do ContentPanel.
+
+Não mostrar tabela vazia piscando antes da resposta.
+
+---
+
+# 30. Erro de listagem
+
+Se API falhar:
+
+mostrar estado de erro amigável.
+
+Exemplo:
+
+"Não foi possível carregar suas contas."
+
+Ofereça:
+
+"Tentar novamente"
+
+quando apropriado.
+
+Não mostrar JSON/stack trace.
+
+---
+
+# 31. Formulário
+
+Criação e edição deverão compartilhar o mesmo componente de formulário quando isso for tecnicamente apropriado.
+
+Evite duplicar:
+
+CreateAccountForm
+EditAccountForm
+
+se ambos possuem os mesmos campos.
+
+---
+
+# 32. Estratégia UX do formulário
+
+Preferência:
+
+Desktop:
+drawer/painel lateral.
+
+Mobile:
+drawer ocupando praticamente toda a largura ou full-screen.
+
+Se o projeto já possuir padrão de dialog consistente que resolva melhor, reutilize-o.
+
+Não adicione nova biblioteca para drawer/modal.
+
+---
+
+# 33. Título — criação
+
+Nova conta
+
+Subtítulo opcional:
+
+Cadastre uma conta para acompanhar seus recursos.
+
+---
+
+# 34. Título — edição
+
+Editar conta
+
+Exiba contexto da conta sem excesso de informação.
+
+---
+
+# 35. Campos
+
+O formulário deverá refletir exatamente o contrato real da API.
+
+Esperado conceitualmente:
+
+- Nome
+- Tipo
+- Saldo inicial
+
+Não adicionar:
+
+- owner;
+- status;
+- saldo atual;
+- banco;
+- agência;
+- número da conta;
+- limite;
+- moeda;
+- categoria;
+- tag.
+
+---
+
+# 36. Nome
+
+Campo:
+
+Nome da conta
+
+Exemplo de placeholder:
+
+Ex.: Conta corrente
+
+Placeholder não substitui label.
+
+---
+
+# 37. Validação do nome
+
+Replique no frontend apenas validações úteis de UX:
+
+- required;
+- maxLength conforme API.
+
+O backend continua sendo autoridade final.
+
+---
+
+# 38. Tipo
+
+Utilize select apropriado.
+
+Label:
+
+Tipo de conta
+
+Opções traduzidas para pt-BR.
+
+O valor enviado deve continuar sendo o enum esperado pelo backend.
+
+---
+
+# 39. Saldo inicial
+
+Label:
+
+Saldo inicial
+
+Esse campo é monetário.
+
+---
+
+# 40. Input monetário
+
+NÃO utilize:
+
+type="number"
+
+de forma ingênua se isso produzir UX inadequada para moeda.
+
+Implemente entrada monetária previsível e acessível.
+
+Não adicione biblioteca pesada de currency mask apenas para esse campo sem necessidade.
+
+---
+
+# 41. Representação interna
+
+O formulário deverá trabalhar de forma segura com decimal.
+
+Lembre-se:
+
+JavaScript usa Number IEEE-754.
+
+Para envio de valores com duas casas, evite operações matemáticas desnecessárias.
+
+O frontend apenas captura e envia o valor.
+
+Não faça cálculos financeiros aqui.
+
+---
+
+# 42. Casas decimais
+
+Permita no máximo duas casas decimais conforme regra do backend.
+
+Não arredonde silenciosamente:
+
+10,999
+
+para:
+
+11,00.
+
+Apresente erro de validação.
+
+---
+
+# 43. Separador decimal
+
+A UI é pt-BR.
+
+O usuário poderá naturalmente digitar:
+
+1250,35
+
+A aplicação deverá tratar a entrada de maneira previsível.
+
+A representação JSON enviada deve ser compatível com o contrato da API.
+
+---
+
+# 44. Valores negativos
+
+Saldo inicial negativo é permitido.
+
+Exemplo:
+
+-350,00
+
+A UI não deve bloquear isso.
+
+---
+
+# 45. Zero
+
+Saldo inicial:
+
+0,00
+
+é válido.
+
+---
+
+# 46. Helper text
+
+Pode utilizar texto discreto:
+
+"Informe o saldo da conta no momento do cadastro."
+
+Isso ajuda a diferenciar saldo inicial de saldo atual.
+
+---
+
+# 47. Criação — submit
+
+Botão:
+
+Salvar conta
+
+Durante request:
+
+- disabled;
+- loading;
+- impedir duplo submit.
+
+---
+
+# 48. Cancelar
+
+Botão:
+
+Cancelar
+
+Fecha o formulário sem salvar.
+
+Se formulário estiver intacto:
+
+fechar diretamente.
+
+---
+
+# 49. Formulário alterado
+
+Se houver infraestrutura existente para proteção de alterações não salvas, reutilize.
+
+Caso não exista, NÃO implemente sistema complexo de confirmação nesta TASK.
+
+---
+
+# 50. POST
+
+Na criação, envie somente campos aceitos pela API.
+
+NUNCA envie:
+
+ownerId.
+
+---
+
+# 51. Sucesso da criação
+
+Após sucesso:
+
+1. fechar formulário;
+2. atualizar listagem;
+3. mostrar feedback.
+
+Exemplo:
+
+"Conta criada com sucesso."
+
+---
+
+# 52. Não recarregar página
+
+Não use:
+
+window.location.reload()
+
+Atualize estado Angular adequadamente.
+
+---
+
+# 53. Edição
+
+Ao selecionar Editar:
+
+carregue os dados existentes.
+
+Pode utilizar dados já presentes na listagem se forem suficientes e confiáveis.
+
+Não faça GET adicional sem necessidade.
+
+---
+
+# 54. PUT
+
+Envie exatamente os campos editáveis aceitos pela API.
+
+---
+
+# 55. Sucesso da edição
+
+Feedback:
+
+"Conta atualizada com sucesso."
+
+Atualize a lista.
+
+---
+
+# 56. initialBalance na edição
+
+A API atualmente permite editar saldo inicial.
+
+Portanto mantenha o campo editável.
+
+Entretanto, NÃO trate isso como regra definitiva do produto.
+
+Essa regra será revisada quando transações forem implementadas.
+
+---
+
+# 57. Duplicidade
+
+Quando backend retornar 409 por nome duplicado:
+
+apresente mensagem amigável.
+
+Exemplo:
+
+"Já existe uma conta ativa com esse nome."
+
+---
+
+# 58. Não inferir 409
+
+Use o contrato real de Problem Details.
+
+Não dependa de parsing frágil de mensagem textual se existe type/code estruturado.
+
+---
+
+# 59. 400
+
+Erros de validação do backend devem ser apresentados de forma útil.
+
+Mapeie para campo quando houver informação estruturada suficiente.
+
+Caso contrário, use mensagem geral.
+
+---
+
+# 60. 401
+
+A infraestrutura global de autenticação deve continuar cuidando desse cenário.
+
+Não crie lógica de login dentro da feature.
+
+---
+
+# 61. 404 durante edição
+
+Se conta deixou de existir ou não estiver acessível:
+
+mostrar mensagem apropriada;
+fechar/atualizar contexto quando necessário.
+
+Não revelar detalhes de ownership.
+
+---
+
+# 62. 500
+
+Mensagem genérica:
+
+"Não foi possível concluir a operação. Tente novamente."
+
+ou padrão existente.
+
+---
+
+# 63. Desativação
+
+Ao selecionar:
+
+Desativar
+
+NÃO execute imediatamente sem feedback.
+
+Apresente confirmação.
+
+---
+
+# 64. Confirmação
+
+Título:
+
+Desativar conta?
+
+Mensagem conceitual:
+
+"A conta deixará de estar disponível para novos lançamentos, mas permanecerá no seu histórico."
+
+Botões:
+
+Cancelar
+Desativar
+
+---
+
+# 65. Sem DELETE
+
+Não apresente:
+
+Excluir conta
+
+A API trabalha com desativação.
+
+---
+
+# 66. Desativação — sucesso
+
+Após sucesso:
+
+- atualizar estado/lista;
+- feedback.
+
+Exemplo:
+
+"Conta desativada."
+
+Se "Mostrar contas inativas" estiver desligado, a conta poderá desaparecer da lista após atualização.
+
+Isso é esperado.
+
+---
+
+# 67. Reativação
+
+Conta inativa deverá possuir ação:
+
+Reativar
+
+---
+
+# 68. Confirmação de reativação
+
+Não é obrigatória uma confirmação para reativação, pois é ação facilmente compreensível e reversível.
+
+Evite dialogs desnecessários.
+
+---
+
+# 69. Reativação — conflito
+
+Se API retornar 409 porque existe outra conta ativa com o mesmo nome:
+
+mostrar mensagem clara.
+
+Exemplo:
+
+"Não é possível reativar esta conta porque já existe uma conta ativa com o mesmo nome."
+
+---
+
+# 70. Feedback
+
+Utilize snackbar/toast já adotado.
+
+Não criar sistema novo de notificações.
+
+---
+
+# 71. Estado local
+
+Mantenha estado da feature claro.
+
+Pode utilizar:
+
+- signals;
+- RxJS;
+- padrão existente.
+
+Siga arquitetura atual.
+
+Não introduza NgRx apenas para esse CRUD.
+
+---
+
+# 72. Signals
+
+Se aplicação já utiliza Angular Signals, prefira consistência.
+
+Não misture três estratégias diferentes de estado.
+
+---
+
+# 73. API service
+
+Crie/estenda serviço específico.
+
+Exemplo conceitual:
+
+AssetAccountsApiService
+
+Responsabilidades:
+
+- list;
+- get, se necessário;
+- create;
+- update;
+- activate;
+- deactivate.
+
+---
+
+# 74. API service não é state store
+
+Não coloque estado visual complexo dentro do API service.
+
+Separe transporte HTTP de estado da página quando apropriado.
+
+---
+
+# 75. Tipagem
+
+Não utilize `any`.
+
+Crie interfaces/types adequados para:
+
+- AssetAccount;
+- CreateAssetAccountRequest;
+- UpdateAssetAccountRequest;
+- AssetAccountType.
+
+Baseie-se no OpenAPI/backend real.
+
+---
+
+# 76. Contrato
+
+Se o projeto já gera tipos/client a partir de OpenAPI, REUTILIZE a infraestrutura.
+
+Não duplique manualmente DTOs gerados.
+
+---
+
+# 77. Datas
+
+Trate datas da API sem converter incorretamente timezone.
+
+Apresente-as em pt-BR.
+
+---
+
+# 78. Sem cálculos
+
+NÃO calcule:
+
+- currentBalance;
+- patrimônio;
+- total de contas.
+
+Ainda não existem transações.
+
+---
+
+# 79. Dashboard
+
+NÃO alterar Dashboard nesta TASK.
+
+A integração ocorrerá na TASK-2.7 planejada.
+
+---
+
+# 80. Ícones por tipo
+
+Se utilizar ícones:
+
+CHECKING → account_balance
+SAVINGS → savings
+CASH → payments/wallet
+INVESTMENT → trending_up
+DIGITAL → smartphone/account_balance_wallet
+OTHER → account_balance_wallet
+
+Adapte aos ícones realmente disponíveis.
+
+Ícones são apoio visual.
+
+Texto continua obrigatório.
+
+---
+
+# 81. Conta inativa visual
+
+Pode utilizar aparência levemente reduzida/neutralizada.
+
+Mas mantenha contraste adequado.
+
+Não use opacity tão baixa que prejudique leitura.
+
+---
+
+# 82. Acessibilidade da tabela
+
+Se usar tabela:
+
+- headers semanticamente corretos;
+- ações nomeadas;
+- status textual;
+- leitura coerente.
+
+---
+
+# 83. Acessibilidade mobile
+
+Cards devem manter ordem lógica.
+
+Menu de ações deve ser navegável por teclado.
+
+---
+
+# 84. Form labels
+
+Todos os campos precisam de labels visíveis.
+
+---
+
+# 85. Erros
+
+Erro não pode ser indicado apenas por cor.
+
+Inclua texto.
+
+---
+
+# 86. Focus no drawer
+
+Ao abrir formulário:
+
+foco deve ir para heading ou primeiro campo conforme padrão do componente.
+
+---
+
+# 87. Focus ao fechar
+
+Quando possível, devolva foco ao botão/elemento que abriu o formulário.
+
+---
+
+# 88. Escape
+
+Drawer/dialog deverá fechar com Escape quando componente escolhido suportar isso, exceto durante operação que não possa ser interrompida.
+
+---
+
+# 89. Touch
+
+Em mobile:
+
+- botão Nova conta;
+- menu de ações;
+- inputs;
+- selects;
+
+devem possuir targets adequados.
+
+---
+
+# 90. Responsividade — 360 × 800
+
+Teste:
+
+- navegação;
+- listagem;
+- empty state;
+- criação;
+- edição;
+- confirmação;
+- menu de ações.
+
+Nenhum overflow horizontal global.
+
+---
+
+# 91. Responsividade — 390 × 844
+
+Repita validação.
+
+---
+
+# 92. Responsividade — 768 × 1024
+
+Valide tablet.
+
+---
+
+# 93. Responsividade — 1280 × 720
+
+Valide desktop com altura reduzida.
+
+Drawer/formulário deve continuar utilizável.
+
+---
+
+# 94. Responsividade — 1920 × 1080
+
+Valide Full HD.
+
+Não estique tabela/formulário de forma inadequada.
+
+---
+
+# 95. Testes unitários
+
+Cubra lógica relevante.
+
+Não teste implementação interna irrelevante.
+
+---
+
+# 96. Teste do mapper de tipos
+
+Confirme labels de todos os AssetAccountType reais.
+
+---
+
+# 97. Teste formatação
+
+Saldo:
+
+0
+→ R$ 0,00
+
+1234.56
+→ R$ 1.234,56
+
+-350.50
+→ -R$ 350,50 ou padrão Intl efetivamente utilizado.
+
+Mantenha consistência global.
+
+---
+
+# 98. Teste formulário criação
+
+Confirme:
+
+- campos;
+- required;
+- type;
+- saldo;
+- submit;
+- loading.
+
+---
+
+# 99. Teste saldo negativo
+
+Deve ser aceito.
+
+---
+
+# 100. Teste >2 casas
+
+Deve gerar erro e impedir submit.
+
+---
+
+# 101. Teste criação
+
+Mock HTTP/controlador de teste:
+
+POST correto;
+ownerId ausente.
+
+---
+
+# 102. Teste edição
+
+PUT correto.
+
+---
+
+# 103. Teste listagem
+
+Default:
+
+somente comportamento da API correspondente.
+
+Toggle:
+
+deve requisitar inclusão de inativas conforme contrato.
+
+---
+
+# 104. Teste deactivate
+
+Ação chama endpoint correto.
+
+Atualiza UI.
+
+---
+
+# 105. Teste activate
+
+Ação chama endpoint correto.
+
+Atualiza UI.
+
+---
+
+# 106. Teste 409
+
+Duplicidade deve produzir mensagem amigável.
+
+---
+
+# 107. Teste empty state
+
+Sem contas:
+
+EmptyState + Nova conta.
+
+---
+
+# 108. Teste loading
+
+Loading deve aparecer adequadamente.
+
+---
+
+# 109. Teste erro
+
+Falha na listagem:
+
+estado de erro + retry quando aplicável.
+
+---
+
+# 110. E2E
+
+Se Playwright estiver configurado, implemente fluxo completo.
+
+Cenário:
+
+1. criar usuário de teste;
+2. login;
+3. acessar Contas;
+4. verificar empty state;
+5. criar Conta Corrente;
+6. validar listagem;
+7. editar nome;
+8. validar alteração;
+9. desativar;
+10. confirmar desaparecimento da listagem padrão;
+11. habilitar "Mostrar contas inativas";
+12. validar conta inativa;
+13. reativar;
+14. validar status ativo.
+
+---
+
+# 111. E2E de saldo negativo
+
+Crie conta com:
+
+-100,50
+
+Confirme apresentação correta.
+
+---
+
+# 112. E2E duplicidade
+
+Crie:
+
+Nubank
+
+Tente criar:
+
+nubank
+
+Esperado:
+
+mensagem de conflito.
+
+Não deve quebrar formulário.
+
+---
+
+# 113. E2E mobile
+
+Viewport:
+
+360 × 800
+
+Execute pelo menos:
+
+- abrir Contas;
+- criar conta;
+- visualizar card;
+- editar;
+- abrir menu de ações.
+
+---
+
+# 114. Regressão
+
+Execute testes existentes de:
+
+- Login;
+- Register;
+- Dashboard;
+- Sidebar;
+- Auth Guards;
+- interceptors;
+- Sprint UI.
+
+---
+
+# 115. Backend
+
+NÃO altere backend para adaptar a UI por conveniência.
+
+A API da TASK-2.2 é o contrato.
+
+Se houver bug real ou incompatibilidade impeditiva:
+
+documente antes de alterar.
+
+Qualquer alteração backend deve aparecer explicitamente no relatório final.
+
+---
+
+# 116. Design System
+
+Não crie:
+
+- botão exclusivo de Accounts;
+- card exclusivo sem necessidade;
+- modal visual completamente diferente.
+
+Reutilize componentes existentes.
+
+---
+
+# 117. Padrão para futuros CRUDs
+
+Ao terminar, avalie quais padrões desta feature são realmente reutilizáveis para Categorias.
+
+Exemplos:
+
+- PageHeader + ação;
+- ContentPanel;
+- loading;
+- empty;
+- error;
+- responsive list;
+- drawer form;
+- confirmation dialog.
+
+Documente o padrão.
+
+NÃO crie ainda GenericCrudComponent.
+
+---
+
+# 118. Documentação
+
+Atualize docs/frontend-architecture.md com a estrutura da feature quando necessário.
+
+Exemplo conceitual:
+
+features/
+  asset-accounts/
+    pages/
+    components/
+    services/
+    models/
+
+Adapte à estrutura real.
+
+---
+
+# 119. Design System
+
+Atualize docs/design-system.md somente se novos padrões reutilizáveis reais surgirem.
+
+Não documente detalhes específicos demais de AssetAccount como regra global.
+
+---
+
+# 120. CLAUDE.md
+
+Adicione somente regras permanentes novas e úteis.
+
+Exemplo:
+
+- CRUDs privados devem reutilizar PageHeader/ContentPanel.
+- Em mobile, tabelas complexas devem possuir apresentação responsiva adequada.
+- Não criar GenericCrud abstractions antes de pelo menos múltiplos casos concretos.
+
+Evite crescimento desnecessário do arquivo.
+
+---
+
+# 121. Lint
+
+Execute lint completo.
+
+Esperado:
+
+PASS.
+
+---
+
+# 122. Unit tests
+
+Execute suíte frontend completa.
+
+Esperado:
+
+PASS.
+
+---
+
+# 123. Production build
+
+Execute build Angular de produção.
+
+Esperado:
+
+PASS.
+
+---
+
+# 124. E2E
+
+Execute Playwright quando configurado.
+
+Esperado:
+
+PASS.
+
+---
+
+# 125. Browser console
+
+Durante o fluxo E2E/manual:
+
+nenhum erro inesperado no console.
+
+---
+
+# 126. Network
+
+Confirme que a feature não faz requests duplicados desnecessários.
+
+Especialmente:
+
+- abrir página;
+- abrir formulário;
+- fechar formulário;
+- toggle inativas.
+
+---
+
+# 127. Critérios de aceite
+
+A TASK-2.3 estará concluída quando:
+
+- rota Contas existir;
+- navegação existir;
+- rota estiver protegida;
+- listagem usar API real;
+- contas ativas forem exibidas;
+- opção de mostrar inativas funcionar;
+- empty state funcionar;
+- loading funcionar;
+- erro/retry funcionar;
+- Nova conta funcionar;
+- formulário usar Design System;
+- nome funcionar;
+- tipo funcionar;
+- saldo inicial funcionar;
+- BRL/pt-BR funcionar;
+- saldo negativo funcionar;
+- >2 casas for rejeitado;
+- criação funcionar;
+- edição funcionar;
+- 409 possuir feedback;
+- desativação funcionar;
+- confirmação de desativação existir;
+- reativação funcionar;
+- conflito de reativação possuir feedback;
+- nenhum ownerId for enviado;
+- nenhum saldo atual fictício for mostrado;
+- desktop funcionar;
+- tablet funcionar;
+- mobile funcionar;
+- acessibilidade estiver validada;
+- regressão da Sprint UI passar;
+- lint passar;
+- testes passarem;
+- production build passar;
+- E2E passar quando configurado.
+
+---
+
+# 128. Relatório final
+
+Ao concluir apresente:
+
+# TASK-2.3
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## API utilizada
+
+Liste endpoints realmente consumidos.
+
+## Rota
+
+Informe rota implementada.
+
+## Navegação
+
+Informe onde "Contas" foi adicionada.
+
+## Estrutura da página
+
+Descreva:
+
+- PageHeader;
+- toolbar;
+- listagem;
+- mobile;
+- estados.
+
+## Formulário
+
+Informe campos implementados.
+
+## UX
+
+Informe estratégia:
+
+- desktop;
+- mobile.
+
+## AssetAccountType
+
+Liste os valores reais e respectivos labels pt-BR.
+
+## Saldo inicial
+
+Informe:
+
+- estratégia de input;
+- separador decimal;
+- valores negativos;
+- validação de escala;
+- formatação BRL.
+
+## Criação
+
+PASS / FAIL
+
+## Edição
+
+PASS / FAIL
+
+## Desativação
+
+PASS / FAIL
+
+## Reativação
+
+PASS / FAIL
+
+## Mostrar inativas
+
+PASS / FAIL
+
+## Duplicidade / 409
+
+PASS / FAIL
+
+## Empty state
+
+PASS / FAIL
+
+## Loading
+
+PASS / FAIL
+
+## Error state
+
+PASS / FAIL
+
+## Responsividade
+
+### 360 × 800
+PASS / FAIL
+
+### 390 × 844
+PASS / FAIL
+
+### 768 × 1024
+PASS / FAIL
+
+### 1280 × 720
+PASS / FAIL
+
+### 1920 × 1080
+PASS / FAIL
+
+## Acessibilidade
+
+### Keyboard
+PASS / FAIL
+
+### Focus
+PASS / FAIL
+
+### Labels
+PASS / FAIL
+
+### Action menus
+PASS / FAIL
+
+### Dialog/drawer
+PASS / FAIL
+
+## Testes
+
+Liste comandos e resultados.
+
+## Unit tests
+PASS / FAIL
+
+## E2E
+PASS / FAIL / NÃO CONFIGURADO
+
+## Mobile E2E
+PASS / FAIL / NÃO CONFIGURADO
+
+## Lint
+PASS / FAIL
+
+## Production build
+PASS / FAIL
+
+## Browser console
+PASS / FAIL
+
+## Backend alterado
+
+Esperado:
+
+NÃO
+
+Se SIM, explique detalhadamente.
+
+## Componentes criados
+
+Liste.
+
+## Componentes reutilizados
+
+Liste.
+
+## Arquivos criados
+
+Liste.
+
+## Arquivos modificados
+
+Liste.
+
+## Arquivos removidos
+
+Liste.
+
+## Padrões reutilizáveis identificados
+
+Informe padrões que poderão ser utilizados na interface de Categorias.
+
+NÃO crie abstrações genéricas apenas para cumprir este item.
+
+## Pendências
+
+### Bloqueantes
+
+### Não bloqueantes
+
+Inclua, quando aplicável:
+
+"Reavaliar edição de initialBalance após introdução de transações."
+
+## Próxima tarefa
+
+Se TASK-2.3 estiver aprovada, informe prontidão para:
+
+TASK-2.4 — Modelo de domínio e persistência de Categorias
+
+NÃO implemente TASK-2.4 nesta execução.

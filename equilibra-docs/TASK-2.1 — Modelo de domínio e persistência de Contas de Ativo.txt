@@ -1,0 +1,1599 @@
+# TASK-2.1 — Modelo de domínio e persistência de Contas de Ativo
+
+As seguintes etapas do projeto Equilibra já foram concluídas:
+
+- Sprint 0 — Fundação técnica
+- Sprint 1 — Identidade, Usuários e Autenticação
+- Sprint UI — Design System e refatoração visual
+
+Agora iniciaremos:
+
+# Sprint 2 — Contas e Categorias
+
+Esta tarefa implementará exclusivamente a fundação de domínio e persistência das:
+
+# Contas de Ativo
+
+NÃO implemente ainda:
+
+- endpoints REST de CRUD;
+- frontend de contas;
+- categorias;
+- despesas;
+- receitas;
+- transferências;
+- relatórios;
+- integração financeira real com o Dashboard.
+
+Esses itens pertencem às próximas TASKs.
+
+---
+
+# 1. Preparação obrigatória
+
+Antes de modificar código, leia integralmente:
+
+- `CLAUDE.md`
+- `README.md`
+- `docs/architecture.md`
+- `docs/api-guidelines.md`
+- `docs/frontend-architecture.md`
+- `docs/security.md`
+- `docs/design-system.md`
+- ADRs existentes
+
+Analise a implementação REAL atual de:
+
+- User;
+- UserRepository;
+- CurrentUser;
+- autenticação;
+- ownership;
+- migrations;
+- Flyway/Liquibase utilizado;
+- MySQL;
+- JPA/Hibernate;
+- estratégia de UUID;
+- auditoria;
+- timestamps;
+- exceptions;
+- testes;
+- Testcontainers.
+
+Antes de implementar, apresente resumidamente:
+
+1. estado atual relevante da arquitetura;
+2. modelo proposto;
+3. regras de negócio;
+4. migration necessária;
+5. testes planejados;
+6. arquivos que pretende criar/modificar.
+
+Somente depois implemente.
+
+---
+
+# 2. Conceito de Conta de Ativo
+
+Uma Conta de Ativo representa um local onde o usuário possui recursos financeiros.
+
+Exemplos:
+
+- conta corrente;
+- conta poupança;
+- carteira de dinheiro;
+- conta digital;
+- investimento;
+- outros ativos financeiros.
+
+Ela NÃO representa uma despesa.
+
+Ela NÃO representa uma transação.
+
+---
+
+# 3. Terminologia
+
+No domínio/backend utilize um nome consistente.
+
+Preferência:
+
+`AssetAccount`
+
+Evite misturar:
+
+- Account;
+- BankAccount;
+- Wallet;
+- Asset;
+- ContaAtivo;
+
+para representar o mesmo agregado.
+
+Se a arquitetura atual possuir convenção melhor, explique antes de divergir.
+
+---
+
+# 4. Entidade
+
+Crie entidade de domínio/persistência para:
+
+`AssetAccount`
+
+Ela deverá pertencer obrigatoriamente a um usuário.
+
+Modelo conceitual inicial:
+
+AssetAccount
+
+- id
+- ownerId
+- name
+- type
+- initialBalance
+- active
+- createdAt
+- updatedAt
+
+Avalie o modelo em relação às convenções existentes antes de implementar.
+
+---
+
+# 5. Identificador
+
+Utilize UUID seguindo a estratégia já adotada pelo projeto.
+
+Não introduza:
+
+- Long;
+- auto increment;
+
+se User e demais entidades já utilizam UUID.
+
+Mantenha consistência arquitetural.
+
+---
+
+# 6. Ownership
+
+Toda conta pertence a exatamente um usuário.
+
+Conceitualmente:
+
+`AssetAccount.ownerId`
+
+deve apontar para:
+
+`User.id`
+
+Nenhuma conta pode existir sem owner.
+
+---
+
+# 7. Regra crítica de segurança
+
+O owner NUNCA deverá ser definido por dados enviados pelo frontend.
+
+Regra permanente:
+
+`ownerId = CurrentUser.id()`
+
+e nunca:
+
+`ownerId = request.ownerId`
+
+Embora a API REST ainda não seja criada nesta TASK, modele domínio e persistência para suportar essa regra.
+
+---
+
+# 8. Relação com User
+
+Avalie cuidadosamente se utilizar:
+
+`@ManyToOne User owner`
+
+ou apenas:
+
+`UUID ownerId`
+
+é mais coerente com a arquitetura existente.
+
+Evite carregar User desnecessariamente apenas para verificar ownership.
+
+Prefira baixo acoplamento quando apropriado.
+
+Documente a decisão.
+
+---
+
+# 9. Nome
+
+Campo:
+
+`name`
+
+Exemplos futuros:
+
+- Conta Corrente;
+- Nubank;
+- Carteira;
+- Poupança.
+
+Requisitos:
+
+- obrigatório;
+- trim;
+- não vazio;
+- limite razoável.
+
+Sugestão:
+
+100 caracteres.
+
+Adapte à convenção existente.
+
+---
+
+# 10. Tipo da conta
+
+Crie conceito:
+
+`AssetAccountType`
+
+Tipos iniciais:
+
+- CHECKING
+- SAVINGS
+- CASH
+- INVESTMENT
+- DIGITAL
+- OTHER
+
+Representações futuras na UI:
+
+CHECKING
+→ Conta corrente
+
+SAVINGS
+→ Poupança
+
+CASH
+→ Dinheiro / Carteira
+
+INVESTMENT
+→ Investimento
+
+DIGITAL
+→ Conta digital
+
+OTHER
+→ Outros
+
+---
+
+# 11. Enum no banco
+
+Prefira persistir enum como string.
+
+Exemplo:
+
+`CHECKING`
+
+e não ordinal:
+
+`0`
+
+`1`
+
+`2`
+
+Não utilize `EnumType.ORDINAL`.
+
+---
+
+# 12. Saldo inicial
+
+Campo:
+
+`initialBalance`
+
+Representa o saldo da conta no momento em que ela é cadastrada no Equilibra.
+
+Exemplo:
+
+Usuário possui R$ 1.250,35 na conta ao começar a utilizar o sistema.
+
+Então:
+
+`initialBalance = 1250.35`
+
+---
+
+# 13. Tipo monetário
+
+Para dinheiro:
+
+NÃO utilize:
+
+- double;
+- float.
+
+Utilize:
+
+`BigDecimal`
+
+---
+
+# 14. Precisão monetária
+
+Defina coluna MySQL adequada.
+
+Sugestão inicial:
+
+`DECIMAL(19,2)`
+
+Avalie consistência com requisitos do projeto.
+
+O sistema trabalha inicialmente com BRL e duas casas decimais.
+
+---
+
+# 15. Escala
+
+Valores monetários persistidos devem possuir duas casas decimais.
+
+Exemplos válidos:
+
+`0.00`
+
+`1250.35`
+
+`999999.99`
+
+---
+
+# 16. Saldo inicial zero
+
+Saldo inicial padrão:
+
+`0.00`
+
+caso não seja informado no futuro.
+
+Entretanto, avalie se domínio deve exigir valor explicitamente.
+
+Documente a decisão.
+
+---
+
+# 17. Saldo inicial negativo
+
+Decisão funcional para esta versão:
+
+# PERMITIR saldo inicial negativo.
+
+Motivo:
+
+uma conta bancária pode estar utilizando:
+
+- cheque especial;
+- limite;
+- saldo devedor;
+
+no momento do cadastro.
+
+Não confunda saldo negativo com conta de despesa.
+
+---
+
+# 18. Saldo atual
+
+NÃO crie nesta TASK um campo persistido:
+
+`currentBalance`
+
+como fonte de verdade.
+
+O saldo atual será derivado futuramente a partir de:
+
+saldo inicial
++
+receitas
+-
+despesas
+±
+transferências
+
+Evite duplicar estado financeiro antes da implementação das transações.
+
+---
+
+# 19. Regra financeira futura
+
+Documente:
+
+`currentBalance` será um valor calculado.
+
+Conceitualmente:
+
+initialBalance
++ incomes
+- expenses
++ incomingTransfers
+- outgoingTransfers
+
+Não implemente o cálculo nesta TASK.
+
+---
+
+# 20. Patrimônio líquido
+
+O Dashboard futuramente utilizará as contas de ativo para calcular patrimônio.
+
+Conceitualmente:
+
+`netWorth = soma dos saldos atuais das contas ativas`
+
+NÃO implemente esse cálculo ainda.
+
+---
+
+# 21. Campo active
+
+Utilize:
+
+`active`
+
+para permitir desativação lógica da conta.
+
+Default:
+
+`true`
+
+---
+
+# 22. Desativação
+
+Conta desativada:
+
+- continua existindo;
+- mantém histórico;
+- poderá continuar sendo referenciada por transações históricas;
+- não deverá ser oferecida futuramente para novos lançamentos, salvo regra específica.
+
+---
+
+# 23. Não usar exclusão física como regra principal
+
+Como contas poderão possuir histórico financeiro, a estratégia funcional futura deverá favorecer:
+
+**desativação**
+
+em vez de exclusão física.
+
+Nesta TASK, prepare o modelo para isso.
+
+---
+
+# 24. Exclusão
+
+NÃO implemente ainda endpoint DELETE.
+
+A política completa de exclusão será definida na TASK da API.
+
+---
+
+# 25. Nome duplicado
+
+Decisão:
+
+o mesmo usuário NÃO deverá possuir duas contas ativas com o mesmo nome normalizado.
+
+Exemplo:
+
+`Nubank`
+
+e
+
+` nubank `
+
+não devem coexistir como contas ativas do mesmo usuário.
+
+---
+
+# 26. Usuários diferentes
+
+Usuário A pode possuir:
+
+`Nubank`
+
+Usuário B também pode possuir:
+
+`Nubank`
+
+Portanto unicidade é por:
+
+owner
++
+nome normalizado
++
+estado relevante
+
+e nunca global.
+
+---
+
+# 27. Normalização do nome
+
+Crie estratégia centralizada.
+
+No mínimo:
+
+- trim;
+- comparação case-insensitive.
+
+Avalie se deve existir coluna:
+
+`normalizedName`
+
+como ocorre eventualmente com email.
+
+Prefira solução previsível e compatível com MySQL.
+
+---
+
+# 28. Contas inativas e nomes
+
+Defina comportamento:
+
+Se usuário desativou:
+
+`Nubank`
+
+ele poderá futuramente criar nova conta ativa chamada:
+
+`Nubank`?
+
+Preferência funcional:
+
+**SIM.**
+
+Portanto a estratégia de unicidade deverá considerar `active`.
+
+Analise cuidadosamente como representar isso no MySQL.
+
+---
+
+# 29. Atenção à constraint
+
+Não confie apenas em validação da aplicação para unicidade.
+
+Proteja concorrência no banco quando tecnicamente possível.
+
+Se MySQL apresentar limitação para o modelo desejado, documente e implemente solução robusta.
+
+---
+
+# 30. Auditoria
+
+A entidade deve possuir:
+
+`createdAt`
+
+`updatedAt`
+
+seguindo o padrão existente.
+
+Não criar mecanismo paralelo de auditoria se já existir infraestrutura.
+
+---
+
+# 31. Timezone
+
+Siga estratégia temporal existente.
+
+Preferencialmente timestamps em UTC no backend.
+
+Não introduza `LocalDateTime` arbitrariamente se projeto utiliza `Instant`.
+
+---
+
+# 32. createdAt
+
+Definido na criação.
+
+Não alterável pelo cliente.
+
+---
+
+# 33. updatedAt
+
+Atualizado automaticamente quando ocorrer modificação persistida.
+
+---
+
+# 34. Entidade e mutabilidade
+
+Não gere setters públicos indiscriminadamente apenas por conveniência.
+
+Proteja invariantes do domínio.
+
+Exemplo conceitual:
+
+`rename(...)`
+
+`changeType(...)`
+
+`changeInitialBalance(...)`
+
+`deactivate()`
+
+`activate()`
+
+Não é obrigatório usar exatamente esses métodos.
+
+Adapte ao estilo arquitetural atual.
+
+---
+
+# 35. Construtor
+
+A criação de AssetAccount deverá garantir invariantes básicas.
+
+Não permita entidade semanticamente inválida quando possível.
+
+---
+
+# 36. JPA
+
+Evite deixar detalhes de JPA destruírem encapsulamento.
+
+Construtor protegido sem argumentos pode existir quando necessário.
+
+---
+
+# 37. Lombok
+
+Siga decisão existente.
+
+Não introduza Lombok se o projeto não utiliza.
+
+Se utiliza, não aplique:
+
+`@Data`
+
+cegamente em entidades JPA.
+
+---
+
+# 38. equals/hashCode
+
+Revise estratégia utilizada nas entidades atuais.
+
+Não inclua coleções ou campos mutáveis indevidamente.
+
+---
+
+# 39. toString
+
+`toString()` não deverá incluir informações sensíveis ou causar lazy loading acidental.
+
+---
+
+# 40. Repository
+
+Crie:
+
+`AssetAccountRepository`
+
+seguindo arquitetura existente.
+
+---
+
+# 41. Repository ownership-aware
+
+Desde o início, queries devem ser pensadas em função do owner.
+
+Exemplos conceituais:
+
+`findByIdAndOwnerId(...)`
+
+`findAllByOwnerId(...)`
+
+`exists...ownerId...`
+
+Evite incentivar:
+
+`findById(id)`
+
+seguido de ownership manual em todos os serviços.
+
+---
+
+# 42. IDOR/BOLA
+
+A persistência deve facilitar proteção contra acesso horizontal.
+
+Para operações de usuário:
+
+buscar por:
+
+`id + ownerId`
+
+em vez de:
+
+`id`
+
+apenas.
+
+---
+
+# 43. Não expor repositório inseguro
+
+Caso utilize Spring Data diretamente, documente que operações de aplicação devem preferir métodos ownership-aware.
+
+Não é necessário impedir tecnicamente todo método herdado nesta TASK se arquitetura não suporta isso elegantemente.
+
+---
+
+# 44. Listagem futura
+
+Prepare query para:
+
+contas do usuário autenticado.
+
+Ordenação inicial recomendada:
+
+`name ASC`
+
+ou critério equivalente consistente.
+
+---
+
+# 45. Contas ativas
+
+Prepare consulta para:
+
+contas ativas de um owner.
+
+Ela será importante futuramente para selects de transações.
+
+---
+
+# 46. Nome duplicado
+
+Repository deverá permitir verificar conflito de nome normalizado por owner.
+
+Considere estado active conforme decisão anterior.
+
+---
+
+# 47. Migration
+
+Crie migration versionada usando ferramenta existente.
+
+NÃO editar migration já aplicada.
+
+---
+
+# 48. Nome da tabela
+
+Sugestão:
+
+`asset_accounts`
+
+Siga convenção real do projeto.
+
+---
+
+# 49. Colunas
+
+Estrutura conceitual:
+
+- id
+- owner_id
+- name
+- normalized_name
+- type
+- initial_balance
+- active
+- created_at
+- updated_at
+
+Ajuste caso arquitetura justifique.
+
+---
+
+# 50. Foreign key
+
+`owner_id`
+
+deverá referenciar tabela de usuários.
+
+Use FK real.
+
+---
+
+# 51. ON DELETE
+
+NÃO utilize:
+
+`ON DELETE CASCADE`
+
+cegamente.
+
+Dados financeiros não devem desaparecer porque um usuário foi excluído sem uma política explícita.
+
+Siga política existente ou use restrição segura.
+
+---
+
+# 52. Índice por owner
+
+Crie índice adequado para:
+
+`owner_id`
+
+As consultas principais serão ownership-aware.
+
+---
+
+# 53. Índice active
+
+Avalie índice composto útil para:
+
+owner_id + active
+
+Não crie índices indiscriminadamente.
+
+---
+
+# 54. Índice de nome
+
+Avalie índice/constraint necessária para unicidade e busca.
+
+Documente decisão.
+
+---
+
+# 55. Collation
+
+Considere comportamento case-insensitive do MySQL.
+
+Não dependa acidentalmente de uma collation sem documentar a estratégia de normalização.
+
+---
+
+# 56. Check constraints
+
+Se versão MySQL/configuração utilizada suportar e projeto utilizar checks, considere:
+
+- name não vazio;
+- escala/regras possíveis.
+
+Não duplique toda regra de domínio em CHECK sem necessidade.
+
+---
+
+# 57. Moeda
+
+Nesta versão o Equilibra opera conceitualmente em:
+
+BRL.
+
+NÃO adicione campo `currency` nesta TASK apenas por antecipação.
+
+Quando suporte multi-moeda existir, deverá ser decisão arquitetural própria.
+
+---
+
+# 58. Instituição financeira
+
+NÃO adicione ainda:
+
+- bankCode;
+- agency;
+- accountNumber;
+- PIX;
+- institutionId.
+
+Uma AssetAccount não precisa necessariamente ser bancária.
+
+---
+
+# 59. Limite
+
+NÃO adicione:
+
+- creditLimit;
+- overdraftLimit;
+
+nesta TASK.
+
+Saldo negativo já cobre o estado financeiro inicial necessário.
+
+---
+
+# 60. Cor e ícone
+
+NÃO coloque preferências puramente visuais como regra obrigatória do domínio nesta TASK.
+
+Se futuramente quisermos personalização por conta, será especificada separadamente.
+
+---
+
+# 61. Conta de despesa
+
+IMPORTANTE:
+
+O requisito original menciona:
+
+"cadastro de contas de despesas".
+
+NÃO misture esse conceito com AssetAccount nesta TASK.
+
+Precisamos modelar o significado funcional de "conta de despesa" separadamente antes de implementá-lo.
+
+AssetAccount representa somente ativos/saldos do usuário.
+
+---
+
+# 62. Categoria
+
+NÃO use Categoria como atributo da conta.
+
+Categorias pertencem à classificação de receitas/despesas.
+
+---
+
+# 63. Tags
+
+NÃO pertencem a AssetAccount nesta versão.
+
+---
+
+# 64. Anexos
+
+NÃO pertencem a AssetAccount.
+
+---
+
+# 65. Testes de domínio
+
+Crie testes para:
+
+- criação válida;
+- nome obrigatório;
+- trim;
+- normalização;
+- type obrigatório;
+- saldo zero;
+- saldo positivo;
+- saldo negativo;
+- active default true;
+- timestamps conforme arquitetura quando aplicável.
+
+---
+
+# 66. Testes monetários
+
+Teste:
+
+`0.00`
+
+`0.01`
+
+`1234.56`
+
+`-500.00`
+
+e valor grande compatível com DECIMAL escolhido.
+
+---
+
+# 67. Escala inválida
+
+Defina comportamento para:
+
+`10.999`
+
+Preferência:
+
+não arredondar silenciosamente valores financeiros em camada arbitrária.
+
+Defina uma regra explícita.
+
+Sugestão:
+
+rejeitar valores com mais de duas casas decimais.
+
+Documente e teste.
+
+---
+
+# 68. Rounding
+
+NÃO aplique arredondamento silencioso usando:
+
+HALF_UP
+
+ou outro modo apenas para fazer persistência funcionar.
+
+A origem do valor deve respeitar escala monetária.
+
+---
+
+# 69. Testes repository
+
+Utilize banco REAL compatível através da infraestrutura existente.
+
+Preferência:
+
+Testcontainers + MySQL.
+
+Não confie somente em H2 se produção usa MySQL.
+
+---
+
+# 70. Teste persistência
+
+Teste:
+
+save
+→ reload
+→ valores preservados.
+
+Inclua BigDecimal.
+
+---
+
+# 71. Teste ownership
+
+Crie:
+
+User A
+User B
+
+Conta pertence a A.
+
+Query:
+
+`id + owner A`
+→ encontrada.
+
+Query:
+
+`id + owner B`
+→ não encontrada.
+
+Esse teste é obrigatório.
+
+---
+
+# 72. Teste listagem ownership
+
+Crie contas:
+
+A1
+A2
+B1
+
+Consulta de A:
+
+retorna apenas:
+
+A1
+A2.
+
+---
+
+# 73. Teste contas ativas
+
+Crie:
+
+A ativa
+A inativa
+
+Consulta ativa:
+
+retorna somente a ativa.
+
+---
+
+# 74. Teste nomes iguais entre usuários
+
+User A:
+
+Nubank
+
+User B:
+
+Nubank
+
+Deve ser permitido.
+
+---
+
+# 75. Teste duplicidade mesmo owner
+
+User A:
+
+Nubank
+
+segunda conta ativa:
+
+nubank
+
+deve falhar conforme estratégia escolhida.
+
+---
+
+# 76. Concorrência
+
+A constraint de banco deve impedir duplicidade mesmo que duas requisições futuras passem simultaneamente pela validação da aplicação.
+
+Valide constraint quando possível.
+
+---
+
+# 77. Teste conta inativa + nome
+
+Valide decisão:
+
+Nubank inativa
++
+nova Nubank ativa
+
+deve ser permitido.
+
+---
+
+# 78. FK
+
+Teste integridade quando apropriado:
+
+owner inexistente
+
+não deve produzir conta órfã.
+
+---
+
+# 79. Migration test
+
+Confirme que migration sobe do zero em banco limpo.
+
+---
+
+# 80. Migration incremental
+
+Confirme que migration também aplica sobre o estado atual do projeto.
+
+Não destrua tabela de usuários.
+
+---
+
+# 81. Schema validation
+
+Se Hibernate estiver configurado com:
+
+`ddl-auto=validate`
+
+ou equivalente:
+
+a aplicação deve iniciar sem divergência.
+
+Não use:
+
+`ddl-auto=update`
+
+para mascarar migration incorreta.
+
+---
+
+# 82. Testes existentes
+
+Toda a suíte anterior deve continuar passando.
+
+Especialmente:
+
+- User;
+- register;
+- login;
+- JWT;
+- CurrentUser;
+- `/me`;
+- security.
+
+---
+
+# 83. Build
+
+Execute build Maven completo.
+
+---
+
+# 84. Testcontainers
+
+Se já utilizado:
+
+execute os testes relevantes com MySQL.
+
+Não substitua por mocks para ganhar velocidade artificialmente.
+
+---
+
+# 85. Frontend
+
+Esperado:
+
+NENHUMA alteração funcional no frontend.
+
+A Sprint UI já está aprovada.
+
+Não criar tela de contas nesta TASK.
+
+---
+
+# 86. Dashboard
+
+NÃO conectar Dashboard à tabela nesta TASK.
+
+Isso será feito posteriormente.
+
+---
+
+# 87. API
+
+NÃO criar:
+
+`GET /api/asset-accounts`
+
+`POST /api/asset-accounts`
+
+etc.
+
+Isso pertence à TASK-2.2.
+
+---
+
+# 88. DTOs REST
+
+Não crie DTOs HTTP especulativos nesta TASK, salvo se a arquitetura de casos de uso exigir objetos internos claramente distintos.
+
+---
+
+# 89. Service
+
+Crie serviço/caso de uso apenas quando necessário para expressar regras do domínio desta TASK.
+
+Não antecipe CRUD completo.
+
+---
+
+# 90. Domain exception
+
+Utilize padrão existente para invariantes.
+
+Não crie dezenas de exceptions específicas sem necessidade.
+
+---
+
+# 91. Documentação
+
+Atualize documentação arquitetural somente onde a nova entidade muda o modelo.
+
+Documente:
+
+- AssetAccount;
+- ownership;
+- initialBalance;
+- currentBalance derivado;
+- desativação;
+- unicidade;
+- BigDecimal.
+
+---
+
+# 92. ADR
+
+Crie ADR somente se houver decisão arquitetural significativa que realmente mereça registro.
+
+Possíveis candidatos:
+
+- estratégia de saldo derivado;
+- estratégia de ownership;
+
+mas não crie ADR para cada campo da entidade.
+
+---
+
+# 93. CLAUDE.md
+
+Adicione somente regras permanentes relevantes que ainda não estejam presentes.
+
+Sugestões:
+
+- valores monetários usam BigDecimal;
+- dinheiro nunca usa double/float;
+- recursos financeiros pertencem ao CurrentUser;
+- queries de recursos privados são ownership-aware;
+- saldo atual não deve ser persistido como fonte de verdade sem decisão arquitetural explícita.
+
+Mantenha conciso.
+
+---
+
+# 94. Segurança
+
+Revise a implementação final procurando:
+
+- owner controlável pelo cliente;
+- query não ownership-aware;
+- cascade perigoso;
+- exposição acidental de User;
+- logs com dados desnecessários.
+
+---
+
+# 95. Performance
+
+Não faça otimização prematura.
+
+Garanta apenas:
+
+- índices coerentes;
+- queries previsíveis;
+- ausência de relacionamento EAGER desnecessário.
+
+---
+
+# 96. Definition of Done
+
+A TASK-2.1 estará concluída quando:
+
+- AssetAccount estiver modelada;
+- UUID consistente;
+- ownership obrigatório;
+- name validado;
+- normalização definida;
+- AssetAccountType implementado;
+- BigDecimal utilizado;
+- DECIMAL adequado;
+- saldo negativo permitido;
+- escala monetária validada;
+- active implementado;
+- timestamps implementados;
+- repository criado;
+- queries ownership-aware disponíveis;
+- migration criada;
+- FK criada;
+- índices adequados;
+- estratégia de unicidade implementada;
+- testes de domínio passarem;
+- testes repository passarem;
+- isolamento A/B testado;
+- migration funcionar;
+- testes anteriores continuarem passando;
+- Maven build passar.
+
+---
+
+# 97. Relatório final
+
+Ao concluir apresente:
+
+# TASK-2.1
+
+Status:
+
+**CONCLUÍDA**
+
+ou
+
+**NÃO CONCLUÍDA**
+
+---
+
+# 98. Modelo implementado
+
+Informe a estrutura final de:
+
+`AssetAccount`
+
+Liste:
+
+- campos;
+- tipos;
+- constraints.
+
+---
+
+# 99. AssetAccountType
+
+Liste os valores implementados.
+
+---
+
+# 100. Estratégia monetária
+
+Informe:
+
+- tipo Java;
+- tipo MySQL;
+- precision;
+- scale;
+- regra para >2 casas;
+- comportamento de valores negativos.
+
+---
+
+# 101. Saldo
+
+Confirme:
+
+## initialBalance
+Persistido.
+
+## currentBalance
+NÃO persistido.
+
+Explique brevemente.
+
+---
+
+# 102. Ownership
+
+Informe como:
+
+`ownerId`
+
+é representado e protegido.
+
+---
+
+# 103. Normalização
+
+Explique como nomes são normalizados.
+
+---
+
+# 104. Unicidade
+
+Explique comportamento para:
+
+### mesmo usuário + mesmo nome ativo
+PERMITIDO / BLOQUEADO
+
+Esperado:
+BLOQUEADO
+
+### usuários diferentes + mesmo nome
+PERMITIDO / BLOQUEADO
+
+Esperado:
+PERMITIDO
+
+### conta inativa + nova conta ativa de mesmo nome
+PERMITIDO / BLOQUEADO
+
+Esperado:
+PERMITIDO
+
+---
+
+# 105. Migration
+
+Informe:
+
+- arquivo;
+- tabela;
+- índices;
+- foreign keys;
+- unique constraints.
+
+---
+
+# 106. Repository
+
+Liste métodos ownership-aware implementados.
+
+---
+
+# 107. Testes
+
+Informe resultados de:
+
+## Domain tests
+PASS / FAIL
+
+## Repository tests
+PASS / FAIL
+
+## Ownership A/B
+PASS / FAIL
+
+## Duplicate name
+PASS / FAIL
+
+## Inactive/reuse name
+PASS / FAIL
+
+## Monetary precision
+PASS / FAIL
+
+## Migration
+PASS / FAIL
+
+## Existing regression tests
+PASS / FAIL
+
+---
+
+# 108. Build
+
+Informe:
+
+## Maven tests
+PASS / FAIL
+
+## Maven build
+PASS / FAIL
+
+---
+
+# 109. Frontend
+
+Confirme:
+
+`NÃO ALTERADO`
+
+ou justifique qualquer alteração.
+
+---
+
+# 110. Arquivos
+
+Liste:
+
+## Criados
+
+## Modificados
+
+## Removidos
+
+---
+
+# 111. Pendências
+
+Classifique:
+
+## Bloqueantes
+
+## Não bloqueantes
+
+Se nenhuma:
+
+`Nenhuma.`
+
+---
+
+# 112. Próxima tarefa
+
+Se TASK-2.1 estiver aprovada, informe prontidão para:
+
+# TASK-2.2 — Casos de Uso e API REST de Contas de Ativo
+
+A TASK-2.2 deverá implementar:
+
+- criação;
+- listagem;
+- consulta;
+- alteração;
+- ativação/desativação;
+- ownership via CurrentUser;
+- validações;
+- Problem Details;
+- OpenAPI;
+- testes de segurança e IDOR/BOLA.
+
+NÃO implemente TASK-2.2 nesta execução.

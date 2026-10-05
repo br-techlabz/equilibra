@@ -1,0 +1,1761 @@
+# TASK-UI-4 — Gate Visual, Responsividade, Acessibilidade e Consistência
+
+Foram concluídas:
+
+- TASK-UI-1 — Design System e refatoração visual global
+- TASK-UI-2 — Dashboard e componentes visuais financeiros
+- TASK-UI-3 — Refatoração visual de Login e Cadastro
+
+Esta é a última tarefa da:
+
+# Sprint UI — Refatoração Visual do Equilibra
+
+Esta TASK é um **GATE DE QUALIDADE**.
+
+O objetivo NÃO é redesenhar novamente a aplicação.
+
+O objetivo é:
+
+1. revisar toda a nova interface;
+2. encontrar inconsistências;
+3. corrigir problemas reais;
+4. validar responsividade;
+5. validar acessibilidade;
+6. validar Design System;
+7. validar regressões funcionais;
+8. eliminar CSS desnecessariamente duplicado;
+9. validar visualmente a aplicação;
+10. decidir se a nova fundação visual está pronta para a Sprint 2.
+
+---
+
+# 1. Regra principal
+
+NÃO faça uma nova refatoração geral.
+
+NÃO altere a identidade visual aprovada sem motivo concreto.
+
+Faça mudanças somente quando encontrar:
+
+- bug visual;
+- inconsistência;
+- problema responsivo;
+- problema de acessibilidade;
+- CSS duplicado relevante;
+- componente divergente do Design System;
+- regressão funcional;
+- problema de usabilidade.
+
+---
+
+# 2. Preparação
+
+Antes de modificar qualquer arquivo, leia:
+
+- `CLAUDE.md`
+- `README.md`
+- `docs/design-system.md`
+- `docs/frontend-architecture.md`
+- `docs/architecture.md`
+- `docs/security.md`
+
+Analise também a implementação REAL resultante de:
+
+- TASK-UI-1
+- TASK-UI-2
+- TASK-UI-3
+
+---
+
+# 3. Inventário visual
+
+Antes de alterar código, faça um inventário dos elementos existentes.
+
+Inclua pelo menos:
+
+## Layout
+
+- PublicLayout
+- AuthenticatedLayout
+- Sidebar
+- Topbar
+- mobile drawer
+
+## Autenticação
+
+- Login
+- Register
+
+## Dashboard
+
+- PageHeader
+- PeriodFilter
+- StatCards
+- ContentPanels
+- gráfico/empty state
+- transações recentes
+- resumo das contas
+
+## Estados
+
+- loading
+- empty
+- error
+- disabled
+- active
+- hover
+- focus
+
+---
+
+# 4. Relatório inicial
+
+Antes da implementação, apresente resumidamente:
+
+## Problemas encontrados
+
+Classifique:
+
+- visual
+- responsividade
+- acessibilidade
+- duplicação
+- consistência
+- funcional
+
+## Correções planejadas
+
+Liste somente correções necessárias.
+
+Não transforme esta etapa em novo projeto de UI.
+
+---
+
+# 5. Referência visual
+
+Continue considerando a imagem de referência original como orientação estrutural.
+
+A implementação final deve preservar:
+
+- sidebar escura;
+- topbar;
+- canvas claro;
+- cards superiores;
+- painéis;
+- hierarquia administrativa;
+- alta legibilidade.
+
+Porém a identidade final é do:
+
+**Equilibra**
+
+e não do template original.
+
+---
+
+# 6. Consistência do shell
+
+Revise:
+
+AuthenticatedLayout
+→ Sidebar
+→ Topbar
+→ Content
+
+Confirme:
+
+- alinhamento;
+- dimensões;
+- espaçamento;
+- comportamento de scroll;
+- responsividade.
+
+---
+
+# 7. Sidebar desktop
+
+Valide:
+
+- largura consistente;
+- item ativo;
+- hover;
+- foco;
+- submenus;
+- ícones;
+- labels;
+- área do usuário;
+- logout;
+- contraste.
+
+---
+
+# 8. Sidebar mobile
+
+Valide como drawer/overlay.
+
+Deve:
+
+- abrir corretamente;
+- fechar corretamente;
+- fechar após navegação quando apropriado;
+- permitir teclado;
+- possuir foco previsível;
+- não causar scroll horizontal;
+- não ficar parcialmente fora da viewport.
+
+---
+
+# 9. Overlay mobile
+
+Quando sidebar estiver aberta:
+
+- overlay deve ser perceptível;
+- clique fora pode fechar quando coerente;
+- interação não deve ficar confusa;
+- z-index deve estar correto.
+
+Não use z-index arbitrariamente crescente para resolver problemas.
+
+---
+
+# 10. Topbar
+
+Revise:
+
+- altura;
+- toggle da sidebar;
+- alinhamento;
+- usuário;
+- menu;
+- logout;
+- comportamento mobile.
+
+Não introduza notificações fictícias.
+
+---
+
+# 11. Área principal
+
+Revise:
+
+- padding;
+- largura;
+- background;
+- alinhamento;
+- breadcrumbs;
+- PageHeader.
+
+Nenhuma página deve parecer deslocada em relação às demais.
+
+---
+
+# 12. PublicLayout
+
+Compare Login e Register.
+
+Confirme:
+
+- mesmo branding;
+- mesma proporção;
+- mesma tipografia;
+- mesmos inputs;
+- mesmos botões;
+- mesmos espaçamentos.
+
+---
+
+# 13. Dashboard
+
+Revise visualmente:
+
+- PageHeader;
+- filtro;
+- quatro KPIs;
+- gráfico;
+- transações;
+- resumo das contas.
+
+A composição deve lembrar estruturalmente a referência sem parecer antiquada.
+
+---
+
+# 14. StatCards
+
+Compare os quatro cards.
+
+Confirme:
+
+- mesma altura;
+- mesmo padding;
+- alinhamento;
+- valores;
+- labels;
+- ícones;
+- contraste.
+
+---
+
+# 15. Valores longos
+
+Teste pelo menos:
+
+`R$ 0,00`
+
+`R$ 1.234,56`
+
+`R$ 999.999,99`
+
+`R$ 9.999.999,99`
+
+`-R$ 1.234,56`
+
+Os cards não devem quebrar inadequadamente.
+
+---
+
+# 16. ContentPanels
+
+Confirme consistência de:
+
+- header;
+- title;
+- subtitle;
+- actions;
+- body;
+- empty state;
+- loading.
+
+---
+
+# 17. EmptyState
+
+Compare:
+
+- gráfico;
+- transações;
+- contas.
+
+Eles devem pertencer ao mesmo sistema visual.
+
+Não precisam ser idênticos, mas devem compartilhar:
+
+- tipografia;
+- espaçamento;
+- ícones;
+- cores.
+
+---
+
+# 18. Design tokens
+
+Audite CSS/SCSS procurando cores hardcoded.
+
+Exemplos:
+
+`#ffffff`
+`#123456`
+`rgb(...)`
+
+Determine se deveriam usar tokens.
+
+Não substitua valores técnicos legítimos cegamente.
+
+---
+
+# 19. Cores
+
+Confirme utilização semântica:
+
+- primary
+- success
+- danger
+- warning
+- info
+- surface
+- sidebar
+- text
+- border
+
+Evite múltiplos tons quase idênticos sem propósito.
+
+---
+
+# 20. Typography
+
+Audite:
+
+- H1
+- H2
+- H3
+- body
+- labels
+- captions
+- KPI values
+
+Confirme hierarquia consistente.
+
+---
+
+# 21. Font weights
+
+Evite dezenas de pesos diferentes.
+
+Utilize escala coerente.
+
+---
+
+# 22. Spacing
+
+Audite:
+
+- 4
+- 8
+- 12
+- 16
+- 24
+- 32
+
+ou escala efetivamente definida.
+
+Procure valores arbitrários.
+
+Exemplo:
+
+`margin: 17px`
+
+deve possuir justificativa ou ser substituído por token apropriado.
+
+---
+
+# 23. Border radius
+
+Compare:
+
+- cards
+- panels
+- inputs
+- buttons
+- menus
+
+Use os tokens definidos.
+
+---
+
+# 24. Shadows
+
+Revise elevação.
+
+Não permita mistura aleatória de sombras.
+
+A aplicação deve continuar relativamente plana e moderna.
+
+---
+
+# 25. Borders
+
+Use bordas sutis e consistentes.
+
+Evite painel com:
+
+border + shadow forte + background contrastante
+
+sem necessidade.
+
+---
+
+# 26. Buttons
+
+Audite:
+
+- primary
+- secondary
+- danger
+- icon buttons
+
+Confirme:
+
+- altura;
+- radius;
+- loading;
+- disabled;
+- hover;
+- focus.
+
+---
+
+# 27. Inputs
+
+Compare Login/Register e futuros padrões.
+
+Confirme:
+
+- altura;
+- label;
+- border;
+- focus;
+- erro;
+- disabled;
+- autofill.
+
+---
+
+# 28. Material overrides
+
+Revise customizações Angular Material.
+
+Evite:
+
+- `::ng-deep` sem necessidade;
+- seletores internos frágeis;
+- `!important` excessivo.
+
+Se houver necessidade legítima, documente.
+
+---
+
+# 29. CSS duplicado
+
+Procure duplicações significativas entre:
+
+- Login/Register;
+- cards;
+- panels;
+- layouts.
+
+Extraia apenas padrões realmente reutilizáveis.
+
+Não crie abstraction layer enorme.
+
+---
+
+# 30. CSS morto
+
+Remova estilos comprovadamente não utilizados introduzidos durante a refatoração.
+
+Não faça limpeza arriscada em áreas não relacionadas.
+
+---
+
+# 31. Inline styles
+
+Procure estilos inline desnecessários.
+
+Prefira Design System/classes quando apropriado.
+
+---
+
+# 32. Viewport 360 × 800
+
+Teste:
+
+- Login;
+- Register;
+- Dashboard;
+- sidebar/drawer;
+- menu;
+- logout.
+
+Critérios:
+
+- sem overflow horizontal;
+- conteúdo legível;
+- inputs acessíveis;
+- botões acessíveis;
+- cards adequados.
+
+---
+
+# 33. Viewport 390 × 844
+
+Faça uma segunda validação mobile.
+
+Isso ajuda a evitar otimização específica para apenas 360px.
+
+---
+
+# 34. Viewport 768 × 1024
+
+Teste tablet.
+
+Confirme:
+
+- navegação;
+- KPIs;
+- painéis;
+- Login/Register;
+- menu.
+
+---
+
+# 35. Viewport 1024 × 768
+
+Teste tablet landscape / desktop pequeno.
+
+Este breakpoint costuma revelar problemas importantes.
+
+---
+
+# 36. Viewport 1280 × 720
+
+Teste desktop com altura relativamente pequena.
+
+Confirme que:
+
+- topbar não consome espaço excessivo;
+- Dashboard permanece utilizável;
+- Register não fica cortado.
+
+---
+
+# 37. Viewport 1366 × 768
+
+Teste resolução desktop comum.
+
+---
+
+# 38. Viewport 1920 × 1080
+
+Teste Full HD.
+
+Confirme que:
+
+- conteúdo não fica excessivamente esticado;
+- formulário público não fica minúsculo;
+- Dashboard utiliza espaço adequadamente.
+
+---
+
+# 39. Overflow
+
+Em todos os viewports:
+
+`document.documentElement.scrollWidth`
+
+não deverá exceder indevidamente:
+
+`clientWidth`
+
+Scroll horizontal global é considerado falha.
+
+---
+
+# 40. Zoom
+
+Quando viável, teste navegador em:
+
+- 100%
+- 125%
+- 200%
+
+Principalmente:
+
+- Login
+- Dashboard
+- sidebar
+
+A interface deve permanecer utilizável.
+
+---
+
+# 41. Texto ampliado
+
+Garanta que layout não dependa de alturas rígidas incompatíveis com texto maior.
+
+---
+
+# 42. Keyboard Gate
+
+Execute navegação somente por teclado.
+
+Teste:
+
+Login
+→ Register
+→ menu
+→ sidebar
+→ Dashboard
+→ logout
+
+---
+
+# 43. Focus
+
+Todo elemento interativo precisa de foco perceptível.
+
+Não remova outline sem alternativa.
+
+---
+
+# 44. Focus order
+
+A ordem deve acompanhar a ordem visual.
+
+Não use tabindex positivo para forçar sequência.
+
+---
+
+# 45. Drawer focus
+
+Quando drawer mobile abrir:
+
+avalie gerenciamento de foco.
+
+Ao fechar:
+
+foco deve retornar de forma razoável ao botão que o abriu quando possível.
+
+---
+
+# 46. Escape
+
+Se componentes Material utilizados suportarem Escape para fechar drawer/menu, preserve o comportamento.
+
+---
+
+# 47. Headings
+
+Revise hierarquia.
+
+Cada página deve possuir heading principal coerente.
+
+Evite saltos arbitrários:
+
+H1 → H4.
+
+---
+
+# 48. Landmarks
+
+Quando apropriado utilize semântica:
+
+- header
+- nav
+- main
+- aside
+
+Não use somente `<div>` para tudo.
+
+---
+
+# 49. Sidebar nav
+
+Menu principal deve estar semanticamente dentro de navegação.
+
+Considere accessible name apropriado.
+
+---
+
+# 50. Ícones
+
+Ícones decorativos:
+
+`aria-hidden`
+
+quando apropriado.
+
+Icon buttons:
+
+nome acessível obrigatório.
+
+---
+
+# 51. Contraste
+
+Valide contraste especialmente em:
+
+- sidebar;
+- cards coloridos;
+- texto secundário;
+- placeholders;
+- erros;
+- disabled;
+- links.
+
+Busque conformidade WCAG AA quando aplicável.
+
+---
+
+# 52. Não depender de cor
+
+Confirme que:
+
+- erro;
+- sucesso;
+- entrada;
+- saída;
+- item ativo
+
+não dependem exclusivamente de cor.
+
+---
+
+# 53. Forms
+
+Revise:
+
+- labels;
+- autocomplete;
+- errors;
+- required;
+- aria-describedby;
+- loading.
+
+---
+
+# 54. Error announcements
+
+Quando possível, mensagens importantes devem ser perceptíveis por tecnologias assistivas.
+
+Use mecanismos Angular Material/ARIA existentes.
+
+Não criar sistema complexo sem necessidade.
+
+---
+
+# 55. prefers-reduced-motion
+
+Revise animações/transições.
+
+Respeite:
+
+`prefers-reduced-motion: reduce`
+
+para movimentos não essenciais.
+
+---
+
+# 56. prefers-color-scheme
+
+NÃO implementar Dark Mode nesta TASK.
+
+A sidebar escura não significa que toda aplicação precise de dark mode.
+
+---
+
+# 57. Touch targets
+
+No mobile, botões/ícones importantes devem possuir área de toque adequada.
+
+Evite controles minúsculos.
+
+---
+
+# 58. Dashboard sem dados
+
+Valide especificamente o estado inicial real:
+
+Entradas
+→ R$ 0,00
+
+Saídas
+→ R$ 0,00
+
+Saldo
+→ R$ 0,00
+
+Patrimônio líquido
+→ R$ 0,00
+
+Gráfico
+→ empty state
+
+Transações
+→ empty state
+
+Contas
+→ empty state
+
+Não deve parecer erro.
+
+---
+
+# 59. Dados fictícios
+
+Faça busca no frontend por possíveis dados de demonstração.
+
+Procure:
+
+- John Doe
+- valores financeiros fixos;
+- percentuais;
+- transações fake;
+- contas fake;
+- notificações fake.
+
+Remova dados que estejam sendo apresentados como reais.
+
+---
+
+# 60. Textos
+
+Revise ortografia e consistência pt-BR.
+
+Exemplos:
+
+- Patrimônio líquido
+- Transações
+- Receita / Renda
+- Transferências
+- E-mail
+
+Evite mistura desnecessária de inglês na UI.
+
+---
+
+# 61. Formatação monetária
+
+Confirme padrão:
+
+BRL
++
+pt-BR
+
+Não formatar manualmente concatenando:
+
+`"R$ " + value`
+
+quando pipe/Intl apropriado puder ser usado.
+
+---
+
+# 62. Datas
+
+Confirme preparação para:
+
+pt-BR.
+
+---
+
+# 63. Rotas
+
+Teste visual e funcionalmente:
+
+`/login`
+`/register`
+`/dashboard`
+
+e rotas existentes relevantes.
+
+---
+
+# 64. Auth Guard
+
+Sem autenticação:
+
+Dashboard
+→ Login
+
+PASS obrigatório.
+
+---
+
+# 65. Guest Guard
+
+Autenticado:
+
+Login/Register
+→ área privada
+
+PASS obrigatório.
+
+---
+
+# 66. Logout
+
+Teste em:
+
+desktop
+e
+mobile.
+
+Após logout:
+
+- shell desaparece;
+- login aparece;
+- rota privada fica protegida.
+
+---
+
+# 67. Reload
+
+Mantenha arquitetura atual:
+
+reload
+→ token em memória perdido
+→ login
+
+NÃO alterar.
+
+---
+
+# 68. Authorization Interceptor
+
+Garanta que nenhuma alteração visual afetou interceptor.
+
+---
+
+# 69. Request ID
+
+Garanta que nenhuma alteração afetou infraestrutura.
+
+---
+
+# 70. Segurança
+
+Confirme:
+
+- password não logada;
+- JWT não logado;
+- JWT não persistido;
+- Authorization não enviado a domínio externo.
+
+---
+
+# 71. Console do navegador
+
+Durante fluxo principal, revise:
+
+- errors;
+- warnings relevantes;
+- failed resources.
+
+Não é necessário eliminar warnings de dependências externas que sejam comprovadamente inofensivos, mas documente-os.
+
+---
+
+# 72. Network
+
+Revise fluxo:
+
+Register
+Login
+/me
+
+Confirme que a refatoração não provocou requests duplicados inesperados.
+
+---
+
+# 73. Performance
+
+Não faça otimização prematura.
+
+Mas verifique problemas óbvios:
+
+- imagens enormes;
+- bundle duplicado;
+- bibliotecas carregadas duas vezes;
+- render loops;
+- listeners não removidos.
+
+---
+
+# 74. ECharts
+
+Se ECharts foi adotado na UI-2:
+
+confirme:
+
+- ausência de erro console;
+- resize correto;
+- dispose correto;
+- empty state correto;
+- sem criação repetida desnecessária de instâncias.
+
+---
+
+# 75. Resize do gráfico
+
+Teste:
+
+desktop
+→ diminuir janela
+→ aumentar janela.
+
+O container não deve quebrar.
+
+---
+
+# 76. Lighthouse
+
+Se o ambiente permitir executar Lighthouse de forma confiável, utilize como diagnóstico.
+
+Não transforme score numérico isolado em critério absoluto.
+
+Priorize problemas concretos.
+
+---
+
+# 77. Axe
+
+Se `axe-core`, Playwright accessibility ou ferramenta equivalente já estiver disponível, execute.
+
+Se NÃO estiver disponível, não instale uma grande cadeia de dependências apenas para esta tarefa.
+
+Faça validação manual estruturada.
+
+---
+
+# 78. Playwright
+
+Utilize Playwright existente para validar os principais viewports.
+
+Prefira seletores por:
+
+- role;
+- label;
+- accessible name;
+- test id quando realmente necessário.
+
+Evite classes CSS.
+
+---
+
+# 79. Screenshots de validação
+
+Gere screenshots locais, quando infraestrutura permitir, de:
+
+### Login
+- mobile
+- desktop
+
+### Register
+- mobile
+- desktop
+
+### Dashboard
+- mobile
+- tablet
+- desktop
+- Full HD
+
+Use-as para inspeção visual.
+
+Não versionar automaticamente salvo infraestrutura de visual regression já existente.
+
+---
+
+# 80. Inspeção dos screenshots
+
+Não basta gerar screenshots.
+
+Analise-os procurando:
+
+- desalinhamento;
+- overflow;
+- espaços excessivos;
+- cards quebrados;
+- texto cortado;
+- inconsistência de cores;
+- painel muito estreito;
+- conteúdo fora da viewport.
+
+Corrija problemas encontrados.
+
+---
+
+# 81. Visual regression
+
+Se o projeto JÁ possuir visual regression:
+
+atualize snapshots somente após confirmar que a mudança é desejada.
+
+Não aceite snapshots cegamente.
+
+---
+
+# 82. Testes unitários
+
+Execute suíte completa frontend.
+
+---
+
+# 83. Testes de autenticação
+
+Confirme novamente:
+
+- Login;
+- Register;
+- AuthService;
+- Auth Guard;
+- Guest Guard;
+- Authorization interceptor;
+- logout.
+
+---
+
+# 84. Testes dos componentes UI
+
+Execute testes de:
+
+- PageHeader;
+- StatCard;
+- ContentPanel;
+- PeriodFilter;
+- PublicLayout;
+- Sidebar;
+- Topbar;
+
+quando existirem.
+
+---
+
+# 85. E2E principal
+
+Execute:
+
+Register
+→ Login
+→ Dashboard
+→ abrir navegação
+→ Logout
+→ Login
+
+PASS obrigatório se E2E estiver configurado.
+
+---
+
+# 86. E2E mobile
+
+Execute pelo menos fluxo:
+
+Login
+→ Dashboard
+→ abrir drawer
+→ navegar/interagir
+→ Logout
+
+em viewport mobile.
+
+---
+
+# 87. Lint
+
+Execute lint completo.
+
+Corrija problemas relacionados à Sprint UI.
+
+---
+
+# 88. Production build
+
+Execute build Angular de produção.
+
+PASS obrigatório.
+
+---
+
+# 89. Bundle
+
+Registre os tamanhos reportados pelo build.
+
+Se houver budget warning:
+
+investigue.
+
+Não aumente budget apenas para esconder problema sem justificativa.
+
+---
+
+# 90. Dependências
+
+Revise dependências adicionadas durante UI-1/2/3.
+
+Pergunte para cada nova dependência:
+
+"Ela ainda é necessária?"
+
+Remova somente dependências comprovadamente não utilizadas.
+
+---
+
+# 91. Backend
+
+NÃO alterar backend durante este Gate, salvo bug de integração comprovado.
+
+Qualquer alteração deverá ser justificada no relatório.
+
+---
+
+# 92. Design System documentation
+
+Revise:
+
+`docs/design-system.md`
+
+Ele deve refletir o código REAL.
+
+Confirme documentação de:
+
+- colors;
+- typography;
+- spacing;
+- radius;
+- shadows;
+- layouts;
+- StatCard;
+- ContentPanel;
+- PublicLayout;
+- responsividade;
+- acessibilidade.
+
+---
+
+# 93. Frontend architecture
+
+Revise:
+
+`docs/frontend-architecture.md`
+
+Confirme:
+
+PublicLayout
+AuthenticatedLayout
+Sidebar
+Topbar
+Dashboard composition
+
+---
+
+# 94. CLAUDE.md
+
+Revise regras de UI.
+
+Devem estar concisas e úteis para próximas Sprints.
+
+Não transforme CLAUDE.md em manual de CSS.
+
+---
+
+# 95. Regra para futuras páginas
+
+Formalize no Design System:
+
+Toda nova página privada deverá, por padrão, utilizar:
+
+AuthenticatedLayout
+↓
+PageHeader
+↓
+ContentPanel / grid apropriado
+↓
+componentes do Design System
+
+Isso será importante na Sprint 2.
+
+---
+
+# 96. Regra para listagens
+
+Prepare orientação, sem implementar componente desnecessário:
+
+Listagens futuras devem utilizar padrão consistente para:
+
+- header;
+- ação "Novo";
+- filtros;
+- tabela/lista;
+- empty state;
+- loading;
+- erro;
+- paginação quando necessária.
+
+---
+
+# 97. Regra para formulários
+
+Formalize padrão:
+
+PageHeader
+↓
+ContentPanel
+↓
+form
+↓
+ações
+
+Mobile:
+
+ações e campos devem permanecer facilmente utilizáveis.
+
+---
+
+# 98. Não criar componentes especulativos
+
+NÃO implemente agora:
+
+- DataTable genérica;
+- GenericCrudComponent;
+- DynamicForm;
+- abstração universal de CRUD.
+
+Crie quando requisitos reais da Sprint 2 surgirem.
+
+---
+
+# 99. Definition of Done da Sprint UI
+
+A Sprint UI somente poderá ser aprovada se:
+
+### Design System
+- consistente
+- documentado
+- utilizado
+
+### Authenticated Layout
+- desktop aprovado
+- tablet aprovado
+- mobile aprovado
+
+### Public Layout
+- Login aprovado
+- Register aprovado
+
+### Dashboard
+- KPIs aprovados
+- gráfico/empty state aprovado
+- transações aprovadas
+- contas aprovadas
+
+### Responsividade
+- sem overflow horizontal
+- breakpoints funcionais
+
+### Acessibilidade
+- teclado funcional
+- foco visível
+- contraste adequado
+- labels corretos
+
+### Segurança
+- autenticação sem regressão
+
+### Qualidade
+- testes PASS
+- lint PASS
+- build PASS
+
+---
+
+# 100. Condições de reprovação
+
+NÃO declare a Sprint UI aprovada se existir problema crítico como:
+
+- layout quebrado em 360px;
+- scroll horizontal global;
+- Login inutilizável;
+- Register inutilizável;
+- Dashboard quebrado;
+- sidebar inacessível no mobile;
+- logout inacessível;
+- contraste crítico;
+- foco invisível;
+- build quebrado;
+- testes críticos falhando;
+- autenticação quebrada;
+- dados financeiros fictícios apresentados como reais.
+
+---
+
+# 101. Relatório final — TASK
+
+Apresente:
+
+# TASK-UI-4
+
+Status:
+
+**CONCLUÍDA**
+
+ou
+
+**NÃO CONCLUÍDA**
+
+---
+
+# 102. Gate visual
+
+Informe:
+
+## PublicLayout
+PASS / FAIL
+
+## AuthenticatedLayout
+PASS / FAIL
+
+## Sidebar
+PASS / FAIL
+
+## Topbar
+PASS / FAIL
+
+## Dashboard
+PASS / FAIL
+
+## StatCards
+PASS / FAIL
+
+## ContentPanels
+PASS / FAIL
+
+## EmptyStates
+PASS / FAIL
+
+## Design tokens
+PASS / FAIL
+
+## Typography
+PASS / FAIL
+
+## Forms
+PASS / FAIL
+
+---
+
+# 103. Gate responsivo
+
+Informe:
+
+## 360 × 800
+PASS / FAIL
+
+## 390 × 844
+PASS / FAIL
+
+## 768 × 1024
+PASS / FAIL
+
+## 1024 × 768
+PASS / FAIL
+
+## 1280 × 720
+PASS / FAIL
+
+## 1366 × 768
+PASS / FAIL
+
+## 1920 × 1080
+PASS / FAIL
+
+Para qualquer FAIL:
+
+descreva o problema.
+
+---
+
+# 104. Gate de acessibilidade
+
+Informe:
+
+## Keyboard navigation
+PASS / FAIL
+
+## Focus visibility
+PASS / FAIL
+
+## Focus order
+PASS / FAIL
+
+## Forms/labels
+PASS / FAIL
+
+## Icon buttons
+PASS / FAIL
+
+## Contrast
+PASS / FAIL
+
+## Heading hierarchy
+PASS / FAIL
+
+## Landmarks
+PASS / FAIL
+
+## Reduced motion
+PASS / FAIL
+
+---
+
+# 105. Gate funcional
+
+Informe:
+
+## Register
+PASS / FAIL
+
+## Login
+PASS / FAIL
+
+## Dashboard navigation
+PASS / FAIL
+
+## Auth Guard
+PASS / FAIL
+
+## Guest Guard
+PASS / FAIL
+
+## Logout
+PASS / FAIL
+
+## Reload behavior
+PASS / FAIL
+
+## Authorization Interceptor
+PASS / FAIL
+
+## Request ID
+PASS / FAIL
+
+---
+
+# 106. Gate de segurança
+
+Informe:
+
+## JWT memory-only
+PASS / FAIL
+
+## JWT not logged
+PASS / FAIL
+
+## Password not logged
+PASS / FAIL
+
+## External token leak protection
+PASS / FAIL
+
+---
+
+# 107. Gate de qualidade
+
+Informe:
+
+## Unit tests
+PASS / FAIL
+
+## E2E
+PASS / FAIL / NÃO CONFIGURADO
+
+## Mobile E2E
+PASS / FAIL / NÃO CONFIGURADO
+
+## Lint
+PASS / FAIL
+
+## Production build
+PASS / FAIL
+
+## Browser console
+PASS / FAIL
+
+---
+
+# 108. Screenshots
+
+Informe quais viewports foram inspecionados visualmente.
+
+Liste problemas encontrados e corrigidos.
+
+Não inclua imagens binárias no relatório textual.
+
+---
+
+# 109. CSS
+
+Informe:
+
+## Duplicações removidas
+
+Liste resumidamente.
+
+## CSS morto removido
+
+Liste resumidamente.
+
+## Hardcoded values corrigidos
+
+Liste resumidamente.
+
+Não invente alterações.
+
+---
+
+# 110. Dependências
+
+Liste dependências adicionadas durante a Sprint UI que permanecem necessárias.
+
+Informe dependências removidas, se houver.
+
+---
+
+# 111. Bundle
+
+Informe resultado do production build:
+
+- initial bundle;
+- lazy chunks relevantes;
+- warnings de budget.
+
+Não altere budgets apenas para obter PASS.
+
+---
+
+# 112. Arquivos
+
+Liste:
+
+## Criados
+
+## Modificados
+
+## Removidos
+
+---
+
+# 113. Pendências
+
+Classifique:
+
+## Bloqueantes
+
+## Não bloqueantes
+
+Se nenhuma:
+
+`Nenhuma.`
+
+---
+
+# 114. Resultado final
+
+Declare explicitamente:
+
+# SPRINT UI — REFATORAÇÃO VISUAL
+
+**APROVADA**
+
+ou
+
+**REPROVADA**
+
+Não aprove a Sprint se houver pendência bloqueante.
+
+---
+
+# 115. Próxima etapa
+
+Somente se a Sprint UI estiver:
+
+**APROVADA**
+
+informe prontidão para:
+
+# Sprint 2 — Contas e Categorias
+
+Próxima tarefa:
+
+**TASK-2.1 — Modelo de domínio e backend de Contas de Ativo**
+
+NÃO implemente TASK-2.1.
+
+Se a Sprint UI for reprovada, liste exatamente o que precisa ser corrigido antes da Sprint 2.
