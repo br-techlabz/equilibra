@@ -223,6 +223,14 @@ Testes confirmam que `/me` ignora header/query maliciosos e responde com o usuá
 
 **Convenção para recurso de outro usuário**: Preferir `404 Not Found` sobre `403 Forbidden` quando negar acesso também evita confirmar a existência do recurso. `403` pode ser usado quando a existência não for sensível.
 
+### Categorias privadas (TASK-2.4)
+
+`Category` mantém `ownerId` obrigatório e imutável, com FK real para `users`. Consultas por ID, listagens, verificações de nome e filtros de applicability incluem o owner. Para disponibilizar categorias a despesas/receitas, o repository exige também `active=true`; `BOTH` participa de ambos os conjuntos.
+
+Não há endpoint de categorias nesta etapa. Na futura API, a identidade deverá vir exclusivamente de `CurrentUser.id()`, nunca do payload. Métodos genéricos herdados de `JpaRepository` não substituem consultas ownership-aware em fluxos privados.
+
+A unicidade por owner/nome ativo é protegida pelo banco, independentemente da applicability; registros inativos são preservados, e a FK não permite exclusão em cascata do histórico com o usuário. Testes MySQL de `CategoryRepositoryTest` cobrem isolamento A/B, filtros, conflitos de nome e FK.
+
 ### Endpoint `/me`
 
 `GET /api/users/me`:

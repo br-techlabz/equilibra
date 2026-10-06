@@ -193,6 +193,21 @@ POST /transactions?userId=123
 }
 ```
 
+## Categorias: domínio e persistência (TASK-2.4)
+
+`category/domain/Category` representa uma classificação privada e plana, independente de contas de ativo. Possui UUID em `String`, `ownerId` imutável, `name`, `normalizedName`, `applicability`, `active`, timestamps `Instant` e versão otimista. Nesta etapa não há API, serviço de aplicação, seed ou interface de categorias.
+
+- `CategoryApplicability`: `EXPENSE`, `INCOME` e `BOTH`, persistidos como texto.
+- Novas categorias são ativas; `deactivate()` preserva o registro para histórico. `rename()`, `changeApplicability()` e `activate()` preservam o encapsulamento.
+- Nome obrigatório com trim e limite de 100 caracteres. A apresentação preserva caixa e acentos; a normalização usa lowercase com `Locale.ROOT`, sem remover acentos, e também deve caber na coluna de 100 caracteres.
+- `CategoryRepository` consulta por ID + owner, lista por owner, filtra ativas e filtra applicability via `IN`: despesas usam `EXPENSE/BOTH`; receitas usam `INCOME/BOTH`.
+- V4 cria `categories` com FK para `users`, sem exclusão em cascata. O índice `(owner_id, active, applicability)` atende às consultas privadas; não há índice isolado redundante de owner.
+- A coluna gerada `active_normalized_name` contém o nome normalizado somente quando ativa, ou `NULL` quando inativa. `UNIQUE(owner_id, active_normalized_name)` protege contra duplicidade ativa inclusive em operações concorrentes e independentemente de applicability, permitindo múltiplos registros históricos inativos de mesmo nome.
+- Essa estratégia evita a limitação da constraint de V3 de contas de ativo, que também restringe duplicidade entre inativas. V3 e AssetAccount não são alterados nesta tarefa.
+- A collation `utf8mb4_unicode_ci`, consistente com as tabelas existentes, compara sem distinguir caixa ou acentos: `Alimentação` e `Alimentacao` conflitam entre categorias ativas do mesmo owner. Isso não altera o texto armazenado/exibido. Lowercase Java não é a única regra de equivalência aplicada pelo banco.
+
+A futura camada de aplicação deverá obter o owner exclusivamente de `CurrentUser.id()`. A entidade e o repository não dependem do contexto HTTP/Spring Security.
+
 ## Decisões financeiras
 
 - Valores financeiros devem utilizar `BigDecimal`.
