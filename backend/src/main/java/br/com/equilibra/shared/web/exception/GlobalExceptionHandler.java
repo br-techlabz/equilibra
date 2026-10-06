@@ -67,6 +67,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({
+        IllegalArgumentException.class,
         MissingServletRequestParameterException.class,
         MethodArgumentTypeMismatchException.class,
         HttpMediaTypeNotSupportedException.class,
