@@ -9,6 +9,8 @@ import br.com.equilibra.category.infrastructure.CategoryRepository;
 import br.com.equilibra.shared.api.CurrentUser;
 import br.com.equilibra.shared.web.exception.ResourceConflictException;
 import br.com.equilibra.shared.web.exception.ResourceNotFoundException;
+import br.com.equilibra.transaction.domain.TransactionType;
+import br.com.equilibra.transaction.infrastructure.FinancialTransactionRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,10 +22,13 @@ import java.util.UUID;
 public class CategoryService {
 
     private final CategoryRepository repository;
+    private final FinancialTransactionRepository transactions;
     private final CurrentUser currentUser;
 
-    public CategoryService(CategoryRepository repository, CurrentUser currentUser) {
+    public CategoryService(CategoryRepository repository, FinancialTransactionRepository transactions,
+                            CurrentUser currentUser) {
         this.repository = repository;
+        this.transactions = transactions;
         this.currentUser = currentUser;
     }
 
@@ -66,6 +71,7 @@ public class CategoryService {
     public CategoryResponse update(String id, UpdateCategoryRequest request) {
         Category category = findOwned(id);
         ensureNameAvailable(category.getOwnerId(), Category.normalizeName(request.name()), category.getId());
+        ensureApplicabilityChangeAllowed(category, request.applicability());
         category.rename(request.name());
         category.changeApplicability(request.applicability());
         try {
@@ -102,6 +108,19 @@ public class CategoryService {
 
     private String ownerId() {
         return currentUser.id().toString();
+    }
+
+    private void ensureApplicabilityChangeAllowed(Category category, CategoryApplicability requested) {
+        if (requested == category.getApplicability()) return;
+        String owner = category.getOwnerId();
+        if (requested == CategoryApplicability.INCOME
+            && transactions.existsByOwnerIdAndCategoryIdAndType(owner, category.getId(), TransactionType.EXPENSE)) {
+            throw new ResourceConflictException("Category applicability conflicts with existing expenses.");
+        }
+        if (requested == CategoryApplicability.EXPENSE
+            && transactions.existsByOwnerIdAndCategoryIdAndType(owner, category.getId(), TransactionType.INCOME)) {
+            throw new ResourceConflictException("Category applicability conflicts with existing incomes.");
+        }
     }
 
     private void ensureNameAvailable(String ownerId, String normalizedName, String excludedId) {

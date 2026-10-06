@@ -8,6 +8,7 @@ import br.com.equilibra.account.infrastructure.AssetAccountRepository;
 import br.com.equilibra.shared.api.CurrentUser;
 import br.com.equilibra.shared.web.exception.ResourceConflictException;
 import br.com.equilibra.shared.web.exception.ResourceNotFoundException;
+import br.com.equilibra.transaction.infrastructure.FinancialTransactionRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,10 +20,13 @@ import java.util.UUID;
 public class AssetAccountService {
 
     private final AssetAccountRepository repository;
+    private final FinancialTransactionRepository transactions;
     private final CurrentUser currentUser;
 
-    public AssetAccountService(AssetAccountRepository repository, CurrentUser currentUser) {
+    public AssetAccountService(AssetAccountRepository repository, FinancialTransactionRepository transactions,
+                               CurrentUser currentUser) {
         this.repository = repository;
+        this.transactions = transactions;
         this.currentUser = currentUser;
     }
 
@@ -65,6 +69,10 @@ public class AssetAccountService {
         if (account.isActive()) {
             ensureNameAvailable(account.getOwnerId(), normalizedName, account.getId());
         }
+        if (!request.initialBalance().equals(account.getInitialBalance())
+            && hasTransactions(account.getOwnerId(), account.getId())) {
+            throw new ResourceConflictException("Initial balance cannot be changed after account activity exists.");
+        }
         account.rename(request.name());
         account.changeType(request.type());
         account.changeInitialBalance(request.initialBalance());
@@ -98,6 +106,11 @@ public class AssetAccountService {
         UUID.fromString(id);
         return repository.findByIdAndOwnerId(id, currentUser.id().toString())
             .orElseThrow(() -> new ResourceNotFoundException("Asset account not found."));
+    }
+
+    private boolean hasTransactions(String ownerId, String accountId) {
+        return transactions.existsByOwnerIdAndSourceAccountIdOrOwnerIdAndDestinationAccountId(
+            ownerId, accountId, ownerId, accountId);
     }
 
     private void ensureNameAvailable(String ownerId, String normalizedName, String excludedId) {

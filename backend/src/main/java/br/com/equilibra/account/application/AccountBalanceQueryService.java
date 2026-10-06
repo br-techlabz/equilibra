@@ -11,8 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
+
 
 @Service
 public class AccountBalanceQueryService {
@@ -20,6 +21,27 @@ public class AccountBalanceQueryService {
     private final FinancialTransactionRepository transactions;
     private final CurrentUser currentUser;
     public AccountBalanceQueryService(AssetAccountRepository accounts,FinancialTransactionRepository transactions,CurrentUser currentUser){this.accounts=accounts;this.transactions=transactions;this.currentUser=currentUser;}
-    @Transactional(readOnly=true)
-    public List<AssetAccountResponse> list(boolean includeInactive){String owner=currentUser.id().toString();List<AssetAccount> values=includeInactive?accounts.findAllByOwnerIdOrderByNameAsc(owner):accounts.findAllByOwnerIdAndActiveTrueOrderByNameAsc(owner);Map<String,BigDecimal> effects=transactions.findAllByOwnerIdAndStatusOrderByOccurredAtDesc(owner,TransactionStatus.ACTIVE).stream().collect(Collectors.groupingBy(t->t.getSourceAccountId()!=null?t.getSourceAccountId():t.getDestinationAccountId(),Collectors.reducing(BigDecimal.ZERO,t->t.getDestinationAccountId()!=null?t.getAmount():t.getAmount().negate(),BigDecimal::add)));return values.stream().map(a->AssetAccountResponse.from(a,a.getInitialBalance().add(effects.getOrDefault(a.getId(),BigDecimal.ZERO)))).toList();}
+    @Transactional(readOnly = true)
+    public List<AssetAccountResponse> list(boolean includeInactive) {
+        String owner = currentUser.id().toString();
+        List<AssetAccount> values = includeInactive
+            ? accounts.findAllByOwnerIdOrderByNameAsc(owner)
+            : accounts.findAllByOwnerIdAndActiveTrueOrderByNameAsc(owner);
+
+        Map<String, BigDecimal> effects = new HashMap<>();
+        transactions.findAllByOwnerIdAndStatusOrderByOccurredAtDesc(owner, TransactionStatus.ACTIVE)
+            .forEach(transaction -> {
+                if (transaction.getSourceAccountId() != null) {
+                    effects.merge(transaction.getSourceAccountId(), transaction.getAmount().negate(), BigDecimal::add);
+                }
+                if (transaction.getDestinationAccountId() != null) {
+                    effects.merge(transaction.getDestinationAccountId(), transaction.getAmount(), BigDecimal::add);
+                }
+            });
+
+        return values.stream()
+            .map(account -> AssetAccountResponse.from(account,
+                account.getInitialBalance().add(effects.getOrDefault(account.getId(), BigDecimal.ZERO))))
+            .toList();
+    }
 }

@@ -61,7 +61,14 @@ export class AuthService {
     this.authApi.login(request).subscribe({
       next: (loginResponse: LoginResponse) => {
         this._accessToken.set(loginResponse.accessToken);
-        this.loadCurrentUser();
+        this.authApi.getCurrentUser().subscribe({
+          next: (user: CurrentUser) => {
+            this._currentUser.set(user);
+            this._status.set('authenticated');
+            void this.router.navigate(['/dashboard']);
+          },
+          error: (error: unknown) => this.handleMeError(error),
+        });
       },
       error: (error: unknown) => {
         this.handleLoginError(error);
@@ -74,9 +81,7 @@ export class AuthService {
       next: (user: CurrentUser) => {
         this._currentUser.set(user);
         this._status.set('authenticated');
-        // Respeita returnUrl se existir, senão dashboard
-        const returnUrl = this.extractReturnUrl();
-        void this.router.navigate([returnUrl]);
+        void this.router.navigate(['/dashboard']);
       },
       error: (error: unknown) => {
         this.handleMeError(error);

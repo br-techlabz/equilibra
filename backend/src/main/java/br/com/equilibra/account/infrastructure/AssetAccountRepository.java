@@ -16,6 +16,8 @@ public interface AssetAccountRepository extends JpaRepository<AssetAccount, Stri
 
     List<AssetAccount> findAllByOwnerIdAndActiveTrueOrderByNameAsc(String ownerId);
 
+    boolean existsByOwnerIdAndId(String ownerId, String id);
+
     boolean existsByOwnerIdAndNormalizedNameAndActiveTrue(String ownerId, String normalizedName);
 
     boolean existsByOwnerIdAndNormalizedNameAndActiveTrueAndIdNot(
