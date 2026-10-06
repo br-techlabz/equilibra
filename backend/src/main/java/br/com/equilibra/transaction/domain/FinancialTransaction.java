@@ -145,6 +145,8 @@ public class FinancialTransaction {
     public void changeAmount(BigDecimal amount) { ensureActive(); this.amount = validateAmount(amount); }
     public void changeOccurredAt(Instant occurredAt) { ensureActive(); this.occurredAt = Objects.requireNonNull(occurredAt, "occurredAt must not be null"); }
     public void changeNotes(String notes) { ensureActive(); this.notes = normalizeNotes(notes); }
+    public void changeSourceAccount(String sourceAccountId) { ensureActive(); this.sourceAccountId = nullableUuid(sourceAccountId, "sourceAccountId"); validateShape(); }
+    public void changeCategory(String categoryId) { ensureActive(); this.categoryId = requireUuid(categoryId, "categoryId"); }
 
     private void ensureActive() {
         if (status != TransactionStatus.ACTIVE) throw new IllegalStateException("cancelled transaction is immutable");

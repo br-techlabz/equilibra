@@ -71,7 +71,7 @@ export class SidebarComponent implements OnInit {
       label: 'Transações',
       icon: 'receipt_long',
       children: [
-        { label: 'Despesas', icon: 'trending_down', route: '/transacoes/despesas' },
+        { label: 'Despesas', icon: 'trending_down', route: '/expenses' },
         { label: 'Receitas', icon: 'trending_up', route: '/transacoes/receitas' },
         { label: 'Transferências', icon: 'swap_horiz', route: '/transacoes/transferencias' },
       ],
