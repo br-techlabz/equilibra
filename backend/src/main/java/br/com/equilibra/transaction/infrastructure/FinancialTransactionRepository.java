@@ -23,8 +23,16 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
     Page<FinancialTransaction> findPageByOwnerAndTypeAndStatus(String ownerId, TransactionType type, TransactionStatus status, Pageable pageable);
 
     @org.springframework.data.jpa.repository.Query("select t from FinancialTransaction t where t.ownerId = :ownerId and (:type is null or t.type = :type) and (:status is null or t.status = :status) and (:from is null or t.occurredAt >= :from) and (:to is null or t.occurredAt < :to) and (:accountId is null or t.sourceAccountId = :accountId or t.destinationAccountId = :accountId) and (:categoryId is null or t.categoryId = :categoryId)")
-    Page<FinancialTransaction> findHistory(String ownerId, TransactionType type, TransactionStatus status, Instant from, Instant to,
-                                            String accountId, String categoryId, Pageable pageable);
+    Page<FinancialTransaction> findHistory(
+        @org.springframework.data.repository.query.Param("ownerId") String ownerId,
+        @org.springframework.data.repository.query.Param("type") TransactionType type,
+        @org.springframework.data.repository.query.Param("status") TransactionStatus status,
+        @org.springframework.data.repository.query.Param("from") Instant from,
+        @org.springframework.data.repository.query.Param("to") Instant to,
+        @org.springframework.data.repository.query.Param("accountId") String accountId,
+        @org.springframework.data.repository.query.Param("categoryId") String categoryId,
+        Pageable pageable
+    );
 
     List<FinancialTransaction> findAllByOwnerIdOrderByOccurredAtDesc(String ownerId);
 
