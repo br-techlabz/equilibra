@@ -180,21 +180,20 @@ Layout para páginas públicas (login, register):
 ## Dashboard
 
 ### DashboardPageComponent (`/dashboard`)
-Estrutura visual completa (dados mockados como `R$ 0,00`):
+O Dashboard combina os KPIs neutros existentes com dados reais de `AssetAccount` disponíveis nesta etapa:
 
-1. **PageHeader** — "Dashboard" + "Visão geral das suas finanças" + ação "Nova transação"
-2. **KPI Grid** (4 cards `app-stat-card`):
-   - Entradas (income, verde) — `trending_up`
-   - Saídas (expense, coral) — `trending_down`
-   - Saldo (balance, azul) — `account_balance`
-   - Patrimônio (asset, teal) — `savings`
-3. **Painel Principal** (grid 65/35% no desktop):
-   - **Chart Panel** (`app-content-panel`) — "Evolução do saldo" + `app-empty-state` (chart variant)
-   - **Transactions Panel** (`app-content-panel`) — "Transações recentes" + `app-empty-state` (inbox variant) com ação "Nova transação"
+1. **PageHeader** — "Dashboard" + "Visão geral das suas finanças".
+2. **KPI Grid**: Entradas, Saídas e Saldo permanecem `R$ 0,00`, pois dependem de transações; Patrimônio usa a soma dos `initialBalance` das contas ativas.
+3. **Painéis principais**: evolução do saldo e transações recentes continuam em empty state, sem séries ou lançamentos fictícios.
+4. **Minhas contas**: lista contas ativas reais, exibindo nome, tipo traduzido e `Saldo inicial`, com link para `/accounts`. Sem contas ativas, exibe empty state e ação de cadastro.
+
+A chamada reutiliza `AssetAccountsApiService.list(false)`. O patrimônio é calculado em centavos inteiros antes da formatação BRL, evitando erros binários como `0,10 + 0,20`; valores negativos são preservados. Loading e erro do endpoint têm estados distintos: erro não é apresentado como patrimônio zero e permite retry.
+
+**Limitação explícita / dívida técnica:** nesta etapa, patrimônio significa “baseado nos saldos iniciais das contas ativas”. Quando o ledger e transações existirem, substituir por `currentBalance` derivado de `initialBalance + receitas - despesas + transferências recebidas - transferências enviadas`, sem usar `createdAt` para fabricar histórico.
 
 **Responsividade:**
-- KPIs: 1 coluna (mobile) → 2 (tablet) → 4 (desktop)
-- Painéis: empilhados (mobile/tablet) → lado a lado (desktop)
+- KPIs: 1 coluna (mobile) → 2 (tablet) → 4 (desktop).
+- Painéis e resumo de contas: empilhados em telas menores, sem overflow horizontal.
 
 ---
 

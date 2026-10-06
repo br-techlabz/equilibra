@@ -38,6 +38,45 @@
   margin-top: 0;
 }
 
+.accounts-state {
+  display: flex;
+  min-height: 180px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.accounts-state p { margin: 0; }
+.accounts-error { color: var(--color-danger-700); }
+.spin { animation: dashboard-spin 1s linear infinite; }
+
+.account-summary-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.account-summary-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.account-summary-item:last-child { border-bottom: 0; }
+.account-summary-icon { display: grid; flex: 0 0 40px; width: 40px; height: 40px; place-items: center; border-radius: var(--radius-lg); background: var(--color-primary-50); color: var(--color-primary-700); }
+.account-summary-details { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: var(--space-1); }
+.account-summary-details strong, .account-summary-details span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-summary-details strong { color: var(--text-primary); }
+.account-summary-details span { color: var(--text-tertiary); font-size: var(--font-size-body-sm); }
+.account-summary-balance { color: var(--text-secondary); font-size: var(--font-size-body-sm); text-align: right; white-space: nowrap; }
+.accounts-panel-footer { display: flex; justify-content: flex-end; padding-top: var(--space-4); }
+
+@keyframes dashboard-spin { to { transform: rotate(360deg); } }
+
 .dashboard-grid {
   gap: var(--space-6);
   align-items: start;
@@ -171,6 +210,11 @@
   .transaction-value {
     font-size: var(--font-size-caption);
   }
+
+  .account-summary-item { align-items: flex-start; }
+  .account-summary-balance { white-space: normal; text-align: right; }
+  .accounts-panel-footer { justify-content: stretch; }
+  .accounts-panel-footer button { width: 100%; }
 }
 
 /* Empty State in Content Panel */

@@ -1,5 +1,4 @@
 <div class="dashboard-page">
-  <!-- Page Header -->
   <app-page-header
     title="Dashboard"
     subtitle="Visão geral das suas finanças"
@@ -9,10 +8,7 @@
   <div class="dashboard-toolbar" aria-label="Filtros do dashboard">
     <mat-form-field appearance="outline" class="period-filter" subscriptSizing="dynamic">
       <mat-label>Período</mat-label>
-      <mat-select
-        [ngModel]="selectedPeriod()"
-        (ngModelChange)="onPeriodChange($event)"
-        aria-label="Selecionar período">
+      <mat-select [ngModel]="selectedPeriod()" (ngModelChange)="onPeriodChange($event)" aria-label="Selecionar período">
         @for (period of periodOptions; track period.value) {
           <mat-option [value]="period.value">{{ period.label }}</mat-option>
         }
@@ -20,85 +16,80 @@
     </mat-form-field>
   </div>
 
-  <!-- KPI Cards Row -->
   <div class="kpi-grid card-grid">
-    @for (kpi of kpiCards; track kpi.label) {
+    <app-stat-card label="Entradas" value="R$ 0,00" icon="trending_up" variant="income" />
+    <app-stat-card label="Saídas" value="R$ 0,00" icon="trending_down" variant="expense" />
+    <app-stat-card label="Saldo" value="R$ 0,00" icon="account_balance" variant="balance" />
+    @if (accountsLoading()) {
+      <app-stat-card label="Patrimônio" value="Carregando..." icon="savings" variant="asset" />
+    } @else if (accountsError()) {
+      <app-stat-card label="Patrimônio" value="Indisponível" icon="savings" variant="asset" />
+    } @else {
       <app-stat-card
-        [label]="kpi.label"
-        [value]="kpi.value"
-        [icon]="kpi.icon"
-        [variant]="kpi.variant"
-        [trend]="kpi.trend"
-        [trendPositive]="kpi.trendPositive">
-      </app-stat-card>
+        label="Patrimônio"
+        [value]="formatCents(netWorthCents)"
+        icon="savings"
+        variant="asset"
+        matTooltip="Baseado nos saldos iniciais das contas ativas." />
     }
   </div>
 
-  <!-- Main Content Grid: Chart (65-70%) + Recent Transactions (30-35%) -->
   <div class="dashboard-grid panel-grid">
-    <!-- Chart Panel -->
-    <app-content-panel
-      title="Evolução do saldo"
-      subtitle="Últimos 30 dias"
-      [actions]="chartActions">
+    <app-content-panel title="Evolução do saldo" subtitle="Últimos 30 dias">
       <app-empty-state
         icon="show_chart"
         iconVariant="chart"
         title="Ainda não há dados suficientes"
-        description="Cadastre contas e registre transações para acompanhar a evolução do saldo."
-        [centered]="true">
-      </app-empty-state>
+        description="A evolução do saldo aparecerá aqui quando houver movimentações."
+        [centered]="true" />
     </app-content-panel>
 
-    <!-- Recent Transactions Panel -->
-    <app-content-panel
-      title="Transações recentes"
-      subtitle="Últimos lançamentos"
-      [actions]="transactionsActions">
-      @if (recentTransactions.length === 1 && recentTransactions[0].type === 'empty') {
-        <app-empty-state
-          icon="receipt_long"
-          iconVariant="inbox"
-          title="Nenhuma transação registrada"
-          description="Suas receitas, despesas e transferências recentes aparecerão aqui."
-          [centered]="true"
-          [actions]="[
-            { label: 'Nova transação', icon: 'add', handler: onNewTransaction, color: 'primary', variant: 'flat' }
-          ]">
-        </app-empty-state>
-      } @else {
-        <div class="transactions-list">
-          @for (transaction of recentTransactions; track transaction.id) {
-            <div class="transaction-item">
-              <div class="transaction-icon" [class]="'transaction-icon--' + transaction.type">
-                <mat-icon>{{ transaction.icon }}</mat-icon>
-              </div>
-              <div class="transaction-details">
-                <span class="transaction-description">{{ transaction.description }}</span>
-                <span class="transaction-meta">
-                  {{ transaction.category }} • {{ transaction.account }} • {{ transaction.date }}
-                </span>
-              </div>
-              <span class="transaction-value" [class.positive]="transaction.type === 'income'" [class.negative]="transaction.type === 'expense'">
-                {{ transaction.value }}
-              </span>
-            </div>
-          }
-        </div>
-      }
+    <app-content-panel title="Transações recentes" subtitle="Últimos lançamentos">
+      <app-empty-state
+        icon="receipt_long"
+        iconVariant="inbox"
+        title="Nenhuma transação registrada"
+        description="Suas movimentações aparecerão aqui quando transações forem implementadas."
+        [centered]="true" />
     </app-content-panel>
   </div>
 
-  <app-content-panel
-    title="Minhas contas"
-    subtitle="Resumo das contas de ativos"
-    class="accounts-panel">
-    <app-empty-state
-      icon="account_balance_wallet"
-      iconVariant="folder"
-      title="Nenhuma conta cadastrada"
-      description="Suas contas e respectivos saldos aparecerão aqui."
-      [centered]="false">
-    </app-empty-state>
+  <app-content-panel title="Minhas contas" subtitle="Patrimônio baseado nos saldos iniciais das contas ativas" class="accounts-panel">
+    @if (accountsLoading()) {
+      <div class="accounts-state" role="status" aria-live="polite">
+        <mat-icon class="spin" aria-hidden="true">sync</mat-icon>
+        <span>Carregando contas...</span>
+      </div>
+    } @else if (accountsError()) {
+      <div class="accounts-state accounts-error" role="alert">
+        <mat-icon aria-hidden="true">error_outline</mat-icon>
+        <p>Não foi possível carregar suas contas.</p>
+        <button mat-stroked-button type="button" (click)="loadAccounts()">Tentar novamente</button>
+      </div>
+    } @else if (accounts().length === 0) {
+      <app-empty-state
+        icon="account_balance_wallet"
+        iconVariant="folder"
+        title="Nenhuma conta cadastrada"
+        description="Cadastre uma conta para começar a acompanhar seu patrimônio."
+        [centered]="false"
+        [actions]="[{ label: 'Cadastrar conta', icon: 'add', handler: navigateToAccounts }]" />
+    } @else {
+      <div class="account-summary-list" role="list">
+        @for (account of accounts(); track account.id) {
+          <div class="account-summary-item" role="listitem">
+            <span class="account-summary-icon" aria-hidden="true"><mat-icon>{{ accountType(account).icon }}</mat-icon></span>
+            <div class="account-summary-details">
+              <strong>{{ account.name }}</strong>
+              <span>{{ accountType(account).label }}</span>
+            </div>
+            <span class="account-summary-balance">Saldo inicial: {{ formatMoney(account.initialBalance) }}</span>
+          </div>
+        }
+      </div>
+      <div class="accounts-panel-footer">
+        <button mat-stroked-button type="button" (click)="navigateToAccounts()">Ver todas as contas</button>
+      </div>
+    }
   </app-content-panel>
 </div>
