@@ -174,7 +174,7 @@ spring:
       auto-commit: false
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: validate
     show-sql: false
   flyway:
     enabled: true
@@ -183,6 +183,9 @@ spring:
     clean-disabled: false
     clean-on-validation-error: true
     validate-on-migrate: true
+  sql:
+    init:
+      mode: never
 
 logging:
   level:

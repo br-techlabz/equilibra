@@ -3,6 +3,7 @@ package br.com.equilibra.config;
 import org.flywaydb.core.Flyway;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -10,9 +11,6 @@ import javax.sql.DataSource;
 
 /**
  * Configuração explícita do Flyway para garantir que as migrations sejam executadas.
- * <p>
- * Garante que o Flyway execute as migrations na inicialização da aplicação.
- * </p>
  */
 @Configuration
 public class FlywayConfig {
@@ -49,16 +47,19 @@ public class FlywayConfig {
     public Flyway flyway(DataSource dataSource) {
         Flyway flyway = Flyway.configure()
             .dataSource(dataSource)
-            .locations("classpath:db/migration")
-            .baselineOnMigrate(false)
-            .cleanDisabled(false)
-            .validateOnMigrate(true)
-            .outOfOrder(false)
+            .locations(locations)
+            .baselineOnMigrate(baselineOnMigrate)
+            .cleanDisabled(cleanDisabled)
+            .validateOnMigrate(validateOnMigrate)
+            .outOfOrder(outOfOrder)
             .load();
-
-        // Executar migrations
         flyway.migrate();
-
         return flyway;
+    }
+
+    @Bean
+    public static BeanFactoryPostProcessor flywayBeforeJpa() {
+        return beanFactory -> beanFactory.getBeanDefinition("entityManagerFactory")
+            .setDependsOn("flyway");
     }
 }
