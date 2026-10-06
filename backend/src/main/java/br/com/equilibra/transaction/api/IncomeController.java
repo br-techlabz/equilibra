@@ -1,0 +1,9 @@
+package br.com.equilibra.transaction.api;
+import br.com.equilibra.transaction.application.IncomeService; import io.swagger.v3.oas.annotations.Operation; import io.swagger.v3.oas.annotations.security.SecurityRequirement; import io.swagger.v3.oas.annotations.tags.Tag; import jakarta.validation.Valid; import org.springframework.http.ResponseEntity; import org.springframework.web.bind.annotation.*; import org.springframework.web.servlet.support.ServletUriComponentsBuilder; import java.net.URI;
+@RestController @RequestMapping("/incomes") @Tag(name="Incomes",description="Receitas do usuário autenticado") @SecurityRequirement(name="bearerAuth") public class IncomeController { private final IncomeService service; public IncomeController(IncomeService service){this.service=service;}
+ @PostMapping @Operation(summary="Criar receita") public ResponseEntity<IncomeResponse> create(@Valid @RequestBody CreateIncomeRequest r){IncomeResponse x=service.create(r);URI l=ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(x.id()).toUri();return ResponseEntity.created(l).body(x);}
+ @GetMapping @Operation(summary="Listar receitas") public ResponseEntity<IncomePageResponse> list(@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size,@RequestParam(defaultValue="false") boolean includeCancelled){return ResponseEntity.ok(service.list(page,size,includeCancelled));}
+ @GetMapping("/{id}") public ResponseEntity<IncomeResponse> get(@PathVariable String id){return ResponseEntity.ok(service.get(id));}
+ @PutMapping("/{id}") public ResponseEntity<IncomeResponse> update(@PathVariable String id,@Valid @RequestBody UpdateIncomeRequest r){return ResponseEntity.ok(service.update(id,r));}
+ @PatchMapping("/{id}/cancel") public ResponseEntity<IncomeResponse> cancel(@PathVariable String id){return ResponseEntity.ok(service.cancel(id));}
+}

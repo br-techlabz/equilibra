@@ -1,0 +1,3 @@
+package br.com.equilibra.transaction.api;
+import br.com.equilibra.transaction.domain.*; import java.math.BigDecimal; import java.time.Instant;
+public record IncomeResponse(String id,String description,Instant occurredAt,String accountId,BigDecimal amount,String categoryId,String notes,TransactionStatus status,Instant createdAt,Instant updatedAt){ public static IncomeResponse from(FinancialTransaction t){return new IncomeResponse(t.getId(),t.getDescription(),t.getOccurredAt(),t.getDestinationAccountId(),t.getAmount(),t.getCategoryId(),t.getNotes(),t.getStatus(),t.getCreatedAt(),t.getUpdatedAt());} }

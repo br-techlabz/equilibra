@@ -146,6 +146,7 @@ public class FinancialTransaction {
     public void changeOccurredAt(Instant occurredAt) { ensureActive(); this.occurredAt = Objects.requireNonNull(occurredAt, "occurredAt must not be null"); }
     public void changeNotes(String notes) { ensureActive(); this.notes = normalizeNotes(notes); }
     public void changeSourceAccount(String sourceAccountId) { ensureActive(); this.sourceAccountId = nullableUuid(sourceAccountId, "sourceAccountId"); validateShape(); }
+    public void changeDestinationAccount(String destinationAccountId) { ensureActive(); this.destinationAccountId = nullableUuid(destinationAccountId, "destinationAccountId"); validateShape(); }
     public void changeCategory(String categoryId) { ensureActive(); this.categoryId = requireUuid(categoryId, "categoryId"); }
 
     private void ensureActive() {
