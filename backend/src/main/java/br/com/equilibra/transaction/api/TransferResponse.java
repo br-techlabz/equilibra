@@ -1,0 +1,3 @@
+package br.com.equilibra.transaction.api;
+import br.com.equilibra.transaction.domain.*; import java.math.BigDecimal; import java.time.Instant;
+public record TransferResponse(String id,String description,Instant occurredAt,String sourceAccountId,String destinationAccountId,BigDecimal amount,String categoryId,String notes,TransactionStatus status,Instant createdAt,Instant updatedAt){public static TransferResponse from(FinancialTransaction t){return new TransferResponse(t.getId(),t.getDescription(),t.getOccurredAt(),t.getSourceAccountId(),t.getDestinationAccountId(),t.getAmount(),t.getCategoryId(),t.getNotes(),t.getStatus(),t.getCreatedAt(),t.getUpdatedAt());}}
