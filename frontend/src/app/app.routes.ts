@@ -50,6 +50,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/incomes/pages/incomes.page').then((m) => m.IncomesPageComponent),
       },
+      {
+        path: 'transfers',
+        loadComponent: () =>
+          import('./features/transfers/pages/transfers.page').then((m) => m.TransfersPageComponent),
+      },
     ],
   },
 ];
