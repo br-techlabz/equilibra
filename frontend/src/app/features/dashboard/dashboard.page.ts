@@ -13,6 +13,8 @@ import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.com
 import { AuthService } from '../../features/auth/data-access/auth.service';
 import { AssetAccountsApiService } from '../asset-accounts/data-access/asset-accounts-api.service';
 import { AssetAccount, assetAccountTypeOption } from '../asset-accounts/models/asset-account.models';
+import { DashboardApiService } from './dashboard-api.service';
+import { DashboardData } from './dashboard.models';
 import { formatCentsAsBRL, sumMoneyInCents } from './money.utils';
 
 @Component({
@@ -36,10 +38,12 @@ import { formatCentsAsBRL, sumMoneyInCents } from './money.utils';
 export class DashboardPageComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly accountsApi = inject(AssetAccountsApiService);
+  private readonly dashboardApi = inject(DashboardApiService);
   private readonly router = inject(Router);
 
   readonly currentUser = this.authService.currentUser;
   readonly accounts = signal<AssetAccount[]>([]);
+  readonly dashboardData = signal<DashboardData | null>(null);
   readonly accountsLoaded = signal(false);
   readonly accountsLoading = signal(false);
   readonly accountsError = signal(false);
@@ -61,7 +65,21 @@ export class DashboardPageComponent implements OnInit {
   readonly recentTransactions: never[] = [];
 
   ngOnInit(): void {
-    this.loadAccounts();
+    this.loadDashboard();
+  }
+
+  loadDashboard(): void {
+    this.accountsLoading.set(true);
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    this.dashboardApi.get(from, now.toISOString()).subscribe({
+      next: (data) => {
+        this.dashboardData.set(data);
+        this.accounts.set(data.accounts.map((account) => ({ id: account.accountId, name: account.name, type: account.type as AssetAccount['type'], initialBalance: account.initialBalance, active: account.active, createdAt: '', updatedAt: '' })));
+        this.accountsLoaded.set(true); this.accountsLoading.set(false); this.accountsError.set(false);
+      },
+      error: () => { this.accountsLoading.set(false); this.accountsError.set(true); },
+    });
   }
 
   loadAccounts(): void {
@@ -88,6 +106,7 @@ export class DashboardPageComponent implements OnInit {
 
   onPeriodChange(value: (typeof this.periodOptions)[number]['value']): void {
     this.selectedPeriod.set(value);
+    this.loadDashboard();
   }
 
   formatMoney(value: number | string): string {

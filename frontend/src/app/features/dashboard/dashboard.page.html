@@ -17,9 +17,9 @@
   </div>
 
   <div class="kpi-grid card-grid">
-    <app-stat-card label="Entradas" value="R$ 0,00" icon="trending_up" variant="income" />
-    <app-stat-card label="Saídas" value="R$ 0,00" icon="trending_down" variant="expense" />
-    <app-stat-card label="Saldo" value="R$ 0,00" icon="account_balance" variant="balance" />
+    <app-stat-card label="Entradas" [value]="dashboardData() ? formatMoney(dashboardData()!.summary.income) : 'Indisponível'" icon="trending_up" variant="income" />
+    <app-stat-card label="Saídas" [value]="dashboardData() ? formatMoney(dashboardData()!.summary.expense) : 'Indisponível'" icon="trending_down" variant="expense" />
+    <app-stat-card label="Saldo" [value]="dashboardData() ? formatMoney(dashboardData()!.summary.net) : 'Indisponível'" icon="account_balance" variant="balance" />
     @if (accountsLoading()) {
       <app-stat-card label="Patrimônio" value="Carregando..." icon="savings" variant="asset" />
     } @else if (accountsError()) {
@@ -27,7 +27,7 @@
     } @else {
       <app-stat-card
         label="Patrimônio"
-        [value]="formatCents(netWorthCents)"
+        [value]="dashboardData() ? formatMoney(dashboardData()!.summary.netWorth) : 'Indisponível'"
         icon="savings"
         variant="asset"
         matTooltip="Baseado nos saldos iniciais das contas ativas." />
@@ -35,26 +35,26 @@
   </div>
 
   <div class="dashboard-grid panel-grid">
-    <app-content-panel title="Evolução do saldo" subtitle="Últimos 30 dias">
+    <app-content-panel title="Evolução do saldo" subtitle="Saldos das contas no período">
       <app-empty-state
         icon="show_chart"
         iconVariant="chart"
-        title="Ainda não há dados suficientes"
-        description="A evolução do saldo aparecerá aqui quando houver movimentações."
+        title="Evolução disponível em breve"
+        description="Os dados do ledger serão exibidos nesta área."
         [centered]="true" />
     </app-content-panel>
 
-    <app-content-panel title="Transações recentes" subtitle="Últimos lançamentos">
+    <app-content-panel title="Transações recentes" subtitle="Atividade financeira recente">
       <app-empty-state
         icon="receipt_long"
         iconVariant="inbox"
-        title="Nenhuma transação registrada"
-        description="Suas movimentações aparecerão aqui quando transações forem implementadas."
+        title="Nenhuma transação recente"
+        description="Suas movimentações financeiras recentes aparecerão aqui."
         [centered]="true" />
     </app-content-panel>
   </div>
 
-  <app-content-panel title="Minhas contas" subtitle="Patrimônio baseado nos saldos iniciais das contas ativas" class="accounts-panel">
+  <app-content-panel title="Minhas contas" subtitle="Saldos correntes derivados do ledger" class="accounts-panel">
     @if (accountsLoading()) {
       <div class="accounts-state" role="status" aria-live="polite">
         <mat-icon class="spin" aria-hidden="true">sync</mat-icon>
@@ -83,7 +83,7 @@
               <strong>{{ account.name }}</strong>
               <span>{{ accountType(account).label }}</span>
             </div>
-            <span class="account-summary-balance">Saldo inicial: {{ formatMoney(account.initialBalance) }}</span>
+            <span class="account-summary-balance">Saldo atual: {{ formatMoney(account.initialBalance) }}</span>
           </div>
         }
       </div>
