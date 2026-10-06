@@ -22,6 +22,9 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
     @org.springframework.data.jpa.repository.Query("select t from FinancialTransaction t where t.ownerId = :ownerId and t.type = :type and (:status is null or t.status = :status)")
     Page<FinancialTransaction> findPageByOwnerAndTypeAndStatus(String ownerId, TransactionType type, TransactionStatus status, Pageable pageable);
 
+    @org.springframework.data.jpa.repository.Query("select t from FinancialTransaction t where t.ownerId = :ownerId and (:type is null or t.type = :type) and (:status is null or t.status = :status) and (:from is null or t.occurredAt >= :from) and (:to is null or t.occurredAt < :to)")
+    Page<FinancialTransaction> findHistory(String ownerId, TransactionType type, TransactionStatus status, Instant from, Instant to, Pageable pageable);
+
     List<FinancialTransaction> findAllByOwnerIdOrderByOccurredAtDesc(String ownerId);
 
     List<FinancialTransaction> findAllByOwnerIdAndStatusOrderByOccurredAtDesc(String ownerId, TransactionStatus status);

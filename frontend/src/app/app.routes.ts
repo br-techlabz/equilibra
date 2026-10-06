@@ -55,6 +55,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/transfers/pages/transfers.page').then((m) => m.TransfersPageComponent),
       },
+      {
+        path: 'transactions',
+        loadComponent: () =>
+          import('./features/transactions/pages/transactions.page').then((m) => m.TransactionsPageComponent),
+      },
     ],
   },
 ];
