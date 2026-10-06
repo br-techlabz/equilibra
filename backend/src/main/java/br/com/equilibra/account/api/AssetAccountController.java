@@ -27,9 +27,11 @@ import java.util.List;
 public class AssetAccountController {
 
     private final AssetAccountService service;
+    private final br.com.equilibra.account.application.AccountBalanceQueryService balances;
 
-    public AssetAccountController(AssetAccountService service) {
+    public AssetAccountController(AssetAccountService service, br.com.equilibra.account.application.AccountBalanceQueryService balances) {
         this.service = service;
+        this.balances = balances;
     }
 
     @PostMapping
@@ -48,7 +50,7 @@ public class AssetAccountController {
     public ResponseEntity<List<AssetAccountResponse>> list(
         @RequestParam(defaultValue = "false") boolean includeInactive
     ) {
-        return ResponseEntity.ok(service.list(includeInactive));
+        return ResponseEntity.ok(balances.list(includeInactive));
     }
 
     @GetMapping("/{id}")
