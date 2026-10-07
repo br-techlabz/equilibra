@@ -24,6 +24,7 @@
 - frontend lint: PASS;
 - testes Angular: 27 SUCCESS;
 - frontend build: PASS;
+- E2E de navegação do Histórico: PASS;
 - `git diff --check`: PASS.
 
 ## Fora de escopo
