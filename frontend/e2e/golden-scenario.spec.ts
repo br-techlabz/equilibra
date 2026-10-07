@@ -9,8 +9,7 @@ test.describe('Golden Scenario financeiro', () => {
     if (isMobile) {
       await page.goto('/accounts');
     } else {
-      await page.locator('.nav-expansion-header').filter({ hasText: 'Contas' }).click();
-      await page.getByRole('link', { name: /contas de ativos/i }).click();
+      await page.getByRole('link', { name: 'Contas', exact: true }).click();
     }
     await expect(page).toHaveURL(/accounts/);
     await expect(page.getByRole('main').first()).toBeVisible();
