@@ -51,15 +51,18 @@ public class TransactionHistoryService {
         if (categoryId != null && categories.findByIdAndOwnerId(categoryId, owner).isEmpty()) {
             throw new ResourceNotFoundException("Category not found.");
         }
-        Page<FinancialTransaction> result = repository.findHistory(owner, type, status, from, to, accountId, categoryId, tagIds,
+        java.util.List<String> normalizedTagIds = tagIds == null || tagIds.isEmpty() ? null : tagIds;
+        Page<FinancialTransaction> result = repository.findHistory(owner, type, status, from, to, accountId, categoryId, normalizedTagIds,
             PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "occurredAt").and(Sort.by(Sort.Direction.DESC, "id"))));
-        java.util.Map<String,Long> attachmentCounts = result.getContent().isEmpty()?java.util.Map.of():attachments.countByTransactionIds(owner,result.getContent().stream().map(FinancialTransaction::getId).toList()).stream().collect(java.util.stream.Collectors.toMap(row->(String)row[0],row->((Number)row[1]).longValue()));
-        return new TransactionHistoryPageResponse(result.getContent().stream().map(t -> TransactionHistoryResponse.from(t, transactionTags(t), attachmentCounts.getOrDefault(t.getId(),0L))).toList(),
+        java.util.List<FinancialTransaction> transactions = result.getContent();
+        java.util.Map<String,Long> attachmentCounts = transactions.isEmpty()?java.util.Map.of():attachments.countByTransactionIds(owner,transactions.stream().map(FinancialTransaction::getId).toList()).stream().collect(java.util.stream.Collectors.toMap(row->(String)row[0],row->((Number)row[1]).longValue()));
+        java.util.Set<String> tagIdsForPage = transactions.stream().flatMap(t -> t.getTagIds().stream()).collect(java.util.stream.Collectors.toSet());
+        java.util.Map<String,br.com.equilibra.tag.domain.Tag> tagsById = tagIdsForPage.isEmpty()?java.util.Map.of():tags.findAllByOwnerIdAndIdIn(owner,tagIdsForPage).stream().collect(java.util.stream.Collectors.toMap(br.com.equilibra.tag.domain.Tag::getId,java.util.function.Function.identity()));
+        java.util.Map<String,java.util.List<br.com.equilibra.transaction.domain.TagSummary>> summariesByTransaction = transactions.stream().collect(java.util.stream.Collectors.toMap(FinancialTransaction::getId,t -> t.getTagIds().stream().map(tagsById::get).filter(java.util.Objects::nonNull).sorted(java.util.Comparator.comparing(br.com.equilibra.tag.domain.Tag::getName)).map(v -> new br.com.equilibra.transaction.domain.TagSummary(v.getId(),v.getName(),v.isActive())).toList()));
+        return new TransactionHistoryPageResponse(transactions.stream().map(t -> TransactionHistoryResponse.from(t, summariesByTransaction.getOrDefault(t.getId(),java.util.List.of()),attachmentCounts.getOrDefault(t.getId(),0L))).toList(),
             result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages());
     }
 
-
-    private java.util.List<br.com.equilibra.transaction.domain.TagSummary> transactionTags(FinancialTransaction t){if(t.getTagIds().isEmpty())return java.util.List.of();return tags.findAllByOwnerIdAndIdIn(t.getOwnerId(),t.getTagIds()).stream().sorted(java.util.Comparator.comparing(br.com.equilibra.tag.domain.Tag::getName)).map(v->new br.com.equilibra.transaction.domain.TagSummary(v.getId(),v.getName(),v.isActive())).toList();}
 
     private static void validateOptionalUuid(String value, String field) {
         if (value != null) {

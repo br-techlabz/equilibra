@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
+@RequestMapping
 @Tag(name="Attachments",description="Anexos privados de transações")
 @SecurityRequirement(name="bearerAuth")
 public class AttachmentController {

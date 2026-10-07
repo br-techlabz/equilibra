@@ -20,7 +20,7 @@ class CategoryMigrationTest {
             Flyway flyway = migration(url, null);
             flyway.migrate();
             flyway.validate();
-            assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("6");
+            assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("8");
             try (var query = connection.prepareStatement("SELECT COUNT(*) FROM categories");
                  var result = query.executeQuery()) {
                 assertThat(result.next()).isTrue();
@@ -57,9 +57,9 @@ class CategoryMigrationTest {
             }
 
             Flyway upgraded = migration(url, null);
-            assertThat(upgraded.migrate().migrationsExecuted).isEqualTo(3);
+            assertThat(upgraded.migrate().migrationsExecuted).isEqualTo(5);
             upgraded.validate();
-            assertThat(upgraded.info().current().getVersion().getVersion()).isEqualTo("6");
+            assertThat(upgraded.info().current().getVersion().getVersion()).isEqualTo("8");
             try (var query = connection.prepareStatement(
                 "SELECT a.owner_id, a.name, a.initial_balance, u.email FROM asset_accounts a JOIN users u ON a.owner_id = u.id WHERE a.id = ?")) {
                 query.setString(1, accountId);

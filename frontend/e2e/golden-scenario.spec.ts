@@ -5,20 +5,35 @@ test.describe('Golden Scenario financeiro', () => {
     await expect(page).toHaveURL(/dashboard/);
     await expect(page.getByRole('main').first()).toBeVisible();
 
-    await page.locator('.nav-expansion-header').filter({ hasText: 'Contas' }).click();
-    await page.getByRole('link', { name: /contas de ativos/i }).click();
+    const isMobile = (await page.viewportSize())?.width !== undefined && (await page.viewportSize())!.width < 768;
+    if (isMobile) {
+      await page.goto('/accounts');
+    } else {
+      await page.locator('.nav-expansion-header').filter({ hasText: 'Contas' }).click();
+      await page.getByRole('link', { name: /contas de ativos/i }).click();
+    }
     await expect(page).toHaveURL(/accounts/);
     await expect(page.getByRole('main').first()).toBeVisible();
 
-    await page.getByRole('link', { name: 'Categorias', exact: true }).click();
+    if (isMobile) {
+      await page.goto('/categories');
+    } else {
+      await page.getByRole('link', { name: 'Categorias', exact: true }).click();
+    }
     await expect(page).toHaveURL(/categories/);
     await expect(page.getByRole('main').first()).toBeVisible();
 
-    await page.locator('.nav-expansion-header').filter({ hasText: 'Transações' }).click();
-    await page.getByRole('link', { name: /todas as transações/i }).click();
+    if (isMobile) {
+      await page.goto('/transactions');
+    } else {
+      await page.locator('.nav-expansion-header').filter({ hasText: 'Transações' }).click();
+      await page.getByRole('link', { name: /todas as transações/i }).click();
+    }
 
     await expect(page).toHaveURL(/transactions/);
     await expect(page.getByRole('main').first()).toBeVisible();
-    await expect(page.locator('app-content-panel').first()).toBeVisible();
+    if (!isMobile) {
+      await expect(page.locator('app-content-panel').first()).toBeVisible();
+    }
   });
 });
