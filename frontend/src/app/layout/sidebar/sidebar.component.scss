@@ -258,6 +258,11 @@
   padding: 0 var(--space-4) 0 calc(var(--space-4) + var(--space-10)) !important;
 }
 
+.nav-child-item.disabled {
+  pointer-events: none;
+  opacity: 0.55;
+}
+
 .nav-item:hover,
 .nav-child-item:hover,
 .nav-item:hover .nav-label,

@@ -65,6 +65,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/transactions/pages/transactions.page').then((m) => m.TransactionsPageComponent),
       },
+      {
+        path: 'reports/financial',
+        loadComponent: () =>
+          import('./features/reports/pages/financial-report.page').then((m) => m.FinancialReportPageComponent),
+      },
     ],
   },
 ];

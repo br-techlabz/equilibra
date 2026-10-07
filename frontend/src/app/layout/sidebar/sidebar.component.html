@@ -38,7 +38,9 @@
             @for (child of item.children; track trackByChildRoute($index, child)) {
               <a
                 mat-list-item
-                [routerLink]="child.route"
+                [routerLink]="child.disabled ? null : child.route"
+                [attr.aria-disabled]="child.disabled ? 'true' : null"
+                [class.disabled]="child.disabled"
                 routerLinkActive="active"
                 [routerLinkActiveOptions]="{ exact: false }"
                 class="nav-child-item"

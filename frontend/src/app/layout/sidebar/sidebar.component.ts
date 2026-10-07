@@ -16,6 +16,7 @@ export interface NavItem {
   icon?: string;
   route?: string;
   children?: NavItem[];
+  disabled?: boolean;
   expanded?: boolean;
 }
 
@@ -83,7 +84,11 @@ export class SidebarComponent implements OnInit {
     {
       label: 'Relatórios',
       icon: 'assessment',
-      route: '/relatorios',
+      children: [
+        { label: 'Financeiro', icon: 'account_balance', route: '/reports/financial' },
+        { label: 'Por categoria', icon: 'category', disabled: true },
+        { label: 'Auditoria', icon: 'fact_check', disabled: true },
+      ],
     },
   ];
 
