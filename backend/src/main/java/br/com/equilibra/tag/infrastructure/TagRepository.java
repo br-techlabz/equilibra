@@ -13,4 +13,6 @@ public interface TagRepository extends JpaRepository<Tag, String> {
     boolean existsByOwnerIdAndNormalizedNameAndActiveTrue(String ownerId, String normalizedName);
     boolean existsByOwnerIdAndNormalizedNameAndActiveTrueAndIdNot(String ownerId, String normalizedName, String id);
     List<Tag> findAllByOwnerIdAndIdIn(String ownerId, Collection<String> ids);
+    @org.springframework.data.jpa.repository.Query("select t.id, t.name, t.active from Tag t where t.ownerId = :ownerId and t.id in :tagIds")
+    java.util.List<Object[]> findSummariesForTransactions(String ownerId, Collection<String> transactionIds);
 }

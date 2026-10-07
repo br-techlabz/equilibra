@@ -9,4 +9,6 @@ public interface TransactionAttachmentRepository extends JpaRepository<Transacti
  Optional<TransactionAttachment> findByIdAndOwnerId(String id,String ownerId);
  List<TransactionAttachment> findAllByTransactionIdAndOwnerIdOrderByCreatedAtAsc(String transactionId,String ownerId);
  long countByTransactionIdAndOwnerId(String transactionId,String ownerId);
+ @org.springframework.data.jpa.repository.Query("select a.transactionId, count(a) from TransactionAttachment a where a.ownerId = :ownerId and a.transactionId in :transactionIds group by a.transactionId")
+ java.util.List<Object[]> countByTransactionIds(String ownerId, java.util.Collection<String> transactionIds);
 }
