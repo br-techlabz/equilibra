@@ -97,9 +97,6 @@ equilibra:
       issuer: ${EQUILIBRA_JWT_ISSUER:equilibra-api}
       access-token-ttl: ${EQUILIBRA_JWT_ACCESS_TOKEN_TTL:15m}
       secret: ${EQUILIBRA_JWT_SECRET:dev-only-change-me-not-for-production-32-bytes-minimum}
-
-# OpenAPI/Swagger
-equilibra:
   attachments:
     storage-type: ${EQUILIBRA_ATTACHMENTS_STORAGE_TYPE:local}
     local-root: ${EQUILIBRA_ATTACHMENTS_LOCAL_ROOT:var/attachments}
@@ -111,6 +108,7 @@ equilibra:
       - image/png
       - image/webp
 
+# OpenAPI/Swagger
 springdoc:
   api-docs:
     path: /api-docs

@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 
+@org.springframework.stereotype.Component
 public class AttachmentFilePolicy {
     private final AttachmentProperties properties;
     public AttachmentFilePolicy(AttachmentProperties properties){this.properties=properties;}
