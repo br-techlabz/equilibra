@@ -68,6 +68,11 @@ export class SidebarComponent implements OnInit {
       route: '/categories',
     },
     {
+      label: 'Tags',
+      icon: 'label',
+      route: '/tags',
+    },
+    {
       label: 'Transações',
       icon: 'receipt_long',
       route: '/transactions',
