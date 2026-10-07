@@ -2,7 +2,9 @@ package br.com.equilibra.transaction.domain;
 
 import br.com.equilibra.account.domain.AssetAccount;
 import br.com.equilibra.category.domain.Category;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -14,6 +16,9 @@ import jakarta.persistence.Version;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -60,6 +65,11 @@ public class FinancialTransaction {
 
     @Column(name = "notes", length = NOTES_MAX_LENGTH)
     private String notes;
+
+    @ElementCollection
+    @CollectionTable(name = "financial_transaction_tags", joinColumns = @jakarta.persistence.JoinColumn(name = "transaction_id"))
+    @Column(name = "tag_id", length = 36, nullable = false)
+    private List<String> tagIds = new ArrayList<>();
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -148,6 +158,8 @@ public class FinancialTransaction {
     public void changeSourceAccount(String sourceAccountId) { ensureActive(); this.sourceAccountId = nullableUuid(sourceAccountId, "sourceAccountId"); validateShape(); }
     public void changeDestinationAccount(String destinationAccountId) { ensureActive(); this.destinationAccountId = nullableUuid(destinationAccountId, "destinationAccountId"); validateShape(); }
     public void changeCategory(String categoryId) { ensureActive(); this.categoryId = requireUuid(categoryId, "categoryId"); }
+    public void replaceTagIds(List<String> ids) { ensureActive(); tagIds = new ArrayList<>(ids); }
+    public List<String> getTagIds() { return Collections.unmodifiableList(tagIds); }
 
     private void ensureActive() {
         if (status != TransactionStatus.ACTIVE) throw new IllegalStateException("cancelled transaction is immutable");

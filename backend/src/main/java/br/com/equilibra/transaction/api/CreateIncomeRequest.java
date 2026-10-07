@@ -12,5 +12,6 @@ public record CreateIncomeRequest(
     @NotBlank String accountId,
     @NotNull BigDecimal amount,
     @NotBlank String categoryId,
-    @Size(max = 4000) String notes
+    @Size(max = 4000) String notes,
+    java.util.List<String> tagIds
 ) {}

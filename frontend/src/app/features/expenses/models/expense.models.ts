@@ -8,6 +8,7 @@ export interface Expense {
   amount: number;
   categoryId: string;
   notes: string | null;
+  tags?: { id: string; name: string; active: boolean }[];
   status: ExpenseStatus;
   createdAt: string;
   updatedAt: string;
@@ -20,6 +21,7 @@ export interface ExpenseRequest {
   amount: number;
   categoryId: string;
   notes?: string | null;
+  tagIds?: string[];
 }
 
 export interface ExpensePage {

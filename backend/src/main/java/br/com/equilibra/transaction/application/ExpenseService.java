@@ -34,13 +34,15 @@ public class ExpenseService {
     private final AssetAccountRepository accounts;
     private final CategoryRepository categories;
     private final CurrentUser currentUser;
+    private final TransactionTagService transactionTags;
 
     public ExpenseService(FinancialTransactionRepository transactions, AssetAccountRepository accounts,
-                          CategoryRepository categories, CurrentUser currentUser) {
+                          CategoryRepository categories, CurrentUser currentUser, TransactionTagService transactionTags) {
         this.transactions = transactions;
         this.accounts = accounts;
         this.categories = categories;
         this.currentUser = currentUser;
+        this.transactionTags = transactionTags;
     }
 
     @Transactional
@@ -48,8 +50,9 @@ public class ExpenseService {
         String owner = ownerId();
         AssetAccount account = eligibleAccount(request.accountId(), owner);
         Category category = eligibleCategory(request.categoryId(), owner);
-        return ExpenseResponse.from(transactions.save(FinancialTransaction.expense(
-            owner, request.description(), request.amount(), request.occurredAt(), category.getId(), account.getId(), request.notes())));
+        FinancialTransaction transaction = FinancialTransaction.expense(owner, request.description(), request.amount(), request.occurredAt(), category.getId(), account.getId(), request.notes());
+        transactionTags.replace(transaction, request.tagIds());
+        return ExpenseResponse.from(transactions.save(transaction));
     }
 
     @Transactional(readOnly = true)
@@ -59,12 +62,12 @@ public class ExpenseService {
         Page<FinancialTransaction> result = transactions.findPageByOwnerAndTypeAndStatus(
             owner, TransactionType.EXPENSE, includeCancelled ? null : TransactionStatus.ACTIVE,
             PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "occurredAt").and(Sort.by(Sort.Direction.DESC, "id"))));
-        return new ExpensePageResponse(result.getContent().stream().map(ExpenseResponse::from).toList(),
+        return new ExpensePageResponse(result.getContent().stream().map(t -> ExpenseResponse.from(t, transactionTags.summaries(t))).toList(),
             result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages());
     }
 
     @Transactional(readOnly = true)
-    public ExpenseResponse get(String id) { return ExpenseResponse.from(findExpense(id)); }
+    public ExpenseResponse get(String id) { FinancialTransaction t = findExpense(id); return ExpenseResponse.from(t, transactionTags.summaries(t)); }
 
     @Transactional
     public ExpenseResponse update(String id, UpdateExpenseRequest request) {
@@ -78,6 +81,7 @@ public class ExpenseService {
         transaction.changeNotes(request.notes());
         transaction.changeSourceAccount(account.getId());
         transaction.changeCategory(category.getId());
+        if (request.tagIds() != null) transactionTags.replace(transaction, request.tagIds());
         try { return ExpenseResponse.from(transactions.save(transaction)); }
         catch (OptimisticLockingFailureException exception) { throw new ResourceConflictException("Expense was modified concurrently."); }
     }
