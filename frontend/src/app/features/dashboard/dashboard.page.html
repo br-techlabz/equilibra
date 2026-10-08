@@ -45,12 +45,24 @@
     </app-content-panel>
 
     <app-content-panel title="Transações recentes" subtitle="Atividade financeira recente">
-      <app-empty-state
-        icon="receipt_long"
-        iconVariant="inbox"
-        title="Nenhuma transação recente"
-        description="Suas movimentações financeiras recentes aparecerão aqui."
-        [centered]="true" />
+      @if (dashboardData()?.recentTransactions?.length) {
+        <div class="transactions-list" role="list">
+          @for (transaction of dashboardData()!.recentTransactions.slice(0, 10); track transaction.id) {
+            <div class="transaction-item" role="listitem">
+              <span class="transaction-icon" [class]="'transaction-icon--' + transaction.type.toLowerCase()" aria-hidden="true">
+                <mat-icon>{{ transaction.type === 'INCOME' ? 'trending_up' : transaction.type === 'EXPENSE' ? 'trending_down' : 'swap_horiz' }}</mat-icon>
+              </span>
+              <div class="transaction-details">
+                <strong class="transaction-description">{{ transaction.description }}</strong>
+                <span class="transaction-meta">{{ transaction.occurredAt | date:'dd/MM/yyyy HH:mm' }}</span>
+              </div>
+              <strong class="transaction-value" [class.positive]="transaction.type === 'INCOME'" [class.negative]="transaction.type === 'EXPENSE'">{{ transaction.type === 'EXPENSE' ? '-' : '' }} {{ transactionAmount(transaction.amount) }}</strong>
+            </div>
+          }
+        </div>
+      } @else {
+        <app-empty-state icon="receipt_long" iconVariant="inbox" title="Nenhuma transação recente" description="Suas movimentações financeiras recentes aparecerão aqui." [centered]="true" />
+      }
     </app-content-panel>
   </div>
 

@@ -168,9 +168,14 @@
 }
 
 .transaction-value {
+  flex: 0 0 auto;
+  display: block;
+  min-width: 5rem;
   font-size: var(--font-size-body-sm);
   font-weight: var(--font-semibold);
   line-height: var(--line-height-tight);
+  color: var(--text-secondary);
+  text-align: right;
   white-space: nowrap;
 }
 

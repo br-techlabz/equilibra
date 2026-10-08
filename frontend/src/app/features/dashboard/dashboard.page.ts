@@ -148,6 +148,11 @@ export class DashboardPageComponent implements OnInit {
     return formatCentsAsBRL(sumMoneyInCents([value]));
   }
 
+  transactionAmount(amount: number | string | null | undefined): string {
+    const value = Number(amount);
+    return Number.isFinite(value) ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value) : 'R$ 0,00';
+  }
+
   formatCents(cents: number): string {
     return formatCentsAsBRL(cents);
   }
