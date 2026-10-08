@@ -98,8 +98,14 @@ export class ShellComponent implements OnInit, AfterViewInit {
   }
 
   private checkMobile(): void {
-    this.isMobile.set(window.innerWidth < 768);
-    if (!this.isMobile()) {
+    const mobile = window.innerWidth < 768;
+    const wasMobile = this.isMobile();
+    this.isMobile.set(mobile);
+
+    if (mobile && !wasMobile) {
+      this.sidebarOpened.set(false);
+      this.sidebarCollapsed.set(false);
+    } else if (!mobile) {
       this.sidebarOpened.set(true);
     }
   }

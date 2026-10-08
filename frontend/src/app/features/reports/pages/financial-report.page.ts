@@ -4,6 +4,9 @@ import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Va
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSelectModule } from '@angular/material/select';
 import { AssetAccountsApiService } from '../../asset-accounts/data-access/asset-accounts-api.service';
@@ -14,19 +17,19 @@ import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.
 import { FinancialReportApiService } from '../data-access/financial-report-api.service';
 import { FinancialReportFilters, FinancialReportResponse, FinancialReportTransaction } from '../models/financial-report.models';
 
-interface ReportForm { from: FormControl<string>; to: FormControl<string>; accountIds: FormControl<string[]>; }
+interface ReportForm { from: FormControl<Date>; to: FormControl<Date>; accountIds: FormControl<string[]>; }
 
 @Component({
   selector: 'app-financial-report-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatPaginatorModule, MatSelectModule, ContentPanelComponent, EmptyStateComponent, PageHeaderComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatDatepickerModule, MatNativeDateModule, MatPaginatorModule, MatSelectModule, ContentPanelComponent, EmptyStateComponent, PageHeaderComponent],
   template: `
     <main class="financial-report-page">
       <app-page-header title="Relatório financeiro" subtitle="Analise receitas, despesas e a evolução dos saldos das suas contas." />
       <app-content-panel title="Filtros do relatório" subtitle="Escolha o período e as contas que deseja analisar.">
         <form class="report-filters" [formGroup]="form" (ngSubmit)="applyFilters()" novalidate>
-          <mat-form-field appearance="outline"><mat-label>Data inicial</mat-label><input matInput type="date" formControlName="from" /><mat-error>Informe a data inicial.</mat-error></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Data final</mat-label><input matInput type="date" formControlName="to" /><mat-error>Informe uma data final posterior à inicial.</mat-error></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Data inicial</mat-label><input matInput [matDatepicker]="fromPicker" formControlName="from" placeholder="dd/MM/yyyy" aria-label="Data inicial no formato dia, mês e ano" /><button mat-icon-button matSuffix type="button" aria-label="Abrir calendário da data inicial" (click)="fromPicker.open()"><mat-icon>calendar_month</mat-icon></button><mat-datepicker #fromPicker></mat-datepicker><mat-error>Informe a data inicial.</mat-error></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Data final</mat-label><input matInput [matDatepicker]="toPicker" formControlName="to" placeholder="dd/MM/yyyy" aria-label="Data final no formato dia, mês e ano" /><button mat-icon-button matSuffix type="button" aria-label="Abrir calendário da data final" (click)="toPicker.open()"><mat-icon>calendar_month</mat-icon></button><mat-datepicker #toPicker></mat-datepicker><mat-error>Informe uma data final posterior à inicial.</mat-error></mat-form-field>
           <mat-form-field appearance="outline" class="account-filter"><mat-label>Contas</mat-label><mat-select multiple formControlName="accountIds"><mat-option [value]="ALL_ACCOUNTS">Todas as contas</mat-option>@for(account of accounts(); track account.id){<mat-option [value]="account.id">{{account.name}}{{account.active?'':' (Inativa)'}}</mat-option>}</mat-select></mat-form-field>
           <div class="filter-actions"><button mat-flat-button color="primary" type="submit" [disabled]="isLoading()">Aplicar filtros</button><button mat-button type="button" (click)="resetFilters()" [disabled]="isLoading()">Restaurar</button></div>
         </form>
@@ -51,10 +54,10 @@ export class FinancialReportPageComponent implements OnInit {
   readonly ALL_ACCOUNTS = 'ALL';
   readonly accounts = signal<AssetAccount[]>([]); readonly report = signal<FinancialReportResponse | null>(null); readonly isLoading = signal(false); readonly errorMessage = signal<string | null>(null); readonly formError = signal<string | null>(null);
   readonly form: FormGroup<ReportForm>; private appliedFilters: FinancialReportFilters; private readonly api = inject(FinancialReportApiService); private readonly accountsApi = inject(AssetAccountsApiService);
-  constructor(private readonly fb: NonNullableFormBuilder){const defaults=this.defaultDates();this.form=this.fb.group({from:this.fb.control(defaults.from,Validators.required),to:this.fb.control(defaults.to,Validators.required),accountIds:this.fb.control<string[]>([])});this.appliedFilters={from:this.start(defaults.from),to:this.end(defaults.to),accountIds:[],page:0,size:20};}
+  constructor(private readonly fb: NonNullableFormBuilder){const defaults=this.defaultDates();this.form=this.fb.group({from:this.fb.control(new Date(`${defaults.from}T00:00:00`),Validators.required),to:this.fb.control(new Date(`${defaults.to}T00:00:00`),Validators.required),accountIds:this.fb.control<string[]>([])});this.appliedFilters={from:this.start(defaults.from),to:this.end(defaults.to),accountIds:[],page:0,size:20};}
   ngOnInit(): void { this.accountsApi.list(true).subscribe({next:v=>this.accounts.set(v),error:()=>undefined}); this.load(this.appliedFilters); }
-  applyFilters(): void { const v=this.form.getRawValue(); if(!v.from||!v.to||v.from>=v.to){this.formError.set('A data inicial deve ser anterior à data final.');return;} this.formError.set(null); const ids=v.accountIds.includes(this.ALL_ACCOUNTS)?[]:[...new Set(v.accountIds)]; this.appliedFilters={from:this.start(v.from),to:this.end(v.to),accountIds:ids,page:0,size:20}; this.load(this.appliedFilters); }
-  resetFilters(): void {const d=this.defaultDates();this.form.reset({from:d.from,to:d.to,accountIds:[]});this.formError.set(null);this.appliedFilters={from:this.start(d.from),to:this.end(d.to),accountIds:[],page:0,size:20};this.load(this.appliedFilters);}
+  applyFilters(): void { const v=this.form.getRawValue(); const from=this.dateInput(v.from); const to=this.dateInput(v.to); if(!from||!to||from>=to){this.formError.set('A data inicial deve ser anterior à data final.');return;} this.formError.set(null); const ids=v.accountIds.includes(this.ALL_ACCOUNTS)?[]:[...new Set(v.accountIds)]; this.appliedFilters={from:this.start(from),to:this.end(to),accountIds:ids,page:0,size:20}; this.load(this.appliedFilters); }
+  resetFilters(): void {const d=this.defaultDates();this.form.reset({from:new Date(`${d.from}T00:00:00`),to:new Date(`${d.to}T00:00:00`),accountIds:[]});this.formError.set(null);this.appliedFilters={from:this.start(d.from),to:this.end(d.to),accountIds:[],page:0,size:20};this.load(this.appliedFilters);}
   retry(): void { this.load(this.appliedFilters); }
   changePage(e:PageEvent): void {this.appliedFilters={...this.appliedFilters,page:e.pageIndex,size:e.pageSize};this.load(this.appliedFilters);}
   money(value:number):string{return new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(value);}

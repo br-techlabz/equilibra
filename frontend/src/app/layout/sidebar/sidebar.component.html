@@ -23,8 +23,8 @@
             [disabled]="collapsed()"
             class="nav-expansion-panel"
             [class.active]="hasActiveChildren(item)"
-            (opened)="onNavigationClick()"
-            (closed)="onNavigationClick()">
+            (opened)="onExpansionOpened()"
+            (closed)="onExpansionClosed()">
             <mat-expansion-panel-header class="nav-expansion-header">
               <span class="nav-header-icon" aria-hidden="true">
                 <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>

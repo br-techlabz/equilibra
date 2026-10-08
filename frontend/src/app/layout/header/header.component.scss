@@ -5,9 +5,10 @@
   position: sticky;
   top: 0;
   z-index: var(--z-index-toolbar);
-  background: linear-gradient(155deg, var(--color-primary-800), var(--color-primary-600));
+  background: #4c1d95;
+  border-color: #4c1d95;
   color: #ffffff;
-  border-bottom: 1px solid var(--topbar-border);
+  border-bottom: 1px solid #4c1d95;
   box-shadow: none;
   display: flex;
   align-items: center;

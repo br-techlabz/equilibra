@@ -4,9 +4,9 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: linear-gradient(155deg, var(--color-primary-800), var(--color-primary-600));
+  background: #4c1d95;
   color: #ffffff;
-  border-right: 1px solid var(--sidebar-border);
+  border: 1px solid #4c1d95;
   transition: width var(--transition-normal), transform var(--transition-normal);
 }
 

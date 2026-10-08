@@ -8,9 +8,11 @@ import { AuthService } from './features/auth/data-access/auth.service';
 import { provideAppInitializer } from '@angular/core';
 import { authTokenInterceptor } from './core/http/auth-token.interceptor';
 import { authErrorInterceptor } from './core/http/auth-error.interceptor';
+import { MAT_DATE_LOCALE } from '@angular/material/core';
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    { provide: MAT_DATE_LOCALE, useValue: 'pt-BR' },
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
     provideAppInitializer(() => inject(AuthService).initialize()),
