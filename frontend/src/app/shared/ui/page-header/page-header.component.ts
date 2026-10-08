@@ -2,14 +2,23 @@ import { Component, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-page-header',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatTooltipModule],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule],
   template: `
     <header class="page-header">
+      <mat-menu #actionMenu="matMenu">
+        @for (item of actions()[0]?.menu ?? []; track item.label) {
+          <button mat-menu-item type="button" (click)="item.handler()">
+            <mat-icon>{{ item.icon }}</mat-icon>
+            <span>{{ item.label }}</span>
+          </button>
+        }
+      </mat-menu>
       <div class="header-content">
         <div class="title-group">
           <h1 class="page-title">{{ title() }}</h1>
@@ -23,7 +32,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
               mat-flat-button
               color="primary"
               [matTooltip]="action.tooltip"
-              (click)="action.handler()"
+              [matMenuTriggerFor]="action.menu ? actionMenu : null"
+              (click)="action.menu ? undefined : action.handler()"
               [disabled]="action.disabled">
               <mat-icon>{{ action.icon }}</mat-icon>
               <span>{{ action.label }}</span>
@@ -110,5 +120,6 @@ export class PageHeaderComponent {
     handler: () => void;
     tooltip?: string;
     disabled?: boolean;
+    menu?: Array<{ label: string; icon: string; handler: () => void }>;
   }>>([]);
 }

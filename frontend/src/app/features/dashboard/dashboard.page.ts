@@ -58,7 +58,17 @@ export class DashboardPageComponent implements OnInit {
   readonly selectedPeriod = signal<(typeof this.periodOptions)[number]['value']>('current-month');
 
   readonly headerActions = [
-    { label: 'Nova transação', icon: 'add', handler: () => undefined, tooltip: 'Disponível quando transações forem implementadas' },
+    {
+      label: 'Nova transação',
+      icon: 'add',
+      handler: () => undefined,
+      tooltip: 'Escolha o tipo de transação',
+      menu: [
+        { label: 'Despesa', icon: 'trending_down', handler: () => this.router.navigate(['/expenses']) },
+        { label: 'Receita', icon: 'trending_up', handler: () => this.router.navigate(['/incomes']) },
+        { label: 'Transferência', icon: 'swap_horiz', handler: () => this.router.navigate(['/transfers']) },
+      ],
+    },
   ];
   readonly chartActions = [];
   readonly transactionsActions = [];
@@ -70,9 +80,8 @@ export class DashboardPageComponent implements OnInit {
 
   loadDashboard(): void {
     this.accountsLoading.set(true);
-    const now = new Date();
-    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    this.dashboardApi.get(from, now.toISOString()).subscribe({
+    const { from, to } = this.periodRange(this.selectedPeriod());
+    this.dashboardApi.get(from.toISOString(), to.toISOString()).subscribe({
       next: (data) => {
         this.dashboardData.set(data);
         this.accounts.set(data.accounts.map((account) => ({ id: account.accountId, name: account.name, type: account.type as AssetAccount['type'], initialBalance: account.initialBalance, active: account.active, createdAt: '', updatedAt: '' })));
@@ -107,6 +116,32 @@ export class DashboardPageComponent implements OnInit {
   onPeriodChange(value: (typeof this.periodOptions)[number]['value']): void {
     this.selectedPeriod.set(value);
     this.loadDashboard();
+  }
+
+  private periodRange(period: (typeof this.periodOptions)[number]['value']): { from: Date; to: Date } {
+    const now = new Date();
+    const to = new Date(now);
+    let from: Date;
+
+    switch (period) {
+      case 'previous-month':
+        from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        to.setTime(new Date(now.getFullYear(), now.getMonth(), 1).getTime());
+        break;
+      case 'three-months':
+        from = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+        break;
+      case 'six-months':
+        from = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+        break;
+      case 'current-year':
+        from = new Date(now.getFullYear(), 0, 1);
+        break;
+      default:
+        from = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+
+    return { from, to };
   }
 
   formatMoney(value: number | string): string {
