@@ -51,6 +51,10 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
         String ownerId, TransactionStatus status, Instant from, Instant to
     );
 
+    List<FinancialTransaction> findAllByOwnerIdAndStatusAndOccurredAtBeforeOrderByOccurredAtAsc(
+        String ownerId, TransactionStatus status, Instant at
+    );
+
     boolean existsByOwnerIdAndSourceAccountIdOrOwnerIdAndDestinationAccountId(
         String sourceOwnerId, String sourceAccountId, String destinationOwnerId, String destinationAccountId
     );

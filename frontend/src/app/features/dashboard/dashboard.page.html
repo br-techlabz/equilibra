@@ -36,12 +36,12 @@
 
   <div class="dashboard-grid panel-grid">
     <app-content-panel title="Evolução do saldo" subtitle="Saldos das contas no período">
-      <app-empty-state
-        icon="show_chart"
-        iconVariant="chart"
-        title="Evolução disponível em breve"
-        description="Os dados do ledger serão exibidos nesta área."
-        [centered]="true" />
+      @if (dashboardData()?.balanceEvolution?.length) {
+        <div class="balance-chart" role="img" aria-label="Evolução do saldo por conta">
+          <div class="chart-legend">@for (series of dashboardData()!.balanceEvolution; track series.accountId) { <span><i [class]="'legend-dot legend-' + $index"></i>{{ series.accountName }}</span> }</div>
+          <div class="chart-with-y-axis"><div class="chart-y-axis">@for (label of chartYAxis(); track label) { <span>{{ label }}</span> }</div><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><line x1="4" y1="50" x2="96" y2="50" class="chart-grid-line" /><line x1="4" y1="20" x2="96" y2="20" class="chart-grid-line" /><line x1="4" y1="80" x2="96" y2="80" class="chart-grid-line" /> @for (series of dashboardData()!.balanceEvolution; track series.accountId) { <polyline [attr.points]="balanceLinePoints(series.points)" [class]="'balance-line balance-line-' + $index" /> } </svg></div><div class="chart-axis"><div class="chart-axis-track">@for (day of currentMonthDays(); track day) { <span>{{ day }}</span> }</div></div>
+        </div>
+      } @else { <app-empty-state icon="show_chart" iconVariant="chart" title="Evolução disponível em breve" description="Os dados do ledger serão exibidos nesta área." [centered]="true" /> }
     </app-content-panel>
 
     <app-content-panel title="Transações recentes" subtitle="Atividade financeira recente">
@@ -64,44 +64,17 @@
         <app-empty-state icon="receipt_long" iconVariant="inbox" title="Nenhuma transação recente" description="Suas movimentações financeiras recentes aparecerão aqui." [centered]="true" />
       }
     </app-content-panel>
+
+    <app-content-panel title="Minhas contas" subtitle="Saldos correntes derivados do ledger" class="accounts-panel">
+      @if (accountsLoading()) {
+        <div class="accounts-state" role="status" aria-live="polite"><mat-icon class="spin" aria-hidden="true">sync</mat-icon><span>Carregando contas...</span></div>
+      } @else if (accountsError()) {
+        <div class="accounts-state accounts-error" role="alert"><mat-icon aria-hidden="true">error_outline</mat-icon><p>Não foi possível carregar suas contas.</p><button mat-stroked-button type="button" (click)="loadAccounts()">Tentar novamente</button></div>
+      } @else if (accounts().length === 0) {
+        <app-empty-state icon="account_balance_wallet" iconVariant="folder" title="Nenhuma conta cadastrada" description="Cadastre uma conta para começar a acompanhar seu patrimônio." [centered]="false" [actions]="[{ label: 'Cadastrar conta', icon: 'add', handler: navigateToAccounts }]" />
+      } @else {
+        <div class="account-summary-list" role="list">@for (account of accounts(); track account.id) {<div class="account-summary-item" role="listitem"><span class="account-summary-icon" aria-hidden="true"><mat-icon>{{ accountType(account).icon }}</mat-icon></span><div class="account-summary-details"><strong>{{ account.name }}</strong><span>{{ accountType(account).label }}</span></div><span class="account-summary-balance">Saldo atual: {{ formatMoney(account.initialBalance) }}</span></div>}</div><div class="accounts-panel-footer"><button mat-stroked-button type="button" (click)="navigateToAccounts()">Ver todas as contas</button></div>
+      }
+    </app-content-panel>
   </div>
 
-  <app-content-panel title="Minhas contas" subtitle="Saldos correntes derivados do ledger" class="accounts-panel">
-    @if (accountsLoading()) {
-      <div class="accounts-state" role="status" aria-live="polite">
-        <mat-icon class="spin" aria-hidden="true">sync</mat-icon>
-        <span>Carregando contas...</span>
-      </div>
-    } @else if (accountsError()) {
-      <div class="accounts-state accounts-error" role="alert">
-        <mat-icon aria-hidden="true">error_outline</mat-icon>
-        <p>Não foi possível carregar suas contas.</p>
-        <button mat-stroked-button type="button" (click)="loadAccounts()">Tentar novamente</button>
-      </div>
-    } @else if (accounts().length === 0) {
-      <app-empty-state
-        icon="account_balance_wallet"
-        iconVariant="folder"
-        title="Nenhuma conta cadastrada"
-        description="Cadastre uma conta para começar a acompanhar seu patrimônio."
-        [centered]="false"
-        [actions]="[{ label: 'Cadastrar conta', icon: 'add', handler: navigateToAccounts }]" />
-    } @else {
-      <div class="account-summary-list" role="list">
-        @for (account of accounts(); track account.id) {
-          <div class="account-summary-item" role="listitem">
-            <span class="account-summary-icon" aria-hidden="true"><mat-icon>{{ accountType(account).icon }}</mat-icon></span>
-            <div class="account-summary-details">
-              <strong>{{ account.name }}</strong>
-              <span>{{ accountType(account).label }}</span>
-            </div>
-            <span class="account-summary-balance">Saldo atual: {{ formatMoney(account.initialBalance) }}</span>
-          </div>
-        }
-      </div>
-      <div class="accounts-panel-footer">
-        <button mat-stroked-button type="button" (click)="navigateToAccounts()">Ver todas as contas</button>
-      </div>
-    }
-  </app-content-panel>
-</div>

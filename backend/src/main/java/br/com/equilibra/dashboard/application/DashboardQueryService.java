@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
@@ -29,6 +31,7 @@ public class DashboardQueryService {
         String owner=currentUser.id().toString();
         List<AssetAccount> accountList=accounts.findAllByOwnerIdAndActiveTrueOrderByNameAsc(owner);
         List<FinancialTransaction> active=transactions.findAllByOwnerIdAndStatusAndOccurredAtBetweenOrderByOccurredAtDesc(owner,TransactionStatus.ACTIVE,from,to);
+        List<FinancialTransaction> before=transactions.findAllByOwnerIdAndStatusAndOccurredAtBeforeOrderByOccurredAtAsc(owner,TransactionStatus.ACTIVE,from);
         BigDecimal income=sum(active,TransactionType.INCOME),expense=sum(active,TransactionType.EXPENSE);
         List<FinancialTransaction> allActive = transactions.findAllByOwnerIdAndStatusOrderByOccurredAtDesc(owner, TransactionStatus.ACTIVE);
         List<FinancialTransaction> allRecent = allActive.stream().limit(10).toList();
@@ -47,7 +50,19 @@ public class DashboardQueryService {
             .toList();
         BigDecimal netWorth=balances.stream().map(DashboardResponse.AccountBalance::currentBalance).reduce(BigDecimal.ZERO,BigDecimal::add);
         List<DashboardResponse.RecentTransaction> recent=allRecent.stream().map(t->new DashboardResponse.RecentTransaction(t.getId(),t.getType().name(),t.getDescription(),t.getOccurredAt(),t.getAmount(),t.getSourceAccountId(),t.getDestinationAccountId(),t.getStatus().name())).toList();
-        return new DashboardResponse(new DashboardResponse.Period(from,to),new DashboardResponse.Summary(income,expense,income.subtract(expense),netWorth),balances,recent);
+        Map<String, BigDecimal> opening = new HashMap<>();
+        accountList.forEach(account -> opening.put(account.getId(), account.getInitialBalance()));
+        before.forEach(transaction -> apply(opening, transaction));
+        Map<String, List<DashboardResponse.BalancePoint>> points = new HashMap<>();
+        LocalDate firstDay = from.atZone(ZoneOffset.UTC).toLocalDate();
+        LocalDate lastDay = to.minusNanos(1).atZone(ZoneOffset.UTC).toLocalDate();
+        for (AssetAccount account : accountList) { List<DashboardResponse.BalancePoint> values = new java.util.ArrayList<>(); BigDecimal balance = opening.get(account.getId()); for (LocalDate day = firstDay; !day.isAfter(lastDay); day = day.plusDays(1)) { Instant dayEnd = day.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant(); for (FinancialTransaction transaction : active) { boolean related = transaction.getSourceAccountId() != null && transaction.getSourceAccountId().equals(account.getId()) || transaction.getDestinationAccountId() != null && transaction.getDestinationAccountId().equals(account.getId()); if (related && transaction.getOccurredAt().isBefore(dayEnd)) balance = transaction.getSourceAccountId() != null && transaction.getSourceAccountId().equals(account.getId()) ? balance.subtract(transaction.getAmount()) : balance.add(transaction.getAmount()); } values.add(new DashboardResponse.BalancePoint(day.atStartOfDay(ZoneOffset.UTC).toInstant(), balance)); } points.put(account.getId(), values); }
+        List<DashboardResponse.BalanceSeries> evolution = accountList.stream().map(account -> new DashboardResponse.BalanceSeries(account.getId(), account.getName(), points.get(account.getId()))).toList();
+        return new DashboardResponse(new DashboardResponse.Period(from,to),new DashboardResponse.Summary(income,expense,income.subtract(expense),netWorth),balances,recent,evolution);
+    }
+    private static void apply(Map<String, BigDecimal> balances, FinancialTransaction transaction) {
+        if (transaction.getSourceAccountId() != null) balances.merge(transaction.getSourceAccountId(), transaction.getAmount().negate(), BigDecimal::add);
+        if (transaction.getDestinationAccountId() != null) balances.merge(transaction.getDestinationAccountId(), transaction.getAmount(), BigDecimal::add);
     }
     private static BigDecimal sum(List<FinancialTransaction> list,TransactionType type){return list.stream().filter(t->t.getType()==type).map(FinancialTransaction::getAmount).reduce(BigDecimal.ZERO,BigDecimal::add);}
 }

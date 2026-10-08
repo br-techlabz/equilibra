@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { DatePipe } from '@angular/common';
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { StatCardComponent } from '../../shared/ui/stat-card/stat-card.component';
 import { ContentPanelComponent } from '../../shared/ui/content-panel/content-panel.component';
@@ -22,6 +23,7 @@ import { formatCentsAsBRL, sumMoneyInCents } from './money.utils';
   standalone: true,
   imports: [
     CommonModule,
+    DatePipe,
     FormsModule,
     MatIconModule,
     MatSelectModule,
@@ -163,5 +165,33 @@ export class DashboardPageComponent implements OnInit {
 
   accountType(account: AssetAccount) {
     return assetAccountTypeOption(account.type);
+  }
+
+  currentMonthDays(): string[] {
+    const periodEnd = this.dashboardData()?.period.to;
+    const today = new Date();
+    const end = periodEnd ? new Date(periodEnd) : today;
+    const isCurrentMonth = end.getFullYear() === today.getFullYear() && end.getMonth() === today.getMonth();
+    const totalDays = isCurrentMonth
+      ? today.getDate()
+      : new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate();
+
+    return Array.from({ length: totalDays }, (_, index) => String(index + 1).padStart(2, '0'));
+  }
+
+  chartYAxis(): string[] {
+    const values = this.dashboardData()?.balanceEvolution.flatMap(series => series.points.map(point => Number(point.balance))) ?? [];
+    if (!values.length) return ['R$ 0,00'];
+    const min = Math.min(...values); const max = Math.max(...values); const step = (max - min || Math.max(Math.abs(max), 1)) / 4;
+    return [max, max - step, max - step * 2, max - step * 3, min].map(value => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value));
+  }
+
+  balanceLinePoints(points: Array<{ at: string; balance: number }>): string {
+    if (!points.length) return '';
+    const visibleDays = this.currentMonthDays().length;
+    const visiblePoints = points.slice(0, visibleDays);
+    const values = visiblePoints.map(point => Number(point.balance));
+    const min = Math.min(...values); const max = Math.max(...values); const range = max - min || 1;
+    return visiblePoints.map((point, index) => `${4 + (index / Math.max(visiblePoints.length - 1, 1)) * 92},${88 - ((Number(point.balance) - min) / range) * 76}`).join(' ');
   }
 }
