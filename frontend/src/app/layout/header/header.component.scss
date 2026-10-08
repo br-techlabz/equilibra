@@ -1,4 +1,6 @@
 .topbar {
+  width: 100%;
+  min-width: 0;
   height: var(--topbar-height);
   position: sticky;
   top: 0;
@@ -14,8 +16,9 @@
 }
 
 .menu-button {
-  display: none;
+  display: inline-flex;
   color: #ffffff;
+  transition: background-color var(--transition-fast);
 }
 
 .menu-button mat-icon {
@@ -25,8 +28,9 @@
 }
 
 .collapse-toggle {
+  display: inline-flex;
   color: var(--topbar-text-muted);
-  transition: color var(--transition-fast);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .collapse-toggle:hover {

@@ -15,18 +15,9 @@
 }
 
 .sidebar.mobile {
-  position: fixed;
-  inset: 0 auto 0 0;
-  transform: translateX(-100%);
+  width: min(var(--sidebar-width, 320px), 280px);
+  height: 100%;
   box-shadow: var(--shadow-xl);
-}
-
-.sidebar.mobile.open {
-  transform: translateX(0);
-}
-
-.sidebar.mobile.closed {
-  transform: translateX(-100%);
 }
 
 .sidebar-brand {
@@ -370,6 +361,15 @@
 .sidebar.collapsed .user-details,
 .sidebar.collapsed .sidebar-user .user-info {
   display: none;
+}
+
+.sidebar.collapsed .nav-item {
+  justify-content: center;
+  padding-inline: 0 !important;
+}
+
+.sidebar.collapsed .nav-item .nav-icon {
+  margin: 0 !important;
 }
 
 @media (min-width: 768px) {

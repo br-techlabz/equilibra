@@ -1,11 +1,12 @@
 <mat-toolbar class="topbar" color="primary" role="navigation" aria-label="Barra de ferramentas principal">
-  <!-- Mobile Menu Button -->
+  <!-- Hamburger Menu -->
   <button
     mat-icon-button
     class="menu-button"
     (click)="onMenuClick()"
-    matTooltip="Abrir menu"
-    aria-label="Abrir menu de navegação"
+    matTooltip="Abrir ou recolher menu"
+    aria-label="Abrir ou recolher menu de navegação"
+    aria-controls="main-navigation"
     [attr.aria-expanded]="!sidebarCollapsed()">
     <mat-icon>menu</mat-icon>
   </button>

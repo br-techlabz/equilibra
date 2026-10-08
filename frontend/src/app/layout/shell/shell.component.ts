@@ -1,8 +1,8 @@
-import { Component, HostBinding, HostListener, inject, signal, computed, OnInit } from '@angular/core';
+import { AfterViewInit, Component, HostBinding, HostListener, ViewChild, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatSidenavModule } from '@angular/material/sidenav';
+import { MatSidenavContainer, MatSidenavModule } from '@angular/material/sidenav';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -33,8 +33,10 @@ import { AuthService } from '../../features/auth/data-access/auth.service';
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
 })
-export class ShellComponent implements OnInit {
+export class ShellComponent implements OnInit, AfterViewInit {
   private readonly authService = inject(AuthService);
+
+  @ViewChild('sidenavContainer') private sidenavContainer?: MatSidenavContainer;
 
   @HostBinding('class') class = 'app-shell';
 
@@ -52,6 +54,10 @@ export class ShellComponent implements OnInit {
     this.checkMobile();
   }
 
+  ngAfterViewInit(): void {
+    this.syncLayout();
+  }
+
   @HostListener('window:resize')
   onResize(): void {
     this.checkMobile();
@@ -60,7 +66,10 @@ export class ShellComponent implements OnInit {
   onMenuToggle(): void {
     if (this.isMobile()) {
       this.sidebarOpened.update((open) => !open);
+      return;
     }
+
+    this.sidebarCollapsed.update((collapsed) => !collapsed);
   }
 
   onSidebarClose(): void {
@@ -72,7 +81,13 @@ export class ShellComponent implements OnInit {
   onSidebarCollapseToggle(): void {
     if (!this.isMobile()) {
       this.sidebarCollapsed.update((collapsed) => !collapsed);
+      this.syncLayout();
     }
+  }
+
+  private syncLayout(): void {
+    requestAnimationFrame(() => this.sidenavContainer?.updateContentMargins());
+    window.setTimeout(() => this.sidenavContainer?.updateContentMargins(), 260);
   }
 
   onLogout(): void {

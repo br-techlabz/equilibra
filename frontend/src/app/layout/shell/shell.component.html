@@ -1,4 +1,4 @@
-<mat-sidenav-container class="shell-container" [class.mobile]="isMobile()" [class.sidebar-collapsed]="sidebarCollapsed()">
+<mat-sidenav-container #sidenavContainer class="shell-container" [class.mobile]="isMobile()" [class.sidebar-collapsed]="sidebarCollapsed()">
   <mat-sidenav
     #sidenav
     [mode]="sidenavMode()"
@@ -7,6 +7,7 @@
     class="shell-sidenav"
     role="navigation"
     aria-label="Navegação principal"
+    id="main-navigation"
     [attr.aria-hidden]="isMobile() && !sidebarOpened()">
     <app-sidebar
       [collapsed]="sidebarCollapsed()"
@@ -15,7 +16,9 @@
       (logout)="onLogout()" />
   </mat-sidenav>
 
-  <mat-sidenav-content class="shell-content">
+  <mat-sidenav-content
+    class="shell-content"
+    [style.margin-left.px]="isMobile() ? 0 : (sidebarCollapsed() ? 72 : 276)">
     <app-header
       [userEmail]="currentUserEmail()"
       [sidebarCollapsed]="sidebarCollapsed()"
