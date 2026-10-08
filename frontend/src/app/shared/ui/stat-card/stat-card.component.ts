@@ -199,6 +199,12 @@ interface StatCardAction {
     }
 
     /* Variant backgrounds */
+    .stat-card--income { background: var(--color-primary-50); }
+    .stat-card--expense { background: var(--color-danger-50); }
+    .stat-card--balance { background: var(--color-info-50); }
+    .stat-card--asset { background: var(--color-primary-90); }
+    .stat-card--neutral { background: var(--color-grey-100); }
+
     .stat-card--income,
     .stat-card--expense,
     .stat-card--balance,
