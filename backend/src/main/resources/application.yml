@@ -97,6 +97,8 @@ equilibra:
       issuer: ${EQUILIBRA_JWT_ISSUER:equilibra-api}
       access-token-ttl: ${EQUILIBRA_JWT_ACCESS_TOKEN_TTL:15m}
       secret: ${EQUILIBRA_JWT_SECRET:dev-only-change-me-not-for-production-32-bytes-minimum}
+    refresh-token-ttl: ${EQUILIBRA_REFRESH_TOKEN_TTL:30d}
+    refresh-cookie-secure: ${EQUILIBRA_REFRESH_COOKIE_SECURE:false}
   attachments:
     storage-type: ${EQUILIBRA_ATTACHMENTS_STORAGE_TYPE:local}
     local-root: ${EQUILIBRA_ATTACHMENTS_LOCAL_ROOT:var/attachments}
@@ -209,3 +211,5 @@ equilibra:
       issuer: equilibra-api
       access-token-ttl: 15m
       secret: test-secret-with-at-least-32-bytes-for-hs256-algorithm
+    refresh-token-ttl: 30d
+    refresh-cookie-secure: false

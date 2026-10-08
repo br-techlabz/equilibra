@@ -8,10 +8,11 @@ import { AuthService } from '../../features/auth/data-access/auth.service';
  * Se autenticado: permite navegação (true)
  * Se não autenticado: redireciona para /login com returnUrl (UrlTree)
  */
-export const authGuard: CanActivateFn = (route, state): boolean | UrlTree => {
+export const authGuard: CanActivateFn = async (route, state): Promise<boolean | UrlTree> => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
+  await authService.initialize();
   if (authService.isAuthenticated()) {
     return true;
   }

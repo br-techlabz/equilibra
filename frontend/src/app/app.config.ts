@@ -1,9 +1,11 @@
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, provideZoneChangeDetection, inject } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 
 import { routes } from './app.routes';
 import { xRequestIdInterceptor } from './core/http/x-request-id.interceptor';
+import { AuthService } from './features/auth/data-access/auth.service';
+import { provideAppInitializer } from '@angular/core';
 import { authTokenInterceptor } from './core/http/auth-token.interceptor';
 import { authErrorInterceptor } from './core/http/auth-error.interceptor';
 
@@ -11,6 +13,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
+    provideAppInitializer(() => inject(AuthService).initialize()),
     provideHttpClient(
       withInterceptors([
         // Ordem dos interceptors:

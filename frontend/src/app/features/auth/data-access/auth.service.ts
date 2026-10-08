@@ -6,7 +6,7 @@ import { LoginRequest } from './login-request';
 import { LoginResponse } from './login-response';
 import { CurrentUser } from './current-user';
 
-export type AuthenticationStatus = 'unauthenticated' | 'authenticating' | 'authenticated';
+export type AuthenticationStatus = 'initializing' | 'unauthenticated' | 'authenticating' | 'authenticated';
 
 /**
  * Serviço responsável pelo estado de autenticação do frontend.
@@ -30,7 +30,8 @@ export class AuthService {
   // Estado privado: usuário atual
   private readonly _currentUser = signal<CurrentUser | null>(null);
   // Estado de autenticação
-  private readonly _status = signal<AuthenticationStatus>('unauthenticated');
+  private readonly _status = signal<AuthenticationStatus>('initializing');
+  private refreshPromise: Promise<boolean> | null = null;
   // Erro de autenticação atual
   private readonly _authError = signal<string | null>(null);
 
@@ -54,6 +55,20 @@ export class AuthService {
    *
    * @param request Credenciais de login
    */
+  initialize(): Promise<boolean> {
+    if (this._status() !== 'initializing') return Promise.resolve(this.isAuthenticated());
+    return this.refreshSession().then((ok) => { if (!ok) this._status.set('unauthenticated'); return ok; });
+  }
+
+  refreshSession(): Promise<boolean> {
+    if (this.refreshPromise) return this.refreshPromise;
+    this.refreshPromise = new Promise<boolean>((resolve) => this.authApi.refresh().subscribe({
+      next: (response) => { this._accessToken.set(response.accessToken); this._status.set('authenticated'); this.loadCurrentUser(false, resolve); },
+      error: () => { this.clearSession(); resolve(false); },
+    })).finally(() => { this.refreshPromise = null; });
+    return this.refreshPromise;
+  }
+
   login(request: LoginRequest): void {
     this._authError.set(null);
     this._status.set('authenticating');
@@ -76,16 +91,10 @@ export class AuthService {
     });
   }
 
-  private loadCurrentUser(): void {
+  private loadCurrentUser(navigate = true, resolve?: (value: boolean) => void): void {
     this.authApi.getCurrentUser().subscribe({
-      next: (user: CurrentUser) => {
-        this._currentUser.set(user);
-        this._status.set('authenticated');
-        void this.router.navigate(['/dashboard']);
-      },
-      error: (error: unknown) => {
-        this.handleMeError(error);
-      },
+      next: (user: CurrentUser) => { this._currentUser.set(user); this._status.set('authenticated'); if (navigate) void this.router.navigate(['/dashboard']); resolve?.(true); },
+      error: (error: unknown) => { this.handleMeError(error); resolve?.(false); },
     });
   }
 
@@ -154,6 +163,7 @@ export class AuthService {
    * Limpa estado e navega para página de login.
    */
   logout(): void {
+    this.authApi.logout().subscribe({ complete: () => undefined, error: () => undefined });
     this.clearSession();
     void this.router.navigate(['/login']);
   }

@@ -39,6 +39,7 @@ class AuthControllerTest {
     private RegisterUserService registerUserService;
     private AuthenticateUserService authenticateUserService;
     private JwtTokenService jwtTokenService;
+    private br.com.equilibra.auth.application.RefreshSessionService refreshSessions;
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -46,12 +47,13 @@ class AuthControllerTest {
         registerUserService = mock(RegisterUserService.class);
         authenticateUserService = mock(AuthenticateUserService.class);
         jwtTokenService = mock(JwtTokenService.class);
+        refreshSessions = mock(br.com.equilibra.auth.application.RefreshSessionService.class);
 
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
         mockMvc = MockMvcBuilders
-            .standaloneSetup(new AuthController(registerUserService, authenticateUserService, jwtTokenService))
+            .standaloneSetup(new AuthController(registerUserService, authenticateUserService, jwtTokenService, refreshSessions, false))
             .setControllerAdvice(new GlobalExceptionHandler())
             .setMessageConverters(new MappingJackson2HttpMessageConverter())
             .setValidator(validator)
