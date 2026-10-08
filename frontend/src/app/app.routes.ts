@@ -70,6 +70,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/reports/pages/financial-report.page').then((m) => m.FinancialReportPageComponent),
       },
+      {
+        path: 'reports/categories',
+        loadComponent: () =>
+          import('./features/reports/pages/category-report.page').then((m) => m.CategoryReportPageComponent),
+      },
     ],
   },
 ];

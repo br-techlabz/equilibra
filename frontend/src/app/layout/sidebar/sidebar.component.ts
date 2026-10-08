@@ -86,7 +86,7 @@ export class SidebarComponent implements OnInit {
       icon: 'assessment',
       children: [
         { label: 'Financeiro', icon: 'account_balance', route: '/reports/financial' },
-        { label: 'Por categoria', icon: 'category', disabled: true },
+        { label: 'Por categoria', icon: 'category', route: '/reports/categories' },
         { label: 'Auditoria', icon: 'fact_check', disabled: true },
       ],
     },
