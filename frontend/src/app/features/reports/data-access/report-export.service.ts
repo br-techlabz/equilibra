@@ -13,6 +13,7 @@ export class ReportExportService {
   private readonly states = new Map<string, ReturnType<typeof signal<ExportState>>>();
   private state(name: ReportName, format: ExportFormat) { const key = `${name}:${format}`; if (!this.states.has(key)) this.states.set(key, signal<ExportState>('idle')); return this.states.get(key)!; }
   exportState(name: ReportName, format: ExportFormat): ReturnType<typeof signal<ExportState>> { return this.state(name, format); }
+  isExporting(name: ReportName, format: ExportFormat): boolean { return this.state(name, format)() === 'exporting'; }
   export(name: ReportName, format: ExportFormat, params: HttpParams): Observable<Blob> {
     const current = this.state(name, format); if (current() === 'exporting') return throwError(() => new Error('Exportação já está em andamento.'));
     current.set('exporting');
