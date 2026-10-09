@@ -1,18 +1,8 @@
 <nav class="sidebar" [class.collapsed]="collapsed()" [class.mobile]="isMobile()" aria-label="Navegação principal">
-  <!-- Brand / Logo -->
-  <div class="sidebar-brand" [class.collapsed]="collapsed()">
-    <div class="brand-icon">
-      <mat-icon>account_balance_wallet</mat-icon>
-    </div>
-    <div class="brand-text" [class.hidden]="collapsed()">
-      <span class="brand-name">Equilibra</span>
-      <span class="brand-tagline">Finanças Domésticas</span>
-    </div>
+  <div class="sidebar-brand">
+    <img class="sidebar-app-logo" src="/logo-roxo-gg.png" alt="Equilibra" />
   </div>
 
-  <mat-divider class="sidebar-divider"></mat-divider>
-
-  <!-- Navigation Menu -->
   <div class="sidebar-nav" [class.collapsed]="collapsed()">
     <mat-nav-list dense>
       @for (item of navigationItems; track trackByRoute($index, item)) {
