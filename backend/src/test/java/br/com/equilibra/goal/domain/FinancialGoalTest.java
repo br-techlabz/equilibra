@@ -1,0 +1,3 @@
+package br.com.equilibra.goal.domain;
+import org.junit.jupiter.api.Test; import java.math.BigDecimal; import static org.assertj.core.api.Assertions.*;
+class FinancialGoalTest { @Test void createsAndCompletesGoal(){FinancialGoal g=new FinancialGoal("owner","Reserva",null,new BigDecimal("10000.00"),null);g.complete();assertThat(g.getStatus()).isEqualTo(FinancialGoalStatus.COMPLETED);} @Test void rejectsInvalidTarget(){assertThatThrownBy(()->new FinancialGoal("owner","x",null,new BigDecimal("0"),null)).isInstanceOf(IllegalArgumentException.class);} @Test void rejectsInvalidTransition(){FinancialGoal g=new FinancialGoal("owner","x",null,new BigDecimal("1.00"),null);g.complete();assertThatThrownBy(g::complete).isInstanceOf(IllegalStateException.class);} }
