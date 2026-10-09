@@ -31,6 +31,10 @@ export const routes: Routes = [
           import('./features/dashboard/dashboard.page').then((m) => m.DashboardPageComponent),
       },
       {
+        path: 'goals',
+        loadComponent: () => import('./features/goals/pages/goals.page').then((m) => m.GoalsPageComponent),
+      },
+      {
         path: 'budgets',
         loadComponent: () => import('./features/budgets/pages/budgets.page').then((m) => m.BudgetsPageComponent),
       },

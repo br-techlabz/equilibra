@@ -56,6 +56,11 @@ export class SidebarComponent implements OnInit {
       route: '/dashboard',
     },
     {
+      label: 'Metas Financeiras',
+      icon: 'flag',
+      route: '/goals',
+    },
+    {
       label: 'Orçamentos',
       icon: 'savings',
       route: '/budgets',
