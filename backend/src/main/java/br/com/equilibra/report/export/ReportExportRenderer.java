@@ -30,7 +30,9 @@ public class ReportExportRenderer {
     public byte[] pdf(String title, String period, String filters, List<String> headers, List<List<String>> rows) {
         try (PDDocument document = new PDDocument(); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             int index = 0;
-            while (index < Math.max(rows.size(), 1)) {
+            boolean firstPage = true;
+            while (firstPage || index < rows.size()) {
+                firstPage = false;
                 PDPage page = new PDPage(); document.addPage(page);
                 try (PDPageContentStream stream = new PDPageContentStream(document, page)) {
                     stream.beginText(); stream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 10); stream.newLineAtOffset(40, 750); stream.showText(safe(title)); stream.newLineAtOffset(0, -16); stream.showText(safe(period)); stream.newLineAtOffset(0, -16); stream.showText(safe(filters)); stream.newLineAtOffset(0, -20); stream.showText(safe(String.join(" | ", headers))); stream.newLineAtOffset(0, -16);
@@ -48,6 +50,6 @@ public class ReportExportRenderer {
         if (value.matches("^[=+\\-@\\t].*")) value = "'" + value;
         return '"' + value.replace("\"", "\"\"") + '"';
     }
-    public static String money(BigDecimal value) { return NumberFormat.getNumberInstance(new Locale("pt", "BR")).format(value == null ? BigDecimal.ZERO : value); }
+    public static String money(BigDecimal value) { NumberFormat format = NumberFormat.getNumberInstance(new Locale("pt", "BR")); format.setMinimumFractionDigits(2); format.setMaximumFractionDigits(2); return format.format(value == null ? BigDecimal.ZERO : value); }
     public static String date(Instant value) { return value == null ? "" : value.toString(); }
 }
