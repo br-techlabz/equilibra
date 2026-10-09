@@ -31,6 +31,10 @@ export const routes: Routes = [
           import('./features/dashboard/dashboard.page').then((m) => m.DashboardPageComponent),
       },
       {
+        path: 'budgets',
+        loadComponent: () => import('./features/budgets/pages/budgets.page').then((m) => m.BudgetsPageComponent),
+      },
+      {
         path: 'accounts',
         loadComponent: () =>
           import('./features/asset-accounts/pages/asset-accounts.page').then((m) => m.AssetAccountsPageComponent),
@@ -74,6 +78,11 @@ export const routes: Routes = [
         path: 'reports/categories',
         loadComponent: () =>
           import('./features/reports/pages/category-report.page').then((m) => m.CategoryReportPageComponent),
+      },
+      {
+        path: 'reports/audit',
+        loadComponent: () =>
+          import('./features/reports/pages/audit-report.page').then((m) => m.AuditReportPageComponent),
       },
     ],
   },

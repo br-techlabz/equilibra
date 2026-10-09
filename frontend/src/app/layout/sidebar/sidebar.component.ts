@@ -56,6 +56,11 @@ export class SidebarComponent implements OnInit {
       route: '/dashboard',
     },
     {
+      label: 'Orçamentos',
+      icon: 'account_balance_wallet',
+      route: '/budgets',
+    },
+    {
       label: 'Contas',
       icon: 'account_balance_wallet',
       route: '/accounts',
@@ -87,7 +92,7 @@ export class SidebarComponent implements OnInit {
       children: [
         { label: 'Financeiro', icon: 'account_balance', route: '/reports/financial' },
         { label: 'Por categoria', icon: 'category', route: '/reports/categories' },
-        { label: 'Auditoria', icon: 'fact_check', disabled: true },
+        { label: 'Auditoria', icon: 'fact_check', route: '/reports/audit' },
       ],
     },
   ];
@@ -117,6 +122,14 @@ export class SidebarComponent implements OnInit {
 
   onNavigationClick(): void {
     this.navigationClick.emit();
+  }
+
+  onExpansionOpened(): void {
+    // Abrir um submenu não é uma navegação; o drawer deve permanecer aberto.
+  }
+
+  onExpansionClosed(): void {
+    // Fechar um submenu não é uma navegação; o drawer deve permanecer aberto.
   }
 
   trackByRoute(index: number, item: NavItem): string {
