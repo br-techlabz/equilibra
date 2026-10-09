@@ -1,0 +1,3 @@
+package br.com.equilibra.budget.api;
+import br.com.equilibra.budget.application.BudgetSummaryService; import io.swagger.v3.oas.annotations.security.SecurityRequirement; import io.swagger.v3.oas.annotations.tags.Tag; import org.springframework.web.bind.annotation.*;
+@RestController @RequestMapping("/budgets") @Tag(name="Budget tracking") @SecurityRequirement(name="bearerAuth") public class BudgetSummaryController {private final BudgetSummaryService service; public BudgetSummaryController(BudgetSummaryService s){service=s;} @GetMapping("/summary") public BudgetSummaryDtos.Response summary(@RequestParam String month){return service.summary(month);}}

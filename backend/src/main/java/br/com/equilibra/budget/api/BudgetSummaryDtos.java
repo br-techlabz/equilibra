@@ -1,0 +1,3 @@
+package br.com.equilibra.budget.api;
+import java.math.BigDecimal; import java.util.List;
+public final class BudgetSummaryDtos { private BudgetSummaryDtos(){} public enum Status { ON_TRACK, WARNING, EXCEEDED } public record Response(String month,BigDecimal totalPlanned,BigDecimal totalActual,BigDecimal totalRemaining,BigDecimal totalConsumptionPercentage,List<Breakdown> budgets){} public record Breakdown(String budgetId,String categoryId,String categoryName,boolean categoryActive,BigDecimal plannedAmount,BigDecimal actualAmount,BigDecimal remainingAmount,BigDecimal consumptionPercentage,Status status){} }
