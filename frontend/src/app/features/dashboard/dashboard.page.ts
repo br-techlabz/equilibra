@@ -86,7 +86,7 @@ export class DashboardPageComponent implements OnInit {
     this.dashboardApi.get(from.toISOString(), to.toISOString()).subscribe({
       next: (data) => {
         this.dashboardData.set(data);
-        this.accounts.set(data.accounts.map((account) => ({ id: account.accountId, name: account.name, type: account.type as AssetAccount['type'], initialBalance: account.initialBalance, active: account.active, createdAt: '', updatedAt: '' })));
+        this.accounts.set(data.accounts.map((account) => ({ id: account.accountId, name: account.name, type: account.type as AssetAccount['type'], initialBalance: account.currentBalance, active: account.active, createdAt: '', updatedAt: '' })));
         this.accountsLoaded.set(true); this.accountsLoading.set(false); this.accountsError.set(false);
       },
       error: () => { this.accountsLoading.set(false); this.accountsError.set(true); },
