@@ -1,12 +1,11 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { DatePipe } from '@angular/common';
 import { PageHeaderComponent } from '../../shared/ui/page-header/page-header.component';
 import { StatCardComponent } from '../../shared/ui/stat-card/stat-card.component';
 import { ContentPanelComponent } from '../../shared/ui/content-panel/content-panel.component';
@@ -177,6 +176,14 @@ export class DashboardPageComponent implements OnInit {
       : new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate();
 
     return Array.from({ length: totalDays }, (_, index) => String(index + 1).padStart(2, '0'));
+  }
+
+  incomePieGradient(): string {
+    const items = this.dashboardData()?.incomeByCategory ?? []; const total = items.reduce((sum, item) => sum + Number(item.amount), 0); if (!total) return 'conic-gradient(var(--canvas-bg-alt) 0 100%)'; let start = 0; const colors = ['var(--color-primary-500)', 'var(--color-success-500)', 'var(--color-danger-500)', 'var(--color-warning-500)', 'var(--color-info-500)']; return `conic-gradient(${items.map((item, index) => { const end = start + Number(item.amount) / total * 100; const part = `${colors[index % colors.length]} ${start}% ${end}%`; start = end; return part; }).join(', ')})`;
+  }
+
+  expensePieGradient(): string {
+    const items = this.dashboardData()?.expenseByCategory ?? []; const total = items.reduce((sum, item) => sum + Number(item.amount), 0); if (!total) return 'conic-gradient(var(--canvas-bg-alt) 0 100%)'; let start = 0; const colors = ['var(--color-primary-500)', 'var(--color-success-500)', 'var(--color-danger-500)', 'var(--color-warning-500)', 'var(--color-info-500)']; return `conic-gradient(${items.map((item, index) => { const end = start + Number(item.amount) / total * 100; const part = `${colors[index % colors.length]} ${start}% ${end}%`; start = end; return part; }).join(', ')})`;
   }
 
   chartYAxis(): string[] {

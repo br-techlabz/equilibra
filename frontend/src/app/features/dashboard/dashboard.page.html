@@ -65,6 +65,10 @@
       }
     </app-content-panel>
 
+    <app-content-panel title="Despesas por categoria" subtitle="Distribuição das despesas no período"><div class="expense-pie" role="img" aria-label="Despesas por categoria"><div class="pie-chart" [style.background]="expensePieGradient()"></div><div class="pie-legend">@for (item of dashboardData()?.expenseByCategory ?? []; track item.categoryName) { <span><i [class]="'legend-dot legend-' + $index"></i>{{ item.categoryName }}: {{ formatMoney(item.amount) }}</span> }</div></div></app-content-panel>
+
+    <app-content-panel title="Receitas por categoria" subtitle="Distribuição das receitas no período"><div class="expense-pie" role="img" aria-label="Receitas por categoria"><div class="pie-chart" [style.background]="incomePieGradient()"></div><div class="pie-legend">@for (item of dashboardData()?.incomeByCategory ?? []; track item.categoryName) { <span><i [class]="'legend-dot legend-' + $index"></i>{{ item.categoryName }}: {{ formatMoney(item.amount) }}</span> }</div></div></app-content-panel>
+
     <app-content-panel title="Minhas contas" subtitle="Saldos correntes derivados do ledger" class="accounts-panel">
       @if (accountsLoading()) {
         <div class="accounts-state" role="status" aria-live="polite"><mat-icon class="spin" aria-hidden="true">sync</mat-icon><span>Carregando contas...</span></div>
