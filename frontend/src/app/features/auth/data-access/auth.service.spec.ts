@@ -39,6 +39,7 @@ describe('AuthService', () => {
     }).compileComponents();
 
     service = TestBed.inject(AuthService);
+    service.clearSession();
     authApi = TestBed.inject(AuthApiService) as jasmine.SpyObj<AuthApiService>;
     router = TestBed.inject(Router);
   });
