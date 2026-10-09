@@ -11,7 +11,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.text.NumberFormat;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.List;
 
 @Component
@@ -46,6 +48,6 @@ public class ReportExportRenderer {
         if (value.matches("^[=+\\-@\\t].*")) value = "'" + value;
         return '"' + value.replace("\"", "\"\"") + '"';
     }
-    public static String money(BigDecimal value) { return value == null ? "0.00" : value.toPlainString(); }
+    public static String money(BigDecimal value) { return NumberFormat.getNumberInstance(new Locale("pt", "BR")).format(value == null ? BigDecimal.ZERO : value); }
     public static String date(Instant value) { return value == null ? "" : value.toString(); }
 }
