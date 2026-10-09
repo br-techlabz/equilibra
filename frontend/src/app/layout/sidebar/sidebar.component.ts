@@ -57,7 +57,7 @@ export class SidebarComponent implements OnInit {
     },
     {
       label: 'Orçamentos',
-      icon: 'account_balance_wallet',
+      icon: 'savings',
       route: '/budgets',
     },
     {
