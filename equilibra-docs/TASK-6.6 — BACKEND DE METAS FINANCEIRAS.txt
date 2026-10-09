@@ -1,0 +1,1104 @@
+# TASK-6.6 — BACKEND DE METAS FINANCEIRAS
+
+PROJETO: EQUILIBRA
+SPRINT: 6 — PLANEJAMENTO FINANCEIRO
+STACK: Spring Boot 4 + MySQL + Angular 19
+
+CONTEXTO
+
+Sprint 5 aprovada.
+TASK-6.0 — Arquitetura do Planejamento Financeiro concluída.
+TASK-6.1 — Backend de Orçamentos concluído.
+TASK-6.2 — Interface de Orçamentos concluída.
+TASK-6.3 — Backend de Planejado versus Realizado concluído.
+TASK-6.4 — Dashboard de Orçamentos concluído.
+TASK-6.5 — Alertas de Limites concluídos.
+
+OBJETIVO
+
+Implementar exclusivamente o backend de Metas Financeiras
+do Equilibra, conforme decisões aprovadas no ADR
+da TASK-6.0.
+
+Permitir ao usuário:
+
+- criar metas financeiras;
+- consultar suas metas;
+- visualizar detalhes;
+- editar informações permitidas;
+- concluir/cancelar/arquivar metas, conforme ADR;
+- acompanhar progresso, SOMENTE conforme modelo
+  expressamente aprovado;
+- consultar metas históricas.
+
+Não implementar frontend nesta TASK.
+
+REGRA FUNDAMENTAL
+
+Meta financeira não é transação financeira.
+
+Criar, editar ou concluir uma meta não deve,
+por si só, alterar saldos, receitas, despesas,
+transferências ou patrimônio líquido.
+
+O ADR da TASK-6.0 prevalece sobre todos
+os exemplos deste prompt.
+
+==================================================
+1. INSPEÇÃO OBRIGATÓRIA
+==================================================
+
+Antes de modificar arquivos, inspecionar:
+
+- CLAUDE.md;
+- ADR da Sprint 6;
+- especificação funcional da TASK-6.0;
+- decisões de produto pendentes;
+- relatórios das TASKS 6.1 a 6.5;
+- arquitetura do ledger;
+- AssetAccount;
+- FinancialTransaction;
+- AccountMovement;
+- CurrentUser;
+- Spring Security;
+- padrões de CRUD;
+- padrões de soft delete e status;
+- migrations Flyway;
+- OpenAPI;
+- Problem Details;
+- Request ID;
+- testes Testcontainers/MySQL.
+
+Não presumir que a modelagem conceitual
+da TASK-6.0 foi aprovada integralmente.
+
+==================================================
+2. GATE DE DECISÕES DE PRODUTO
+==================================================
+
+ANTES DE CODIFICAR, confirmar no ADR:
+
+A. O que representa o progresso de uma meta?
+
+Possibilidades conceituais:
+
+1. Progresso informado manualmente.
+2. Alocações virtuais de planejamento.
+3. Contribuições financeiras reais.
+4. Saldo de uma conta vinculada.
+5. Outro modelo aprovado.
+
+B. Uma meta pode estar vinculada a contas?
+
+C. É possível compartilhar dinheiro entre metas?
+
+D. O progresso pode diminuir?
+
+E. O progresso pode superar o objetivo?
+
+F. Como metas são concluídas?
+
+G. Como metas são canceladas ou arquivadas?
+
+H. Qual a política de edição após conclusão?
+
+I. Existe histórico de contribuições?
+
+J. O que significa uma contribuição para
+   efeitos de saldo e patrimônio?
+
+Se qualquer decisão essencial estiver pendente,
+registrar BLOCKED e apresentar alternativas
+com consequências técnicas e financeiras.
+
+NÃO escolher silenciosamente um modelo.
+
+==================================================
+3. PRE-IMPLEMENTATION REPORT
+==================================================
+
+Antes de editar, produzir:
+
+# TASK-6.6 — PRE-IMPLEMENTATION REPORT
+
+1. ADR utilizado.
+2. Decisões de produto confirmadas.
+3. Modelo de progresso aprovado.
+4. Modelo de persistência.
+5. Estados de meta.
+6. Política de edição.
+7. Política de conclusão.
+8. Política de cancelamento/arquivamento.
+9. Relação com contas e ledger.
+10. Contratos REST.
+11. Regras de ownership.
+12. Validações.
+13. Migrations.
+14. Estratégia de testes.
+15. Arquivos previstos.
+16. Bloqueadores, se houver.
+
+Somente implementar após confirmar
+ausência de decisões bloqueantes.
+
+==================================================
+4. DOMÍNIO
+==================================================
+
+Implementar entidade conforme ADR.
+
+Nome conceitual:
+
+FinancialGoal
+
+Campos candidatos:
+
+id: UUID
+ownerId: UUID
+name: String
+description: String opcional
+targetAmount: BigDecimal
+targetDate: LocalDate opcional
+status: enum aprovado
+createdAt
+updatedAt
+
+Campos de progresso ou associação com contas
+somente se previstos no ADR.
+
+Não adicionar campos especulativos.
+
+==================================================
+5. IDENTIDADE
+==================================================
+
+Utilizar UUID conforme padrão existente.
+
+Gerar identificador no backend.
+
+Não aceitar ownerId do cliente.
+
+Não permitir alterar ID da meta.
+
+==================================================
+6. NOME
+==================================================
+
+Validar:
+
+- obrigatório;
+- não vazio;
+- tamanho máximo;
+- normalização, se aprovada;
+- caracteres aceitos.
+
+Definir unicidade de nomes somente se
+o ADR exigir.
+
+Não aplicar automaticamente a regra
+de unicidade das categorias.
+
+==================================================
+7. DESCRIÇÃO
+==================================================
+
+Se prevista:
+
+- opcional;
+- tamanho limitado;
+- tratada como texto não confiável;
+- sem HTML executável.
+
+Não permitir XSS ao expor a descrição.
+
+==================================================
+8. VALOR OBJETIVO
+==================================================
+
+Usar BigDecimal.
+
+Persistir conforme padrão monetário
+DECIMAL(19,2), se aprovado.
+
+Validar:
+
+- obrigatório;
+- maior que zero, salvo ADR diferente;
+- máximo permitido;
+- até duas casas decimais;
+- formato válido.
+
+Rejeitar precisão inválida sem
+arredondamento silencioso.
+
+==================================================
+9. DATA OBJETIVO
+==================================================
+
+Se targetDate existir:
+
+usar LocalDate.
+
+Não converter uma data civil
+para timestamp sem necessidade.
+
+Definir conforme ADR:
+
+- data passada;
+- data atual;
+- data futura;
+- edição da data;
+- ausência de data.
+
+Não inventar obrigatoriedade.
+
+==================================================
+10. ESTADOS DA META
+==================================================
+
+Implementar somente estados aprovados.
+
+Exemplos conceituais:
+
+ACTIVE;
+COMPLETED;
+CANCELLED;
+ARCHIVED.
+
+Não copiar estados de FinancialTransaction
+sem decisão arquitetural.
+
+Definir transições válidas.
+
+==================================================
+11. TRANSIÇÕES DE ESTADO
+==================================================
+
+Centralizar regras em serviço de domínio.
+
+Exemplos de questões a resolver pelo ADR:
+
+ACTIVE -> COMPLETED
+ACTIVE -> CANCELLED
+COMPLETED -> ARCHIVED
+
+Reabertura é permitida?
+
+Conclusão é automática ou explícita?
+
+Não permitir transições inválidas.
+
+==================================================
+12. CONCLUSÃO
+==================================================
+
+Seguir semântica aprovada.
+
+Se conclusão for automática por progresso:
+
+definir comportamento para progresso >= objetivo.
+
+Se conclusão for manual:
+
+não concluir apenas porque o percentual chegou
+a 100%.
+
+Não misturar conclusão de planejamento
+com transferência bancária real.
+
+==================================================
+13. CANCELAMENTO
+==================================================
+
+Seguir política do ADR.
+
+Cancelar uma meta não cancela
+movimentações financeiras reais.
+
+Não excluir receitas, despesas ou transferências
+associadas sem decisão explícita.
+
+==================================================
+14. ARQUIVAMENTO
+==================================================
+
+Se previsto:
+
+preservar histórico;
+manter isolamento por usuário;
+respeitar filtros de listagem.
+
+Não inventar soft delete.
+
+==================================================
+15. MODELO DE PROGRESSO
+==================================================
+
+Implementar EXATAMENTE o modelo aprovado.
+
+Se manual:
+
+validar e armazenar progresso conforme ADR.
+
+Se virtual:
+
+registrar alocações sem alterar ledger,
+com semântica explícita de planejamento.
+
+Se baseado em conta:
+
+derivar valores do saldo real conforme ADR.
+
+Se baseado em contribuições reais:
+
+utilizar transações financeiras existentes
+conforme arquitetura aprovada.
+
+Não misturar modelos diferentes.
+
+==================================================
+16. NÃO CRIAR DINHEIRO FICTÍCIO
+==================================================
+
+Criar meta não pode:
+
+- aumentar saldo de conta;
+- criar receita;
+- criar movimento de ledger;
+- alterar patrimônio;
+- criar transferência;
+- alterar dashboard financeiro.
+
+Uma contribuição virtual, se permitida,
+não pode ser tratada como depósito bancário.
+
+==================================================
+17. PROGRESSO E PERCENTUAL
+==================================================
+
+Se previsto no ADR:
+
+progressAmount = valor de progresso aprovado.
+
+remainingAmount = targetAmount - progressAmount.
+
+progressPercentage =
+(progressAmount / targetAmount) * 100.
+
+Usar BigDecimal.
+
+Não usar float/double.
+
+Definir arredondamento e limites
+conforme ADR.
+
+Não persistir valores derivados sem justificativa.
+
+==================================================
+18. PROGRESSO ACIMA DO OBJETIVO
+==================================================
+
+Definir comportamento conforme ADR.
+
+Exemplo:
+
+target=10000.00
+progress=10500.00.
+
+Pode exceder?
+
+Se sim:
+
+percentual=105%;
+remaining=-500.00.
+
+Se não:
+
+rejeitar operação conforme regra aprovada.
+
+Não truncar silenciosamente.
+
+==================================================
+19. PROGRESSO NEGATIVO
+==================================================
+
+Validar política aprovada.
+
+Não permitir progresso negativo sem
+semântica explícita.
+
+Se houver retirada/reversão de alocação,
+usar operação e regras específicas.
+
+==================================================
+20. CONTRIBUIÇÕES
+==================================================
+
+Se ADR prevê contribuições:
+
+implementar somente operações e persistência
+necessárias ao modelo aprovado.
+
+Definir:
+
+- criação;
+- edição;
+- reversão;
+- exclusão;
+- data;
+- valor;
+- histórico;
+- ownership;
+- concorrência;
+- idempotência, quando necessária.
+
+Se contribuições não foram aprovadas
+para TASK-6.6, não implementá-las.
+
+==================================================
+21. INTEGRIDADE DE CONTRIBUIÇÕES
+==================================================
+
+Se houver registros de contribuição:
+
+uma contribuição pertence a uma meta
+do mesmo usuário.
+
+Não permitir contribuição para meta estrangeira.
+
+Não permitir que uma mesma movimentação real
+seja contabilizada duas vezes se o modelo
+se basear no ledger.
+
+==================================================
+22. VÍNCULO COM CONTAS
+==================================================
+
+Se aprovado:
+
+validar conta pertencente ao usuário.
+
+Conta estrangeira deve ser tratada como
+inexistente.
+
+Definir tratamento de conta inativa.
+
+Não presumir que saldo total da conta
+equivale a dinheiro reservado para a meta.
+
+==================================================
+23. CONCORRÊNCIA
+==================================================
+
+Se progresso for mutável:
+
+proteger contra atualizações perdidas.
+
+Avaliar optimistic locking com @Version
+ou mecanismo aprovado.
+
+Testar concorrência.
+
+Não permitir que duas operações simultâneas
+corrompam progresso ou histórico.
+
+==================================================
+24. MIGRATIONS
+==================================================
+
+Criar migration Flyway nova.
+
+Incluir:
+
+- tabela de metas;
+- PK UUID;
+- ownerId;
+- campos aprovados;
+- valores DECIMAL;
+- datas;
+- status;
+- timestamps;
+- FKs necessárias;
+- índices por owner e status.
+
+Se houver contribuições aprovadas,
+criar estrutura correspondente.
+
+Não modificar migrations aplicadas.
+
+==================================================
+25. CONSTRAINTS
+==================================================
+
+Aplicar constraints de banco quando cabíveis:
+
+- NOT NULL;
+- valor objetivo válido;
+- status válido;
+- integridade referencial;
+- unicidade aprovada;
+- owner consistente.
+
+Não depender apenas de Bean Validation.
+
+==================================================
+26. REPOSITORY
+==================================================
+
+Criar consultas owner-scoped.
+
+Evitar findById isolado como autorização.
+
+Listagens devem ser estáveis e eficientes.
+
+Não criar N+1 em vínculos ou progresso.
+
+==================================================
+27. SERVICE
+==================================================
+
+Centralizar regras:
+
+- criação;
+- edição;
+- transições;
+- progresso;
+- ownership;
+- integridade;
+- validação.
+
+Controller deve permanecer fino.
+
+==================================================
+28. API REST
+==================================================
+
+Implementar contratos aprovados no ADR.
+
+Exemplos conceituais:
+
+POST /api/goals
+GET /api/goals
+GET /api/goals/{id}
+PUT /api/goals/{id}
+
+Operações de conclusão, cancelamento,
+arquivamento e contribuições devem usar
+somente endpoints previstos no ADR.
+
+Não criar endpoints redundantes.
+
+==================================================
+29. CRIAÇÃO
+==================================================
+
+POST conforme contrato real.
+
+Resposta:
+
+201 Created.
+
+Location header conforme padrão do projeto.
+
+Nunca aceitar ownerId.
+
+Validar campos e regras de estado inicial.
+
+==================================================
+30. LISTAGEM
+==================================================
+
+Permitir consultar metas próprias.
+
+Filtros conforme ADR:
+
+- status;
+- ativas;
+- históricas;
+- prazo.
+
+Paginação e ordenação conforme padrão existente.
+
+Não implementar filtros especulativos.
+
+==================================================
+31. DETALHAMENTO
+==================================================
+
+Retornar DTO tipado.
+
+Incluir progresso e histórico somente
+se aprovados e implementados.
+
+Não expor entidade JPA.
+
+Não expor dados de outros usuários.
+
+==================================================
+32. EDIÇÃO
+==================================================
+
+Permitir alterar somente campos autorizados.
+
+Exemplo:
+
+nome;
+descrição;
+valor objetivo;
+prazo.
+
+Definir política para metas concluídas,
+canceladas e arquivadas.
+
+Não alterar ownerId ou id.
+
+==================================================
+33. DTOs
+==================================================
+
+Criar DTOs tipados:
+
+CreateGoalRequest;
+UpdateGoalRequest;
+GoalResponse;
+GoalFilter;
+
+e outros aprovados.
+
+Não aceitar entidades JPA como request.
+
+Não usar campos de progresso inexistentes.
+
+==================================================
+34. VALIDATION
+==================================================
+
+Usar Bean Validation e regras de domínio.
+
+Cobrir:
+
+- campos ausentes;
+- nome inválido;
+- descrição longa;
+- valor negativo;
+- valor zero;
+- três casas decimais;
+- valor acima do limite;
+- data inválida;
+- status inválido;
+- transição inválida;
+- meta estrangeira;
+- conta estrangeira, se aplicável.
+
+==================================================
+35. ERROS HTTP
+==================================================
+
+Seguir convenção existente.
+
+400:
+request inválido.
+
+401:
+sem autenticação.
+
+404:
+meta inexistente ou estrangeira.
+
+409:
+transição inválida/conflito de concorrência,
+quando aplicável.
+
+422:
+regra de domínio, se padrão aprovado.
+
+500:
+erro sanitizado.
+
+Usar Problem Details e Request ID.
+
+==================================================
+36. SEGURANÇA
+==================================================
+
+Owner derivado de JWT -> CurrentUser.
+
+Nunca receber ownerId do cliente.
+
+Toda consulta e mutação owner-scoped.
+
+IDs estrangeiros devem ser indistinguíveis
+de IDs inexistentes.
+
+Não vazar dados por filtros, erros
+ou relacionamentos.
+
+==================================================
+37. OPENAPI
+==================================================
+
+Documentar:
+
+- endpoints reais;
+- schemas;
+- estados;
+- transições;
+- modelo de progresso;
+- valores monetários;
+- datas;
+- erros;
+- exemplos;
+- autenticação.
+
+Não documentar funcionalidades ainda não
+implementadas.
+
+==================================================
+38. GOLDEN — CRIAÇÃO
+==================================================
+
+User A cria:
+
+name="Reserva de emergência"
+targetAmount=10000.00
+targetDate=2027-12-31
+
+Esperado:
+
+201 Created;
+UUID;
+owner A;
+estado inicial aprovado;
+nenhum movimento financeiro criado.
+
+==================================================
+39. GOLDEN — EDIÇÃO
+==================================================
+
+Atualizar:
+
+name="Reserva financeira"
+targetAmount=12000.00
+
+Esperado:
+
+campos permitidos atualizados;
+mesmo owner;
+mesmo ID;
+ledger inalterado.
+
+==================================================
+40. GOLDEN — PROGRESSO
+==================================================
+
+Executar cenário compatível com
+modelo aprovado no ADR.
+
+Exemplo conceitual:
+
+target=10000.00
+progress=3500.00
+
+Se o modelo permitir:
+
+remaining=6500.00
+percentage=35.00%.
+
+Registrar a origem exata do progresso.
+
+Não criar contribuição fictícia apenas
+para satisfazer o teste.
+
+==================================================
+41. GOLDEN — CONCLUSÃO
+==================================================
+
+Testar transição aprovada para conclusão.
+
+Verificar:
+
+- estado correto;
+- data de conclusão, se prevista;
+- histórico preservado;
+- operações posteriores permitidas/proibidas;
+- ledger inalterado, salvo operação financeira
+  real explicitamente aprovada.
+
+==================================================
+42. GOLDEN — CANCELAMENTO
+==================================================
+
+Cancelar meta conforme ADR.
+
+Esperado:
+
+estado correto;
+histórico preservado;
+nenhuma exclusão indevida de transações reais.
+
+==================================================
+43. GOLDEN — MULTIUSER
+==================================================
+
+User A possui meta Reserva.
+
+User B possui meta Reserva.
+
+Ambos podem usar o mesmo nome,
+salvo regra de unicidade aprovada.
+
+User A não pode:
+
+- consultar meta de B;
+- editar meta de B;
+- concluir meta de B;
+- cancelar meta de B;
+- registrar contribuição em meta de B.
+
+==================================================
+44. GOLDEN — SEM ALTERAR PATRIMÔNIO
+==================================================
+
+Antes:
+
+Patrimônio líquido=2000.00.
+
+Criar meta:
+
+target=10000.00.
+
+Depois:
+
+Patrimônio líquido=2000.00.
+
+Editar meta:
+
+target=12000.00.
+
+Depois:
+
+Patrimônio líquido=2000.00.
+
+Se houver contribuição virtual aprovada:
+
+patrimônio continua 2000.00.
+
+==================================================
+45. TESTES UNITÁRIOS
+==================================================
+
+Cobrir:
+
+- criação;
+- edição;
+- consulta;
+- listagem;
+- status;
+- transições;
+- valor monetário;
+- prazo;
+- progresso aprovado;
+- conclusão;
+- cancelamento;
+- arquivamento, se existir;
+- concorrência;
+- ownership;
+- erros de domínio.
+
+==================================================
+46. TESTES DE INTEGRAÇÃO
+==================================================
+
+Usar Testcontainers/MySQL.
+
+Validar:
+
+- migration;
+- constraints;
+- FKs;
+- transações;
+- concorrência;
+- BigDecimal;
+- datas;
+- filtros;
+- paginação;
+- ownership;
+- endpoints;
+- Problem Details;
+- Request ID.
+
+Não substituir MySQL por H2 nos testes
+de comportamento específico do banco.
+
+==================================================
+47. TESTES DE SEGURANÇA
+==================================================
+
+Sem JWT:
+401.
+
+Meta de outro usuário:
+404.
+
+Atualização estrangeira:
+404.
+
+Transição estrangeira:
+404.
+
+Contribuição estrangeira:
+404, se aplicável.
+
+Listagem:
+somente dados próprios.
+
+Nenhum endpoint aceita ownerId.
+
+==================================================
+48. REGRESSÕES
+==================================================
+
+Executar regressões relevantes:
+
+Authentication;
+Asset Accounts;
+Categories;
+Expenses;
+Income;
+Transfers;
+Dashboard;
+History;
+Tags;
+Attachments;
+Reports;
+Exports;
+Budget CRUD;
+Budget Summary;
+Budget Dashboard;
+Budget Alerts.
+
+Confirmar que metas não alteram:
+
+- ledger;
+- saldos;
+- receitas;
+- despesas;
+- transferências;
+- patrimônio;
+- relatórios financeiros.
+
+==================================================
+49. PERFORMANCE
+==================================================
+
+Validar:
+
+- índices;
+- consultas owner-scoped;
+- paginação;
+- ordenação;
+- ausência de N+1;
+- cálculo eficiente de progresso;
+- ausência de agregações financeiras redundantes.
+
+Não inventar métricas.
+
+==================================================
+50. FORA DO ESCOPO
+==================================================
+
+Não implementar:
+
+- frontend Angular;
+- telas de metas;
+- dashboard visual de metas;
+- gráficos de metas;
+- notificações de metas;
+- e-mail;
+- push;
+- metas compartilhadas;
+- integrações bancárias;
+- movimentações financeiras automáticas;
+- novas modalidades de ledger;
+- alterações nos relatórios existentes.
+
+Não antecipar TASK-6.7.
+
+==================================================
+51. DEFINITION OF DONE
+==================================================
+
+TASK-6.6 concluída quando:
+
+- ADR validado sem decisões bloqueantes;
+- modelo de metas implementado;
+- modelo de progresso respeitado;
+- migrations aplicadas;
+- constraints aplicadas;
+- CRUD conforme política aprovada;
+- estados e transições corretos;
+- valores monetários validados;
+- prazos validados;
+- owner-scoping garantido;
+- concorrência protegida, quando aplicável;
+- nenhum dinheiro fictício criado;
+- OpenAPI atualizado;
+- Golden Scenarios aprovados;
+- testes unitários aprovados;
+- Testcontainers/MySQL aprovados;
+- testes de segurança aprovados;
+- build backend aprovado;
+- regressões relevantes aprovadas;
+- ledger preservado.
+
+==================================================
+52. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-6.6 — BACKEND DE METAS FINANCEIRAS
+
+STATUS:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+1. ADR utilizado.
+2. Decisões de produto.
+3. Modelo de progresso.
+4. Entidades.
+5. Migrations.
+6. Constraints e índices.
+7. Endpoints.
+8. DTOs.
+9. Validações.
+10. Estados.
+11. Transições.
+12. Conclusão.
+13. Cancelamento.
+14. Arquivamento.
+15. Progresso e percentuais.
+16. Contribuições, se aplicáveis.
+17. Relação com contas.
+18. Proteção contra dinheiro fictício.
+19. Ownership.
+20. Concorrência.
+21. Golden Scenarios.
+22. Testes unitários.
+23. Testcontainers/MySQL.
+24. Segurança.
+25. OpenAPI.
+26. Problem Details.
+27. Performance.
+28. Regressões.
+29. Build backend.
+30. Arquivos modificados.
+31. Bugs encontrados/corrigidos.
+32. Divergências do ADR.
+33. Dívidas técnicas.
+34. Fora do escopo confirmado.
+
+Se concluída:
+
+READY FOR TASK-6.7 — Frontend de Metas Financeiras.
+
+NÃO implementar TASK-6.7 nesta execução.

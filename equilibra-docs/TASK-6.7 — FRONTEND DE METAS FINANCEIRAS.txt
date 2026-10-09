@@ -1,0 +1,949 @@
+# TASK-6.7 — FRONTEND DE METAS FINANCEIRAS
+
+PROJETO: EQUILIBRA
+SPRINT: 6 — PLANEJAMENTO FINANCEIRO
+STACK: Angular 19 + Angular Material + ECharts
+BACKEND: Spring Boot 4 + MySQL
+
+CONTEXTO
+
+TASK-6.0 — Arquitetura concluída.
+TASK-6.1 — Backend de Orçamentos concluído.
+TASK-6.2 — Interface de Orçamentos concluída.
+TASK-6.3 — Backend de Planejado versus Realizado concluído.
+TASK-6.4 — Dashboard de Orçamentos concluído.
+TASK-6.5 — Alertas de Limites concluídos.
+TASK-6.6 — Backend de Metas Financeiras concluído.
+
+OBJETIVO
+
+Implementar a interface de gestão de Metas Financeiras
+do Equilibra, consumindo exclusivamente a API real
+implementada na TASK-6.6.
+
+O usuário deverá conseguir:
+
+- visualizar suas metas;
+- criar novas metas;
+- consultar detalhes;
+- editar informações permitidas;
+- acompanhar progresso, se aprovado;
+- executar transições de estado permitidas;
+- consultar metas concluídas e históricas;
+- entender quanto falta para cada objetivo.
+
+Não implementar novas regras financeiras no frontend.
+
+==================================================
+1. INSPEÇÃO OBRIGATÓRIA
+==================================================
+
+Antes de editar arquivos, inspecionar:
+
+- CLAUDE.md;
+- ADR da Sprint 6;
+- relatório final da TASK-6.6;
+- modelo de progresso aprovado;
+- contratos REST reais;
+- DTOs e OpenAPI;
+- enums de status;
+- regras de transição;
+- regras de edição;
+- política de conclusão;
+- política de cancelamento;
+- política de arquivamento;
+- política de contribuições, se existir;
+- Angular routing;
+- Auth Guard;
+- sidebar;
+- PageHeader;
+- ContentPanel;
+- Design System;
+- formulários existentes;
+- drawers/dialogs;
+- componentes monetários;
+- serviços Angular;
+- padrões de testes.
+
+Não presumir que exemplos deste prompt
+correspondem aos contratos reais.
+
+==================================================
+2. PRE-IMPLEMENTATION REPORT
+==================================================
+
+Antes de implementar, produzir:
+
+# TASK-6.7 — PRE-IMPLEMENTATION REPORT
+
+1. ADR utilizado.
+2. Endpoints reais.
+3. DTOs reais.
+4. Modelo de progresso aprovado.
+5. Estados de meta.
+6. Transições permitidas.
+7. Campos editáveis.
+8. Política de conclusão.
+9. Política de cancelamento.
+10. Política de arquivamento.
+11. Contribuições, se aplicáveis.
+12. Componentes reutilizáveis.
+13. Estrutura da interface.
+14. Responsividade.
+15. Plano de testes.
+16. Arquivos previstos.
+17. Decisões pendentes.
+
+Se houver decisão bloqueante,
+registrar BLOCKED.
+
+==================================================
+3. ROTA
+==================================================
+
+Criar rota privada:
+
+/goals
+
+ou rota definida no ADR.
+
+Reutilizar layout autenticado.
+
+Não criar layout paralelo.
+
+==================================================
+4. SIDEBAR
+==================================================
+
+Adicionar item:
+
+Metas Financeiras
+
+Usar ícone coerente com Design System.
+
+Respeitar:
+
+desktop;
+tablet;
+mobile;
+menu expandido;
+menu recolhido.
+
+==================================================
+5. PAGE HEADER
+==================================================
+
+Título:
+
+Minhas Metas
+
+Subtítulo sugerido:
+
+"Planeje e acompanhe seus objetivos financeiros."
+
+Ação principal:
+
+Nova meta
+
+==================================================
+6. IDENTIDADE VISUAL
+==================================================
+
+Preservar Design System existente.
+
+Cor principal:
+
+#4c1d95.
+
+Usar tokens do tema quando disponíveis.
+
+Não criar estilo visual desconectado
+das telas anteriores.
+
+==================================================
+7. VISÃO GERAL
+==================================================
+
+Apresentar lista de metas do usuário.
+
+Preferir cards responsivos com:
+
+- nome;
+- objetivo;
+- prazo, se existir;
+- status;
+- progresso, se disponível;
+- valor restante, se disponível;
+- ações permitidas.
+
+Não exibir campos inexistentes.
+
+==================================================
+8. FILTROS
+==================================================
+
+Implementar filtros aprovados:
+
+- todas;
+- em andamento;
+- concluídas;
+- canceladas;
+- arquivadas.
+
+Usar status reais.
+
+Não inventar estados.
+
+==================================================
+9. ORDENAÇÃO
+==================================================
+
+Respeitar contrato da API.
+
+Preferências possíveis:
+
+- prazo mais próximo;
+- criação mais recente;
+- nome;
+- status.
+
+Não adicionar filtros ou ordenação
+que exijam endpoints inexistentes.
+
+==================================================
+10. CRIAÇÃO
+==================================================
+
+Botão:
+
+Nova meta.
+
+Abrir drawer ou dialog conforme padrão existente.
+
+Campos conforme DTO real.
+
+Exemplos conceituais:
+
+nome;
+descrição;
+valor objetivo;
+data objetivo.
+
+==================================================
+11. NOME
+==================================================
+
+Validar:
+
+obrigatório;
+não vazio;
+tamanho máximo;
+mensagens amigáveis.
+
+Seguir regras do backend.
+
+==================================================
+12. DESCRIÇÃO
+==================================================
+
+Se existir:
+
+campo opcional;
+limite de caracteres;
+tratamento seguro como texto.
+
+Não renderizar HTML não confiável.
+
+==================================================
+13. VALOR OBJETIVO
+==================================================
+
+Utilizar componente monetário existente.
+
+Formato pt-BR.
+
+Exemplo:
+
+R$ 10.000,00.
+
+Validar:
+
+valor permitido;
+até duas casas decimais;
+limites do backend.
+
+Não usar float para cálculos financeiros.
+
+==================================================
+14. PRAZO
+==================================================
+
+Se targetDate existir:
+
+utilizar datepicker.
+
+Respeitar LocalDate.
+
+Evitar deslocamentos por timezone.
+
+Validar regras de data conforme ADR.
+
+==================================================
+15. DETALHAMENTO
+==================================================
+
+Permitir abrir detalhes da meta.
+
+Mostrar somente dados disponíveis:
+
+nome;
+descrição;
+objetivo;
+prazo;
+status;
+progresso;
+histórico, se aprovado.
+
+==================================================
+16. EDIÇÃO
+==================================================
+
+Permitir editar somente campos autorizados.
+
+Respeitar estado da meta.
+
+Não permitir edição de campos bloqueados
+em metas concluídas/canceladas/arquivadas.
+
+Backend permanece autoridade.
+
+==================================================
+17. MODELO DE PROGRESSO
+==================================================
+
+Implementar EXATAMENTE o modelo da TASK-6.6.
+
+Se progresso for manual:
+
+exibir controles aprovados.
+
+Se progresso for virtual:
+
+explicar que representa planejamento,
+não saldo bancário.
+
+Se progresso vier de conta vinculada:
+
+exibir origem conforme contrato.
+
+Se progresso vier de transações reais:
+
+não criar movimentações adicionais.
+
+Não misturar modelos.
+
+==================================================
+18. BARRA DE PROGRESSO
+==================================================
+
+Se API fornecer progresso:
+
+mostrar barra.
+
+Exemplo:
+
+35% alcançado.
+
+A barra visual pode ser limitada a 100%,
+mas o percentual textual deve preservar
+o valor real se exceder 100%.
+
+Não recalcular valores financeiros
+no componente.
+
+==================================================
+19. VALOR RESTANTE
+==================================================
+
+Se API fornecer remainingAmount:
+
+mostrar:
+
+"Faltam R$ 6.500,00".
+
+Se valor for negativo:
+
+respeitar semântica aprovada.
+
+Não converter automaticamente para zero.
+
+==================================================
+20. ORIGEM DO PROGRESSO
+==================================================
+
+Se necessário, apresentar explicação clara:
+
+"Progresso informado manualmente"
+
+ou
+
+"Valor vinculado à conta"
+
+ou
+
+"Alocações de planejamento".
+
+Usar somente o modelo real.
+
+Não sugerir que valores virtuais
+estão depositados em uma conta bancária.
+
+==================================================
+21. CONTRIBUIÇÕES
+==================================================
+
+Somente implementar interface de contribuições
+se a TASK-6.6 tiver endpoints reais aprovados.
+
+Se existir:
+
+- listar contribuições;
+- registrar contribuição;
+- reverter/remover conforme contrato;
+- mostrar histórico;
+- tratar erros;
+- atualizar progresso.
+
+Não inventar endpoint.
+
+==================================================
+22. CONFIRMAÇÃO DE AÇÕES
+==================================================
+
+Ações de conclusão, cancelamento,
+arquivamento ou exclusão devem seguir
+política real.
+
+Usar confirmação para ações irreversíveis
+ou destrutivas.
+
+Informar consequências verdadeiras.
+
+==================================================
+23. CONCLUSÃO
+==================================================
+
+Se API permitir concluir meta:
+
+mostrar ação apenas em estados válidos.
+
+Não concluir automaticamente no frontend
+somente porque o progresso atingiu 100%.
+
+Respeitar ADR.
+
+==================================================
+24. CANCELAMENTO
+==================================================
+
+Se API permitir cancelar:
+
+mostrar confirmação.
+
+Não cancelar transações financeiras reais.
+
+Não anunciar sucesso antes da resposta HTTP.
+
+==================================================
+25. ARQUIVAMENTO
+==================================================
+
+Se previsto:
+
+permitir arquivar e consultar histórico.
+
+Não inventar soft delete.
+
+==================================================
+26. ESTADOS VISUAIS
+==================================================
+
+Exibir status com rótulos claros.
+
+Exemplos conceituais:
+
+Em andamento;
+Concluída;
+Cancelada;
+Arquivada.
+
+Usar enums reais.
+
+Não depender apenas de cor.
+
+==================================================
+27. SERVIÇO ANGULAR
+==================================================
+
+Criar:
+
+FinancialGoalService
+
+ou nome coerente com arquitetura.
+
+Consumir API real da TASK-6.6.
+
+Usar HttpClient.
+
+Reutilizar interceptors.
+
+Não enviar ownerId.
+
+==================================================
+28. MODELS
+==================================================
+
+Criar interfaces tipadas:
+
+FinancialGoal;
+CreateGoalRequest;
+UpdateGoalRequest;
+GoalFilter;
+
+e outras reais.
+
+Não usar any.
+
+Não adicionar propriedades inexistentes.
+
+==================================================
+29. AUTHENTICATION
+==================================================
+
+Reutilizar JWT em memória.
+
+Não armazenar token em localStorage.
+
+Não colocar token em URL.
+
+401 deve seguir fluxo global existente.
+
+403 não deve encerrar sessão indevidamente.
+
+==================================================
+30. MULTIUSER
+==================================================
+
+User A vê somente metas de A.
+
+User B vê somente metas de B.
+
+Não manter dados de usuário anterior
+após encerramento/troca de sessão.
+
+Não enviar ownerId ao backend.
+
+==================================================
+31. LOADING
+==================================================
+
+Implementar:
+
+carregando lista;
+carregando detalhes;
+salvando;
+executando transição;
+carregando histórico, se existir.
+
+Evitar submissões duplicadas.
+
+==================================================
+32. EMPTY STATE
+==================================================
+
+Se não existem metas:
+
+mostrar:
+
+"Você ainda não cadastrou nenhuma meta financeira."
+
+CTA:
+
+"Criar minha primeira meta".
+
+==================================================
+33. ERROR STATE
+==================================================
+
+Falha HTTP:
+
+mostrar mensagem clara;
+permitir retry;
+não mostrar dados fictícios.
+
+Falha no formulário:
+
+preservar campos preenchidos.
+
+==================================================
+34. PROBLEM DETAILS
+==================================================
+
+Reutilizar tratamento existente.
+
+400:
+validação.
+
+401:
+autenticação.
+
+404:
+meta indisponível.
+
+409:
+transição inválida ou conflito.
+
+422:
+regra de domínio, se aplicável.
+
+500:
+erro sanitizado.
+
+==================================================
+35. REQUESTS CONCORRENTES
+==================================================
+
+Mudanças rápidas de filtros
+não podem mostrar resultados antigos.
+
+Usar switchMap ou estratégia equivalente.
+
+Cancelar subscriptions corretamente.
+
+==================================================
+36. ATUALIZAÇÃO APÓS CRUD
+==================================================
+
+Após criar:
+
+atualizar lista.
+
+Após editar:
+
+atualizar card e detalhes.
+
+Após concluir/cancelar/arquivar:
+
+atualizar status e filtros.
+
+Após contribuição, se existir:
+
+atualizar progresso pelo backend.
+
+==================================================
+37. RESPONSIVIDADE
+==================================================
+
+Validar:
+
+360x800
+390x844
+768x1024
+1024x768
+1280x720
+1366x768
+1920x1080.
+
+Testar:
+
+sidebar;
+cards;
+formulários;
+drawers;
+datas;
+valores grandes;
+nomes longos;
+histórico;
+botões;
+nenhum overflow horizontal global.
+
+==================================================
+38. ACESSIBILIDADE
+==================================================
+
+Garantir:
+
+labels;
+foco;
+navegação por teclado;
+contraste;
+mensagens acessíveis;
+erros associados aos campos;
+barras com texto;
+confirmações acessíveis;
+sem dependência exclusiva de cores.
+
+==================================================
+39. GOLDEN — CRIAÇÃO
+==================================================
+
+Criar:
+
+Reserva de emergência
+targetAmount=10000.00
+targetDate=2027-12-31.
+
+Esperado:
+
+meta aparece na lista;
+valor correto;
+prazo correto;
+status inicial correto.
+
+==================================================
+40. GOLDEN — EDIÇÃO
+==================================================
+
+Alterar:
+
+nome;
+targetAmount=12000.00.
+
+Esperado:
+
+card atualizado;
+detalhes atualizados;
+nenhuma alteração financeira.
+
+==================================================
+41. GOLDEN — PROGRESSO
+==================================================
+
+Se modelo aprovado fornecer:
+
+target=10000.00
+progress=3500.00
+remaining=6500.00
+percentage=35%.
+
+Esperado:
+
+valores corretos;
+barra 35%;
+origem do progresso compreensível.
+
+==================================================
+42. GOLDEN — CONCLUSÃO
+==================================================
+
+Executar conclusão conforme ADR.
+
+Esperado:
+
+status correto;
+ações disponíveis corretas;
+histórico preservado.
+
+==================================================
+43. GOLDEN — CANCELAMENTO
+==================================================
+
+Cancelar meta conforme contrato.
+
+Esperado:
+
+status atualizado;
+nenhuma alteração no ledger;
+meta histórica acessível conforme ADR.
+
+==================================================
+44. GOLDEN — MULTIUSER
+==================================================
+
+User A e B possuem metas.
+
+Frontend não envia ownerId.
+
+A só vê metas de A.
+
+B só vê metas de B.
+
+==================================================
+45. TESTES UNITÁRIOS
+==================================================
+
+Cobrir:
+
+- serviço;
+- contratos HTTP;
+- criação;
+- edição;
+- listagem;
+- filtros;
+- detalhes;
+- status;
+- transições;
+- progresso;
+- datas;
+- valores BRL;
+- loading;
+- empty;
+- error;
+- retry;
+- concorrência;
+- confirmação;
+- acessibilidade básica.
+
+==================================================
+46. TESTES E2E
+==================================================
+
+Se infraestrutura E2E existir:
+
+validar:
+
+- navegação;
+- criação;
+- edição;
+- consulta;
+- conclusão;
+- cancelamento;
+- responsividade.
+
+Não declarar PASS sem execução.
+
+==================================================
+47. REGRESSÕES
+==================================================
+
+Executar regressões relevantes:
+
+Authentication;
+Asset Accounts;
+Categories;
+Expenses;
+Income;
+Transfers;
+Dashboard;
+History;
+Tags;
+Attachments;
+Reports;
+Exports;
+Budget CRUD;
+Budget Summary;
+Budget Dashboard;
+Budget Alerts.
+
+Não alterar ledger nem regras financeiras.
+
+==================================================
+48. VALIDAÇÕES
+==================================================
+
+Executar scripts reais:
+
+Angular lint;
+Angular unit tests;
+Angular production build;
+E2E, se configurado.
+
+Registrar comandos e resultados.
+
+Não declarar testes aprovados sem execução.
+
+==================================================
+49. FORA DO ESCOPO
+==================================================
+
+Não implementar:
+
+- backend novo;
+- endpoints inexistentes;
+- novas regras financeiras;
+- contribuições não aprovadas;
+- notificações de metas;
+- integrações bancárias;
+- metas compartilhadas;
+- alterações no ledger;
+- novos relatórios;
+- exportações;
+- funcionalidades da Sprint 7.
+
+==================================================
+50. DEFINITION OF DONE
+==================================================
+
+TASK-6.7 concluída quando:
+
+- rota privada implementada;
+- sidebar atualizada;
+- listagem de metas funcionando;
+- criação funcionando;
+- edição funcionando;
+- detalhes funcionando;
+- status corretos;
+- transições aprovadas funcionando;
+- progresso conforme backend;
+- contribuições somente se previstas;
+- valores monetários corretos;
+- datas corretas;
+- estados loading/empty/error/retry;
+- ownership preservado;
+- responsividade validada;
+- acessibilidade validada;
+- testes unitários aprovados;
+- lint aprovado;
+- production build aprovado;
+- regressões relevantes aprovadas;
+- nenhuma alteração financeira indevida.
+
+==================================================
+51. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-6.7 — FRONTEND DE METAS FINANCEIRAS
+
+STATUS:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+1. ADR utilizado.
+2. Modelo de progresso.
+3. Rota.
+4. Sidebar.
+5. Componentes criados.
+6. Serviços Angular.
+7. Contratos REST.
+8. Criação.
+9. Edição.
+10. Detalhes.
+11. Filtros.
+12. Estados.
+13. Transições.
+14. Contribuições, se aplicáveis.
+15. Progresso.
+16. Valores monetários.
+17. Datas.
+18. Loading/empty/error.
+19. Concorrência.
+20. Responsividade.
+21. Acessibilidade.
+22. Golden Scenarios.
+23. Testes unitários.
+24. E2E.
+25. Lint.
+26. Production build.
+27. Regressões.
+28. Arquivos modificados.
+29. Bugs encontrados/corrigidos.
+30. Divergências do ADR.
+31. Dívidas técnicas.
+32. Fora do escopo confirmado.
+
+Se concluída:
+
+READY FOR TASK-6.8 — GATE FINAL DA SPRINT 6.
+
+NÃO implementar TASK-6.8 nesta execução.

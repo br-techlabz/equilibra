@@ -1,0 +1,1004 @@
+# TASK-6.0 — ARQUITETURA DO PLANEJAMENTO FINANCEIRO
+
+PROJETO: EQUILIBRA
+SPRINT: 6 — PLANEJAMENTO FINANCEIRO
+STACK: Spring Boot 4 + Angular 19 + MySQL
+
+CONTEXTO
+
+Sprints 0 a 5 concluídas e aprovadas conforme histórico do projeto.
+
+A Sprint 5 entregou:
+- Relatório Financeiro;
+- Relatório por Categoria;
+- Relatório de Auditoria;
+- exportações PDF e CSV;
+- testes de consistência e isolamento multiusuário.
+
+OBJETIVO DA SPRINT 6
+
+Adicionar capacidades de planejamento financeiro:
+
+1. Orçamentos mensais por categoria.
+2. Comparação entre valores planejados e realizados.
+3. Indicadores de consumo do orçamento.
+4. Alertas de limites de gastos.
+5. Metas financeiras.
+6. Interfaces responsivas e integradas ao Equilibra.
+
+OBJETIVO DESTA TASK
+
+Definir a arquitetura, as regras de domínio, os contratos REST,
+a modelagem de dados, os critérios de segurança e o plano de testes
+para a Sprint 6.
+
+NÃO implementar código funcional nesta TASK.
+
+==================================================
+1. INSPEÇÃO OBRIGATÓRIA
+==================================================
+
+Antes de propor qualquer arquitetura, inspecionar:
+
+- CLAUDE.md;
+- ADRs existentes;
+- ledger da Sprint 3;
+- entidades financeiras;
+- FinancialTransaction;
+- AccountMovement;
+- AssetAccount;
+- Category;
+- Expense;
+- Income;
+- Transfer;
+- Dashboard;
+- History;
+- relatórios da Sprint 5;
+- CurrentUser;
+- Spring Security;
+- migrations;
+- índices;
+- testes;
+- OpenAPI;
+- estrutura Angular;
+- Design System;
+- padrões de navegação;
+- tratamento de erros;
+- componentes de formulários e gráficos.
+
+Documentar as decisões existentes que devem ser preservadas.
+
+Não presumir estruturas que não existem no repositório.
+
+==================================================
+2. PRINCÍPIOS ARQUITETURAIS
+==================================================
+
+Preservar:
+
+- isolamento multiusuário;
+- identidade derivada do JWT;
+- BigDecimal para valores monetários;
+- ledger como fonte de verdade;
+- movimentos financeiros imutáveis conforme ADR;
+- transações canceladas sem efeito financeiro;
+- transferências distintas de receitas/despesas;
+- consultas owner-scoped;
+- MySQL como banco de produção;
+- Testcontainers para integração;
+- Angular com componentes tipados;
+- responsividade;
+- acessibilidade;
+- Problem Details;
+- Request ID.
+
+Não criar um segundo mecanismo de saldos.
+
+Não alterar o comportamento financeiro aprovado nas
+Sprints anteriores.
+
+==================================================
+3. DOMÍNIO DE ORÇAMENTOS
+==================================================
+
+Propor entidade de orçamento mensal por categoria.
+
+Nome conceitual:
+
+CategoryBudget
+
+Campos candidatos:
+
+id;
+ownerId;
+categoryId;
+year;
+month;
+plannedAmount;
+createdAt;
+updatedAt.
+
+A estrutura final deve ser definida após analisar o domínio real.
+
+Avaliar:
+
+- orçamento por categoria;
+- orçamento por mês;
+- orçamento anual versus mensal;
+- orçamento de despesa versus receita;
+- unicidade por usuário/categoria/mês;
+- possibilidade de edição;
+- histórico;
+- categorias inativas;
+- categorias renomeadas.
+
+RECOMENDAÇÃO INICIAL:
+
+Orçamentos de DESPESAS por categoria e competência mensal.
+
+Não introduzir previsão de receitas sem decisão explícita.
+
+==================================================
+4. REGRAS DE CATEGORIA
+==================================================
+
+Categorias existentes possuem applicability:
+
+EXPENSE
+INCOME
+BOTH.
+
+Definir:
+
+EXPENSE:
+elegível para orçamento de despesa.
+
+BOTH:
+elegível para orçamento de despesa.
+
+INCOME:
+não elegível para orçamento de despesa.
+
+Confirmar essa política com o modelo real.
+
+Uma categoria BOTH deve considerar apenas suas
+transações EXPENSE para consumo do orçamento.
+
+Receitas não podem reduzir artificialmente o gasto realizado.
+
+==================================================
+5. COMPETÊNCIA MENSAL
+==================================================
+
+Definir representação canônica do mês:
+
+year + month
+
+ou YearMonth no domínio Java.
+
+Evitar armazenar datas artificiais sem necessidade.
+
+Exemplo:
+
+2026-10.
+
+Definir claramente timezone e conversão para intervalo
+de occurredAt.
+
+Se o período mensal for:
+
+[primeiro instante do mês,
+ primeiro instante do mês seguinte)
+
+documentar a regra.
+
+==================================================
+6. ORÇAMENTO E CONTA
+==================================================
+
+Decidir se orçamento é:
+
+A. global por categoria, somando todas as contas do usuário;
+
+ou
+
+B. associado a categorias e subconjuntos de contas.
+
+RECOMENDAÇÃO:
+
+MVP global por categoria.
+
+Justificativa:
+
+- evita duplicação de orçamento;
+- simplifica acompanhamento;
+- preserva a semântica da categoria;
+- facilita conciliação com Relatório por Categoria.
+
+Se existir requisito real para orçamento por conta,
+documentar como extensão futura.
+
+==================================================
+7. VALOR PLANEJADO
+==================================================
+
+Usar BigDecimal DECIMAL(19,2), conforme padrão real.
+
+Recomendação:
+
+plannedAmount >= 0.
+
+Definir se zero é permitido.
+
+Não usar float/double.
+
+Rejeitar mais de duas casas decimais,
+conforme política monetária existente.
+
+==================================================
+8. UNICIDADE
+==================================================
+
+Definir restrição de unicidade para:
+
+owner;
+category;
+year;
+month.
+
+A constraint deve existir no banco.
+
+Prever tratamento de conflito concorrente.
+
+Não confiar somente em validação na aplicação.
+
+==================================================
+9. EDIÇÃO DO ORÇAMENTO
+==================================================
+
+Definir política:
+
+- criação;
+- consulta;
+- atualização;
+- exclusão;
+- alteração de categoria;
+- alteração de competência.
+
+RECOMENDAÇÃO:
+
+Identidade category + month imutável após criação.
+
+Permitir editar plannedAmount.
+
+Para trocar categoria ou mês:
+criar novo orçamento conforme política aprovada.
+
+Avaliar se exclusão física é aceitável para dados de planejamento
+ou se soft delete é necessário.
+
+Não copiar automaticamente a política de transações financeiras.
+
+==================================================
+10. CATEGORIAS INATIVAS
+==================================================
+
+Definir comportamento para:
+
+- orçamento existente cuja categoria foi desativada;
+- consulta histórica;
+- edição;
+- criação de novos orçamentos;
+- reativação de categoria.
+
+RECOMENDAÇÃO:
+
+Preservar orçamentos históricos.
+
+Não permitir criar novo orçamento para categoria inativa.
+
+Documentar a política exata para edição.
+
+==================================================
+11. REALIZADO
+==================================================
+
+Definir:
+
+actualAmount = soma de despesas ACTIVE
+da categoria
+no mês correspondente.
+
+A consulta deve ser owner-scoped.
+
+Usar occurredAt.
+
+Não usar createdAt como competência financeira.
+
+==================================================
+12. CANCELAMENTOS
+==================================================
+
+Expense CANCELLED:
+
+não contribui para actualAmount.
+
+Cancelamento deve atualizar o valor realizado
+automaticamente nas consultas posteriores.
+
+Não armazenar actualAmount como verdade mutável
+sem justificativa arquitetural.
+
+==================================================
+13. TRANSFERÊNCIAS
+==================================================
+
+Transferências:
+
+não consomem orçamento de despesa.
+
+Não converter transferência em despesa.
+
+Não contar transferências internas ou entre contas
+como gasto orçamentário.
+
+==================================================
+14. RECEITAS
+==================================================
+
+Receitas:
+
+não consomem orçamento de despesa.
+
+Para categoria BOTH:
+
+somente Expense contribui para actualAmount.
+
+Não calcular orçamento líquido de receitas menos despesas
+sem requisito explícito.
+
+==================================================
+15. TRANSAÇÕES SEM CATEGORIA
+==================================================
+
+Inspecionar se despesas sem categoria são permitidas.
+
+Se sim, definir política:
+
+- agrupamento "Sem categoria";
+- orçamento específico;
+- exclusão do acompanhamento por categoria;
+- indicador separado de gastos não categorizados.
+
+Não inventar categoria persistida automaticamente.
+
+==================================================
+16. INDICADORES
+==================================================
+
+Definir DTOs para:
+
+plannedAmount;
+actualAmount;
+remainingAmount;
+consumptionPercentage;
+budgetStatus.
+
+Fórmulas propostas:
+
+remainingAmount = plannedAmount - actualAmount.
+
+consumptionPercentage =
+actualAmount / plannedAmount * 100.
+
+Para plannedAmount=0:
+
+definir semântica explícita.
+
+Não dividir por zero.
+
+Não truncar consumo acima de 100%.
+
+==================================================
+17. STATUS DO ORÇAMENTO
+==================================================
+
+Propor estados derivados:
+
+ON_TRACK
+WARNING
+EXCEEDED
+
+Exemplo inicial:
+
+ON_TRACK:
+consumo abaixo de 80%.
+
+WARNING:
+consumo de 80% até 100%.
+
+EXCEEDED:
+consumo acima de 100%.
+
+IMPORTANTE:
+
+Os limiares são propostas, não regras já aprovadas.
+
+Definir no ADR:
+
+- se 100% é WARNING ou LIMIT_REACHED;
+- se 0% é ON_TRACK;
+- tratamento de plannedAmount=0;
+- se limiares são configuráveis;
+- se status é persistido ou derivado.
+
+Preferir status derivado.
+
+==================================================
+18. ALERTAS
+==================================================
+
+Definir estratégia de alertas de orçamento.
+
+MVP recomendado:
+
+alertas in-app, derivados do consumo.
+
+Exemplos:
+
+- orçamento próximo do limite;
+- orçamento atingido;
+- orçamento excedido.
+
+Não implementar email, push ou WhatsApp nesta Sprint
+sem decisão explícita.
+
+Avaliar:
+
+- evitar alertas duplicados;
+- categorias sem orçamento;
+- alertas de meses anteriores;
+- cancelamento de despesa;
+- mudança no valor planejado.
+
+==================================================
+19. DASHBOARD DE ORÇAMENTOS
+==================================================
+
+Definir indicadores:
+
+- orçamento total do mês;
+- gasto realizado;
+- saldo disponível;
+- percentual utilizado;
+- categorias em alerta;
+- categorias excedidas.
+
+Esses indicadores devem considerar somente categorias
+com orçamento definido, salvo decisão diferente.
+
+Documentar separadamente despesas sem orçamento.
+
+==================================================
+20. VISUALIZAÇÃO
+==================================================
+
+Propor componentes:
+
+- resumo mensal;
+- progresso por categoria;
+- barras planejado versus realizado;
+- indicadores de alerta;
+- filtro de mês;
+- criação/edição de orçamento.
+
+Reutilizar Angular Material e ECharts.
+
+Não adicionar nova biblioteca de gráficos.
+
+==================================================
+21. METAS FINANCEIRAS
+==================================================
+
+Propor modelo:
+
+FinancialGoal
+
+Campos candidatos:
+
+id;
+ownerId;
+name;
+targetAmount;
+targetDate;
+status;
+createdAt;
+updatedAt.
+
+Avaliar necessidade de:
+
+initialAmount;
+currentAmount;
+contributions;
+linkedAccountId;
+completedAt.
+
+Não fixar o modelo antes de definir a semântica
+de progresso financeiro.
+
+==================================================
+22. SEMÂNTICA DE METAS
+==================================================
+
+Decisão arquitetural obrigatória:
+
+Como uma meta acumula progresso?
+
+Opções:
+
+A. Progresso informado manualmente.
+
+B. Contribuições explícitas associadas à meta.
+
+C. Saldo de conta vinculada.
+
+D. Outra abordagem fundamentada.
+
+Analisar vantagens, riscos e impactos no ledger.
+
+RECOMENDAÇÃO:
+
+Não usar automaticamente saldo de conta como
+progresso de meta sem esclarecer a semântica.
+
+Não criar dinheiro fictício no sistema.
+
+==================================================
+23. CONTRIBUIÇÕES PARA METAS
+==================================================
+
+Se o ADR optar por contribuições:
+
+definir se representam:
+
+- apenas alocação virtual de saldo existente;
+- movimentações financeiras reais;
+- registros de planejamento independentes.
+
+Não lançar Income/Expense/Transfer automaticamente
+sem regra aprovada.
+
+Evitar dupla contagem de patrimônio.
+
+==================================================
+24. META E CONTAS
+==================================================
+
+Avaliar se meta pode estar vinculada a:
+
+- nenhuma conta;
+- uma conta;
+- várias contas.
+
+Definir ownership.
+
+Conta inativa:
+qual o comportamento?
+
+Conta com saldo negativo:
+qual o comportamento?
+
+Não assumir que saldo da conta é dinheiro reservado.
+
+==================================================
+25. META E CANCELAMENTO
+==================================================
+
+Definir:
+
+- meta ativa;
+- meta concluída;
+- meta cancelada/arquivada;
+- edição após conclusão;
+- reabertura;
+- exclusão.
+
+Não confundir status da meta com status de
+FinancialTransaction.
+
+==================================================
+26. SEGURANÇA
+==================================================
+
+Todas as entidades novas devem ser owner-scoped.
+
+Nunca receber ownerId do frontend.
+
+Validar:
+
+categoryId;
+accountId;
+goalId;
+budgetId.
+
+IDs estrangeiros devem ser indistinguíveis
+de inexistentes conforme padrão existente.
+
+Definir matriz de autorização por endpoint.
+
+==================================================
+27. CONTRATOS REST — ORÇAMENTOS
+==================================================
+
+Propor endpoints consistentes com o projeto.
+
+Exemplos conceituais:
+
+POST /api/budgets
+GET /api/budgets
+GET /api/budgets/{id}
+PUT /api/budgets/{id}
+DELETE /api/budgets/{id}
+
+Usar contratos definitivos aprovados no ADR.
+
+Definir:
+
+request;
+response;
+validation;
+status HTTP;
+Problem Details;
+paginação;
+filtros;
+OpenAPI.
+
+==================================================
+28. CONTRATOS REST — ACOMPANHAMENTO
+==================================================
+
+Propor endpoint para resumo mensal.
+
+Exemplo:
+
+GET /api/budgets/summary?month=2026-10
+
+Definir DTO contendo:
+
+planned;
+actual;
+remaining;
+percentage;
+status;
+breakdown por categoria.
+
+Evitar cálculos duplicados no frontend.
+
+==================================================
+29. CONTRATOS REST — METAS
+==================================================
+
+Propor endpoints para:
+
+- criar;
+- listar;
+- detalhar;
+- editar;
+- concluir;
+- cancelar/arquivar;
+- acompanhar progresso.
+
+Somente após definir semântica do domínio.
+
+==================================================
+30. PERFORMANCE
+==================================================
+
+Definir:
+
+- índices;
+- constraints;
+- agregações SQL;
+- consulta por mês;
+- consultas por usuário;
+- prevenção de N+1;
+- paginação;
+- ausência de multiplicação por joins.
+
+Evitar materializar valores realizados.
+
+==================================================
+31. MIGRATIONS
+==================================================
+
+Propor migrations Flyway conforme padrão real.
+
+Não modificar migrations aplicadas.
+
+Documentar:
+
+- tabelas;
+- colunas;
+- índices;
+- constraints;
+- FKs;
+- ownership;
+- tipos monetários.
+
+Não executar migrations nesta TASK.
+
+==================================================
+32. ANGULAR
+==================================================
+
+Planejar rotas:
+
+/budgets
+/goals
+
+ou paths aprovados.
+
+Definir:
+
+- menu lateral;
+- filtros;
+- componentes;
+- drawers;
+- serviços tipados;
+- loading;
+- empty;
+- error;
+- responsividade;
+- acessibilidade.
+
+Não implementar componentes nesta TASK.
+
+==================================================
+33. GOLDEN SCENARIO — ORÇAMENTOS
+==================================================
+
+User A cria:
+
+Orçamento Alimentação:
+R$ 1.000,00
+Competência: outubro/2026.
+
+Despesas ACTIVE:
+R$ 300,00
+R$ 450,00
+
+Expense CANCELLED:
+R$ 200,00
+
+Income na categoria BOTH:
+R$ 500,00
+
+Transfer:
+R$ 100,00
+
+Esperado:
+
+Planned:
+R$ 1.000,00
+
+Actual:
+R$ 750,00
+
+Remaining:
+R$ 250,00
+
+Consumption:
+75%.
+
+Receita, transferência e despesa cancelada
+não alteram actual.
+
+==================================================
+34. GOLDEN — EXCEDIDO
+==================================================
+
+Adicionar Expense ACTIVE:
+
+R$ 400,00.
+
+Esperado:
+
+Actual:
+R$ 1.150,00
+
+Remaining:
+-R$ 150,00
+
+Consumption:
+115%.
+
+Status:
+EXCEEDED, se aprovado.
+
+==================================================
+35. GOLDEN — MULTIUSER
+==================================================
+
+User B possui categoria de mesmo nome e
+orçamento de mesmo mês.
+
+Dados de A e B são isolados.
+
+User A não pode criar orçamento com
+categoryId pertencente a B.
+
+==================================================
+36. GOLDEN — METAS
+==================================================
+
+Definir Golden Scenario somente após escolher
+semântica de progresso.
+
+O cenário deve provar:
+
+- meta criada;
+- progresso correto;
+- nenhuma criação fictícia de dinheiro;
+- isolamento multiusuário;
+- conclusão;
+- cancelamento/arquivamento;
+- comportamento em edições.
+
+==================================================
+37. PLANO DE TESTES
+==================================================
+
+Definir testes para:
+
+- unicidade mensal;
+- categorias EXPENSE/INCOME/BOTH;
+- categorias inativas;
+- período;
+- cancelamentos;
+- transferências;
+- precisão monetária;
+- plannedAmount=0;
+- consumo >100%;
+- concorrência;
+- multiusuário;
+- alertas;
+- metas;
+- ownership;
+- Problem Details;
+- Testcontainers/MySQL;
+- frontend;
+- regressões das Sprints 3 a 5.
+
+==================================================
+38. DÍVIDAS E DECISÕES PENDENTES
+==================================================
+
+Identificar decisões que dependem de produto.
+
+Não ocultar ambiguidades importantes.
+
+Para cada uma:
+
+- contexto;
+- opções;
+- recomendação;
+- impactos;
+- decisão proposta.
+
+Se uma decisão for bloqueante:
+
+marcar como PENDING PRODUCT DECISION.
+
+Não implementar comportamento arbitrário.
+
+==================================================
+39. ROADMAP DA SPRINT 6
+==================================================
+
+Produzir plano:
+
+TASK-6.0 — Arquitetura e ADR
+TASK-6.1 — Backend de orçamentos
+TASK-6.2 — Frontend de orçamentos
+TASK-6.3 — Backend planejado × realizado
+TASK-6.4 — Dashboard de orçamentos
+TASK-6.5 — Alertas
+TASK-6.6 — Backend de metas
+TASK-6.7 — Frontend de metas
+TASK-6.8 — Gate
+
+Para cada task:
+
+- objetivo;
+- dependências;
+- arquivos prováveis;
+- testes;
+- critérios de conclusão;
+- fora do escopo.
+
+==================================================
+40. ENTREGÁVEIS
+==================================================
+
+Produzir documentação persistida no repositório,
+seguindo convenção atual:
+
+1. ADR da Sprint 6.
+2. Especificação funcional.
+3. Modelagem de domínio.
+4. Contratos REST planejados.
+5. Matriz de segurança.
+6. Golden Scenarios.
+7. Plano de testes.
+8. Roadmap detalhado.
+
+Evitar duplicar documentos quando a estrutura
+do projeto já contempla esses artefatos.
+
+==================================================
+41. DEFINITION OF DONE
+==================================================
+
+TASK-6.0 concluída quando:
+
+- arquitetura existente foi inspecionada;
+- regras financeiras foram preservadas;
+- modelo de orçamento foi definido;
+- competência mensal foi definida;
+- unicidade foi definida;
+- categorias BOTH foram tratadas;
+- cancelamentos foram tratados;
+- transferências foram tratadas;
+- indicadores foram definidos;
+- limites e alertas foram definidos;
+- modelo de metas foi proposto;
+- semântica de progresso de metas foi decidida
+  ou marcada explicitamente como pendente;
+- ownership foi definido;
+- contratos REST foram propostos;
+- migrations foram planejadas;
+- testes foram planejados;
+- Golden Scenarios foram definidos;
+- roadmap foi detalhado;
+- ADR foi persistido;
+- nenhum código funcional foi implementado.
+
+==================================================
+42. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-6.0 — ARQUITETURA DO PLANEJAMENTO FINANCEIRO
+
+Status:
+CONCLUÍDA / BLOCKED / PENDING DECISIONS
+
+1. Documentos produzidos.
+2. ADR principal.
+3. Decisões de orçamento.
+4. Modelo de dados.
+5. Competência mensal.
+6. Categorias e elegibilidade.
+7. Planned versus Actual.
+8. Fórmulas.
+9. Alertas.
+10. Metas financeiras.
+11. Semântica do progresso.
+12. Contratos REST.
+13. Segurança.
+14. Performance.
+15. Migrations planejadas.
+16. Golden Scenarios.
+17. Plano de testes.
+18. Roadmap.
+19. Decisões pendentes.
+20. Divergências com arquitetura existente.
+21. Arquivos criados/modificados.
+22. Confirmação de ausência de implementação funcional.
+
+Se concluída e sem decisões bloqueantes:
+
+READY FOR TASK-6.1 — Backend de Orçamentos por Categoria.
+
+NÃO implementar TASK-6.1 nesta execução.

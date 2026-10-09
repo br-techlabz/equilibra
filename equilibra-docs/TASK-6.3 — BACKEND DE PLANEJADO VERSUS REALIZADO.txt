@@ -1,0 +1,984 @@
+# TASK-6.3 — BACKEND DE PLANEJADO VERSUS REALIZADO
+
+PROJETO: EQUILIBRA
+SPRINT: 6 — PLANEJAMENTO FINANCEIRO
+STACK: Spring Boot 4 + MySQL + Angular 19
+
+CONTEXTO
+
+Sprint 5 aprovada.
+TASK-6.0 — Arquitetura do Planejamento Financeiro concluída.
+TASK-6.1 — Backend de Orçamentos por Categoria concluído.
+TASK-6.2 — Interface de Gestão de Orçamentos concluída.
+
+OBJETIVO
+
+Implementar o backend responsável pelo acompanhamento
+mensal de orçamentos por categoria, calculando:
+
+- valor planejado;
+- valor realizado;
+- valor restante;
+- percentual de consumo;
+- totais consolidados;
+- informações necessárias para indicadores e gráficos.
+
+O valor realizado deve derivar das despesas reais,
+respeitando o ledger e as regras aprovadas.
+
+NÃO implementar frontend nesta TASK.
+
+O ADR da TASK-6.0 e os contratos reais prevalecem
+sobre exemplos deste prompt.
+
+==================================================
+1. INSPEÇÃO OBRIGATÓRIA
+==================================================
+
+Antes de alterar código, inspecionar:
+
+- CLAUDE.md;
+- ADR da Sprint 6;
+- especificação funcional da TASK-6.0;
+- relatórios das TASKS 6.1 e 6.2;
+- CategoryBudget real;
+- FinancialTransaction;
+- AccountMovement;
+- Expense;
+- Category;
+- CurrentUser;
+- regras de cancelamento;
+- occurredAt;
+- políticas de timezone;
+- Relatório por Categoria da Sprint 5;
+- consultas SQL existentes;
+- repositories;
+- índices;
+- OpenAPI;
+- migrations;
+- testes com Testcontainers/MySQL.
+
+Reutilizar regras e consultas existentes sempre
+que compatíveis com o contrato de orçamento.
+
+Não criar uma segunda fonte de verdade financeira.
+
+==================================================
+2. PRE-IMPLEMENTATION REPORT
+==================================================
+
+Antes de editar, produzir:
+
+# TASK-6.3 — PRE-IMPLEMENTATION REPORT
+
+1. ADR aplicável.
+2. Modelo de orçamento implementado.
+3. Origem dos valores realizados.
+4. Semântica temporal.
+5. Regras de categoria.
+6. Política de cancelamento.
+7. Fórmulas.
+8. Casos de orçamento zero.
+9. Contratos REST.
+10. Estratégia de agregação SQL.
+11. Índices existentes.
+12. Estratégia de segurança.
+13. Golden Scenarios.
+14. Plano de testes.
+15. Arquivos previstos.
+16. Decisões pendentes.
+
+Se houver decisão bloqueante não resolvida no ADR,
+não inventar comportamento: registrar BLOCKED.
+
+==================================================
+3. FONTE DE VERDADE
+==================================================
+
+O valor realizado deve ser calculado a partir
+das despesas efetivamente válidas.
+
+Não utilizar:
+
+- saldos de contas;
+- patrimônio líquido;
+- receitas;
+- transferências;
+- valores preenchidos pelo frontend;
+- totais materializados sem justificativa.
+
+Não persistir actualAmount como campo mutável
+do orçamento, salvo decisão explícita do ADR.
+
+==================================================
+4. COMPETÊNCIA MENSAL
+==================================================
+
+Usar a competência aprovada no ADR.
+
+Exemplo:
+
+2026-10.
+
+Converter para o intervalo temporal correto,
+considerando a política real de timezone.
+
+Preferir intervalo semiaberto:
+
+[início do mês, início do mês seguinte)
+
+quando consistente com a arquitetura existente.
+
+O campo financeiro de referência é occurredAt.
+
+Não utilizar createdAt para determinar o mês
+de consumo do orçamento.
+
+==================================================
+5. DESPESAS VÁLIDAS
+==================================================
+
+Somar apenas despesas que:
+
+- pertencem ao usuário autenticado;
+- possuem status financeiro válido/ACTIVE;
+- estão na competência consultada;
+- pertencem à categoria do orçamento;
+- satisfazem os demais critérios aprovados.
+
+Usar magnitude positiva de despesa.
+
+Não inverter sinais incorretamente.
+
+==================================================
+6. DESPESAS CANCELADAS
+==================================================
+
+Despesas canceladas não devem contribuir
+para actualAmount.
+
+Se uma despesa for cancelada após ter sido
+contabilizada anteriormente, a próxima consulta
+deve refletir automaticamente a exclusão.
+
+Não criar rotina de sincronização manual.
+
+==================================================
+7. RECEITAS
+==================================================
+
+Receitas não consomem orçamento de despesas.
+
+Categoria BOTH:
+
+somente transações EXPENSE devem entrar
+no cálculo de actualAmount.
+
+Não compensar gastos com receitas da mesma categoria.
+
+==================================================
+8. TRANSFERÊNCIAS
+==================================================
+
+Transferências não consomem orçamento.
+
+Não incluir movimentos de transferência
+na soma de despesas.
+
+Transferências entre contas próprias não representam
+consumo de orçamento de categoria.
+
+==================================================
+9. CATEGORIAS INATIVAS
+==================================================
+
+Um orçamento histórico associado a categoria
+posteriormente desativada deve permanecer consultável
+conforme ADR.
+
+As despesas históricas válidas continuam contribuindo
+para o realizado.
+
+Não filtrar automaticamente category.active=true
+nas agregações históricas.
+
+==================================================
+10. DESPESAS SEM CATEGORIA
+==================================================
+
+Inspecionar se Expense sem categoria é permitida.
+
+Aplicar a política aprovada no ADR.
+
+Não criar automaticamente uma categoria
+"Sem categoria" no banco.
+
+Se despesas sem categoria não pertencem a nenhum
+orçamento, mantê-las fora do total realizado
+dos orçamentos definidos.
+
+Documentar eventual indicador separado de
+despesas não orçadas, se aprovado.
+
+==================================================
+11. CONTAS FINANCEIRAS
+==================================================
+
+O orçamento por categoria deve seguir o escopo
+de contas aprovado no ADR.
+
+Se orçamento for global por categoria:
+
+somar despesas de todas as contas próprias.
+
+Não aplicar filtros de conta não previstos.
+
+Não duplicar despesas devido a joins com
+movimentos de conta, tags ou anexos.
+
+==================================================
+12. FÓRMULAS
+==================================================
+
+Para cada orçamento:
+
+plannedAmount = valor cadastrado.
+
+actualAmount = soma das despesas elegíveis.
+
+remainingAmount = plannedAmount - actualAmount.
+
+consumptionPercentage =
+(actualAmount / plannedAmount) * 100.
+
+Usar BigDecimal.
+
+Definir escala e arredondamento conforme ADR.
+
+Não usar float/double.
+
+Não truncar consumo acima de 100%.
+
+==================================================
+13. ORÇAMENTO ZERO
+==================================================
+
+Se plannedAmount=0 for permitido pelo ADR,
+definir semântica exata para:
+
+actualAmount=0;
+actualAmount>0;
+remainingAmount;
+consumptionPercentage;
+status derivado.
+
+Nunca dividir por zero.
+
+Não inventar percentual infinito.
+
+Se zero for proibido, cobrir a restrição
+nos testes e contratos.
+
+==================================================
+14. VALORES ACIMA DO LIMITE
+==================================================
+
+Exemplo:
+
+plannedAmount=1000.00
+actualAmount=1150.00
+
+Esperado:
+
+remainingAmount=-150.00
+consumptionPercentage=115.00
+
+Não limitar percentual a 100%.
+
+Não transformar saldo negativo em zero.
+
+==================================================
+15. STATUS DE CONSUMO
+==================================================
+
+Se o ADR da TASK-6.0 já aprovou status derivados,
+implementá-los conforme contrato.
+
+Exemplos conceituais:
+
+ON_TRACK;
+WARNING;
+EXCEEDED.
+
+Não assumir limiares de 80% ou 100%
+sem consultar o ADR.
+
+Se a lógica de alertas foi reservada para TASK-6.5,
+não implementar notificações nem persistência
+de alertas nesta TASK.
+
+==================================================
+16. CONTRATO DE ACOMPANHAMENTO
+==================================================
+
+Implementar endpoint conforme ADR/OpenAPI.
+
+Exemplo conceitual:
+
+GET /api/budgets/summary?month=2026-10
+
+Ou outro endpoint aprovado.
+
+Retornar DTO tipado com:
+
+- competência;
+- totais consolidados;
+- breakdown por orçamento/categoria;
+- plannedAmount;
+- actualAmount;
+- remainingAmount;
+- consumptionPercentage;
+- status, somente se aprovado.
+
+Não criar endpoint duplicado se já existir
+contrato equivalente no projeto.
+
+==================================================
+17. DTO POR CATEGORIA
+==================================================
+
+Campos candidatos:
+
+budgetId;
+categoryId;
+categoryName;
+categoryActive;
+plannedAmount;
+actualAmount;
+remainingAmount;
+consumptionPercentage.
+
+Incluir somente campos aprovados.
+
+Não expor entidades JPA.
+
+Não expor ownerId desnecessariamente.
+
+==================================================
+18. TOTAIS CONSOLIDADOS
+==================================================
+
+Para os orçamentos definidos na competência:
+
+totalPlanned = soma dos plannedAmount.
+
+totalActual = soma do realizado de cada orçamento.
+
+totalRemaining = totalPlanned - totalActual.
+
+Definir totalConsumptionPercentage conforme ADR.
+
+Não calcular média simples dos percentuais
+das categorias, pois isso distorce o consolidado.
+
+Se permitido:
+
+totalConsumptionPercentage =
+totalActual / totalPlanned * 100.
+
+Tratar totalPlanned=0 explicitamente.
+
+==================================================
+19. DESPESAS NÃO ORÇADAS
+==================================================
+
+Definir e respeitar o escopo aprovado:
+
+Despesas em categorias sem orçamento não devem
+ser adicionadas artificialmente ao realizado
+dos orçamentos cadastrados.
+
+Se houver campo unbudgetedExpenses,
+calcular de forma separada e explícita.
+
+Não misturar:
+
+totalActual de orçamentos definidos
+
+com
+
+totalExpense do mês inteiro.
+
+==================================================
+20. ORÇAMENTO SEM DESPESAS
+==================================================
+
+Exemplo:
+
+plannedAmount=500.00
+nenhuma despesa válida.
+
+Esperado:
+
+actualAmount=0.00
+remainingAmount=500.00
+consumptionPercentage=0, se definido pelo ADR.
+
+O orçamento deve aparecer mesmo sem movimentos.
+
+==================================================
+21. MÊS SEM ORÇAMENTOS
+==================================================
+
+Retornar estrutura consistente.
+
+Exemplo conceitual:
+
+totais zerados;
+lista vazia.
+
+Não retornar 404 simplesmente porque não existem
+orçamentos naquela competência.
+
+==================================================
+22. RECONCILIAÇÃO COM SPRINT 5
+==================================================
+
+Para a mesma competência e categoria,
+o actualAmount deve ser reconciliável
+com as despesas do Relatório por Categoria,
+considerando os mesmos critérios de seleção.
+
+Se houver diferença legítima de escopo,
+documentá-la claramente.
+
+Não duplicar regras de negócio divergentes.
+
+==================================================
+23. CONSULTAS SQL
+==================================================
+
+Executar agregações no MySQL.
+
+Evitar carregar todas as despesas em memória
+para somá-las no Java.
+
+Usar consultas owner-scoped.
+
+Garantir que cada despesa seja contabilizada uma vez.
+
+Preferir consultas agrupadas por categoria
+para todos os orçamentos da competência.
+
+==================================================
+24. N+1
+==================================================
+
+Não executar uma consulta de despesas
+para cada orçamento.
+
+Evitar:
+
+for (budget : budgets) {
+  repository.sumExpenses(budget.categoryId);
+}
+
+Preferir agregação em lote.
+
+Verificar quantidade de queries conforme
+instrumentação disponível.
+
+==================================================
+25. ÍNDICES
+==================================================
+
+Inspecionar índices existentes.
+
+Avaliar índices para:
+
+owner;
+category;
+occurredAt;
+status/type.
+
+Criar migration adicional somente se houver
+necessidade demonstrável.
+
+Não modificar migrations aplicadas.
+
+==================================================
+26. OWNERSHIP
+==================================================
+
+Derivar usuário de CurrentUser.
+
+Nunca aceitar ownerId em query params
+ou corpo da requisição.
+
+Listar apenas orçamentos próprios.
+
+Somar apenas despesas próprias.
+
+Nunca incluir despesas de outro usuário
+mesmo que IDs de categoria sejam semelhantes.
+
+==================================================
+27. MULTIUSUÁRIO
+==================================================
+
+User A e User B:
+
+possuem categoria "Alimentação".
+
+Ambos possuem orçamento outubro/2026.
+
+As despesas de A não entram no realizado de B.
+
+As despesas de B não entram no realizado de A.
+
+Não confiar somente no categoryId para isolamento.
+
+==================================================
+28. ERROS HTTP
+==================================================
+
+Seguir convenções existentes.
+
+400:
+competência inválida.
+
+401:
+sem autenticação.
+
+403:
+permissão insuficiente, se aplicável.
+
+404:
+referência específica inexistente/estrangeira,
+quando houver endpoint por ID.
+
+500:
+erro sanitizado.
+
+Usar Problem Details e Request ID.
+
+==================================================
+29. OPENAPI
+==================================================
+
+Documentar:
+
+- endpoint;
+- parâmetros;
+- formato da competência;
+- campos monetários;
+- fórmulas;
+- status;
+- tratamento de orçamento zero;
+- exemplos;
+- respostas de erro;
+- autenticação.
+
+Não documentar campos não implementados.
+
+==================================================
+30. GOLDEN SCENARIO — BASE
+==================================================
+
+User A:
+
+Categoria Alimentação:
+EXPENSE, ACTIVE.
+
+Orçamento:
+
+month=2026-10
+plannedAmount=1000.00
+
+Despesas ACTIVE em outubro:
+
+300.00
+450.00
+
+Despesa CANCELLED em outubro:
+
+200.00
+
+Receita em categoria BOTH:
+
+500.00
+
+Transferência:
+
+100.00
+
+Esperado:
+
+plannedAmount=1000.00
+actualAmount=750.00
+remainingAmount=250.00
+consumptionPercentage=75.00
+
+Receitas, transferências e canceladas
+não alteram actualAmount.
+
+==================================================
+31. GOLDEN SCENARIO — EXCEDIDO
+==================================================
+
+Adicionar despesa ACTIVE:
+
+400.00
+
+Esperado:
+
+actualAmount=1150.00
+remainingAmount=-150.00
+consumptionPercentage=115.00
+
+Status EXCEEDED somente se aprovado no ADR.
+
+==================================================
+32. GOLDEN — CANCELAMENTO POSTERIOR
+==================================================
+
+Partindo do realizado 1150.00:
+
+cancelar a despesa de 400.00.
+
+Esperado na próxima consulta:
+
+actualAmount=750.00
+remainingAmount=250.00
+consumptionPercentage=75.00
+
+Sem atualização manual do orçamento.
+
+==================================================
+33. GOLDEN — OUTRO MÊS
+==================================================
+
+Criar despesa:
+
+2026-11
+600.00
+
+Consultar orçamento de outubro.
+
+Esperado:
+
+despesa de novembro não entra.
+
+Consultar novembro:
+
+somente se existir orçamento para novembro,
+apresentar o realizado correspondente
+na linha daquele orçamento.
+
+==================================================
+34. GOLDEN — CATEGORY BOTH
+==================================================
+
+Categoria BOTH:
+
+Orçamento=500.00
+
+Income ACTIVE=300.00
+Expense ACTIVE=125.10
+Expense ACTIVE=25.20
+
+Esperado:
+
+actualAmount=150.30
+remainingAmount=349.70
+consumptionPercentage=30.06
+
+Income não reduz realizado.
+
+==================================================
+35. GOLDEN — CATEGORIA INATIVA
+==================================================
+
+Criar orçamento para categoria ativa.
+
+Criar despesas válidas.
+
+Desativar categoria.
+
+Consultar competência histórica.
+
+Esperado:
+
+orçamento visível;
+realizado preservado;
+nome/estado da categoria conforme DTO.
+
+==================================================
+36. GOLDEN — MÚLTIPLOS ORÇAMENTOS
+==================================================
+
+Outubro/2026:
+
+Alimentação:
+planned=1000.00
+actual=750.00
+
+Transporte:
+planned=500.00
+actual=200.00
+
+Esperado:
+
+totalPlanned=1500.00
+totalActual=950.00
+totalRemaining=550.00
+
+totalConsumptionPercentage=
+63.333...%, arredondado conforme ADR.
+
+Não calcular média simples entre
+75% e 40%.
+
+==================================================
+37. GOLDEN — SEM ORÇAMENTO
+==================================================
+
+Categoria Lazer:
+
+Expense ACTIVE=300.00
+
+Nenhum orçamento em outubro.
+
+Esperado:
+
+não adicionar 300.00 ao totalActual
+dos orçamentos cadastrados.
+
+Se existir unbudgetedExpenses,
+mostrar separadamente.
+
+==================================================
+38. GOLDEN — MULTIUSER
+==================================================
+
+User A:
+
+planned=1000.00
+actual=750.00
+
+User B:
+
+planned=2000.00
+actual=300.00
+
+Consultas devem permanecer isoladas.
+
+==================================================
+39. TESTES UNITÁRIOS
+==================================================
+
+Cobrir:
+
+- competência;
+- planned;
+- actual;
+- remaining;
+- percentual;
+- arredondamento;
+- orçamento zero;
+- excesso;
+- despesas canceladas;
+- transferências;
+- receitas;
+- categoria BOTH;
+- categoria inativa;
+- mês sem despesas;
+- mês sem orçamentos;
+- múltiplos orçamentos;
+- despesas não orçadas;
+- multiusuário.
+
+==================================================
+40. TESTES DE INTEGRAÇÃO
+==================================================
+
+Usar Testcontainers/MySQL.
+
+Validar:
+
+- agregações SQL reais;
+- limites temporais;
+- owner-scoping;
+- ausência de duplicação;
+- comportamento de cancelamento;
+- reconciliação com relatórios;
+- índices;
+- Problem Details;
+- autenticação.
+
+Não substituir MySQL por H2 nos testes
+dependentes de SQL específico.
+
+==================================================
+41. TESTES DE SEGURANÇA
+==================================================
+
+Sem JWT:
+401.
+
+User A não recebe orçamento de B.
+
+User A não recebe despesas de B.
+
+Parâmetros inválidos:
+400 seguro.
+
+Nenhum endpoint aceita ownerId.
+
+Nenhum dado de outro usuário nos totais.
+
+==================================================
+42. REGRESSÕES
+==================================================
+
+Executar testes relevantes de:
+
+Authentication;
+Asset Accounts;
+Categories;
+Expenses;
+Income;
+Transfers;
+Dashboard;
+History;
+Tags;
+Attachments;
+Reports;
+Exports;
+Budget CRUD.
+
+Confirmar que a implementação não altera:
+
+- ledger;
+- saldos;
+- patrimônio;
+- relatórios da Sprint 5;
+- regras de cancelamento.
+
+==================================================
+43. PERFORMANCE
+==================================================
+
+Validar:
+
+- agregação no banco;
+- ausência de N+1;
+- índices;
+- consultas limitadas;
+- resposta estável com muitas categorias;
+- ausência de joins multiplicadores.
+
+Não inventar números de performance.
+
+Registrar medições reais quando disponíveis.
+
+==================================================
+44. FORA DO ESCOPO
+==================================================
+
+Não implementar:
+
+- frontend Angular;
+- cards visuais;
+- gráficos;
+- dashboard Angular;
+- notificações;
+- email;
+- push;
+- persistência de alertas;
+- metas financeiras;
+- contribuições para metas;
+- exportação de orçamentos;
+- novos tipos de transação;
+- alterações no ledger.
+
+Esses itens pertencem às próximas tasks.
+
+==================================================
+45. DEFINITION OF DONE
+==================================================
+
+TASK-6.3 concluída quando:
+
+- endpoint de acompanhamento implementado;
+- DTOs tipados;
+- competência correta;
+- realizado derivado de despesas válidas;
+- canceladas excluídas;
+- receitas excluídas;
+- transferências excluídas;
+- categoria BOTH correta;
+- categorias inativas preservadas;
+- orçamento zero tratado;
+- excesso acima de 100% correto;
+- totais consolidados corretos;
+- despesas não orçadas não misturadas;
+- owner-scoping garantido;
+- agregação SQL eficiente;
+- sem N+1;
+- OpenAPI atualizado;
+- Golden Scenarios aprovados;
+- testes unitários aprovados;
+- Testcontainers/MySQL aprovados;
+- segurança aprovada;
+- build backend aprovado;
+- regressões relevantes aprovadas;
+- ledger inalterado.
+
+==================================================
+46. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-6.3 — BACKEND DE PLANEJADO VERSUS REALIZADO
+
+STATUS:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+1. ADR utilizado.
+2. Endpoint implementado.
+3. DTOs.
+4. Competência e timezone.
+5. Fonte de verdade.
+6. Fórmulas.
+7. Cancelamentos.
+8. Receitas e transferências.
+9. Categorias BOTH/inativas.
+10. Orçamento zero.
+11. Percentuais acima de 100%.
+12. Totais consolidados.
+13. Despesas não orçadas.
+14. Agregações SQL.
+15. Índices.
+16. Ownership.
+17. Golden Scenarios.
+18. Reconciliação com Sprint 5.
+19. Testes unitários.
+20. Testcontainers/MySQL.
+21. Segurança.
+22. OpenAPI.
+23. Performance.
+24. Regressões.
+25. Build backend.
+26. Arquivos modificados.
+27. Bugs encontrados/corrigidos.
+28. Divergências do ADR.
+29. Dívidas técnicas.
+30. Fora do escopo confirmado.
+
+Se concluída:
+
+READY FOR TASK-6.4 — Dashboard de Acompanhamento de Orçamentos.
+
+NÃO implementar TASK-6.4 nesta execução.

@@ -1,0 +1,904 @@
+# TASK-6.4 — DASHBOARD DE ACOMPANHAMENTO DE ORÇAMENTOS
+
+PROJETO: EQUILIBRA
+SPRINT: 6 — PLANEJAMENTO FINANCEIRO
+STACK: Angular 19 + Angular Material + ECharts
+BACKEND: Spring Boot 4 + MySQL
+
+CONTEXTO
+
+Sprint 5 aprovada.
+TASK-6.0 — Arquitetura concluída.
+TASK-6.1 — Backend de orçamentos concluído.
+TASK-6.2 — Interface de gestão de orçamentos concluída.
+TASK-6.3 — Backend de planejado versus realizado concluído.
+
+OBJETIVO
+
+Implementar a experiência visual de acompanhamento
+mensal dos orçamentos por categoria, consumindo
+exclusivamente os dados reais calculados no backend.
+
+A interface deverá apresentar:
+
+- resumo mensal;
+- total planejado;
+- total realizado;
+- valor restante;
+- percentual de consumo;
+- comparação por categoria;
+- gráficos e barras de progresso;
+- navegação entre competências;
+- tratamento de estados vazios e erros.
+
+Não implementar regras financeiras no Angular.
+
+O ADR da TASK-6.0 e os contratos reais da TASK-6.3
+prevalecem sobre exemplos deste prompt.
+
+==================================================
+1. INSPEÇÃO OBRIGATÓRIA
+==================================================
+
+Antes de alterar arquivos, inspecionar:
+
+- CLAUDE.md;
+- ADR da Sprint 6;
+- especificação funcional da TASK-6.0;
+- relatório da TASK-6.3;
+- endpoint real de acompanhamento;
+- DTOs e OpenAPI;
+- BudgetService existente;
+- tela /budgets da TASK-6.2;
+- layout autenticado;
+- sidebar;
+- componentes compartilhados;
+- Angular Material;
+- ECharts;
+- design tokens;
+- tema claro/escuro, se existir;
+- padrões de loading/empty/error;
+- testes frontend;
+- responsividade existente.
+
+Não presumir nomes de campos ou endpoints.
+
+==================================================
+2. PRE-IMPLEMENTATION REPORT
+==================================================
+
+Antes de editar, produzir:
+
+# TASK-6.4 — PRE-IMPLEMENTATION REPORT
+
+1. Contrato REST real.
+2. DTO de acompanhamento.
+3. Totais disponíveis.
+4. Dados por categoria.
+5. Semântica de percentuais.
+6. Tratamento de orçamento zero.
+7. Status aprovados no ADR.
+8. Componentes reutilizáveis.
+9. Estratégia de navegação.
+10. Estrutura responsiva.
+11. Plano de testes.
+12. Arquivos previstos.
+
+Somente depois implementar.
+
+==================================================
+3. INTEGRAÇÃO COM A TASK-6.2
+==================================================
+
+A tela de gestão de orçamentos já existe.
+
+Não duplicar funcionalidades.
+
+Avaliar a melhor organização:
+
+A. acrescentar seção de acompanhamento na rota /budgets;
+
+B. criar sub-rota /budgets/overview;
+
+C. outra estrutura prevista no ADR.
+
+Preferir a solução coerente com a navegação existente.
+
+Não criar dois menus redundantes.
+
+==================================================
+4. IDENTIDADE VISUAL
+==================================================
+
+Preservar integralmente o Design System do Equilibra.
+
+Cor principal da identidade:
+
+#4c1d95
+
+Usar tokens do tema existente quando disponíveis.
+
+Não aplicar cores fixas indiscriminadamente.
+
+Respeitar tema escuro, caso exista.
+
+Não substituir componentes compartilhados
+por estilos isolados desnecessários.
+
+==================================================
+5. CABEÇALHO
+==================================================
+
+Apresentar:
+
+Acompanhamento de Orçamentos
+
+Subtítulo sugerido:
+
+"Acompanhe seus limites e gastos por categoria."
+
+Manter padrão de PageHeader existente.
+
+==================================================
+6. SELETOR DE COMPETÊNCIA
+==================================================
+
+Permitir selecionar mês e ano.
+
+Exemplo:
+
+Outubro de 2026.
+
+Reutilizar componente mensal da TASK-6.2
+quando apropriado.
+
+Não criar um segundo seletor inconsistente.
+
+==================================================
+7. NAVEGAÇÃO MENSAL
+==================================================
+
+Permitir:
+
+mês anterior;
+mês seguinte;
+seleção direta, se existente.
+
+Atualizar todos os indicadores
+ao mudar a competência.
+
+==================================================
+8. SINCRONIZAÇÃO DE COMPETÊNCIA
+==================================================
+
+Se gestão e acompanhamento coexistirem
+na mesma tela, usar a mesma competência selecionada.
+
+Se forem rotas diferentes, preservar contexto
+por query params ou padrão aprovado.
+
+Não mostrar dados de meses diferentes
+na mesma visão sem indicação explícita.
+
+==================================================
+9. CONSUMO DA API
+==================================================
+
+Consumir endpoint real da TASK-6.3.
+
+Não recalcular valores financeiros no Angular.
+
+Usar:
+
+plannedAmount;
+actualAmount;
+remainingAmount;
+consumptionPercentage;
+
+conforme nomes reais do DTO.
+
+==================================================
+10. MODELS
+==================================================
+
+Criar interfaces tipadas se ainda não existirem.
+
+Exemplos conceituais:
+
+BudgetSummary;
+BudgetCategoryProgress;
+BudgetConsumptionStatus.
+
+Usar tipos compatíveis com OpenAPI.
+
+Não usar any.
+
+Não inventar campos.
+
+==================================================
+11. SERVIÇO ANGULAR
+==================================================
+
+Estender BudgetService existente
+ou criar serviço específico se a arquitetura exigir.
+
+Não duplicar lógica HTTP.
+
+Reutilizar interceptors e tratamento de erros.
+
+Não enviar ownerId.
+
+==================================================
+12. RESUMO MENSAL
+==================================================
+
+Exibir cards para:
+
+Total planejado;
+Total realizado;
+Total restante;
+Percentual consumido.
+
+Utilizar exclusivamente valores retornados pelo backend.
+
+Não calcular somas financeiras no componente.
+
+==================================================
+13. VALORES MONETÁRIOS
+==================================================
+
+Formatar em pt-BR:
+
+R$ 1.000,00
+R$ 750,00
+-R$ 150,00
+
+Preservar precisão dos valores recebidos.
+
+Não usar parseFloat para cálculos financeiros.
+
+==================================================
+14. PERCENTUAL
+==================================================
+
+Exibir consumo conforme DTO.
+
+Exemplos:
+
+0%;
+75%;
+100%;
+115%.
+
+Não limitar texto a 100%.
+
+Se backend retornar precisão adicional,
+aplicar somente formatação de apresentação.
+
+==================================================
+15. ORÇAMENTO EXCEDIDO
+==================================================
+
+Exemplo:
+
+planned=1000
+actual=1150
+remaining=-150
+consumption=115%.
+
+Mostrar:
+
+115% utilizado.
+
+Valor restante negativo.
+
+A barra visual pode ocupar no máximo
+100% da largura física, mas o texto
+deve preservar o percentual real.
+
+==================================================
+16. ORÇAMENTO ZERO
+==================================================
+
+Seguir semântica aprovada no ADR e DTO.
+
+Não dividir por zero no Angular.
+
+Se percentual for null ou não aplicável,
+mostrar representação acessível:
+
+"Não aplicável"
+
+ou outra aprovada.
+
+Não inventar 0% para caso indefinido.
+
+==================================================
+17. COMPARAÇÃO POR CATEGORIA
+==================================================
+
+Exibir para cada orçamento:
+
+categoria;
+planned;
+actual;
+remaining;
+percentage;
+status, se fornecido;
+categoria inativa, se aplicável.
+
+Não misturar categorias sem orçamento
+ao conjunto de orçamentos cadastrados.
+
+==================================================
+18. BARRAS DE PROGRESSO
+==================================================
+
+Cada categoria deve ter barra visual.
+
+A barra deve representar o consumo.
+
+Para percentual acima de 100%:
+
+preenchimento visual limitado ao contêiner;
+percentual textual real;
+indicador acessível de excesso.
+
+Não usar somente cor para comunicar situação.
+
+==================================================
+19. STATUS VISUAL
+==================================================
+
+Se o backend fornece status aprovados:
+
+ON_TRACK;
+WARNING;
+EXCEEDED;
+
+ou equivalentes reais:
+
+usar rótulos claros.
+
+Exemplos:
+
+Dentro do limite;
+Próximo do limite;
+Orçamento excedido.
+
+Não criar limiares próprios no frontend.
+
+==================================================
+20. GRÁFICO ECHARTS
+==================================================
+
+Implementar gráfico comparativo por categoria.
+
+Sugestão:
+
+barras agrupadas:
+
+Planejado;
+Realizado.
+
+Utilizar ECharts já presente no projeto.
+
+Não adicionar biblioteca nova.
+
+==================================================
+21. GRÁFICO COM VALORES NEGATIVOS
+==================================================
+
+O gráfico deve preservar os valores
+financeiros corretos.
+
+Não transformar remaining negativo em positivo.
+
+Para planejado versus realizado,
+ambas as séries devem usar valores reais
+do backend.
+
+==================================================
+22. CATEGORIAS COM NOMES LONGOS
+==================================================
+
+Testar nomes extensos.
+
+Garantir:
+
+- tooltip;
+- truncamento acessível;
+- labels legíveis;
+- nenhuma sobreposição crítica;
+- layout responsivo.
+
+==================================================
+23. ORDENAÇÃO
+==================================================
+
+Definir ordenação conforme ADR ou padrão existente.
+
+Possibilidades:
+
+- nome da categoria;
+- maior percentual;
+- maior gasto.
+
+Não inventar ordenação financeira no backend.
+
+Se ordenação for apenas visual,
+não alterar valores nem agrupamentos.
+
+==================================================
+24. CATEGORIAS INATIVAS
+==================================================
+
+Exibir orçamentos históricos associados
+a categorias inativas.
+
+Mostrar indicação discreta:
+
+"Inativa".
+
+Não ocultar dados históricos válidos.
+
+==================================================
+25. CATEGORIA BOTH
+==================================================
+
+Categoria BOTH deve aparecer normalmente
+quando possuir orçamento de despesa.
+
+A interface não deve subtrair receitas
+do valor realizado.
+
+O backend é autoridade.
+
+==================================================
+26. DESPESAS NÃO ORÇADAS
+==================================================
+
+Se o backend fornece indicador separado
+de despesas não orçadas:
+
+apresentar de forma distinta.
+
+Não somar esse valor ao total realizado
+dos orçamentos cadastrados.
+
+Se o campo não existe:
+
+não inventar indicador.
+
+==================================================
+27. MÊS SEM ORÇAMENTOS
+==================================================
+
+Mostrar empty state.
+
+Mensagem sugerida:
+
+"Você ainda não definiu orçamentos para este mês."
+
+CTA:
+
+"Criar orçamento".
+
+Integrar com fluxo da TASK-6.2.
+
+==================================================
+28. ORÇAMENTOS SEM DESPESAS
+==================================================
+
+Mostrar:
+
+planned > 0;
+actual = 0;
+remaining = planned;
+consumo = 0%, conforme ADR.
+
+Não tratar como empty state.
+
+==================================================
+29. LOADING
+==================================================
+
+Implementar skeletons ou indicadores
+coerentes com o projeto.
+
+Ao mudar mês:
+
+não apresentar dados antigos como se fossem
+da nova competência.
+
+==================================================
+30. ERROR STATE
+==================================================
+
+Falha HTTP:
+
+mostrar mensagem clara;
+permitir tentar novamente;
+não mostrar valores fictícios;
+não zerar silenciosamente dados em erro.
+
+==================================================
+31. REQUESTS CONCORRENTES
+==================================================
+
+Ao navegar rapidamente entre meses:
+
+resposta antiga não pode sobrescrever
+resposta mais recente.
+
+Usar switchMap ou mecanismo equivalente.
+
+Cancelar subscriptions adequadamente.
+
+==================================================
+32. ATUALIZAÇÃO APÓS CRUD
+==================================================
+
+Se usuário criar, editar ou remover orçamento
+na mesma interface:
+
+atualizar o acompanhamento após sucesso.
+
+Evitar duplicar requests desnecessariamente.
+
+Não recalcular totais no frontend.
+
+==================================================
+33. NAVEGAÇÃO PARA GESTÃO
+==================================================
+
+Permitir acesso fácil a:
+
+Novo orçamento;
+Editar orçamento;
+Gerenciar orçamentos.
+
+Reutilizar fluxo existente.
+
+Não duplicar formulário.
+
+==================================================
+34. ACESSIBILIDADE
+==================================================
+
+Validar:
+
+- navegação por teclado;
+- foco;
+- labels;
+- contraste;
+- barras com informação textual;
+- gráficos com alternativa textual;
+- estados não dependentes apenas de cor;
+- títulos hierárquicos;
+- loading acessível;
+- mensagens de erro claras.
+
+==================================================
+35. RESPONSIVIDADE
+==================================================
+
+Validar:
+
+360x800
+390x844
+768x1024
+1024x768
+1280x720
+1366x768
+1920x1080
+
+Verificar:
+
+- cards;
+- filtros;
+- barras;
+- gráficos;
+- tabelas;
+- sidebar;
+- textos longos;
+- valores grandes;
+- nenhum overflow horizontal global.
+
+==================================================
+36. GOLDEN SCENARIO — BASE
+==================================================
+
+API retorna:
+
+month=2026-10
+
+Alimentação:
+planned=1000.00
+actual=750.00
+remaining=250.00
+percentage=75.00
+
+Esperado:
+
+cards e linha exibem valores corretos.
+
+Barra representa 75%.
+
+==================================================
+37. GOLDEN — EXCEDIDO
+==================================================
+
+API retorna:
+
+planned=1000.00
+actual=1150.00
+remaining=-150.00
+percentage=115.00
+
+Esperado:
+
+115% textual;
+barra sem overflow;
+valor negativo preservado;
+status correto se fornecido.
+
+==================================================
+38. GOLDEN — MÚLTIPLOS ORÇAMENTOS
+==================================================
+
+API retorna:
+
+Alimentação:
+planned=1000
+actual=750
+
+Transporte:
+planned=500
+actual=200
+
+Totais do backend:
+
+planned=1500
+actual=950
+remaining=550
+percentage conforme ADR.
+
+Esperado:
+
+cards mostram totais do backend;
+gráfico mostra duas categorias;
+sem média simples de percentuais.
+
+==================================================
+39. GOLDEN — CANCELAMENTO
+==================================================
+
+Após cancelar uma despesa:
+
+API retorna novo actual.
+
+Ao atualizar a tela:
+
+valor realizado deve refletir o backend.
+
+Não usar valor antigo em cache indevido.
+
+==================================================
+40. GOLDEN — COMPETÊNCIA
+==================================================
+
+Outubro:
+dados A.
+
+Novembro:
+dados B.
+
+Navegar rapidamente:
+
+Outubro -> Novembro -> Outubro.
+
+Esperado:
+
+dados da competência atual;
+nenhuma resposta atrasada sobrescreve a tela.
+
+==================================================
+41. GOLDEN — INATIVA
+==================================================
+
+Categoria desativada após criação
+de orçamento histórico.
+
+Esperado:
+
+categoria continua visível;
+identificação de inativa;
+valores preservados.
+
+==================================================
+42. GOLDEN — MULTIUSER
+==================================================
+
+User A e User B possuem orçamentos.
+
+Frontend consome API autenticada.
+
+Não envia ownerId.
+
+Não mantém dados do usuário anterior
+após troca de sessão.
+
+==================================================
+43. TESTES UNITÁRIOS
+==================================================
+
+Testar:
+
+- serviço HTTP;
+- contrato real;
+- cards;
+- valores BRL;
+- percentual;
+- excesso;
+- orçamento zero;
+- categoria BOTH;
+- categoria inativa;
+- mês vazio;
+- loading;
+- error;
+- retry;
+- navegação mensal;
+- concorrência;
+- atualização após CRUD;
+- gráfico;
+- acessibilidade básica.
+
+==================================================
+44. TESTES E2E
+==================================================
+
+Se infraestrutura E2E existir:
+
+validar:
+
+- navegação;
+- seleção de mês;
+- visualização de cards;
+- gráfico;
+- criação de orçamento;
+- atualização do acompanhamento;
+- comportamento responsivo.
+
+Não declarar E2E PASS se não executado.
+
+==================================================
+45. REGRESSÕES
+==================================================
+
+Executar regressões relevantes:
+
+Authentication;
+Categories;
+Asset Accounts;
+Expenses;
+Income;
+Transfers;
+Dashboard;
+History;
+Tags;
+Attachments;
+Reports;
+Exports;
+Budget CRUD.
+
+Não alterar regras financeiras nem endpoints
+existentes sem necessidade comprovada.
+
+==================================================
+46. COMANDOS DE VALIDAÇÃO
+==================================================
+
+Executar conforme scripts reais:
+
+Angular lint;
+Angular unit tests;
+Angular production build;
+E2E, se configurado.
+
+Registrar comandos e resultados reais.
+
+Não marcar PASS sem execução.
+
+==================================================
+47. FORA DO ESCOPO
+==================================================
+
+Não implementar:
+
+- novos cálculos financeiros;
+- alterações no ledger;
+- novos endpoints backend;
+- notificações;
+- email;
+- push;
+- alertas persistidos;
+- metas financeiras;
+- contribuições para metas;
+- exportação de orçamentos;
+- novas bibliotecas de gráficos.
+
+==================================================
+48. DEFINITION OF DONE
+==================================================
+
+TASK-6.4 concluída quando:
+
+- interface de acompanhamento implementada;
+- integração real com TASK-6.3;
+- competência mensal funcionando;
+- cards de resumo funcionando;
+- valores monetários corretos;
+- percentual correto;
+- excesso acima de 100% exibido;
+- orçamento zero tratado;
+- comparativo por categoria funcionando;
+- gráfico ECharts funcionando;
+- categorias inativas exibidas;
+- estados loading/empty/error/retry;
+- concorrência de requests tratada;
+- atualização após CRUD;
+- responsividade validada;
+- acessibilidade validada;
+- testes unitários aprovados;
+- lint aprovado;
+- production build aprovado;
+- regressões relevantes aprovadas;
+- nenhuma regra financeira duplicada.
+
+==================================================
+49. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-6.4 — DASHBOARD DE ACOMPANHAMENTO DE ORÇAMENTOS
+
+STATUS:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+1. ADR utilizado.
+2. Organização da navegação.
+3. Componentes criados.
+4. Serviço Angular.
+5. Contrato REST consumido.
+6. Filtro de competência.
+7. Cards de resumo.
+8. Comparação por categoria.
+9. Barras de progresso.
+10. Gráfico ECharts.
+11. Percentuais acima de 100%.
+12. Orçamento zero.
+13. Categorias inativas.
+14. Estados de loading/empty/error.
+15. Concorrência de requests.
+16. Atualização após CRUD.
+17. Responsividade.
+18. Acessibilidade.
+19. Golden Scenarios.
+20. Testes unitários.
+21. E2E.
+22. Lint.
+23. Production build.
+24. Regressões.
+25. Arquivos modificados.
+26. Bugs encontrados/corrigidos.
+27. Divergências do ADR.
+28. Dívidas técnicas.
+29. Fora do escopo confirmado.
+
+Se concluída:
+
+READY FOR TASK-6.5 — Alertas de Limites de Gastos.
+
+NÃO implementar TASK-6.5 nesta execução.

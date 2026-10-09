@@ -1,0 +1,834 @@
+# TASK-6.2 — INTERFACE DE GESTÃO DE ORÇAMENTOS
+
+PROJETO: EQUILIBRA
+SPRINT: 6 — PLANEJAMENTO FINANCEIRO
+STACK: Angular 19 + Spring Boot 4 + MySQL
+
+CONTEXTO
+
+Sprint 5 aprovada.
+TASK-6.0 — Arquitetura do Planejamento Financeiro concluída.
+TASK-6.1 — Backend de Orçamentos por Categoria concluído.
+
+OBJETIVO
+
+Implementar a interface Angular para gerenciamento de
+orçamentos mensais por categoria.
+
+O usuário deverá conseguir:
+
+- consultar orçamentos por competência;
+- criar orçamento;
+- editar valor planejado;
+- remover ou arquivar orçamento conforme ADR;
+- visualizar categoria associada;
+- identificar categorias inativas;
+- compreender conflitos de orçamento duplicado;
+- navegar entre competências mensais.
+
+Consumir exclusivamente a API real da TASK-6.1.
+
+NÃO implementar cálculos de realizado, consumo ou alertas.
+
+==================================================
+1. INSPEÇÃO OBRIGATÓRIA
+==================================================
+
+Antes de modificar arquivos, inspecionar:
+
+- CLAUDE.md;
+- ADR da Sprint 6;
+- especificação funcional da TASK-6.0;
+- relatório final da TASK-6.1;
+- endpoints reais de Budget;
+- DTOs e OpenAPI;
+- CategoryService;
+- Angular routing;
+- Auth Guard;
+- HTTP interceptors;
+- Design System;
+- sidebar;
+- PageHeader;
+- ContentPanel;
+- formulários;
+- drawers/dialogs;
+- componentes de listagem;
+- empty states;
+- padrões de erro;
+- padrões de confirmação;
+- testes Angular.
+
+ADR e contrato real prevalecem sobre exemplos deste prompt.
+
+==================================================
+2. PRE-IMPLEMENTATION REPORT
+==================================================
+
+Antes de editar, produzir:
+
+# TASK-6.2 — PRE-IMPLEMENTATION REPORT
+
+1. Contratos REST reais.
+2. Campos reais do orçamento.
+3. Competência mensal.
+4. Regras de edição.
+5. Política de remoção/arquivamento.
+6. Categorias elegíveis.
+7. Categorias inativas.
+8. Componentes reutilizáveis.
+9. Estrutura de tela.
+10. Estados da interface.
+11. Estratégia responsiva.
+12. Plano de testes.
+13. Arquivos previstos.
+
+Somente depois implementar.
+
+==================================================
+3. ROTA
+==================================================
+
+Criar rota privada conforme ADR.
+
+Preferência conceitual:
+
+/budgets
+
+Reutilizar layout autenticado.
+
+Não criar layout paralelo.
+
+==================================================
+4. SIDEBAR
+==================================================
+
+Adicionar item:
+
+Orçamentos
+
+Utilizar ícone coerente com Design System.
+
+Respeitar comportamento:
+
+desktop;
+tablet;
+mobile;
+menu recolhido;
+menu expandido.
+
+Não alterar estrutura global sem necessidade.
+
+==================================================
+5. PAGE HEADER
+==================================================
+
+Título:
+
+Orçamentos
+
+Subtítulo:
+
+"Planeje seus gastos mensais por categoria."
+
+Ação principal:
+
+Novo orçamento
+
+Usar componentes existentes.
+
+==================================================
+6. FILTRO DE COMPETÊNCIA
+==================================================
+
+Permitir selecionar mês e ano.
+
+Exemplo:
+
+Outubro de 2026.
+
+Usar formato e semântica definidos no ADR.
+
+Não converter YearMonth para timestamp
+desnecessariamente.
+
+==================================================
+7. NAVEGAÇÃO MENSAL
+==================================================
+
+Oferecer controles:
+
+Mês anterior
+Mês seguinte
+
+e seletor de competência, se adequado ao Design System.
+
+Não criar calendário complexo sem necessidade.
+
+==================================================
+8. COMPETÊNCIA PADRÃO
+==================================================
+
+Usar mês atual, salvo regra diferente do ADR.
+
+A mudança de mês deve atualizar a listagem.
+
+==================================================
+9. CONSULTA
+==================================================
+
+Consumir endpoint real da TASK-6.1.
+
+Filtrar orçamentos pela competência selecionada.
+
+Não buscar todos os orçamentos para filtrar
+client-side se a API já oferece filtro mensal.
+
+==================================================
+10. LISTAGEM
+==================================================
+
+Exibir para cada orçamento:
+
+- nome da categoria;
+- competência;
+- valor planejado;
+- estado da categoria, quando relevante;
+- ações permitidas.
+
+Não mostrar campos inexistentes.
+
+==================================================
+11. DESKTOP
+==================================================
+
+Usar tabela ou cards conforme padrão existente.
+
+Preferência:
+
+Categoria
+Competência
+Valor planejado
+Ações
+
+==================================================
+12. MOBILE
+==================================================
+
+Utilizar cards responsivos.
+
+Cada card deve permitir identificar:
+
+categoria;
+valor;
+competência;
+ações.
+
+Evitar scroll horizontal global.
+
+==================================================
+13. CRIAÇÃO
+==================================================
+
+Botão:
+
+Novo orçamento
+
+Abrir drawer ou dialog conforme padrão existente.
+
+Campos:
+
+Categoria
+Competência
+Valor planejado
+
+Utilizar contrato real.
+
+==================================================
+14. SELEÇÃO DE CATEGORIA
+==================================================
+
+Carregar categorias próprias do usuário.
+
+Se ADR definiu orçamento de despesas:
+
+permitir:
+
+EXPENSE;
+BOTH.
+
+Não permitir:
+
+INCOME.
+
+Não mostrar categorias estrangeiras.
+
+==================================================
+15. CATEGORIAS INATIVAS
+==================================================
+
+Na criação:
+
+seguir política do ADR.
+
+Se criação em categoria inativa for proibida,
+não oferecer como opção válida.
+
+Na listagem histórica:
+
+continuar exibindo categoria inativa associada
+a orçamento existente.
+
+==================================================
+16. DUPLICIDADE
+==================================================
+
+Se já existe orçamento para categoria e competência:
+
+não permitir duplicidade.
+
+Frontend pode prevenir seleção duplicada
+para melhorar UX.
+
+Backend permanece autoridade.
+
+Se API retornar 409:
+
+mostrar mensagem clara.
+
+Exemplo:
+
+"Já existe um orçamento para esta categoria neste mês."
+
+Não exibir stack trace.
+
+==================================================
+17. VALOR PLANEJADO
+==================================================
+
+Campo monetário em BRL.
+
+Utilizar componente monetário existente.
+
+Validar:
+
+obrigatório;
+valor permitido pelo ADR;
+duas casas decimais;
+limites;
+formato inválido.
+
+Não usar float para cálculos financeiros.
+
+Não arredondar silenciosamente entradas inválidas.
+
+==================================================
+18. EDIÇÃO
+==================================================
+
+Permitir editar somente campos aprovados no ADR.
+
+Se categoryId e competência forem imutáveis:
+
+exibi-los como informação não editável.
+
+Permitir alterar plannedAmount.
+
+Não tentar atualizar campos imutáveis.
+
+==================================================
+19. REMOÇÃO/ARQUIVAMENTO
+==================================================
+
+Seguir política real da TASK-6.1.
+
+Se DELETE:
+
+implementar confirmação antes da remoção.
+
+Se arquivamento:
+
+utilizar endpoint e nomenclatura corretos.
+
+Não inventar soft delete no frontend.
+
+==================================================
+20. CONFIRMAÇÃO
+==================================================
+
+Ações destrutivas devem exigir confirmação.
+
+Exemplo:
+
+"Deseja remover o orçamento de Alimentação
+de outubro de 2026?"
+
+Informar consequência real conforme ADR.
+
+==================================================
+21. SUCESSO
+==================================================
+
+Após criação:
+
+fechar drawer/dialog;
+atualizar listagem;
+mostrar feedback.
+
+Após edição:
+
+atualizar valor;
+mostrar feedback.
+
+Após remoção:
+
+atualizar listagem;
+mostrar feedback.
+
+Não anunciar sucesso antes da resposta HTTP.
+
+==================================================
+22. LOADING
+==================================================
+
+Implementar estados:
+
+carregando listagem;
+salvando;
+removendo;
+carregando categorias.
+
+Não permitir submissões duplicadas.
+
+==================================================
+23. EMPTY STATE
+==================================================
+
+Se mês não possui orçamentos:
+
+mostrar:
+
+"Nenhum orçamento cadastrado para este mês."
+
+CTA:
+
+"Criar orçamento"
+
+Não tratar ausência de orçamentos como erro.
+
+==================================================
+24. NO CATEGORIES
+==================================================
+
+Se não existem categorias elegíveis:
+
+mostrar mensagem clara.
+
+Exemplo:
+
+"Cadastre uma categoria de despesa antes
+de criar seu primeiro orçamento."
+
+CTA para gestão de categorias,
+conforme navegação existente.
+
+==================================================
+25. ERROR STATE
+==================================================
+
+Falha na consulta:
+
+mensagem;
+retry.
+
+Falha na criação/edição:
+
+manter formulário;
+preservar dados digitados;
+mostrar erro.
+
+Falha na remoção:
+
+manter item visível;
+mostrar erro.
+
+==================================================
+26. PROBLEM DETAILS
+==================================================
+
+Reutilizar tratamento existente.
+
+400:
+validação.
+
+401:
+fluxo global de autenticação.
+
+403:
+não encerrar sessão indevidamente.
+
+404:
+orçamento/categoria indisponível.
+
+409:
+conflito de duplicidade.
+
+500:
+mensagem segura.
+
+==================================================
+27. SERVICE ANGULAR
+==================================================
+
+Criar:
+
+BudgetService
+
+ou nome coerente com projeto.
+
+Consumir endpoints reais.
+
+Usar HttpClient.
+
+Reutilizar interceptors.
+
+Não incluir ownerId.
+
+Não enviar JWT na URL.
+
+==================================================
+28. MODELS
+==================================================
+
+Criar interfaces tipadas:
+
+Budget;
+CreateBudgetRequest;
+UpdateBudgetRequest;
+BudgetFilter;
+
+conforme OpenAPI.
+
+Não usar any.
+
+Não criar campos inexistentes.
+
+==================================================
+29. CONCORRÊNCIA DE REQUESTS
+==================================================
+
+Se usuário navegar rapidamente entre meses:
+
+resposta antiga não pode sobrescrever nova.
+
+Usar switchMap ou estratégia equivalente.
+
+Evitar memory leaks.
+
+==================================================
+30. ESTADO
+==================================================
+
+Manter separação clara entre:
+
+competência selecionada;
+listagem atual;
+formulário;
+estado de submissão.
+
+Não mostrar orçamento de setembro
+sob título outubro durante carregamento
+sem indicação explícita.
+
+==================================================
+31. ACESSIBILIDADE
+==================================================
+
+Garantir:
+
+- labels nos campos;
+- navegação por teclado;
+- foco correto no drawer;
+- Escape quando apropriado;
+- erros associados aos campos;
+- confirmação acessível;
+- botões com nomes claros;
+- loading anunciável;
+- feedback não dependente apenas de cor.
+
+==================================================
+32. RESPONSIVIDADE
+==================================================
+
+Validar:
+
+360x800
+390x844
+768x1024
+1024x768
+1280x720
+1366x768
+1920x1080
+
+Testar:
+
+- menu lateral;
+- PageHeader;
+- seletor mensal;
+- formulário;
+- listagem;
+- cards;
+- confirmação;
+- nomes longos;
+- valores monetários elevados.
+
+Nenhum overflow horizontal global.
+
+==================================================
+33. GOLDEN SCENARIO
+==================================================
+
+User A possui categoria:
+
+Alimentação
+EXPENSE
+ACTIVE.
+
+Criar orçamento:
+
+2026-10
+R$ 1.000,00.
+
+Esperado:
+
+orçamento aparece em outubro.
+
+Editar:
+
+R$ 1.200,00.
+
+Esperado:
+
+valor atualizado.
+
+Navegar para novembro:
+
+orçamento de outubro não aparece.
+
+Voltar para outubro:
+
+orçamento aparece.
+
+==================================================
+34. DUPLICIDADE GOLDEN
+==================================================
+
+Tentar criar outro orçamento:
+
+Alimentação
+2026-10.
+
+Esperado:
+
+erro de conflito amigável.
+
+Nenhuma duplicata.
+
+==================================================
+35. BOTH GOLDEN
+==================================================
+
+Categoria BOTH:
+
+permitida para orçamento de despesa,
+se ADR aprovou.
+
+Categoria INCOME:
+
+não permitida.
+
+==================================================
+36. INACTIVE GOLDEN
+==================================================
+
+Criar orçamento com categoria ativa.
+
+Desativar categoria.
+
+Consultar mês histórico.
+
+Esperado:
+
+orçamento continua visível.
+
+Indicador:
+
+"Inativa".
+
+==================================================
+37. MULTIUSER GOLDEN
+==================================================
+
+User A e User B possuem orçamentos.
+
+User A só vê seus orçamentos.
+
+Não enviar ownerId.
+
+Não expor categorias privadas de B.
+
+==================================================
+38. TESTES UNITÁRIOS
+==================================================
+
+Testar:
+
+- service;
+- GET;
+- POST;
+- PUT;
+- DELETE/arquivo conforme ADR;
+- competência;
+- mês anterior;
+- mês seguinte;
+- categoria EXPENSE;
+- categoria BOTH;
+- categoria INCOME;
+- categoria inativa;
+- duplicidade;
+- valor monetário;
+- loading;
+- empty;
+- error;
+- retry;
+- confirmação;
+- submissão duplicada;
+- resposta antiga;
+- atualização de listagem.
+
+==================================================
+39. TESTES DE INTEGRAÇÃO FRONTEND
+==================================================
+
+Usar mocks HTTP tipados.
+
+Validar requests conforme OpenAPI real.
+
+Se E2E estiver configurado:
+
+executar fluxo de criação, edição e remoção.
+
+Não marcar PASS se não executado.
+
+==================================================
+40. REGRESSÕES
+==================================================
+
+Verificar:
+
+Dashboard;
+Asset Accounts;
+Categories;
+Expenses;
+Income;
+Transfers;
+History;
+Tags;
+Attachments;
+Financial Reports;
+Category Reports;
+Audit Reports;
+Exports.
+
+Não alterar telas anteriores sem bug comprovado.
+
+==================================================
+41. FORA DO ESCOPO
+==================================================
+
+Não implementar:
+
+actualAmount;
+remainingAmount;
+consumptionPercentage;
+planned versus actual;
+dashboard de orçamento;
+alertas;
+metas financeiras;
+exportação de orçamento;
+novos endpoints backend;
+mudanças no ledger;
+gráficos de consumo.
+
+Esses recursos pertencem às próximas tasks.
+
+==================================================
+42. DEFINITION OF DONE
+==================================================
+
+TASK-6.2 concluída quando:
+
+- rota privada funcionar;
+- sidebar funcionar;
+- filtro de competência funcionar;
+- navegação mensal funcionar;
+- listagem consumir API real;
+- criação funcionar;
+- edição funcionar;
+- remoção/arquivamento funcionar;
+- categorias elegíveis forem respeitadas;
+- categorias inativas históricas forem exibidas;
+- duplicidade for tratada;
+- BRL estiver correto;
+- loading/empty/error/retry funcionarem;
+- ownership for preservado;
+- responsividade estiver validada;
+- acessibilidade estiver validada;
+- testes passarem;
+- lint passar;
+- production build passar;
+- regressões essenciais passarem.
+
+==================================================
+43. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-6.2 — INTERFACE DE GESTÃO DE ORÇAMENTOS
+
+STATUS:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+1. ADR utilizado.
+2. Rota.
+3. Sidebar.
+4. Contratos API.
+5. Filtro de competência.
+6. Navegação mensal.
+7. Listagem.
+8. Criação.
+9. Edição.
+10. Remoção/arquivamento.
+11. Categorias elegíveis.
+12. Categorias inativas.
+13. Duplicidade.
+14. Valores monetários.
+15. Estados.
+16. Responsividade.
+17. Acessibilidade.
+18. Golden Scenarios.
+19. Testes executados.
+20. Lint.
+21. Production build.
+22. Regressões.
+23. Arquivos criados/modificados.
+24. Bugs corrigidos.
+25. Divergências do ADR.
+26. Dívidas técnicas.
+27. Fora do escopo confirmado.
+
+Se concluída:
+
+READY FOR TASK-6.3 — Backend de Planejado versus Realizado.
+
+NÃO implementar TASK-6.3 nesta execução.

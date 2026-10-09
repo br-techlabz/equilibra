@@ -1,0 +1,876 @@
+# TASK-6.1 — BACKEND DE ORÇAMENTOS POR CATEGORIA
+
+PROJETO: EQUILIBRA
+SPRINT: 6 — PLANEJAMENTO FINANCEIRO
+STACK: Spring Boot 4 + MySQL + Angular 19
+
+CONTEXTO
+
+Sprint 5 aprovada.
+TASK-6.0 concluída.
+ADR, especificação funcional, contratos e roadmap da
+Sprint 6 produzidos na TASK-6.0.
+
+OBJETIVO
+
+Implementar exclusivamente o backend de cadastro,
+consulta, edição e remoção/arquivamento de orçamentos
+mensais por categoria, conforme decisões da TASK-6.0.
+
+Não implementar nesta etapa:
+
+- frontend;
+- cálculo de realizado;
+- planejado versus realizado;
+- dashboard de orçamento;
+- alertas;
+- metas financeiras.
+
+O ADR 6.0 prevalece sobre todas as sugestões deste prompt.
+
+==================================================
+1. INSPEÇÃO OBRIGATÓRIA
+==================================================
+
+Antes de modificar arquivos, inspecionar:
+
+- CLAUDE.md;
+- ADR da Sprint 6;
+- especificação funcional da TASK-6.0;
+- contratos REST planejados;
+- decisões pendentes;
+- modelagem de domínio;
+- matriz de segurança;
+- Golden Scenarios;
+- migrations existentes;
+- Category e CategoryService;
+- CurrentUser;
+- Spring Security;
+- padrões de controllers e services;
+- DTOs e validação;
+- Problem Details;
+- Request ID;
+- OpenAPI;
+- testes Testcontainers/MySQL.
+
+Confirmar que não existem decisões bloqueantes
+pendentes para a implementação de orçamentos.
+
+Se existirem, registrar BLOCKED e solicitar a
+decisão necessária antes de codificar.
+
+==================================================
+2. PRE-IMPLEMENTATION REPORT
+==================================================
+
+Antes de editar, apresentar:
+
+# TASK-6.1 — PRE-IMPLEMENTATION REPORT
+
+1. Decisões relevantes do ADR.
+2. Entidade proposta.
+3. Campos e tipos reais.
+4. Unicidade e constraints.
+5. Política de competência mensal.
+6. Categorias elegíveis.
+7. Política de categorias inativas.
+8. Política de edição.
+9. Política de exclusão/arquivamento.
+10. Endpoints.
+11. Requests e responses.
+12. Validações.
+13. Ownership.
+14. Migrations.
+15. Testes.
+16. Arquivos previstos.
+
+Somente depois implementar.
+
+==================================================
+3. ENTIDADE DE DOMÍNIO
+==================================================
+
+Implementar a entidade aprovada no ADR.
+
+Nome conceitual:
+
+CategoryBudget
+
+Campos candidatos:
+
+id: UUID
+ownerId: UUID
+categoryId: UUID
+year: integer
+month: integer
+plannedAmount: BigDecimal
+createdAt
+updatedAt
+
+Não adicionar campos sem necessidade.
+
+Não persistir actualAmount, remainingAmount
+ou consumptionPercentage nesta TASK, salvo decisão
+expressa do ADR.
+
+==================================================
+4. COMPETÊNCIA MENSAL
+==================================================
+
+Representar competência conforme ADR.
+
+Preferência conceitual:
+
+YearMonth
+
+ou campos year + month.
+
+Validar:
+
+year permitido;
+month entre 1 e 12;
+competência válida;
+formato de entrada.
+
+Não converter competência em timestamp
+sem necessidade.
+
+==================================================
+5. VALOR PLANEJADO
+==================================================
+
+Usar BigDecimal.
+
+Persistência compatível com DECIMAL(19,2),
+ou padrão monetário aprovado.
+
+Rejeitar:
+
+- null;
+- valores negativos, se proibidos pelo ADR;
+- mais de duas casas decimais;
+- valores fora do limite da coluna;
+- formatos inválidos.
+
+Definir comportamento de zero conforme ADR.
+
+Não arredondar silenciosamente valores inválidos.
+
+==================================================
+6. CATEGORIAS ELEGÍVEIS
+==================================================
+
+Respeitar applicability:
+
+EXPENSE
+INCOME
+BOTH
+
+Se ADR aprovou orçamento de despesas:
+
+EXPENSE: elegível.
+BOTH: elegível.
+INCOME: não elegível.
+
+Validar no backend.
+
+Não confiar no frontend.
+
+==================================================
+7. CATEGORIAS INATIVAS
+==================================================
+
+Seguir política do ADR.
+
+Cenários obrigatórios:
+
+- categoria ativa na criação;
+- categoria inativa na criação;
+- categoria desativada após orçamento existente;
+- consulta histórica;
+- edição de orçamento histórico;
+- categoria reativada.
+
+Não excluir automaticamente orçamentos históricos
+quando uma categoria for desativada.
+
+==================================================
+8. OWNERSHIP
+==================================================
+
+Toda operação deve derivar o usuário autenticado:
+
+JWT -> SecurityContext -> CurrentUser.
+
+Nunca aceitar ownerId em requests.
+
+Validar categoryId pertencente ao usuário.
+
+Categoria estrangeira deve ser tratada como
+inexistente conforme política de segurança.
+
+Buscar orçamento sempre por:
+
+id + ownerId
+
+ou estratégia equivalente.
+
+Nunca usar findById isolado para autorizar operação.
+
+==================================================
+9. UNICIDADE
+==================================================
+
+Aplicar unicidade aprovada no ADR.
+
+Exemplo conceitual:
+
+UNIQUE(owner_id, category_id, year, month)
+
+A constraint deve existir no MySQL.
+
+Validar conflito também na camada de aplicação
+para mensagem amigável.
+
+Entretanto, a constraint do banco é obrigatória
+para proteger contra concorrência.
+
+==================================================
+10. CONCORRÊNCIA
+==================================================
+
+Testar duas tentativas simultâneas de criação
+para mesma categoria e competência.
+
+Resultado esperado:
+
+apenas um orçamento persistido.
+
+A outra tentativa deve receber erro de domínio
+consistente, preferencialmente 409.
+
+Não permitir duplicatas.
+
+==================================================
+11. CRIAÇÃO
+==================================================
+
+Implementar endpoint conforme contrato ADR.
+
+Exemplo conceitual:
+
+POST /api/budgets
+
+Request candidato:
+
+{
+  "categoryId": "UUID",
+  "month": "2026-10",
+  "plannedAmount": 1000.00
+}
+
+A estrutura final deve seguir OpenAPI/ADR real.
+
+Resposta:
+
+201 Created.
+
+Location header quando padrão existente exigir.
+
+Não receber ownerId.
+
+==================================================
+12. LISTAGEM
+==================================================
+
+Implementar endpoint conforme ADR.
+
+Exemplo:
+
+GET /api/budgets?month=2026-10
+
+Permitir consultar orçamentos próprios.
+
+Suportar filtros aprovados:
+
+competência;
+categoria;
+status de arquivamento, se existir.
+
+Não implementar filtros não previstos.
+
+Retornar somente dados do usuário.
+
+==================================================
+13. DETALHAMENTO
+==================================================
+
+Endpoint conceitual:
+
+GET /api/budgets/{id}
+
+Retornar DTO tipado.
+
+Incluir metadados da categoria se aprovados:
+
+categoryId;
+categoryName;
+categoryActive.
+
+Não expor entidades JPA.
+
+==================================================
+14. EDIÇÃO
+==================================================
+
+Endpoint conforme ADR.
+
+Exemplo:
+
+PUT /api/budgets/{id}
+
+Se identidade category + month for imutável,
+permitir editar somente plannedAmount.
+
+Não permitir alteração silenciosa de:
+
+ownerId;
+categoryId;
+competência.
+
+Se ADR permitir outras alterações,
+seguir exatamente as regras aprovadas.
+
+==================================================
+15. REMOÇÃO OU ARQUIVAMENTO
+==================================================
+
+Implementar política aprovada no ADR.
+
+Não presumir soft delete.
+
+Orçamentos são dados de planejamento,
+não movimentos do ledger.
+
+Se exclusão física for aprovada:
+
+DELETE /api/budgets/{id}
+
+Se arquivamento for aprovado:
+
+usar endpoint e estado definidos no ADR.
+
+Não inventar status ACTIVE/CANCELLED
+copiados de FinancialTransaction.
+
+==================================================
+16. CATEGORIA RENOMEADA
+==================================================
+
+Se uma categoria for renomeada,
+definir apresentação conforme ADR.
+
+Preferir relação com categoria real,
+sem snapshot duplicado, salvo decisão contrária.
+
+O orçamento deve continuar associado ao mesmo UUID.
+
+==================================================
+17. VALIDAÇÕES DE REQUEST
+==================================================
+
+Implementar Bean Validation e validação de domínio.
+
+Cobrir:
+
+- JSON inválido;
+- campo obrigatório ausente;
+- UUID malformado;
+- competência inválida;
+- plannedAmount inválido;
+- categoria não elegível;
+- categoria inativa;
+- categoria estrangeira;
+- duplicidade;
+- edição proibida;
+- orçamento inexistente;
+- orçamento estrangeiro.
+
+==================================================
+18. ERROS HTTP
+==================================================
+
+Seguir convenção existente.
+
+400:
+request inválido.
+
+401:
+sem autenticação.
+
+404:
+orçamento/categoria inexistente ou estrangeiro.
+
+409:
+duplicidade ou conflito de estado,
+quando aplicável.
+
+500:
+erro sanitizado.
+
+Utilizar Problem Details.
+
+Preservar Request ID.
+
+==================================================
+19. TRANSAÇÕES DE BANCO
+==================================================
+
+Operações de escrita devem ser transacionais.
+
+Evitar estado parcialmente persistido.
+
+Não usar transações longas desnecessárias.
+
+Tratar violações de constraint de forma segura.
+
+==================================================
+20. MIGRATION
+==================================================
+
+Criar migration Flyway nova conforme convenção real.
+
+Incluir:
+
+- tabela de orçamento;
+- UUID;
+- ownerId;
+- categoryId;
+- competência;
+- plannedAmount;
+- timestamps;
+- FKs;
+- unique constraint;
+- índices necessários.
+
+Revisar modelo real de usuários e categorias
+antes de definir foreign keys.
+
+Não modificar migrations aplicadas.
+
+==================================================
+21. INTEGRIDADE REFERENCIAL
+==================================================
+
+Definir FK para Category conforme ADR.
+
+Não permitir orçamento referenciando categoria inexistente.
+
+Respeitar a política de exclusão/desativação de Category.
+
+Não permitir cascade que apague históricos indevidamente.
+
+==================================================
+22. REPOSITORY
+==================================================
+
+Criar repository com consultas owner-scoped.
+
+Evitar métodos que exponham dados de outros usuários.
+
+Listagem deve ser eficiente.
+
+Não criar consultas complexas de agregação financeira
+nesta TASK.
+
+==================================================
+23. SERVICE
+==================================================
+
+Centralizar regras no serviço de domínio/aplicação.
+
+Controller deve ser fino.
+
+Validar:
+
+ownership;
+categoria;
+competência;
+valor;
+unicidade;
+edição;
+remoção.
+
+Não espalhar regras entre controller e repository.
+
+==================================================
+24. DTOs
+==================================================
+
+Criar DTOs separados para:
+
+Create;
+Update;
+Response;
+List/Filter.
+
+Seguir padrões do projeto.
+
+Não aceitar entidade JPA diretamente como request.
+
+Não expor ownerId desnecessariamente.
+
+==================================================
+25. OPENAPI
+==================================================
+
+Documentar:
+
+- endpoints;
+- request schemas;
+- response schemas;
+- competência;
+- plannedAmount;
+- categorias elegíveis;
+- categoria inativa;
+- unicidade;
+- status HTTP;
+- Problem Details;
+- exemplos.
+
+Não documentar endpoints ainda não implementados.
+
+==================================================
+26. GOLDEN SCENARIO — CRIAÇÃO
+==================================================
+
+User A possui categoria Alimentação:
+
+applicability=EXPENSE
+active=true.
+
+Criar orçamento:
+
+month=2026-10
+plannedAmount=1000.00.
+
+Esperado:
+
+201 Created.
+
+Consultar:
+
+retorna orçamento com mesmo valor,
+categoria e competência.
+
+==================================================
+27. GOLDEN — EDIÇÃO
+==================================================
+
+Atualizar plannedAmount:
+
+1000.00 -> 1200.00.
+
+Esperado:
+
+valor atualizado;
+mesma categoria;
+mesma competência;
+mesmo owner;
+updatedAt coerente.
+
+==================================================
+28. GOLDEN — DUPLICIDADE
+==================================================
+
+Criar segundo orçamento:
+
+mesma categoria;
+mesmo mês;
+mesmo usuário.
+
+Esperado:
+
+409 Conflict ou política ADR equivalente.
+
+Não persistir duplicata.
+
+==================================================
+29. GOLDEN — OUTRO MÊS
+==================================================
+
+Criar orçamento para novembro/2026
+na mesma categoria.
+
+Esperado:
+
+permitido.
+
+Não confundir competências.
+
+==================================================
+30. GOLDEN — MULTIUSER
+==================================================
+
+User B possui categoria Alimentação própria.
+
+User B cria orçamento para outubro/2026.
+
+Esperado:
+
+permitido, pois owner diferente.
+
+User A não pode:
+
+- consultar orçamento de B;
+- editar orçamento de B;
+- remover orçamento de B;
+- criar orçamento usando categoryId de B.
+
+==================================================
+31. GOLDEN — CATEGORIA BOTH
+==================================================
+
+Criar categoria BOTH.
+
+Criar orçamento de despesas conforme ADR.
+
+Esperado:
+
+permitido, se regra aprovada.
+
+Não calcular receitas nesta TASK.
+
+==================================================
+32. GOLDEN — CATEGORIA INCOME
+==================================================
+
+Criar categoria INCOME.
+
+Tentar orçamento de despesas.
+
+Esperado:
+
+rejeição de domínio conforme ADR.
+
+==================================================
+33. GOLDEN — INATIVA
+==================================================
+
+Criar orçamento em categoria ativa.
+
+Desativar categoria.
+
+Consultar orçamento histórico.
+
+Esperado:
+
+orçamento continua acessível.
+
+Testar edição e novas criações conforme política ADR.
+
+==================================================
+34. TESTES UNITÁRIOS
+==================================================
+
+Testar:
+
+- criação;
+- consulta;
+- listagem;
+- edição;
+- remoção/arquivamento;
+- valor monetário;
+- competência;
+- categoria elegível;
+- categoria inativa;
+- duplicidade;
+- ownership;
+- campos imutáveis;
+- erros de domínio.
+
+==================================================
+35. TESTES DE INTEGRAÇÃO
+==================================================
+
+Usar Testcontainers/MySQL.
+
+Testar:
+
+- migration;
+- FK;
+- unique constraint;
+- transações;
+- concorrência;
+- persistência BigDecimal;
+- isolamento;
+- endpoints;
+- Problem Details;
+- autenticação.
+
+Não substituir MySQL por H2 para validar
+comportamento específico do banco.
+
+==================================================
+36. TESTES DE SEGURANÇA
+==================================================
+
+Sem JWT:
+401.
+
+User A tenta consultar ID de B:
+404 seguro.
+
+User A tenta editar ID de B:
+404 seguro.
+
+User A tenta remover ID de B:
+404 seguro.
+
+User A envia categoryId de B:
+404 seguro.
+
+Listagem de A não inclui B.
+
+Nenhum endpoint aceita ownerId.
+
+==================================================
+37. REGRESSÕES
+==================================================
+
+Executar regressões relevantes:
+
+Authentication;
+Categories;
+Asset Accounts;
+Expenses;
+Income;
+Transfers;
+Dashboard;
+History;
+Tags;
+Attachments;
+Reports;
+Exports.
+
+Criar orçamento não pode alterar:
+
+- saldo de conta;
+- ledger;
+- despesas;
+- receitas;
+- transferências;
+- patrimônio;
+- relatórios financeiros.
+
+==================================================
+38. PERFORMANCE
+==================================================
+
+Revisar:
+
+- índices por owner;
+- competência;
+- categoria;
+- unicidade;
+- paginação, se prevista;
+- consultas sem N+1.
+
+Não introduzir cache.
+
+Não criar agregações desnecessárias.
+
+==================================================
+39. FORA DO ESCOPO
+==================================================
+
+Não implementar:
+
+- frontend Angular;
+- cálculo de actualAmount;
+- remainingAmount;
+- consumptionPercentage;
+- status ON_TRACK/WARNING/EXCEEDED;
+- alertas;
+- dashboard de orçamento;
+- metas;
+- contribuições para metas;
+- relatórios de orçamento;
+- exportação de orçamento;
+- alterações no ledger;
+- novos tipos de transação.
+
+Esses recursos pertencem às TASKS seguintes.
+
+==================================================
+40. DEFINITION OF DONE
+==================================================
+
+TASK-6.1 concluída quando:
+
+- entidade persistida conforme ADR;
+- migration aplicada;
+- FK correta;
+- unique constraint aplicada;
+- CRUD conforme política aprovada;
+- competência validada;
+- plannedAmount validado;
+- categorias elegíveis validadas;
+- categorias inativas tratadas;
+- ownership garantido;
+- concorrência protegida;
+- DTOs tipados;
+- Problem Details;
+- Request ID;
+- OpenAPI atualizado;
+- Golden Scenarios aprovados;
+- testes unitários aprovados;
+- Testcontainers/MySQL aprovados;
+- build backend aprovado;
+- regressões relevantes aprovadas;
+- nenhuma alteração financeira indevida.
+
+==================================================
+41. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-6.1 — BACKEND DE ORÇAMENTOS POR CATEGORIA
+
+STATUS:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+1. ADR utilizado.
+2. Modelo implementado.
+3. Migration criada.
+4. Constraints e índices.
+5. Endpoints reais.
+6. Requests e responses.
+7. Competência mensal.
+8. Regras monetárias.
+9. Categorias elegíveis.
+10. Categorias inativas.
+11. Política de edição.
+12. Política de remoção.
+13. Ownership.
+14. Tratamento de concorrência.
+15. Golden Scenarios.
+16. Testes unitários.
+17. Testcontainers/MySQL.
+18. Segurança.
+19. OpenAPI.
+20. Problem Details.
+21. Regressões.
+22. Build backend.
+23. Arquivos criados/modificados.
+24. Bugs encontrados/corrigidos.
+25. Divergências do ADR.
+26. Dívidas técnicas.
+27. Fora do escopo confirmado.
+
+Se concluída:
+
+READY FOR TASK-6.2 — Interface de Gestão de Orçamentos.
+
+NÃO implementar TASK-6.2 nesta execução.

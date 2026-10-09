@@ -1,0 +1,1266 @@
+# TASK-6.8 — GATE FINAL DA SPRINT 6
+
+PROJETO: EQUILIBRA
+SPRINT: 6 — PLANEJAMENTO FINANCEIRO
+STACK: Spring Boot 4 + Angular 19 + MySQL
+QUALIDADE: Testcontainers, testes automatizados, segurança e regressão
+
+CONTEXTO
+
+Sprint 0 aprovada.
+Sprint 1 aprovada.
+Sprint 2 aprovada.
+Sprint 3 aprovada.
+Sprint 4 aprovada.
+Sprint 5 aprovada.
+
+TASK-6.0 — Arquitetura e ADR concluídos.
+TASK-6.1 — Backend de Orçamentos concluído.
+TASK-6.2 — Frontend de Orçamentos concluído.
+TASK-6.3 — Backend de Planejado versus Realizado concluído.
+TASK-6.4 — Dashboard de Orçamentos concluído.
+TASK-6.5 — Alertas de Limites concluídos.
+TASK-6.6 — Backend de Metas Financeiras concluído.
+TASK-6.7 — Frontend de Metas Financeiras concluído.
+
+OBJETIVO
+
+Executar o GATE FINAL DA SPRINT 6.
+
+Auditar integralmente as funcionalidades implementadas,
+validar aderência ao ADR, executar testes reais,
+corrigir defeitos comprovados e determinar se
+a Sprint 6 pode ser aprovada.
+
+NÃO desenvolver novas funcionalidades.
+
+Não declarar aprovação sem evidências.
+
+==================================================
+1. INSPEÇÃO INICIAL
+==================================================
+
+Inspecionar:
+
+- CLAUDE.md;
+- ADR da Sprint 6;
+- especificação funcional;
+- relatórios das TASKS 6.0 a 6.7;
+- código backend;
+- código frontend;
+- migrations;
+- entidades;
+- repositories;
+- services;
+- controllers;
+- DTOs;
+- OpenAPI;
+- Angular services;
+- rotas;
+- componentes;
+- formulários;
+- dashboards;
+- alertas;
+- metas;
+- testes;
+- pipelines;
+- documentação.
+
+Identificar contratos e decisões reais.
+
+Não presumir que os relatórios anteriores
+garantem funcionamento.
+
+==================================================
+2. RELATÓRIO DE ENTRADA
+==================================================
+
+Antes de corrigir qualquer código, produzir:
+
+# TASK-6.8 — GATE ENTRY REPORT
+
+1. Escopo implementado.
+2. ADRs aplicáveis.
+3. Endpoints existentes.
+4. Componentes frontend.
+5. Migrations.
+6. Testes existentes.
+7. Cobertura observável.
+8. Riscos conhecidos.
+9. Dívidas técnicas.
+10. Divergências.
+11. Lacunas de teste.
+12. Plano de auditoria.
+13. Critérios de aprovação.
+
+==================================================
+3. MATRIZ DE RASTREABILIDADE
+==================================================
+
+Criar matriz relacionando:
+
+Requisito;
+TASK de origem;
+ADR;
+Implementação;
+Teste;
+Resultado;
+Evidência.
+
+Cobrir todas as TASKS 6.1 a 6.7.
+
+Não marcar requisito como PASS
+apenas porque existe código.
+
+==================================================
+4. ORÇAMENTOS — DOMÍNIO
+==================================================
+
+Validar:
+
+- ownerId;
+- categoria;
+- competência;
+- plannedAmount;
+- status;
+- timestamps;
+- unicidade;
+- validações;
+- integridade referencial.
+
+Confirmar aderência ao ADR.
+
+==================================================
+5. ORÇAMENTOS — CATEGORIAS
+==================================================
+
+Validar:
+
+EXPENSE:
+permitida.
+
+BOTH:
+permitida.
+
+INCOME:
+proibida, se essa for a regra aprovada.
+
+Categoria estrangeira:
+não utilizável.
+
+Categoria inativa:
+respeitar política histórica do ADR.
+
+==================================================
+6. ORÇAMENTOS — VALORES
+==================================================
+
+Validar:
+
+BigDecimal;
+DECIMAL(19,2);
+zero;
+negativo;
+três casas decimais;
+limites;
+arredondamento;
+overflow.
+
+Não permitir arredondamento silencioso
+de valores inválidos.
+
+==================================================
+7. ORÇAMENTOS — UNICIDADE
+==================================================
+
+Validar constraint real para:
+
+owner;
+category;
+year;
+month.
+
+Criar orçamento duplicado:
+
+resultado conforme contrato,
+tipicamente 409.
+
+Testar concorrência de criação.
+
+Não depender somente de validação
+prévia em service.
+
+==================================================
+8. ORÇAMENTOS — CRUD
+==================================================
+
+Validar:
+
+criação;
+listagem;
+detalhamento;
+edição;
+remoção/arquivamento conforme ADR;
+filtros;
+competência;
+categoria inativa;
+erros;
+ownership.
+
+==================================================
+9. ORÇAMENTOS — FRONTEND
+==================================================
+
+Validar:
+
+rota;
+sidebar;
+listagem;
+formulário;
+seleção de categoria;
+seleção de mês;
+valores BRL;
+validações;
+loading;
+empty;
+error;
+retry;
+responsividade;
+acessibilidade.
+
+==================================================
+10. PLANEJADO VERSUS REALIZADO
+==================================================
+
+Validar fórmula:
+
+plannedAmount = orçamento cadastrado.
+
+actualAmount = despesas elegíveis.
+
+remainingAmount = planned - actual.
+
+consumptionPercentage conforme ADR.
+
+Nenhum valor realizado deve ser
+mantido como saldo paralelo desatualizável.
+
+==================================================
+11. FONTE DE VERDADE
+==================================================
+
+Verificar que o realizado é derivado
+das transações financeiras válidas.
+
+Não aceitar:
+
+- valor informado pelo frontend;
+- saldo de conta como despesa;
+- receita compensando despesa;
+- transferência como despesa;
+- cache desatualizado como verdade.
+
+==================================================
+12. CANCELAMENTOS
+==================================================
+
+Despesa cancelada:
+
+não consome orçamento.
+
+Após cancelamento:
+
+consulta reflete novo valor.
+
+Não exigir ajuste manual do orçamento.
+
+==================================================
+13. RECEITAS
+==================================================
+
+Receitas não entram no realizado
+de orçamento de despesas.
+
+Categoria BOTH:
+
+somente EXPENSE entra.
+
+==================================================
+14. TRANSFERÊNCIAS
+==================================================
+
+Transferências internas não entram
+no consumo de orçamento.
+
+Validar que movimentos de origem/destino
+não duplicam despesas.
+
+==================================================
+15. COMPETÊNCIA
+==================================================
+
+Validar occurredAt.
+
+Não usar createdAt para classificar consumo.
+
+Testar:
+
+primeiro instante do mês;
+último instante do mês;
+início do mês seguinte;
+fevereiro;
+ano bissexto;
+virada do ano;
+timezone aprovado.
+
+==================================================
+16. MÚLTIPLAS CONTAS
+==================================================
+
+Se orçamento global por categoria:
+
+despesas de todas as contas próprias
+devem ser agregadas corretamente.
+
+Não duplicar por joins.
+
+Não incluir contas de outro usuário.
+
+==================================================
+17. CATEGORIAS INATIVAS
+==================================================
+
+Orçamentos históricos devem continuar
+visíveis conforme ADR.
+
+Despesas históricas válidas
+continuam no realizado.
+
+==================================================
+18. DESPESAS NÃO ORÇADAS
+==================================================
+
+Despesas sem orçamento não devem
+ser misturadas indevidamente ao total
+dos orçamentos cadastrados.
+
+Se indicador separado existir,
+validar cálculo e apresentação.
+
+==================================================
+19. ORÇAMENTO ZERO
+==================================================
+
+Validar política aprovada.
+
+Não permitir divisão por zero.
+
+Não retornar NaN ou Infinity.
+
+Não inventar percentual.
+
+==================================================
+20. CONSUMO ACIMA DE 100%
+==================================================
+
+Exemplo:
+
+planned=1000.00
+actual=1150.00.
+
+Esperado:
+
+remaining=-150.00;
+percentage=115.00.
+
+Não truncar valor financeiro.
+
+==================================================
+21. TOTAIS CONSOLIDADOS
+==================================================
+
+Validar:
+
+totalPlanned;
+totalActual;
+totalRemaining;
+totalConsumptionPercentage.
+
+Não usar média simples dos percentuais
+por categoria.
+
+Reconciliar com os dados por categoria.
+
+==================================================
+22. RECONCILIAÇÃO COM RELATÓRIOS
+==================================================
+
+Comparar o realizado de orçamentos
+com Relatório por Categoria da Sprint 5.
+
+Usar mesmos critérios quando aplicáveis.
+
+Documentar diferenças legítimas de escopo.
+
+==================================================
+23. DASHBOARD DE ORÇAMENTOS
+==================================================
+
+Validar:
+
+cards;
+gráficos;
+barras;
+competência;
+categoria;
+valores BRL;
+percentuais;
+valores negativos;
+categorias inativas;
+loading;
+empty;
+error;
+retry;
+responsividade.
+
+==================================================
+24. GRÁFICOS
+==================================================
+
+Validar ECharts:
+
+- dados reais;
+- valores corretos;
+- nomes longos;
+- muitos registros;
+- tooltips;
+- acessibilidade;
+- redimensionamento;
+- ausência de vazamento de subscriptions.
+
+==================================================
+25. ALERTAS — REGRAS
+==================================================
+
+Validar estados aprovados no ADR.
+
+Testar:
+
+abaixo do limiar;
+exatamente no limiar;
+próximo de 100%;
+exatamente 100%;
+acima de 100%;
+orçamento zero.
+
+Não assumir limiares não aprovados.
+
+==================================================
+26. ALERTAS — DINAMISMO
+==================================================
+
+Após:
+
+criar despesa;
+cancelar despesa;
+editar orçamento;
+alterar competência;
+
+alertas devem refletir estado atual.
+
+Não manter aviso obsoleto.
+
+==================================================
+27. ALERTAS — FRONTEND
+==================================================
+
+Validar:
+
+badges;
+mensagens;
+cores;
+barras;
+percentuais;
+valores excedidos;
+acessibilidade;
+responsividade;
+empty/error/loading.
+
+Não depender somente de cor.
+
+==================================================
+28. ALERTAS — ARQUITETURA
+==================================================
+
+Verificar ausência de infraestrutura
+desnecessária:
+
+polling excessivo;
+scheduler;
+fila;
+notificações persistidas;
+WebSocket;
+
+salvo aprovação explícita.
+
+==================================================
+29. METAS — MODELO DE DOMÍNIO
+==================================================
+
+Confirmar modelo real aprovado na TASK-6.6.
+
+Validar:
+
+entidade;
+owner;
+nome;
+descrição;
+valor objetivo;
+prazo;
+status;
+progresso;
+timestamps;
+relacionamentos.
+
+Não impor campos conceituais
+que não foram aprovados.
+
+==================================================
+30. METAS — MODELO DE PROGRESSO
+==================================================
+
+Verificar semântica real:
+
+manual;
+virtual;
+conta vinculada;
+transação real;
+ou outro modelo aprovado.
+
+Garantir que implementação e UI
+representem o mesmo conceito.
+
+==================================================
+31. METAS — INTEGRIDADE FINANCEIRA
+==================================================
+
+Criar, editar, concluir ou cancelar
+meta não pode criar dinheiro fictício.
+
+Validar que operações de planejamento
+não alteram indevidamente:
+
+saldo;
+receita;
+despesa;
+transferência;
+patrimônio;
+ledger.
+
+==================================================
+32. METAS — VALORES
+==================================================
+
+Validar:
+
+BigDecimal;
+precisão;
+targetAmount;
+progressAmount, se existir;
+remainingAmount, se existir;
+percentage, se existir;
+zero;
+negativo;
+excesso;
+arredondamento.
+
+Respeitar ADR.
+
+==================================================
+33. METAS — ESTADOS
+==================================================
+
+Validar transições aprovadas.
+
+Testar:
+
+estado inicial;
+conclusão;
+cancelamento;
+arquivamento;
+reabertura, se permitida;
+operações proibidas;
+histórico.
+
+Não inventar transições.
+
+==================================================
+34. METAS — CONCORRÊNCIA
+==================================================
+
+Se progresso for mutável:
+
+testar atualizações simultâneas.
+
+Não permitir perda silenciosa de atualização.
+
+Verificar optimistic locking
+ou estratégia aprovada.
+
+==================================================
+35. METAS — CONTRIBUIÇÕES
+==================================================
+
+Se contribuições foram aprovadas:
+
+validar:
+
+criação;
+histórico;
+reversão;
+ownership;
+duplicidade;
+concorrência;
+consistência de progresso;
+relação com ledger.
+
+Se não existem no modelo aprovado,
+marcar NOT APPLICABLE.
+
+==================================================
+36. METAS — FRONTEND
+==================================================
+
+Validar:
+
+rota;
+sidebar;
+listagem;
+filtros;
+criação;
+edição;
+detalhes;
+progresso;
+barras;
+status;
+transições;
+confirmações;
+loading;
+empty;
+error;
+retry;
+responsividade;
+acessibilidade.
+
+==================================================
+37. SEGURANÇA MULTIUSUÁRIO
+==================================================
+
+Executar testes com User A e User B.
+
+Verificar isolamento em:
+
+orçamentos;
+resumos;
+alertas;
+metas;
+contribuições, se aplicáveis.
+
+Não aceitar ownerId do cliente.
+
+==================================================
+38. IDS ESTRANGEIROS
+==================================================
+
+Para recursos de outro usuário:
+
+GET;
+PUT;
+PATCH;
+DELETE;
+transições;
+contribuições;
+
+devem respeitar política de 404
+indistinguível de inexistente.
+
+Não revelar dados por mensagens de erro.
+
+==================================================
+39. AUTENTICAÇÃO
+==================================================
+
+Validar:
+
+JWT em memória;
+401;
+403;
+expiração;
+logout;
+troca de sessão;
+limpeza de estado;
+guards;
+interceptors.
+
+Não introduzir refresh token
+ou armazenamento persistente
+fora da arquitetura aprovada.
+
+==================================================
+40. SEGURANÇA DE INPUTS
+==================================================
+
+Validar:
+
+Bean Validation;
+tamanhos;
+strings;
+descrições;
+valores monetários;
+datas;
+enums;
+UUID;
+parâmetros de consulta;
+XSS;
+injeção SQL;
+erros sanitizados.
+
+==================================================
+41. PROBLEM DETAILS
+==================================================
+
+Validar:
+
+400;
+401;
+403;
+404;
+409;
+422, se aplicável;
+500.
+
+Confirmar Request ID.
+
+Não expor stack traces,
+SQL ou detalhes internos.
+
+==================================================
+42. OPENAPI
+==================================================
+
+Comparar documentação com implementação.
+
+Validar:
+
+endpoints;
+schemas;
+campos;
+enums;
+validações;
+erros;
+segurança;
+exemplos.
+
+Corrigir divergências.
+
+==================================================
+43. MIGRATIONS
+==================================================
+
+Executar migrations em MySQL limpo.
+
+Validar:
+
+ordem;
+integridade;
+constraints;
+índices;
+FKs;
+unicidade;
+status;
+DECIMAL;
+datas.
+
+Não editar migrations já aplicadas.
+
+==================================================
+44. TESTCONTAINERS
+==================================================
+
+Executar testes reais com MySQL.
+
+Não substituir por H2
+para comportamento específico do banco.
+
+Registrar resultados.
+
+==================================================
+45. GOLDEN — ORÇAMENTO BASE
+==================================================
+
+User A:
+
+Categoria Alimentação.
+
+Orçamento outubro/2026:
+planned=1000.00.
+
+Despesas ACTIVE:
+300.00;
+450.00.
+
+Despesa CANCELLED:
+200.00.
+
+Receita BOTH:
+500.00.
+
+Transferência:
+100.00.
+
+Esperado:
+
+actual=750.00;
+remaining=250.00;
+percentage=75%.
+
+==================================================
+46. GOLDEN — EXCESSO
+==================================================
+
+Adicionar despesa ACTIVE:
+
+400.00.
+
+Esperado:
+
+actual=1150.00;
+remaining=-150.00;
+percentage=115%.
+
+Alerta conforme ADR.
+
+==================================================
+47. GOLDEN — CANCELAMENTO
+==================================================
+
+Cancelar despesa de 400.00.
+
+Esperado:
+
+actual=750.00;
+remaining=250.00;
+percentage=75%.
+
+Alerta atualizado.
+
+==================================================
+48. GOLDEN — MÚLTIPLOS ORÇAMENTOS
+==================================================
+
+Alimentação:
+
+planned=1000.00;
+actual=750.00.
+
+Transporte:
+
+planned=500.00;
+actual=200.00.
+
+Esperado:
+
+totalPlanned=1500.00;
+totalActual=950.00;
+totalRemaining=550.00.
+
+Percentual consolidado conforme ADR.
+
+==================================================
+49. GOLDEN — META NÃO ALTERA SALDO
+==================================================
+
+Antes:
+
+Conta A=1200.00;
+Conta B=800.00;
+Patrimônio=2000.00.
+
+Criar meta:
+
+target=10000.00.
+
+Editar meta:
+
+target=12000.00.
+
+Concluir/cancelar conforme regras.
+
+Esperado:
+
+Conta A=1200.00;
+Conta B=800.00;
+Patrimônio=2000.00.
+
+Exceto se operação financeira real
+explicitamente aprovada ocorrer.
+
+==================================================
+50. GOLDEN — MULTIUSER
+==================================================
+
+User A e B:
+
+possuem orçamentos e metas.
+
+A não acessa recursos de B.
+
+B não acessa recursos de A.
+
+Totais e alertas não vazam entre usuários.
+
+==================================================
+51. REGRESSÃO DO LEDGER
+==================================================
+
+Executar Golden Scenario da Sprint 3:
+
+Conta A inicial=1000.00.
+Conta B inicial=500.00.
+
+Income A=700.00.
+Expense A=200.00.
+Transfer A->B=300.00.
+
+Esperado:
+
+Conta A=1200.00;
+Conta B=800.00;
+Patrimônio=2000.00;
+Receitas=700.00;
+Despesas=200.00;
+Resultado=500.00;
+Histórico=3 transações lógicas.
+
+==================================================
+52. REGRESSÃO SPRINT 4
+==================================================
+
+Validar:
+
+tags;
+associações;
+categorias inativas;
+anexos;
+download privado;
+ownership;
+histórico;
+filtros;
+ausência de N+1.
+
+==================================================
+53. REGRESSÃO SPRINT 5
+==================================================
+
+Validar:
+
+relatório financeiro;
+relatório por categoria;
+auditoria;
+PDF;
+CSV;
+filtros;
+competência;
+contas;
+transferências;
+cancelamentos;
+reconciliação;
+segurança.
+
+==================================================
+54. REGRESSÃO SPRINTS 0–2
+==================================================
+
+Validar:
+
+autenticação;
+JWT;
+usuários;
+contas;
+categorias;
+validações;
+migrations;
+OpenAPI;
+Problem Details;
+Request ID.
+
+==================================================
+55. PERFORMANCE
+==================================================
+
+Verificar:
+
+- consultas agrupadas;
+- ausência de N+1;
+- índices;
+- paginação;
+- filtros;
+- carregamento frontend;
+- renderização de gráficos;
+- subscriptions;
+- requests concorrentes;
+- ausência de polling desnecessário.
+
+Registrar medições reais, quando disponíveis.
+
+==================================================
+56. RESPONSIVIDADE
+==================================================
+
+Validar:
+
+360x800;
+390x844;
+768x1024;
+1024x768;
+1280x720;
+1366x768;
+1920x1080.
+
+Cobrir:
+
+orçamentos;
+dashboard;
+alertas;
+metas;
+formulários;
+drawers;
+dialogs;
+gráficos;
+sidebar.
+
+Sem overflow horizontal global.
+
+==================================================
+57. ACESSIBILIDADE
+==================================================
+
+Verificar:
+
+- labels;
+- navegação por teclado;
+- foco;
+- contraste;
+- mensagens de erro;
+- barras com texto;
+- status não dependentes de cor;
+- confirmação de ações;
+- títulos;
+- alternativas textuais aos gráficos.
+
+==================================================
+58. TESTES AUTOMATIZADOS
+==================================================
+
+Executar suites reais:
+
+Backend unit tests;
+Backend integration tests;
+Testcontainers/MySQL;
+Frontend unit tests;
+Frontend integration tests;
+E2E, se configurado;
+Lint;
+Backend build;
+Angular production build.
+
+Não declarar PASS sem executar.
+
+==================================================
+59. CLASSIFICAÇÃO DE DEFEITOS
+==================================================
+
+Classificar achados:
+
+BLOCKER:
+integridade financeira comprometida,
+vazamento multiusuário ou fluxo essencial quebrado.
+
+CRITICAL:
+erro financeiro relevante ou
+falha de segurança grave.
+
+MAJOR:
+funcionalidade importante incorreta.
+
+MINOR:
+defeito localizado sem impacto essencial.
+
+COSMETIC:
+ajuste visual.
+
+Registrar evidências.
+
+==================================================
+60. CORREÇÕES PERMITIDAS
+==================================================
+
+Corrigir somente defeitos comprovados
+dentro do escopo da Sprint 6.
+
+Para cada correção:
+
+- reproduzir;
+- registrar causa;
+- corrigir;
+- criar teste de regressão;
+- executar teste;
+- documentar resultado.
+
+Não refatorar amplamente sem necessidade.
+
+==================================================
+61. CORREÇÕES FORA DO ESCOPO
+==================================================
+
+Se defeito exigir mudança arquitetural
+não aprovada:
+
+registrar BLOCKED.
+
+Não inventar novo modelo financeiro.
+
+Não alterar ledger silenciosamente.
+
+Não implementar funcionalidades da Sprint 7.
+
+==================================================
+62. MATRIZ FINAL
+==================================================
+
+Produzir tabela:
+
+Requisito;
+Implementação;
+Teste;
+Resultado;
+Evidência;
+Observação.
+
+Usar status:
+
+PASS;
+FAIL;
+BLOCKED;
+NOT RUN;
+NOT APPLICABLE.
+
+Não tratar NOT RUN como PASS.
+
+==================================================
+63. CRITÉRIOS DE APROVAÇÃO
+==================================================
+
+A Sprint 6 somente pode ser APPROVED se:
+
+- requisitos obrigatórios implementados;
+- aderência ao ADR;
+- integridade financeira preservada;
+- ownership validado;
+- Golden Scenarios aprovados;
+- migrations aprovadas;
+- testes obrigatórios executados;
+- builds aprovados;
+- sem BLOCKER;
+- sem CRITICAL;
+- sem MAJOR aberto que comprometa
+  requisito obrigatório;
+- documentação consistente.
+
+Se faltar evidência obrigatória:
+
+NOT APPROVED ou BLOCKED,
+com justificativa.
+
+==================================================
+64. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# SPRINT 6 — FINAL GATE REPORT
+
+STATUS:
+
+APPROVED;
+NOT APPROVED;
+BLOCKED.
+
+1. Resumo executivo.
+2. ADRs verificados.
+3. Matriz de rastreabilidade.
+4. TASK-6.1.
+5. TASK-6.2.
+6. TASK-6.3.
+7. TASK-6.4.
+8. TASK-6.5.
+9. TASK-6.6.
+10. TASK-6.7.
+11. Integridade financeira.
+12. Segurança multiusuário.
+13. Golden Scenarios.
+14. Regressão do ledger.
+15. Regressão Sprint 4.
+16. Regressão Sprint 5.
+17. Migrations.
+18. Testcontainers/MySQL.
+19. Backend unit tests.
+20. Frontend unit tests.
+21. E2E.
+22. Lint.
+23. Backend build.
+24. Angular production build.
+25. Performance.
+26. Responsividade.
+27. Acessibilidade.
+28. OpenAPI.
+29. Problem Details.
+30. Bugs encontrados.
+31. Bugs corrigidos.
+32. Bugs pendentes.
+33. Dívidas técnicas.
+34. Arquivos modificados.
+35. Comandos executados.
+36. Evidências.
+37. Riscos residuais.
+38. Decisão final.
+
+Se APPROVED:
+
+SPRINT 6 APPROVED.
+
+READY FOR SPRINT 7 PLANNING.
+
+NÃO implementar Sprint 7 nesta execução.
+
+==================================================
+65. INSTRUÇÃO FINAL
+==================================================
+
+Execute a auditoria de forma rigorosa.
+
+Não confunda existência de código
+com requisito validado.
+
+Não confunda teste não executado
+com teste aprovado.
+
+Não aprove a Sprint 6 com defeitos
+financeiros ou falhas de isolamento.
+
+Corrija defeitos dentro do escopo,
+execute novamente os testes afetados
+e registre resultados reais.
+
+A decisão final deve ser baseada
+em evidências reproduzíveis.

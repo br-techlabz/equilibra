@@ -1,0 +1,927 @@
+# TASK-6.5 — ALERTAS DE LIMITES DE GASTOS
+
+PROJETO: EQUILIBRA
+SPRINT: 6 — PLANEJAMENTO FINANCEIRO
+STACK: Spring Boot 4 + Angular 19 + MySQL
+
+CONTEXTO
+
+Sprint 5 aprovada.
+
+TASK-6.0 — Arquitetura do Planejamento Financeiro concluída.
+TASK-6.1 — Backend de Orçamentos por Categoria concluído.
+TASK-6.2 — Interface de Gestão de Orçamentos concluída.
+TASK-6.3 — Backend de Planejado versus Realizado concluído.
+TASK-6.4 — Dashboard de Acompanhamento concluído.
+
+OBJETIVO
+
+Implementar alertas in-app de consumo de orçamento,
+identificando categorias que:
+
+- estão dentro do limite;
+- estão próximas do limite;
+- atingiram o limite;
+- ultrapassaram o limite.
+
+Os alertas devem ser derivados dos dados reais
+de orçamento e consumo, sem alterar o ledger.
+
+Não implementar notificações externas.
+
+IMPORTANTE
+
+O ADR da TASK-6.0 é a fonte de verdade.
+
+Os limiares, nomes dos estados, contratos REST
+e decisões de persistência devem seguir o ADR.
+
+Os exemplos deste prompt não autorizam criar
+regras divergentes das já aprovadas.
+
+==================================================
+1. INSPEÇÃO OBRIGATÓRIA
+==================================================
+
+Antes de modificar arquivos, inspecionar:
+
+- CLAUDE.md;
+- ADR da TASK-6.0;
+- especificação funcional da Sprint 6;
+- decisões pendentes;
+- relatórios das TASKS 6.1 a 6.4;
+- entidade CategoryBudget;
+- backend de planejado versus realizado;
+- DTOs de acompanhamento;
+- enums/status existentes;
+- endpoints reais;
+- OpenAPI;
+- BudgetService;
+- dashboard Angular;
+- Angular Material;
+- ECharts;
+- Design System;
+- componentes compartilhados;
+- tratamento de erros;
+- testes existentes.
+
+Não criar nova estrutura se a arquitetura
+já oferecer os recursos necessários.
+
+==================================================
+2. PRE-IMPLEMENTATION REPORT
+==================================================
+
+Antes de editar, produzir:
+
+# TASK-6.5 — PRE-IMPLEMENTATION REPORT
+
+1. ADR aplicável.
+2. Status existentes.
+3. Limiares aprovados.
+4. Semântica de 100%.
+5. Tratamento de orçamento zero.
+6. Dados já disponíveis no backend.
+7. Contratos REST existentes.
+8. Necessidade real de alterações backend.
+9. Componentes frontend reutilizáveis.
+10. Estratégia de atualização.
+11. Estratégia de testes.
+12. Arquivos previstos.
+13. Decisões pendentes.
+
+Se existir decisão de produto bloqueante,
+registrar BLOCKED em vez de inventar comportamento.
+
+==================================================
+3. ARQUITETURA DOS ALERTAS
+==================================================
+
+Preferir alertas derivados do estado atual
+dos orçamentos.
+
+Não criar um sistema genérico de notificações.
+
+Não criar filas, jobs, scheduler, WebSocket,
+SSE ou polling periódico sem necessidade.
+
+Não persistir alertas se o ADR determinou
+que sejam calculados dinamicamente.
+
+==================================================
+4. FONTE DE VERDADE
+==================================================
+
+Reutilizar:
+
+plannedAmount;
+actualAmount;
+remainingAmount;
+consumptionPercentage;
+budgetStatus;
+
+conforme DTO real da TASK-6.3.
+
+O frontend não deve recalcular valores financeiros.
+
+O backend deve continuar sendo a autoridade
+sobre o consumo e os estados de orçamento.
+
+==================================================
+5. ESTADOS
+==================================================
+
+Aplicar os estados aprovados no ADR.
+
+Exemplos conceituais:
+
+ON_TRACK
+WARNING
+LIMIT_REACHED
+EXCEEDED
+
+Não adicionar LIMIT_REACHED se o ADR definiu
+somente três estados.
+
+Não renomear enums existentes sem necessidade.
+
+==================================================
+6. LIMIARES
+==================================================
+
+Usar os limiares aprovados.
+
+Exemplo APENAS ILUSTRATIVO:
+
+ON_TRACK:
+consumo menor que 80%.
+
+WARNING:
+consumo de 80% até menos de 100%.
+
+LIMIT_REACHED:
+consumo exatamente igual a 100%.
+
+EXCEEDED:
+consumo acima de 100%.
+
+Não adotar automaticamente esses valores.
+
+==================================================
+7. COMPARAÇÃO MONETÁRIA
+==================================================
+
+A classificação deve evitar erros
+decorrentes de arredondamento de percentual.
+
+Se o ADR permitir, utilizar comparações
+com BigDecimal e valores monetários exatos.
+
+Exemplo:
+
+planned=1000.00
+actual=1000.00
+
+Deve representar exatamente o limite.
+
+Não classificar como excedido por erro
+de representação numérica.
+
+==================================================
+8. ORÇAMENTO ZERO
+==================================================
+
+Seguir a semântica aprovada.
+
+Casos:
+
+planned=0;
+actual=0.
+
+planned=0;
+actual>0.
+
+Não dividir por zero.
+
+Não apresentar NaN ou Infinity.
+
+Não inventar status que contradiga o ADR.
+
+==================================================
+9. ORÇAMENTO EXCEDIDO
+==================================================
+
+Exemplo:
+
+planned=1000.00
+actual=1150.00
+
+remaining=-150.00
+percentage=115%.
+
+Exibir:
+
+"Limite excedido"
+
+Não limitar o percentual textual a 100%.
+
+Não transformar restante negativo em zero.
+
+==================================================
+10. ORÇAMENTO ATINGIDO
+==================================================
+
+Exemplo:
+
+planned=1000.00
+actual=1000.00
+
+A apresentação deve respeitar a regra aprovada
+para exatamente 100%.
+
+Não confundir atingido com excedido.
+
+==================================================
+11. ORÇAMENTO PRÓXIMO DO LIMITE
+==================================================
+
+Quando o orçamento entrar na faixa de atenção
+aprovada no ADR, apresentar aviso claro.
+
+Exemplo de texto:
+
+"Você está próximo do limite planejado
+para esta categoria."
+
+Não apresentar alertas alarmistas.
+
+==================================================
+12. CANCELAMENTO DE DESPESA
+==================================================
+
+Se uma despesa for cancelada:
+
+o valor realizado diminui conforme ledger.
+
+O alerta deve refletir automaticamente
+o novo estado na próxima consulta.
+
+Não manter alerta antigo como verdadeiro
+se a condição deixou de existir.
+
+==================================================
+13. EDIÇÃO DE ORÇAMENTO
+==================================================
+
+Se plannedAmount mudar:
+
+recalcular classificação a partir dos dados
+atualizados do backend.
+
+Exemplo:
+
+planned=500
+actual=450.
+
+Após editar planned=1000:
+
+o alerta deve refletir o novo limite.
+
+Não manter estado obsoleto no frontend.
+
+==================================================
+14. COMPETÊNCIA
+==================================================
+
+Alertas devem corresponder à competência
+selecionada.
+
+Não misturar orçamentos de meses diferentes.
+
+Definir no ADR se alertas históricos
+aparecem somente como indicadores históricos,
+sem notificação ativa.
+
+==================================================
+15. CATEGORIAS INATIVAS
+==================================================
+
+Orçamentos históricos com categorias inativas
+devem permanecer visíveis conforme ADR.
+
+Alertas derivados devem seguir o comportamento
+documentado para consultas históricas.
+
+Não ocultar categoria apenas por estar inativa.
+
+==================================================
+16. CATEGORIA BOTH
+==================================================
+
+Uma categoria BOTH pode ter orçamento de despesa.
+
+Somente despesas válidas contribuem
+para o consumo.
+
+Receitas não reduzem o realizado.
+
+==================================================
+17. TRANSFERÊNCIAS
+==================================================
+
+Transferências não devem gerar alertas
+de consumo de orçamento.
+
+Não somar transferências como despesas.
+
+==================================================
+18. DESPESAS NÃO ORÇADAS
+==================================================
+
+Despesas em categorias sem orçamento
+não devem gerar alerta de estouro de um
+orçamento inexistente.
+
+Se existir indicador de despesas não orçadas,
+tratá-lo separadamente.
+
+==================================================
+19. BACKEND — REUTILIZAÇÃO
+==================================================
+
+Inspecionar se TASK-6.3 já fornece status
+derivados e totais suficientes.
+
+Se sim:
+
+não criar endpoints desnecessários.
+
+Se faltarem campos estritamente necessários:
+
+estender contrato existente conforme ADR,
+preservando compatibilidade.
+
+Não duplicar a lógica financeira.
+
+==================================================
+20. BACKEND — SERVIÇO
+==================================================
+
+Se houver necessidade de lógica nova:
+
+centralizar classificação em serviço de domínio.
+
+Usar BigDecimal.
+
+Não implementar regra de status somente no controller.
+
+Não duplicar fórmulas entre relatórios e orçamentos.
+
+==================================================
+21. BACKEND — CONTRATOS
+==================================================
+
+Utilizar endpoint real da TASK-6.3.
+
+Se ADR aprovou endpoint específico de alertas,
+implementá-lo conforme contrato.
+
+Não criar API de notificações persistentes
+sem decisão explícita.
+
+==================================================
+22. BACKEND — OPENAPI
+==================================================
+
+Atualizar OpenAPI apenas se contratos mudarem.
+
+Documentar:
+
+- status;
+- semântica dos limiares;
+- orçamento zero;
+- exemplos;
+- erros.
+
+Não documentar endpoints inexistentes.
+
+==================================================
+23. BACKEND — SEGURANÇA
+==================================================
+
+Derivar owner de CurrentUser.
+
+Nunca aceitar ownerId do cliente.
+
+Alertas de A não podem conter dados de B.
+
+Não expor IDs privados de outros usuários.
+
+==================================================
+24. FRONTEND — DASHBOARD
+==================================================
+
+Integrar alertas ao dashboard da TASK-6.4.
+
+Reutilizar a competência selecionada.
+
+Não criar nova tela sem necessidade.
+
+Não duplicar consulta à API para cada categoria.
+
+==================================================
+25. FRONTEND — RESUMO DE ALERTAS
+==================================================
+
+Apresentar, se dados permitirem:
+
+- quantidade de categorias próximas do limite;
+- quantidade de categorias excedidas;
+- indicação de categorias que exigem atenção.
+
+Usar estados fornecidos pelo backend.
+
+Contagens simples de apresentação sobre a
+coleção recebida são permitidas quando coerentes
+com o contrato e sem recriar regras financeiras.
+
+==================================================
+26. FRONTEND — ALERTAS POR CATEGORIA
+==================================================
+
+Cada categoria deve mostrar:
+
+- nome;
+- planejado;
+- realizado;
+- percentual;
+- valor restante;
+- estado de consumo;
+- mensagem contextual, quando relevante.
+
+Não exibir campos inexistentes.
+
+==================================================
+27. FRONTEND — CORES
+==================================================
+
+Respeitar Design System do Equilibra.
+
+Cor principal:
+
+#4c1d95.
+
+Sugestão visual:
+
+ON_TRACK:
+cor neutra ou padrão.
+
+WARNING:
+âmbar.
+
+EXCEEDED:
+vermelho.
+
+Usar tokens existentes.
+
+Não depender exclusivamente de cor.
+
+==================================================
+28. FRONTEND — BARRAS
+==================================================
+
+Preservar barras de progresso existentes.
+
+Para consumo >100%:
+
+limitar apenas preenchimento visual
+ao tamanho do contêiner.
+
+Manter percentual textual real.
+
+Não ocultar excesso.
+
+==================================================
+29. FRONTEND — MENSAGENS
+==================================================
+
+Usar mensagens curtas.
+
+Exemplos:
+
+"Dentro do limite."
+
+"Próximo do limite."
+
+"Limite atingido."
+
+"Limite excedido em R$ 150,00."
+
+Não usar linguagem alarmista.
+
+Não exibir aviso de excesso quando o orçamento
+já voltou ao estado normal.
+
+==================================================
+30. FRONTEND — ACESSIBILIDADE
+==================================================
+
+Garantir:
+
+- ícones com rótulos;
+- estados textuais;
+- contraste;
+- navegação por teclado;
+- alertas anunciáveis quando apropriado;
+- gráficos com alternativa textual;
+- mensagens não dependentes de cor;
+- ausência de animações intrusivas.
+
+==================================================
+31. FRONTEND — RESPONSIVIDADE
+==================================================
+
+Validar:
+
+360x800
+390x844
+768x1024
+1024x768
+1280x720
+1366x768
+1920x1080
+
+Verificar:
+
+- cards;
+- alertas;
+- badges;
+- barras;
+- textos;
+- nomes longos;
+- valores grandes;
+- sidebar;
+- ausência de overflow horizontal global.
+
+==================================================
+32. FRONTEND — LOADING
+==================================================
+
+Durante carregamento:
+
+não apresentar alertas antigos como se fossem
+da competência recém-selecionada.
+
+Reutilizar estados de loading existentes.
+
+==================================================
+33. FRONTEND — EMPTY
+==================================================
+
+Se não existem orçamentos:
+
+não mostrar alertas falsos.
+
+Exibir empty state já existente.
+
+==================================================
+34. FRONTEND — ERROR
+==================================================
+
+Se consulta falhar:
+
+não converter erro em estado ON_TRACK.
+
+Mostrar erro e retry.
+
+Não apresentar "Tudo dentro do limite"
+quando os dados não foram carregados.
+
+==================================================
+35. FRONTEND — REQUESTS CONCORRENTES
+==================================================
+
+Navegação rápida entre meses não pode
+mostrar alertas de resposta antiga.
+
+Reutilizar estratégia de cancelamento
+da TASK-6.4.
+
+==================================================
+36. ATUALIZAÇÃO APÓS CRUD
+==================================================
+
+Após criar, editar ou remover orçamento:
+
+atualizar alertas conforme resposta real.
+
+Não recalcular estados localmente
+com regras duplicadas.
+
+==================================================
+37. ATUALIZAÇÃO APÓS TRANSAÇÕES
+==================================================
+
+Ao retornar ao dashboard após criar,
+editar ou cancelar uma despesa:
+
+consultar dados atuais conforme estratégia
+de atualização já existente.
+
+Não exigir atualização manual de dados
+quando a navegação pode revalidá-los.
+
+Não adicionar polling periódico sem necessidade.
+
+==================================================
+38. GOLDEN — DENTRO DO LIMITE
+==================================================
+
+planned=1000.00
+actual=650.00
+percentage=65%.
+
+Esperado:
+
+estado normal conforme ADR;
+sem aviso indevido de excesso.
+
+==================================================
+39. GOLDEN — PRÓXIMO DO LIMITE
+==================================================
+
+planned=500.00
+actual=425.00
+percentage=85%.
+
+Esperado:
+
+WARNING somente se o limiar aprovado
+classificar 85% nessa faixa.
+
+==================================================
+40. GOLDEN — LIMITE ATINGIDO
+==================================================
+
+planned=1000.00
+actual=1000.00
+percentage=100%.
+
+Esperado:
+
+estado definido no ADR para exatamente 100%.
+
+==================================================
+41. GOLDEN — EXCEDIDO
+==================================================
+
+planned=1500.00
+actual=1650.00
+percentage=110%.
+
+Esperado:
+
+estado de excesso;
+remaining=-150.00;
+percentual textual 110%.
+
+==================================================
+42. GOLDEN — CANCELAMENTO
+==================================================
+
+planned=1000.00
+actual=1150.00.
+
+Cancelar despesa ACTIVE de 400.00.
+
+Novo actual=750.00.
+
+Esperado:
+
+estado atualizado;
+alerta de excesso deixa de aparecer;
+percentual=75%.
+
+==================================================
+43. GOLDEN — EDIÇÃO DO LIMITE
+==================================================
+
+planned=500.00
+actual=450.00.
+
+Alterar planned=1000.00.
+
+Esperado:
+
+percentual=45%;
+estado recalculado pelo backend;
+interface atualizada.
+
+==================================================
+44. GOLDEN — MÊS DIFERENTE
+==================================================
+
+Outubro:
+orçamento excedido.
+
+Novembro:
+orçamento dentro do limite.
+
+Ao navegar:
+
+mostrar alertas da competência correta.
+
+==================================================
+45. GOLDEN — MULTIUSER
+==================================================
+
+User A:
+orçamento excedido.
+
+User B:
+orçamento normal.
+
+A não recebe alertas de B.
+
+B não recebe alertas de A.
+
+==================================================
+46. TESTES BACKEND
+==================================================
+
+Se houver alteração backend, testar:
+
+- limiares;
+- exatamente 100%;
+- orçamento zero;
+- excesso;
+- BigDecimal;
+- cancelamento;
+- categoria BOTH;
+- categoria inativa;
+- multiusuário;
+- owner-scoping;
+- Problem Details.
+
+Usar Testcontainers/MySQL para integração
+quando aplicável.
+
+==================================================
+47. TESTES FRONTEND
+==================================================
+
+Testar:
+
+- status visual;
+- mensagens;
+- percentuais;
+- excesso;
+- zero;
+- cards;
+- badges;
+- barras;
+- loading;
+- empty;
+- error;
+- retry;
+- competência;
+- requests concorrentes;
+- atualização após CRUD;
+- atualização após cancelamento;
+- acessibilidade.
+
+==================================================
+48. TESTES DE REGRESSÃO
+==================================================
+
+Executar regressões relevantes:
+
+Authentication;
+Categories;
+Asset Accounts;
+Expenses;
+Income;
+Transfers;
+Dashboard;
+History;
+Tags;
+Attachments;
+Reports;
+Exports;
+Budget CRUD;
+Budget Summary;
+Budget Dashboard.
+
+Nenhuma mudança deve alterar o ledger.
+
+==================================================
+49. PERFORMANCE
+==================================================
+
+Validar:
+
+- sem consulta por categoria;
+- sem N+1;
+- sem polling desnecessário;
+- sem processamento financeiro duplicado;
+- sem chamadas repetidas para o mesmo resumo;
+- sem armazenamento redundante de alertas.
+
+==================================================
+50. FORA DO ESCOPO
+==================================================
+
+Não implementar:
+
+- email;
+- push;
+- WhatsApp;
+- SMS;
+- central genérica de notificações;
+- WebSocket;
+- scheduler;
+- notificações persistidas, salvo ADR explícito;
+- configurações avançadas de limiares;
+- metas financeiras;
+- contribuições para metas;
+- alterações no ledger;
+- novos tipos de transação.
+
+==================================================
+51. DEFINITION OF DONE
+==================================================
+
+TASK-6.5 concluída quando:
+
+- regras do ADR respeitadas;
+- limiares corretos;
+- estado de 100% correto;
+- orçamento zero tratado;
+- excesso acima de 100% correto;
+- alertas derivados de dados reais;
+- cancelamentos refletidos;
+- edição de limite refletida;
+- competência correta;
+- categoria BOTH correta;
+- categorias inativas tratadas;
+- multiusuário isolado;
+- dashboard integrado;
+- mensagens acessíveis;
+- barras corretas;
+- responsividade validada;
+- testes backend aplicáveis aprovados;
+- testes frontend aprovados;
+- lint aprovado;
+- production build aprovado;
+- regressões relevantes aprovadas;
+- ledger inalterado.
+
+==================================================
+52. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-6.5 — ALERTAS DE LIMITES DE GASTOS
+
+STATUS:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+1. ADR utilizado.
+2. Limiares.
+3. Estados implementados.
+4. Tratamento de 100%.
+5. Tratamento de orçamento zero.
+6. Backend alterado ou reutilizado.
+7. Contratos REST.
+8. Integração com dashboard.
+9. Resumo de alertas.
+10. Alertas por categoria.
+11. Mensagens.
+12. Barras e cores.
+13. Cancelamentos.
+14. Edição de limites.
+15. Competência mensal.
+16. Categorias BOTH/inativas.
+17. Ownership.
+18. Responsividade.
+19. Acessibilidade.
+20. Golden Scenarios.
+21. Testes backend.
+22. Testes frontend.
+23. Testcontainers/MySQL, se aplicável.
+24. Lint.
+25. Production build.
+26. Regressões.
+27. Performance.
+28. Arquivos modificados.
+29. Bugs encontrados/corrigidos.
+30. Divergências do ADR.
+31. Dívidas técnicas.
+32. Fora do escopo confirmado.
+
+Se concluída:
+
+READY FOR TASK-6.6 — Backend de Metas Financeiras.
+
+NÃO implementar TASK-6.6 nesta execução.

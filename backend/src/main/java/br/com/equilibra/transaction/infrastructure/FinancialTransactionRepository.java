@@ -51,6 +51,10 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
         String ownerId, TransactionStatus status, Instant from, Instant to
     );
 
+    @org.springframework.data.jpa.repository.Query("select t.categoryId as categoryId, sum(t.amount) as amount from FinancialTransaction t where t.ownerId = :ownerId and t.status = :status and t.type = br.com.equilibra.transaction.domain.TransactionType.EXPENSE and t.occurredAt >= :from and t.occurredAt < :to and t.categoryId in :categoryIds group by t.categoryId")
+    List<CategoryExpenseAggregate> sumActiveExpensesByCategory(String ownerId, TransactionStatus status, Instant from, Instant to, List<String> categoryIds);
+    interface CategoryExpenseAggregate { String getCategoryId(); java.math.BigDecimal getAmount(); }
+
     List<FinancialTransaction> findAllByOwnerIdAndStatusAndOccurredAtBeforeOrderByOccurredAtAsc(
         String ownerId, TransactionStatus status, Instant at
     );
