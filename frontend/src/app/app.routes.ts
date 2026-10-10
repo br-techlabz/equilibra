@@ -35,6 +35,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/goals/pages/goals.page').then((m) => m.GoalsPageComponent),
       },
       {
+        path: 'recurrences',
+        loadComponent: () => import('./features/recurrences/pages/recurrences.page').then((m) => m.RecurrencesPageComponent),
+      },
+      {
         path: 'budgets',
         loadComponent: () => import('./features/budgets/pages/budgets.page').then((m) => m.BudgetsPageComponent),
       },

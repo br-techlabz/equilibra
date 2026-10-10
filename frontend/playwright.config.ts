@@ -24,7 +24,7 @@ export default defineConfig({
     },
     {
       name: 'tablet',
-      use: { ...devices['iPad Mini'], viewport: { width: 768, height: 1024 } },
+      use: { ...devices['Desktop Chrome'], viewport: { width: 768, height: 1024 } },
     },
   ],
   webServer: {

@@ -2,7 +2,7 @@ import { expect, test } from './fixtures/auth';
 
 test.describe('responsive financial shell', () => {
   test('keeps dashboard within the viewport', async ({ page, authenticatedPage }) => {
-    await page.goto('/dashboard');
+    await expect(page).toHaveURL(/dashboard/);
     await expect(page.getByRole('main')).toBeVisible();
 
     const dimensions = await page.evaluate(() => ({
@@ -16,7 +16,11 @@ test.describe('responsive financial shell', () => {
     page,
     authenticatedPage,
   }) => {
-    await page.goto('/transactions');
+    if ((page.viewportSize()?.width ?? 1280) < 768) {
+      await page.getByRole('button', { name: 'Abrir ou recolher menu de navegação' }).click();
+    }
+    await page.locator('.nav-expansion-header').filter({ hasText: 'Transações' }).click();
+    await page.getByRole('link', { name: /todas as transações/i }).click();
     await expect(page.getByRole('main')).toBeVisible();
 
     const dimensions = await page.evaluate(() => ({

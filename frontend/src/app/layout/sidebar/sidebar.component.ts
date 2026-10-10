@@ -66,6 +66,11 @@ export class SidebarComponent implements OnInit {
       route: '/budgets',
     },
     {
+      label: 'Recorrências',
+      icon: 'repeat',
+      route: '/recurrences',
+    },
+    {
       label: 'Contas',
       icon: 'account_balance_wallet',
       route: '/accounts',

@@ -7,7 +7,8 @@ test.describe('Golden Scenario financeiro', () => {
 
     const isMobile = (await page.viewportSize())?.width !== undefined && (await page.viewportSize())!.width < 768;
     if (isMobile) {
-      await page.goto('/accounts');
+      await page.getByRole('button', { name: 'Abrir ou recolher menu de navegação' }).click();
+      await page.getByRole('link', { name: 'Contas', exact: true }).click();
     } else {
       await page.getByRole('link', { name: 'Contas', exact: true }).click();
     }
@@ -15,7 +16,8 @@ test.describe('Golden Scenario financeiro', () => {
     await expect(page.getByRole('main').first()).toBeVisible();
 
     if (isMobile) {
-      await page.goto('/categories');
+      await page.getByRole('button', { name: 'Abrir ou recolher menu de navegação' }).click();
+      await page.getByRole('link', { name: 'Categorias', exact: true }).click();
     } else {
       await page.getByRole('link', { name: 'Categorias', exact: true }).click();
     }
@@ -23,7 +25,8 @@ test.describe('Golden Scenario financeiro', () => {
     await expect(page.getByRole('main').first()).toBeVisible();
 
     if (isMobile) {
-      await page.goto('/transactions');
+      await page.getByRole('button', { name: 'Abrir ou recolher menu de navegação' }).click();
+      await page.locator('a[href="/transactions"]').evaluate((element) => (element as HTMLElement).click());
     } else {
       await page.locator('.nav-expansion-header').filter({ hasText: 'Transações' }).click();
       await page.getByRole('link', { name: /todas as transações/i }).click();

@@ -1,6 +1,11 @@
 import { expect, test } from './fixtures/auth';
 
 const openReport = async (page: import('@playwright/test').Page, label: string) => {
+  if ((page.viewportSize()?.width ?? 1280) < 768) {
+    await page.getByRole('button', { name: 'Abrir ou recolher menu de navegação' }).click();
+    await page.locator(`a[href^="/reports/"]`).filter({ hasText: label }).evaluate((element) => (element as HTMLElement).click());
+    return;
+  }
   await page.locator('.nav-expansion-header').filter({ hasText: 'Relatórios' }).click();
   await page.getByRole('link', { name: label, exact: true }).click();
 };

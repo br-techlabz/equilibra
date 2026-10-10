@@ -1,0 +1,41 @@
+<main class="recurrences-page">
+  <app-page-header title="Minhas Recorrências" subtitle="Organize seus compromissos periódicos." [actions]="pageActions" />
+  <app-content-panel title="Regras recorrentes" subtitle="As regras não alteram seu saldo real automaticamente.">
+    <div class="filters" aria-label="Filtros de recorrências">
+      <mat-form-field appearance="outline"><mat-label>Tipo</mat-label><mat-select [value]="typeFilter()" (selectionChange)="typeFilter.set($event.value)"><mat-option value="ALL">Todos os tipos</mat-option><mat-option value="EXPENSE">Despesas</mat-option><mat-option value="INCOME">Receitas</mat-option></mat-select></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>Estado</mat-label><mat-select [value]="statusFilter()" (selectionChange)="statusFilter.set($event.value)">@for (status of statuses; track status.value) { <mat-option [value]="status.value">{{ status.label }}</mat-option> }</mat-select></mat-form-field>
+      <button mat-stroked-button type="button" (click)="load()" [disabled]="loading()"><mat-icon>refresh</mat-icon> Atualizar</button>
+    </div>
+    @if (loading()) { <p class="state" role="status">Carregando recorrências…</p> }
+    @if (!loading() && error()) { <div class="error" role="alert">{{ error() }} <button mat-button type="button" (click)="load()">Tentar novamente</button></div> }
+    @if (!loading() && loaded() && !error() && visible().length === 0) { <app-empty-state icon="repeat" iconVariant="folder" title="Você ainda não cadastrou recorrências." description="Crie uma regra para organizar seus compromissos periódicos." [actions]="pageActions" [centered]="false" /> }
+    @if (!loading() && visible().length > 0) {
+      <div class="recurrence-list" role="list">
+        @for (item of visible(); track item.id) {
+          <article class="recurrence-card" role="listitem">
+            <div class="identity"><span class="type-badge" [class.income]="item.type === 'INCOME'">{{ typeLabel(item.type) }}</span><h2>{{ item.description }}</h2><span class="status" [class]="'status status-' + item.status.toLowerCase()">{{ statusLabel(item.status) }}</span></div>
+            <div class="metric"><span>Valor</span><strong>{{ money(item.amount) }}</strong></div>
+            <div class="metric"><span>Periodicidade</span><strong>{{ frequencyLabel(item.frequency) }} · dia {{ item.dueDay }}</strong></div>
+            <div class="metric"><span>Vigência</span><strong>{{ item.startDate }}{{ item.endDate ? ' até ' + item.endDate : '' }}</strong></div>
+            <div class="metric"><span>Categoria / conta</span><strong>{{ description(item.categoryId) }} · {{ accountName(item.accountId) }}</strong></div>
+            <button mat-icon-button [matMenuTriggerFor]="actionsMenu" [matMenuTriggerData]="{ item: item }" [attr.aria-label]="'Ações de ' + item.description"><mat-icon>more_vert</mat-icon></button>
+          </article>
+        }
+      </div>
+    }
+  </app-content-panel>
+  @if (formOpen()) {
+    <button class="drawer-backdrop" type="button" aria-label="Fechar formulário" (click)="closeForm()"></button>
+    <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title"><header><div><span class="eyebrow">Recorrências</span><h2 id="drawer-title">{{ editing() ? 'Editar recorrência' : 'Nova recorrência' }}</h2></div><button mat-icon-button type="button" aria-label="Fechar formulário" (click)="closeForm()"><mat-icon>close</mat-icon></button></header>
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        @if (!editing()) { <mat-form-field appearance="outline"><mat-label>Tipo</mat-label><mat-select formControlName="type">@for (option of typeOptions; track option.value) { <mat-option [value]="option.value">{{ option.label }}</mat-option> }</mat-select></mat-form-field> }
+        <mat-form-field appearance="outline"><mat-label>Descrição</mat-label><input matInput formControlName="description" /><mat-error>Informe uma descrição de até 255 caracteres.</mat-error></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Valor</mat-label><input matInput formControlName="amount" inputmode="decimal" placeholder="0,00" /><mat-hint>Use até duas casas decimais.</mat-hint><mat-error>Informe um valor válido.</mat-error></mat-form-field>
+        @if (!editing()) { <mat-form-field appearance="outline"><mat-label>Categoria</mat-label><mat-select formControlName="categoryId">@for (category of categories(); track category.id) { <mat-option [value]="category.id">{{ category.name }}</mat-option> }</mat-select></mat-form-field><mat-form-field appearance="outline"><mat-label>Conta</mat-label><mat-select formControlName="accountId">@for (account of accounts(); track account.id) { <mat-option [value]="account.id">{{ account.name }}</mat-option> }</mat-select></mat-form-field><mat-form-field appearance="outline"><mat-label>Periodicidade</mat-label><mat-select formControlName="frequency">@for (option of frequencyOptions; track option.value) { <mat-option [value]="option.value">{{ option.label }}</mat-option> }</mat-select></mat-form-field><mat-form-field appearance="outline"><mat-label>Data inicial</mat-label><input matInput type="date" formControlName="startDate" /></mat-form-field> }
+        <mat-form-field appearance="outline"><mat-label>Data final (opcional)</mat-label><input matInput type="date" formControlName="endDate" /></mat-form-field><mat-form-field appearance="outline"><mat-label>Dia de vencimento</mat-label><input matInput type="number" formControlName="dueDay" min="1" max="31" /></mat-form-field>
+        <div class="drawer-actions"><button mat-button type="button" (click)="closeForm()">Cancelar</button><button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || saving()">{{ editing() ? 'Salvar alterações' : 'Cadastrar recorrência' }}</button></div>
+      </form>
+    </aside>
+  }
+  <mat-menu #actionsMenu="matMenu"><ng-template matMenuContent let-item="item"><button mat-menu-item (click)="openEdit(item)" [disabled]="item.status === 'ENDED' || item.status === 'CANCELLED'"><mat-icon>edit</mat-icon><span>Editar</span></button><button mat-menu-item *ngIf="item.status === 'ACTIVE'" (click)="transition(item, 'pause')"><mat-icon>pause</mat-icon><span>Pausar</span></button><button mat-menu-item *ngIf="item.status === 'PAUSED'" (click)="transition(item, 'resume')"><mat-icon>play_arrow</mat-icon><span>Reativar</span></button><button mat-menu-item *ngIf="item.status === 'ACTIVE' || item.status === 'PAUSED'" (click)="transition(item, 'end')"><mat-icon>stop</mat-icon><span>Encerrar</span></button><button mat-menu-item *ngIf="item.status !== 'CANCELLED' && item.status !== 'ENDED'" (click)="transition(item, 'cancel')"><mat-icon>cancel</mat-icon><span>Cancelar</span></button></ng-template></mat-menu>
+</main>

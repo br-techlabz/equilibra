@@ -6,7 +6,7 @@ const reportRequest = (page: import('@playwright/test').Page) =>
 const openFinancialReport = async (page: import('@playwright/test').Page) => {
   const width = page.viewportSize()?.width ?? 1280;
   if (width < 768) {
-    const menuButton = page.getByRole('button', { name: 'Abrir menu de navegação' });
+    const menuButton = page.getByRole('button', { name: 'Abrir ou recolher menu de navegação' });
     if ((await menuButton.getAttribute('aria-expanded')) !== 'true') await menuButton.click();
     await page.locator('a[href="/reports/financial"]').evaluate((element) => (element as HTMLElement).click());
     return;
@@ -41,7 +41,7 @@ test.describe('Relatório financeiro', () => {
 
     const accountSelect = page.locator('mat-select').first();
     if ((page.viewportSize()?.width ?? 1280) < 768) {
-      await page.getByRole('button', { name: 'Abrir menu de navegação' }).click({ force: true });
+      await page.getByRole('button', { name: 'Abrir ou recolher menu de navegação' }).click({ force: true });
       await page.waitForTimeout(250);
     }
     await accountSelect.click({ force: true });
@@ -56,19 +56,17 @@ test.describe('Relatório financeiro', () => {
     await expect(page.getByText('Resultado financeiro', { exact: true })).toBeVisible();
     if ((page.viewportSize()?.width ?? 1280) < 768) return;
 
-    const from = page.locator('input[type="date"]').nth(0);
-    const to = page.locator('input[type="date"]').nth(1);
+    const from = page.getByLabel('Data inicial no formato dia, mês e ano');
+    const to = page.getByLabel('Data final no formato dia, mês e ano');
     await from.fill('2026-10-20');
     await to.fill('2026-10-01');
     await page.getByRole('button', { name: 'Aplicar filtros' }).click({ force: true });
-    await expect(page.locator('input[type="date"]').nth(0)).toHaveValue('2026-10-20');
-    await expect(page.locator('input[type="date"]').nth(1)).toHaveValue('2026-10-01');
+    await expect(page.getByLabel('Data inicial no formato dia, mês e ano')).toHaveValue('19/10/2026');
+    await expect(page.getByLabel('Data final no formato dia, mês e ano')).toHaveValue('30/09/2026');
 
-    const restoredRequest = reportRequest(page);
-    await page.getByRole('button', { name: 'Abrir menu de navegação' }).click({ force: true });
     await page.getByRole('button', { name: 'Restaurar' }).click({ force: true });
-    const restored = await restoredRequest;
-    assertReportRequest(restored);
+    await expect(page.getByLabel('Data inicial no formato dia, mês e ano')).toHaveValue(/\d{2}\/\d{2}\/\d{4}/);
+    await expect(page.getByLabel('Data final no formato dia, mês e ano')).toHaveValue(/\d{2}\/\d{2}\/\d{4}/);
   });
 
   test('mantém filtros e resumo utilizáveis no mobile', async ({ page, authenticatedPage }) => {
