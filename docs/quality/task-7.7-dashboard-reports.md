@@ -35,6 +35,12 @@
 - O runner Karma permanece bloqueado após conexão com ChromeHeadless e não apresenta resumo Jasmine.
 - Relatórios históricos não receberam novos agregados nesta task; a previsibilidade está integrada ao Dashboard e às telas de Fluxo de Caixa/Agenda.
 
+## Gate E2E final
+
+- E2E Dashboard + Agenda: 4 testes aprovados em 25,6s contra o frontend atualizado na porta 4202.
+- Projeção e indicadores retornaram HTTP 200.
+- Separação real/previsto e ausência de `ownerId` verificadas.
+
 ## Fora do escopo confirmado
 
 - Alterações no ledger.

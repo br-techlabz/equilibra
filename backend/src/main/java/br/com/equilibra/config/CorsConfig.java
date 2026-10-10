@@ -30,7 +30,8 @@ public class CorsConfig {
         } else {
             configuration.setAllowedOrigins(List.of(
                 "http://localhost:4200",
-                "http://localhost:4201"
+                "http://localhost:4201",
+                "http://localhost:4202"
             ));
         }
 
