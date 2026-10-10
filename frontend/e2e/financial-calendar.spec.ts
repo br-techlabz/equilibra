@@ -39,6 +39,16 @@ test.describe('Agenda Financeira', () => {
     }));
   });
 
+  test('exibe indicadores de vencimentos separados por grupo', async ({ page, authenticatedPage }) => {
+    await page.route('**/api/commitments/indicators*', async route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ referenceDate: '2026-10-10', upcomingDays: 7, overdue: { count: 1, amount: 200, expenseCount: 1, incomeCount: 0, expenseAmount: 200, incomeAmount: 0 }, dueToday: { count: 1, amount: 150, expenseCount: 0, incomeCount: 1, expenseAmount: 0, incomeAmount: 150 }, upcoming: { count: 1, amount: 300, expenseCount: 1, incomeCount: 0, expenseAmount: 300, incomeAmount: 0 }, futurePending: { count: 0, amount: 0, expenseCount: 0, incomeCount: 0, expenseAmount: 0, incomeAmount: 0 } }) }));
+    await page.route('**/api/commitments?*', async route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 100 }) }));
+    await openCalendar(page);
+    await expect(page.getByText('Atrasados', { exact: true })).toBeVisible();
+    await expect(page.getByText('Vencem hoje', { exact: true })).toBeVisible();
+    await expect(page.getByText('Próximos 7 dias', { exact: true })).toBeVisible();
+    await expect(page.getByText('R$ 200,00', { exact: true })).toBeVisible();
+  });
+
   test('exibe compromissos no mês e filtra por tipo', async ({ page, authenticatedPage }) => {
     await page.route('**/api/commitments?*', async route => route.fulfill({
       status: 200,

@@ -1,0 +1,2 @@
+export interface CommitmentIndicatorGroup { count:number; expenseCount:number; incomeCount:number; amount:number|string; expenseAmount:number|string; incomeAmount:number|string; }
+export interface CommitmentIndicators { referenceDate:string; upcomingDays:number; overdue:CommitmentIndicatorGroup; dueToday:CommitmentIndicatorGroup; upcoming:CommitmentIndicatorGroup; futurePending:CommitmentIndicatorGroup; }

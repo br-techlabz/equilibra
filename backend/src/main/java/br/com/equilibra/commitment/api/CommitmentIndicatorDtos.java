@@ -1,0 +1,3 @@
+package br.com.equilibra.commitment.api;
+import br.com.equilibra.commitment.domain.CommitmentType; import java.math.BigDecimal; import java.time.LocalDate;
+public final class CommitmentIndicatorDtos { private CommitmentIndicatorDtos(){} public record Group(long count,long expenseCount,long incomeCount,BigDecimal amount,BigDecimal expenseAmount,BigDecimal incomeAmount){} public record Response(LocalDate referenceDate,int upcomingDays,Group overdue,Group dueToday,Group upcoming,Group futurePending){} public record Filter(LocalDate referenceDate,CommitmentType type,String accountId,LocalDate from,LocalDate to){} }

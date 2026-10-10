@@ -1,0 +1,3 @@
+package br.com.equilibra.commitment.domain;
+import org.junit.jupiter.api.Test; import java.math.BigDecimal; import java.time.*; import java.util.*; import static org.assertj.core.api.Assertions.*;
+class CommitmentIndicatorClassificationTest { @Test void boundariesAreExclusive(){LocalDate ref=LocalDate.of(2026,10,10);assertThat(LocalDate.of(2026,10,9).isBefore(ref)).isTrue();assertThat(LocalDate.of(2026,10,10)).isEqualTo(ref);assertThat(LocalDate.of(2026,10,17).isAfter(ref.plusDays(7))).isFalse();assertThat(LocalDate.of(2026,10,18).isAfter(ref.plusDays(7))).isTrue();} @Test void monetaryAmountsKeepScale(){assertThat(new BigDecimal("129.90").add(new BigDecimal("3500.00"))).isEqualByComparingTo("3629.90");} }

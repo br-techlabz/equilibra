@@ -76,6 +76,11 @@ export class SidebarComponent implements OnInit {
       route: '/financial-calendar',
     },
     {
+      label: 'Fluxo de Caixa',
+      icon: 'show_chart',
+      route: '/cash-flow',
+    },
+    {
       label: 'Contas',
       icon: 'account_balance_wallet',
       route: '/accounts',

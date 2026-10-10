@@ -43,6 +43,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/financial-calendar/pages/financial-calendar.page').then((m) => m.FinancialCalendarPageComponent),
       },
       {
+        path: 'cash-flow',
+        loadComponent: () => import('./features/cash-flow/pages/cash-flow.page').then((m) => m.CashFlowPageComponent),
+      },
+      {
         path: 'budgets',
         loadComponent: () => import('./features/budgets/pages/budgets.page').then((m) => m.BudgetsPageComponent),
       },

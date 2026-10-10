@@ -10,7 +10,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ContentPanelComponent } from '../../../shared/ui/content-panel/content-panel.component';
 import { EmptyStateComponent } from '../../../shared/ui/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
-import { FinancialCommitmentApiService } from '../data-access/financial-commitment-api.service';
+import { FinancialCommitmentApiService } from '../data-access/financial-commitment-api.service'; import { CommitmentIndicatorApiService } from '../data-access/commitment-indicator-api.service'; import { CommitmentIndicators } from '../models/commitment-indicator.models';
 import { AssetAccountsApiService } from '../../asset-accounts/data-access/asset-accounts-api.service';
 import { CategoriesApiService } from '../../categories/data-access/categories-api.service';
 import { AssetAccount } from '../../asset-accounts/models/asset-account.models';
@@ -23,17 +23,17 @@ import { CommitmentStatus, CommitmentType, FinancialCommitment } from '../models
   templateUrl: './financial-calendar.page.html', styleUrl: './financial-calendar.page.scss',
 })
 export class FinancialCalendarPageComponent implements OnInit {
-  private readonly api = inject(FinancialCommitmentApiService);
+  private readonly api = inject(FinancialCommitmentApiService); private readonly indicatorsApi = inject(CommitmentIndicatorApiService);
   private readonly accountsApi = inject(AssetAccountsApiService);
   private readonly categoriesApi = inject(CategoriesApiService);
   private readonly fb = inject(FormBuilder);
   private readonly snack = inject(MatSnackBar);
-  readonly items = signal<FinancialCommitment[]>([]); readonly accounts = signal<AssetAccount[]>([]); readonly categories = signal<Category[]>([]); readonly loading = signal(false); readonly loaded = signal(false); readonly error = signal('');
+  readonly items = signal<FinancialCommitment[]>([]); readonly indicators = signal<CommitmentIndicators|null>(null); readonly accounts = signal<AssetAccount[]>([]); readonly categories = signal<Category[]>([]); readonly loading = signal(false); readonly loaded = signal(false); readonly error = signal('');
   readonly month = signal(this.currentMonth()); readonly selectedDay = signal<string | null>(null); readonly typeFilter = signal<CommitmentType | 'ALL'>('ALL'); readonly statusFilter = signal<CommitmentStatus | 'ALL'>('ALL'); readonly editing = signal<FinancialCommitment | null>(null); readonly drawer = signal(false); readonly saving = signal(false);
   readonly pageActions = [{ label: 'Novo compromisso', icon: 'add', handler: () => this.openCreate() }];
   readonly form = this.fb.nonNullable.group({ type: ['EXPENSE' as CommitmentType, Validators.required], description: ['', Validators.required], plannedAmount: ['', Validators.required], dueDate: ['', Validators.required], accountId: ['', Validators.required], categoryId: ['', Validators.required] });
   readonly visible = computed(() => this.items().filter(x => (this.typeFilter() === 'ALL' || x.type === this.typeFilter()) && (this.statusFilter() === 'ALL' || x.status === this.statusFilter()) && (!this.selectedDay() || x.dueDate === this.selectedDay())));
-  ngOnInit(): void { this.accountsApi.list(false).subscribe({ next: value => this.accounts.set(value), error: () => undefined }); this.categoriesApi.list(false).subscribe({ next: value => this.categories.set(value), error: () => undefined }); this.load(); }
+  ngOnInit(): void { this.indicatorsApi.indicators().subscribe({ next: value => this.indicators.set(value), error: () => undefined }); this.accountsApi.list(false).subscribe({ next: value => this.accounts.set(value), error: () => undefined }); this.categoriesApi.list(false).subscribe({ next: value => this.categories.set(value), error: () => undefined }); this.load(); }
   currentMonth(): string { return new Date().toISOString().slice(0, 7); }
   range(): { from: string; to: string } { const [y, m] = this.month().split('-').map(Number); return { from: `${this.month()}-01`, to: `${y}-${String(m).padStart(2, '0')}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}` }; }
   load(): void { this.loading.set(true); this.loaded.set(false); this.api.list({ ...this.range(), type: this.typeFilter() === 'ALL' ? undefined : this.typeFilter() as CommitmentType, status: this.statusFilter() === 'ALL' ? undefined : this.statusFilter() as CommitmentStatus }).subscribe({ next: r => { this.items.set(r.content); this.loading.set(false); this.loaded.set(true); }, error: () => { this.error.set('Não foi possível carregar a agenda.'); this.loading.set(false); this.loaded.set(true); } }); }
@@ -45,6 +45,7 @@ export class FinancialCalendarPageComponent implements OnInit {
   isToday(day: string): boolean { return day === new Date().toISOString().slice(0, 10); }
   count(day: string): number { return this.items().filter(x => x.dueDate === day).length; }
   selectDay(day: string): void { this.selectedDay.set(this.selectedDay() === day ? null : day); }
+  focusIndicator(group: 'overdue' | 'dueToday' | 'upcoming' | 'futurePending'): void { const selected = this.indicators()?.[group]; if (!selected || selected.count === 0) return; if (group === 'overdue') this.statusFilter.set('PENDING'); this.selectedDay.set(null); this.load(); }
   openCreate(): void { this.editing.set(null); this.form.reset({ type: 'EXPENSE', description: '', plannedAmount: '', dueDate: `${this.month()}-01`, accountId: '', categoryId: '' }); this.drawer.set(true); }
   openEdit(x: FinancialCommitment): void { this.editing.set(x); this.form.reset({ type: x.type, description: x.description, plannedAmount: String(x.plannedAmount), dueDate: x.dueDate, accountId: x.accountId, categoryId: x.categoryId }); this.drawer.set(true); }
   close(): void { if (!this.saving()) this.drawer.set(false); }

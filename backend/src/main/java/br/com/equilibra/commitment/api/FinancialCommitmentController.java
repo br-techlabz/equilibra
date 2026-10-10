@@ -1,6 +1,8 @@
 package br.com.equilibra.commitment.api;
 
 import br.com.equilibra.commitment.application.FinancialCommitmentService;
+import br.com.equilibra.commitment.application.CommitmentIndicatorService;
+import io.swagger.v3.oas.annotations.Operation;
 import br.com.equilibra.commitment.domain.CommitmentStatus;
 import br.com.equilibra.commitment.domain.CommitmentType;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,8 +20,9 @@ import java.util.List;
 @Tag(name="Financial Commitments")
 @SecurityRequirement(name="bearerAuth")
 public class FinancialCommitmentController {
- private final FinancialCommitmentService service;
- public FinancialCommitmentController(FinancialCommitmentService service){this.service=service;}
+ private final FinancialCommitmentService service; private final CommitmentIndicatorService indicatorService;
+ public FinancialCommitmentController(FinancialCommitmentService service,CommitmentIndicatorService indicatorService){this.service=service;this.indicatorService=indicatorService;}
+ @Operation(summary="Read owner-scoped due-date indicators") @GetMapping("/indicators") public CommitmentIndicatorDtos.Response indicators(@RequestParam(required=false) java.time.LocalDate referenceDate,@RequestParam(required=false) br.com.equilibra.commitment.domain.CommitmentType type,@RequestParam(required=false) String accountId,@RequestParam(required=false) java.time.LocalDate from,@RequestParam(required=false) java.time.LocalDate to){return indicatorService.indicators(new CommitmentIndicatorDtos.Filter(referenceDate,type,accountId,from,to));}
  @Operation(summary="Create a pending financial commitment")
  @PostMapping public ResponseEntity<CommitmentDtos.Response> create(@Valid @RequestBody CommitmentDtos.Create request){return ResponseEntity.status(HttpStatus.CREATED).body(service.create(request));}
  @Operation(summary="Generate recurring commitments on demand")
