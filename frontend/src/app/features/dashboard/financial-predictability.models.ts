@@ -1,0 +1,1 @@
+import { CashFlowProjection } from '../cash-flow/models/cash-flow.models'; import { CommitmentIndicators } from '../financial-calendar/models/commitment-indicator.models'; export interface FinancialPredictabilityData { projection:CashFlowProjection; indicators:CommitmentIndicators; }

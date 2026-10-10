@@ -13,7 +13,7 @@ import { EmptyStateComponent } from '../../shared/ui/empty-state/empty-state.com
 import { AuthService } from '../../features/auth/data-access/auth.service';
 import { AssetAccountsApiService } from '../asset-accounts/data-access/asset-accounts-api.service';
 import { AssetAccount, assetAccountTypeOption } from '../asset-accounts/models/asset-account.models';
-import { DashboardApiService } from './dashboard-api.service';
+import { DashboardApiService } from './dashboard-api.service'; import { FinancialPredictabilityService } from './financial-predictability.service'; import { FinancialPredictabilityData } from './financial-predictability.models';
 import { DashboardData } from './dashboard.models';
 import { formatCentsAsBRL, sumMoneyInCents } from './money.utils';
 
@@ -39,12 +39,12 @@ import { formatCentsAsBRL, sumMoneyInCents } from './money.utils';
 export class DashboardPageComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly accountsApi = inject(AssetAccountsApiService);
-  private readonly dashboardApi = inject(DashboardApiService);
+  private readonly dashboardApi = inject(DashboardApiService); private readonly predictabilityApi = inject(FinancialPredictabilityService);
   private readonly router = inject(Router);
 
   readonly currentUser = this.authService.currentUser;
   readonly accounts = signal<AssetAccount[]>([]);
-  readonly dashboardData = signal<DashboardData | null>(null);
+  readonly dashboardData = signal<DashboardData | null>(null); readonly predictability = signal<FinancialPredictabilityData | null>(null); readonly predictabilityLoading = signal(false); readonly predictabilityError = signal(false);
   readonly accountsLoaded = signal(false);
   readonly accountsLoading = signal(false);
   readonly accountsError = signal(false);
@@ -76,9 +76,10 @@ export class DashboardPageComponent implements OnInit {
   readonly recentTransactions: never[] = [];
 
   ngOnInit(): void {
-    this.loadDashboard();
+    this.loadDashboard(); this.loadPredictability();
   }
 
+  loadPredictability(): void { const { from, to } = this.periodRange(this.selectedPeriod()); this.predictabilityLoading.set(true); this.predictabilityError.set(false); this.predictabilityApi.load(from.toISOString().slice(0,10),to.toISOString().slice(0,10)).subscribe({next:value=>{this.predictability.set(value);this.predictabilityLoading.set(false)},error:()=>{this.predictabilityLoading.set(false);this.predictabilityError.set(true)}}); }
   loadDashboard(): void {
     this.accountsLoading.set(true);
     const { from, to } = this.periodRange(this.selectedPeriod());
@@ -110,13 +111,15 @@ export class DashboardPageComponent implements OnInit {
     });
   }
 
+  navigateToCashFlow(): void { this.router.navigate(['/cash-flow']); }
+  navigateToCalendar(): void { this.router.navigate(['/financial-calendar']); }
   navigateToAccounts(): void {
     this.router.navigate(['/accounts']);
   }
 
   onPeriodChange(value: (typeof this.periodOptions)[number]['value']): void {
     this.selectedPeriod.set(value);
-    this.loadDashboard();
+    this.loadDashboard(); this.loadPredictability();
   }
 
   private periodRange(period: (typeof this.periodOptions)[number]['value']): { from: Date; to: Date } {

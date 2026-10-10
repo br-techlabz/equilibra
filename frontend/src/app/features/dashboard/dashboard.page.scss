@@ -1,3 +1,4 @@
+.predictability-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--space-4)}.predictability-grid article{display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-5);border:1px solid var(--card-border);border-radius:var(--radius-lg);background:var(--card-bg)}.predictability-grid span,.predictability-grid small{color:var(--text-secondary)}.predictability-grid strong{font-size:var(--font-size-h3)}.predictability-links{display:flex;gap:var(--space-3);margin-top:var(--space-5)}
 .dashboard-page {
   display: flex;
   flex-direction: column;

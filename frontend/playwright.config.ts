@@ -8,7 +8,7 @@ export default defineConfig({
   workers: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: 'http://127.0.0.1:4201',
+    baseURL: process.env['E2E_BASE_URL'] ?? 'http://127.0.0.1:4201',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
