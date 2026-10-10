@@ -71,6 +71,11 @@ export class SidebarComponent implements OnInit {
       route: '/recurrences',
     },
     {
+      label: 'Agenda Financeira',
+      icon: 'calendar_month',
+      route: '/financial-calendar',
+    },
+    {
       label: 'Contas',
       icon: 'account_balance_wallet',
       route: '/accounts',

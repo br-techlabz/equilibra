@@ -39,6 +39,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/recurrences/pages/recurrences.page').then((m) => m.RecurrencesPageComponent),
       },
       {
+        path: 'financial-calendar',
+        loadComponent: () => import('./features/financial-calendar/pages/financial-calendar.page').then((m) => m.FinancialCalendarPageComponent),
+      },
+      {
         path: 'budgets',
         loadComponent: () => import('./features/budgets/pages/budgets.page').then((m) => m.BudgetsPageComponent),
       },
