@@ -1,0 +1,9 @@
+node_modules
+.dist
+coverage
+.playwright
+.angular
+.git
+.gitignore
+Dockerfile
+npm-debug.log*

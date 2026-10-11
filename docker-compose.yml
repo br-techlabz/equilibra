@@ -47,18 +47,19 @@ services:
     networks:
       - equilibra-network
 
-  # Frontend Angular (placeholder - será configurado posteriormente)
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   container_name: equilibra-frontend
-  #   ports:
-  #     - "4200:80"
-  #   depends_on:
-  #     - backend
-  #   networks:
-  #     - equilibra-network
+  # Frontend Angular
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: equilibra-frontend
+    ports:
+      - "${FRONTEND_PORT:-4201}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - equilibra-network
 
 volumes:
   mysql_data:
