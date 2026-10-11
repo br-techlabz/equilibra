@@ -1,0 +1,1135 @@
+# TASK-7.1 — BACKEND DE RECORRÊNCIAS
+
+PROJETO: EQUILIBRA
+SPRINT: 7 — PREVISIBILIDADE FINANCEIRA
+STACK: Spring Boot 4 + MySQL
+SEGURANÇA: Spring Security + JWT + CurrentUser
+QUALIDADE: Flyway + OpenAPI + Testcontainers/MySQL
+
+CONTEXTO
+
+Sprints 0 a 6 aprovadas.
+
+TASK-7.0 — Arquitetura e ADR da Sprint 7 concluídos.
+
+OBJETIVO
+
+Implementar o backend de gerenciamento de regras
+de recorrência para despesas e receitas.
+
+Permitir que o usuário configure obrigações
+e entradas financeiras periódicas.
+
+A implementação deve seguir estritamente o ADR
+da TASK-7.0 e preservar o ledger existente.
+
+IMPORTANTE
+
+Não presumir que uma recorrência é uma
+transação financeira efetivada.
+
+Não criar movimentos financeiros apenas
+por cadastrar uma recorrência.
+
+Não implementar frontend nesta tarefa.
+
+==================================================
+1. INSPEÇÃO OBRIGATÓRIA
+==================================================
+
+Antes de alterar código, inspecionar:
+
+- CLAUDE.md;
+- ADR da TASK-7.0;
+- relatório arquitetural da Sprint 7;
+- decisões de domínio aprovadas;
+- Golden Scenarios da Sprint 7;
+- modelo de recorrências definido;
+- modelo de ocorrências previsto;
+- estratégia de geração;
+- política de idempotência;
+- estados aprovados;
+- política de vencimentos;
+- tratamento de competência;
+- modelo de despesas e receitas;
+- AssetAccount;
+- Category;
+- FinancialTransaction;
+- ledger;
+- CurrentUser;
+- padrões de repositories;
+- padrões de DTOs;
+- Flyway;
+- OpenAPI;
+- testes existentes.
+
+Não inferir contratos a partir de exemplos.
+
+==================================================
+2. GATE DE ARQUITETURA
+==================================================
+
+Confirmar no ADR:
+
+A. Entidade de regra de recorrência.
+
+B. Tipos permitidos: EXPENSE e INCOME,
+ou enum equivalente.
+
+C. Periodicidades aprovadas.
+
+D. Data inicial e data final.
+
+E. Política de dia de vencimento.
+
+F. Associação com conta e categoria.
+
+G. Estratégia de geração de ocorrências.
+
+H. Horizonte de geração.
+
+I. Estados da regra.
+
+J. Edição da regra e efeito sobre ocorrências.
+
+K. Cancelamento e pausa.
+
+L. Idempotência e concorrência.
+
+M. Tratamento de ocorrências já efetivadas.
+
+N. Responsabilidade da TASK-7.1 versus TASK-7.3.
+
+O. Se o valor é fixo ou variável.
+
+P. Se existem exceções por ocorrência.
+
+Q. Se a geração é sob demanda, agendada
+ou realizada por outro mecanismo aprovado.
+
+Se decisão essencial estiver ausente,
+registrar BLOCKED.
+
+Não escolher silenciosamente.
+
+==================================================
+3. PRE-IMPLEMENTATION REPORT
+==================================================
+
+Antes de editar arquivos, produzir:
+
+# TASK-7.1 — PRE-IMPLEMENTATION REPORT
+
+1. ADR utilizado.
+2. Escopo autorizado.
+3. Modelo de domínio.
+4. Entidades.
+5. Periodicidades.
+6. Estados.
+7. Datas e vencimentos.
+8. Contas e categorias.
+9. Estratégia de ocorrências.
+10. Idempotência.
+11. Concorrência.
+12. Contratos REST.
+13. Ownership.
+14. Migrations.
+15. Estratégia de testes.
+16. Arquivos previstos.
+17. Dependências futuras.
+18. Decisões bloqueantes.
+
+==================================================
+4. ESCOPO FUNCIONAL
+==================================================
+
+Implementar operações aprovadas para:
+
+- criar regra de recorrência;
+- listar regras;
+- consultar detalhes;
+- editar campos permitidos;
+- pausar/reativar, se previsto;
+- encerrar/cancelar, se previsto;
+- consultar regras históricas, se previsto.
+
+Implementar geração de ocorrências SOMENTE
+na extensão explicitamente atribuída
+à TASK-7.1 pelo ADR.
+
+Não antecipar efetivação financeira da TASK-7.3.
+
+==================================================
+5. MODELO DE DOMÍNIO
+==================================================
+
+Implementar entidade definida no ADR.
+
+Nome conceitual:
+
+RecurrenceRule
+
+Campos candidatos, sujeitos ao ADR:
+
+id: UUID
+ownerId: UUID
+type: EXPENSE / INCOME
+description: String
+amount: BigDecimal
+categoryId: UUID
+accountId: UUID
+frequency: enum aprovado
+startDate: LocalDate
+endDate: LocalDate opcional
+dueDay: Integer opcional
+status: enum aprovado
+createdAt
+updatedAt
+
+Não criar campos não aprovados.
+
+==================================================
+6. IDENTIDADE
+==================================================
+
+Usar UUID conforme arquitetura.
+
+Gerar ID no backend.
+
+ownerId derivado do JWT.
+
+Não aceitar ownerId do cliente.
+
+Não permitir alteração de ID.
+
+==================================================
+7. TIPO FINANCEIRO
+==================================================
+
+Respeitar tipos aprovados.
+
+EXPENSE:
+recorrência de despesa.
+
+INCOME:
+recorrência de receita.
+
+Não criar TRANSFER como recorrência
+sem decisão explícita.
+
+==================================================
+8. VALOR
+==================================================
+
+Usar BigDecimal.
+
+Persistir DECIMAL(19,2), conforme padrão.
+
+Validar:
+
+- obrigatório;
+- positivo, conforme ADR;
+- até duas casas decimais;
+- limites;
+- valores inválidos.
+
+Não arredondar silenciosamente.
+
+==================================================
+9. DESCRIÇÃO
+==================================================
+
+Validar:
+
+- obrigatoriedade;
+- tamanho;
+- espaços;
+- normalização, se aprovada.
+
+Tratar conteúdo como texto não confiável.
+
+Não renderizar HTML executável.
+
+==================================================
+10. PERIODICIDADES
+==================================================
+
+Implementar somente frequências aprovadas.
+
+Exemplos conceituais:
+
+DAILY;
+WEEKLY;
+MONTHLY;
+YEARLY.
+
+Não implementar todas automaticamente.
+
+Se houver intervalo customizado,
+seguir contrato do ADR.
+
+==================================================
+11. DATAS
+==================================================
+
+Usar tipos temporais coerentes:
+
+LocalDate para datas civis;
+Instant/OffsetDateTime somente quando necessário.
+
+Separar:
+
+data de início;
+data de vencimento;
+data de término;
+data de efetivação financeira.
+
+Não confundir vencimento com occurredAt.
+
+==================================================
+12. DIA 31 E FEVEREIRO
+==================================================
+
+Implementar política aprovada.
+
+Exemplos possíveis:
+
+- último dia válido do mês;
+- pular mês;
+- rejeitar regra;
+- outra política.
+
+Não escolher comportamento sem ADR.
+
+Testar fevereiro e ano bissexto.
+
+==================================================
+13. RECORRÊNCIA SEMANAL
+==================================================
+
+Se aprovada:
+
+definir dia da semana;
+data âncora;
+intervalo;
+cálculo da próxima ocorrência.
+
+Não depender do timezone do servidor
+sem política explícita.
+
+==================================================
+14. RECORRÊNCIA ANUAL
+==================================================
+
+Se aprovada:
+
+definir comportamento para 29 de fevereiro.
+
+Não deslocar silenciosamente
+para outra data.
+
+==================================================
+15. DATA FINAL
+==================================================
+
+Se endDate existir:
+
+validar relação com startDate.
+
+Definir inclusão/exclusão do limite
+conforme ADR.
+
+Não gerar ocorrências fora da vigência.
+
+==================================================
+16. CATEGORIAS
+==================================================
+
+Validar categoria do mesmo owner.
+
+EXPENSE:
+categoria EXPENSE ou BOTH.
+
+INCOME:
+categoria INCOME ou BOTH.
+
+Seguir política de categorias inativas.
+
+Categoria estrangeira:
+404 ou erro aprovado indistinguível
+de recurso inexistente.
+
+==================================================
+17. CONTAS
+==================================================
+
+Se regra vincular AssetAccount:
+
+validar ownership.
+
+Respeitar política de conta inativa.
+
+Não permitir conta de outro usuário.
+
+Não alterar saldo ao vincular conta.
+
+==================================================
+18. ESTADOS DA REGRA
+==================================================
+
+Implementar somente estados aprovados.
+
+Exemplos conceituais:
+
+ACTIVE;
+PAUSED;
+ENDED;
+CANCELLED.
+
+Não adicionar estados sem ADR.
+
+==================================================
+19. TRANSIÇÕES
+==================================================
+
+Centralizar regras em service.
+
+Validar:
+
+ativação;
+pausa;
+reativação;
+encerramento;
+cancelamento;
+edição por estado.
+
+Não permitir transições inválidas.
+
+==================================================
+20. REGRA VERSUS OCORRÊNCIA
+==================================================
+
+Manter distinção entre:
+
+RecurrenceRule:
+modelo periódico.
+
+Occurrence:
+compromisso individual, se aprovado.
+
+FinancialTransaction:
+lançamento efetivado.
+
+Não tratar essas entidades como equivalentes.
+
+==================================================
+21. GERAÇÃO DE OCORRÊNCIAS
+==================================================
+
+Seguir estratégia aprovada na TASK-7.0.
+
+Se a TASK-7.1 incluir geração:
+
+implementar apenas a geração de previsões,
+sem efetivação no ledger.
+
+Se geração estiver reservada à TASK-7.3:
+
+implementar somente a estrutura necessária
+às regras, sem antecipar o gerador.
+
+Documentar a fronteira.
+
+==================================================
+22. HORIZONTE DE GERAÇÃO
+==================================================
+
+Se aplicável:
+
+respeitar horizonte aprovado.
+
+Não gerar ocorrências infinitas.
+
+Não criar milhares de registros
+sem limite definido.
+
+==================================================
+23. IDEMPOTÊNCIA
+==================================================
+
+Se ocorrências forem geradas nesta TASK:
+
+a mesma regra e competência não podem
+gerar duplicatas indevidas.
+
+Aplicar chave de unicidade coerente
+com o modelo aprovado.
+
+Proteger contra chamadas repetidas.
+
+==================================================
+24. CONCORRÊNCIA
+==================================================
+
+Testar operações simultâneas:
+
+criação;
+edição;
+mudança de estado;
+geração, se existir.
+
+Usar constraints e locking
+conforme arquitetura.
+
+Não depender apenas de verificação
+prévia em memória.
+
+==================================================
+25. EDIÇÃO DE RECORRÊNCIA
+==================================================
+
+Definir campos editáveis.
+
+Se já existem ocorrências:
+
+seguir política do ADR para:
+
+- futuras;
+- vencidas;
+- canceladas;
+- efetivadas.
+
+Não reescrever histórico financeiro.
+
+==================================================
+26. ALTERAÇÃO DE VALOR
+==================================================
+
+Exemplo conceitual:
+
+Internet:
+129.90 por mês.
+
+Alteração para:
+149.90.
+
+Definir se novo valor vale:
+
+- a partir de data;
+- próximas ocorrências;
+- toda série ainda não efetivada.
+
+Seguir ADR.
+
+Não alterar transações já efetivadas.
+
+==================================================
+27. PAUSA
+==================================================
+
+Se prevista:
+
+pausar regra deve impedir novas
+ocorrências conforme política aprovada.
+
+Não cancelar automaticamente pagamentos reais.
+
+==================================================
+28. ENCERRAMENTO
+==================================================
+
+Se previsto:
+
+encerrar regra deve respeitar
+ocorrências existentes.
+
+Não excluir histórico.
+
+==================================================
+29. CANCELAMENTO
+==================================================
+
+Se previsto:
+
+cancelar regra não cancela
+movimentações financeiras reais.
+
+Ocorrências futuras devem seguir
+política do ADR.
+
+==================================================
+30. MIGRATIONS
+==================================================
+
+Criar migrations Flyway novas.
+
+Incluir:
+
+- tabelas aprovadas;
+- UUID;
+- ownerId;
+- DECIMAL;
+- datas;
+- enums/status;
+- timestamps;
+- FKs;
+- índices;
+- constraints.
+
+Não modificar migrations aplicadas.
+
+==================================================
+31. INTEGRIDADE DO BANCO
+==================================================
+
+Validar:
+
+NOT NULL;
+CHECKs quando cabíveis;
+FKs;
+unicidade;
+ownership;
+valores;
+datas;
+estados.
+
+Não confiar apenas em Bean Validation.
+
+==================================================
+32. REPOSITORY
+==================================================
+
+Criar consultas owner-scoped.
+
+Não usar findById sem autorização
+para operações expostas.
+
+Evitar N+1.
+
+Implementar paginação quando prevista.
+
+==================================================
+33. SERVICE
+==================================================
+
+Centralizar:
+
+validações;
+periodicidade;
+transições;
+ownership;
+geração, se aprovada;
+idempotência;
+concorrência.
+
+Controller deve ser fino.
+
+==================================================
+34. API REST
+==================================================
+
+Implementar contratos reais do ADR.
+
+Exemplos conceituais:
+
+POST /api/recurrences
+GET /api/recurrences
+GET /api/recurrences/{id}
+PUT /api/recurrences/{id}
+
+Endpoints de pausa, retomada,
+cancelamento e geração somente
+se aprovados.
+
+Não inventar contratos paralelos.
+
+==================================================
+35. CRIAÇÃO
+==================================================
+
+POST:
+
+201 Created.
+
+Location header conforme padrão.
+
+Validar tipo, categoria, conta,
+valor e periodicidade.
+
+Não criar lançamento financeiro real.
+
+==================================================
+36. LISTAGEM
+==================================================
+
+Listar somente regras próprias.
+
+Filtros conforme ADR:
+
+tipo;
+status;
+periodicidade;
+categoria;
+conta.
+
+Não criar filtros não aprovados.
+
+==================================================
+37. DETALHAMENTO
+==================================================
+
+Retornar DTO tipado.
+
+Não expor entidade JPA.
+
+Não vazar dados de outros usuários.
+
+==================================================
+38. EDIÇÃO
+==================================================
+
+Aplicar regras aprovadas.
+
+Validar concorrência.
+
+Preservar identidade e ownership.
+
+Não alterar histórico efetivado.
+
+==================================================
+39. DTOs
+==================================================
+
+Criar DTOs reais:
+
+CreateRecurrenceRequest;
+UpdateRecurrenceRequest;
+RecurrenceResponse;
+RecurrenceFilter;
+
+ou nomes definidos no projeto.
+
+Não usar any.
+
+Não aceitar ownerId.
+
+==================================================
+40. VALIDAÇÃO
+==================================================
+
+Cobrir:
+
+- tipo ausente;
+- descrição inválida;
+- valor zero;
+- valor negativo;
+- três casas decimais;
+- categoria incompatível;
+- categoria estrangeira;
+- conta estrangeira;
+- frequência inválida;
+- data inicial inválida;
+- data final inválida;
+- dia de vencimento inválido;
+- transição inválida.
+
+==================================================
+41. ERROS HTTP
+==================================================
+
+Seguir padrão existente:
+
+400;
+401;
+403;
+404;
+409;
+422, se aplicável;
+500.
+
+Usar Problem Details e Request ID.
+
+Não expor SQL ou stack trace.
+
+==================================================
+42. SEGURANÇA
+==================================================
+
+Derivar owner do JWT.
+
+Todas as consultas owner-scoped.
+
+IDs estrangeiros indistinguíveis
+de IDs inexistentes.
+
+Não aceitar ownerId em requests.
+
+==================================================
+43. OPENAPI
+==================================================
+
+Documentar:
+
+- endpoints;
+- DTOs;
+- periodicidades;
+- estados;
+- datas;
+- valores;
+- erros;
+- autenticação;
+- exemplos.
+
+Documentar somente o que foi implementado.
+
+==================================================
+44. GOLDEN — DESPESA MENSAL
+==================================================
+
+User A cria:
+
+Internet residencial.
+EXPENSE.
+129.90.
+MONTHLY.
+Vencimento dia 10.
+Início outubro/2026.
+
+Esperado:
+
+regra válida;
+owner A;
+periodicidade correta;
+nenhuma alteração no ledger.
+
+==================================================
+45. GOLDEN — RECEITA MENSAL
+==================================================
+
+User A cria:
+
+Salário.
+INCOME.
+3500.00.
+MONTHLY.
+Vencimento dia 5.
+
+Esperado:
+
+regra válida;
+categoria compatível;
+nenhuma receita efetivada automaticamente
+sem autorização prevista no ADR.
+
+==================================================
+46. GOLDEN — DIA 31
+==================================================
+
+Criar recorrência mensal no dia 31.
+
+Validar fevereiro e abril.
+
+Resultado conforme política aprovada.
+
+==================================================
+47. GOLDEN — ANO BISSEXTO
+==================================================
+
+Testar:
+
+2028-02-29;
+2029-02-28;
+2029-03-01.
+
+Aplicar semântica real do ADR.
+
+==================================================
+48. GOLDEN — ALTERAÇÃO DE VALOR
+==================================================
+
+Internet:
+
+129.90.
+
+Alterar para:
+
+149.90.
+
+Validar vigência e histórico
+conforme ADR.
+
+Não alterar lançamentos efetivados.
+
+==================================================
+49. GOLDEN — PAUSA
+==================================================
+
+Se aprovada:
+
+pausar regra.
+
+Validar transição e geração futura.
+
+Não alterar saldos.
+
+==================================================
+50. GOLDEN — CANCELAMENTO
+==================================================
+
+Se aprovado:
+
+cancelar regra.
+
+Validar histórico e ocorrências.
+
+Não excluir ledger.
+
+==================================================
+51. GOLDEN — MULTIUSER
+==================================================
+
+User A possui recorrência Internet.
+
+User B possui recorrência Internet.
+
+A não pode consultar, editar,
+pausar ou cancelar regra de B.
+
+B não acessa dados de A.
+
+==================================================
+52. GOLDEN — INTEGRIDADE FINANCEIRA
+==================================================
+
+Antes:
+
+Conta A=1200.00.
+Conta B=800.00.
+Patrimônio=2000.00.
+
+Criar recorrência EXPENSE=129.90.
+
+Depois:
+
+Conta A=1200.00.
+Conta B=800.00.
+Patrimônio=2000.00.
+
+Criar recorrência INCOME=3500.00.
+
+Depois:
+
+Conta A=1200.00.
+Conta B=800.00.
+Patrimônio=2000.00.
+
+Nenhuma transação lógica adicional
+deve aparecer no histórico financeiro
+por simples criação de regra.
+
+==================================================
+53. TESTES UNITÁRIOS
+==================================================
+
+Cobrir:
+
+criação;
+edição;
+listagem;
+detalhes;
+validação;
+periodicidades;
+datas;
+estados;
+transições;
+categoria;
+conta;
+ownership;
+concorrência;
+geração, se aplicável.
+
+==================================================
+54. TESTES DE INTEGRAÇÃO
+==================================================
+
+Usar Testcontainers/MySQL.
+
+Validar:
+
+migrations;
+constraints;
+FKs;
+DECIMAL;
+datas;
+concorrência;
+transações;
+endpoints;
+segurança;
+Problem Details;
+Request ID.
+
+Não substituir por H2.
+
+==================================================
+55. TESTES DE SEGURANÇA
+==================================================
+
+Sem JWT:
+401.
+
+Regra estrangeira:
+404.
+
+Edição estrangeira:
+404.
+
+Transição estrangeira:
+404.
+
+Listagem:
+somente próprias.
+
+==================================================
+56. TESTES DE IDEMPOTÊNCIA
+==================================================
+
+Se houver geração nesta TASK:
+
+gerar duas vezes mesmo período.
+
+Esperado:
+
+nenhuma duplicidade indevida.
+
+Testar chamadas concorrentes.
+
+==================================================
+57. REGRESSÕES
+==================================================
+
+Executar regressões relevantes:
+
+Authentication;
+Asset Accounts;
+Categories;
+Expenses;
+Income;
+Transfers;
+Dashboard;
+History;
+Tags;
+Attachments;
+Reports;
+Exports;
+Budgets;
+Budget Summary;
+Budget Alerts;
+Financial Goals.
+
+Não alterar semântica financeira existente.
+
+==================================================
+58. PERFORMANCE
+==================================================
+
+Validar:
+
+índices;
+paginação;
+owner-scoping;
+ausência de N+1;
+consultas eficientes;
+limites de geração;
+ausência de jobs não aprovados.
+
+==================================================
+59. FORA DO ESCOPO
+==================================================
+
+Não implementar:
+
+- frontend de recorrências;
+- calendário financeiro;
+- fluxo de caixa projetado;
+- alertas de vencimento;
+- pagamento/recebimento;
+- baixa financeira;
+- novas transações automáticas;
+- notificações externas;
+- funcionalidades da TASK-7.3;
+- refatoração ampla do ledger.
+
+==================================================
+60. DEFINITION OF DONE
+==================================================
+
+TASK-7.1 concluída quando:
+
+- ADR respeitado;
+- modelo implementado;
+- migrations aplicadas;
+- constraints aprovadas;
+- CRUD funcionando;
+- periodicidades corretas;
+- vencimentos corretos;
+- estados corretos;
+- ownership garantido;
+- idempotência, se aplicável;
+- concorrência protegida;
+- ledger preservado;
+- OpenAPI atualizado;
+- Golden Scenarios aprovados;
+- testes unitários aprovados;
+- Testcontainers/MySQL aprovado;
+- testes de segurança aprovados;
+- backend build aprovado;
+- regressões relevantes aprovadas.
+
+==================================================
+61. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-7.1 — BACKEND DE RECORRÊNCIAS
+
+STATUS:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+1. ADR utilizado.
+2. Decisões confirmadas.
+3. Entidades.
+4. Migrations.
+5. Constraints.
+6. Periodicidades.
+7. Vencimentos.
+8. Estados.
+9. Transições.
+10. Geração de ocorrências, se aplicável.
+11. Idempotência.
+12. Concorrência.
+13. Endpoints.
+14. DTOs.
+15. Validações.
+16. Ownership.
+17. Integridade financeira.
+18. Golden Scenarios.
+19. Testes unitários.
+20. Testcontainers/MySQL.
+21. Segurança.
+22. OpenAPI.
+23. Problem Details.
+24. Performance.
+25. Regressões.
+26. Build backend.
+27. Arquivos modificados.
+28. Bugs encontrados/corrigidos.
+29. Divergências do ADR.
+30. Dívidas técnicas.
+31. Fora do escopo confirmado.
+
+Se concluída:
+
+READY FOR TASK-7.2 — Frontend de Recorrências.
+
+NÃO implementar TASK-7.2 nesta execução.

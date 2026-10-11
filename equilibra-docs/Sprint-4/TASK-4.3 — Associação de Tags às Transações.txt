@@ -1,0 +1,2400 @@
+# TASK-4.3 — Associação de Tags às Transações
+
+Estamos na:
+
+# Sprint 4 — Enriquecimento das Transações
+
+Concluídas:
+
+- TASK-4.0 — Arquitetura de Tags e Anexos
+- TASK-4.1 — Domínio, Persistência e API de Tags
+- TASK-4.2 — Interface de Tags
+
+A Sprint 3 foi aprovada e suas invariantes financeiras estão congeladas.
+
+Agora implemente:
+
+# TASK-4.3 — Associação de Tags às Transações
+
+Objetivo:
+
+Implementar a associação de Tags às transações financeiras do Equilibra:
+
+- Expense;
+- Income;
+- Transfer.
+
+A associação deve existir na TRANSAÇÃO FINANCEIRA LÓGICA.
+
+Tags são metadata.
+
+Tags NÃO podem modificar o efeito financeiro da transação.
+
+Esta TASK inclui:
+
+- persistência da associação;
+- migration;
+- domínio;
+- casos de uso;
+- API;
+- DTOs;
+- integração nos formulários Angular;
+- exibição básica das Tags nas transações;
+- testes;
+- regressões financeiras.
+
+O filtro avançado do Histórico por Tag pode ser preparado nesta TASK,
+mas a integração completa do Histórico pertence à TASK-4.7, salvo se o
+ADR 4.0 determinou explicitamente que o filtro deve nascer junto com a
+associação.
+
+Attachments permanecem FORA desta TASK.
+
+---
+
+# 1. FONTE DE VERDADE
+
+Antes de modificar código, leia:
+
+- CLAUDE.md;
+- ADR da TASK-4.0;
+- relatório da TASK-4.1;
+- relatório da TASK-4.2;
+- ADR do ledger da TASK-3.0;
+- implementação real de FinancialTransaction;
+- AccountMovement, se existir;
+- Expense;
+- Income;
+- Transfer;
+- Tag;
+- Category;
+- repositories;
+- migrations;
+- DashboardQueryService;
+- TransactionHistoryQueryService;
+- APIs atuais;
+- OpenAPI;
+- telas Angular de Expense;
+- telas Angular de Income;
+- telas Angular de Transfer;
+- tela de Tags;
+- testes financeiros da Sprint 3.
+
+O ADR da TASK-4.0 e o modelo real do ledger são autoridades.
+
+Não criar arquitetura paralela.
+
+---
+
+# 2. PRE-IMPLEMENTATION REPORT
+
+Antes de modificar arquivos, produza:
+
+# TASK-4.3 — PRE-IMPLEMENTATION REPORT
+
+## 1. Modelo financeiro atual
+
+Explique:
+
+FinancialTransaction;
+Expense;
+Income;
+Transfer;
+AccountMovement.
+
+## 2. Modelo Tag atual
+
+Campos:
+Ownership:
+Lifecycle:
+API:
+
+## 3. Decisão do ADR 4.0
+
+Explique exatamente como Tag deve ser associada à transação.
+
+## 4. Modelo proposto
+
+Mostre:
+
+Tag ↔ FinancialTransaction
+
+e cardinalidades.
+
+## 5. Database
+
+Mostre tabela associativa proposta.
+
+## 6. Ownership
+
+Explique como impedir:
+
+Transaction User A
++
+Tag User B.
+
+## 7. Inactive Tags
+
+Explique política.
+
+## 8. Cancelled Transactions
+
+Explique política.
+
+## 9. Expense API
+
+Mostre mudanças necessárias.
+
+## 10. Income API
+
+Mostre mudanças necessárias.
+
+## 11. Transfer API
+
+Mostre mudanças necessárias.
+
+## 12. Angular
+
+Mostre estratégia de Tag Selector.
+
+## 13. Ledger Invariance
+
+Explique por que associação não altera movimentos.
+
+## 14. Queries
+
+Explique estratégia para evitar N+1.
+
+## 15. Tests
+
+Liste cenários.
+
+## 16. Files
+
+Liste arquivos:
+
+- criar;
+- modificar;
+- reutilizar.
+
+Somente depois implemente.
+
+---
+
+# 3. PRINCÍPIO FUNDAMENTAL
+
+Tag é METADATA.
+
+Adicionar Tag:
+
+efeito financeiro = 0.
+
+Remover Tag:
+
+efeito financeiro = 0.
+
+Substituir Tags:
+
+efeito financeiro = 0.
+
+Desativar Tag:
+
+efeito financeiro = 0.
+
+Reativar Tag:
+
+efeito financeiro = 0.
+
+---
+
+# 4. LEDGER CONGELADO
+
+Não modificar regras:
+
+Expense ACTIVE:
+-account amount.
+
+Income ACTIVE:
++account amount.
+
+Transfer ACTIVE:
+-source amount
++destination amount.
+
+Cancelled:
+0.
+
+---
+
+# 5. TRANSFER NEUTRALITY
+
+Associar Tags a Transfer:
+
+Net Worth antes = X.
+
+Net Worth depois = X.
+
+---
+
+# 6. RELAÇÃO
+
+Seguir ADR.
+
+Arquitetura esperada:
+
+FinancialTransaction
+N:M
+Tag.
+
+---
+
+# 7. NÃO ASSOCIAR AO MOVEMENT
+
+Se ledger utiliza AccountMovement:
+
+Tag NÃO pertence ao AccountMovement.
+
+---
+
+# 8. MOTIVO
+
+Transfer possui dois movimentos financeiros, mas é uma única transação
+lógica.
+
+Ela deve possuir um único conjunto de Tags.
+
+---
+
+# 9. CARDINALIDADE
+
+Uma FinancialTransaction:
+
+0..N Tags.
+
+Uma Tag:
+
+0..N FinancialTransactions.
+
+---
+
+# 10. ZERO TAGS
+
+Transação sem Tags continua válida.
+
+---
+
+# 11. DATABASE
+
+Criar migration nova para associação.
+
+Nunca editar migration aplicada.
+
+---
+
+# 12. JOIN TABLE
+
+Usar nome definido no ADR/padrão.
+
+Conceitualmente:
+
+financial_transaction_tags
+
+- transaction_id
+- tag_id
+
+---
+
+# 13. PRIMARY/UNIQUE
+
+Garantir que:
+
+(transaction_id, tag_id)
+
+não possa se repetir.
+
+---
+
+# 14. FOREIGN KEYS
+
+transaction_id
+→ financial_transactions
+
+tag_id
+→ tags.
+
+Adaptar nomes reais.
+
+---
+
+# 15. INDEXES
+
+Avaliar:
+
+transaction_id
+tag_id
+
+e necessidades futuras para filtro por Tag.
+
+Não criar índices redundantes cegamente.
+
+---
+
+# 16. CASCADE
+
+Definir conforme ADR.
+
+Como transações financeiras não possuem physical delete normal,
+não depender de cascade como regra de negócio.
+
+---
+
+# 17. TAG DEACTIVATION
+
+Desativar Tag NÃO remove associações históricas.
+
+---
+
+# 18. TAG REACTIVATION
+
+Reativar Tag NÃO cria nem remove associações automaticamente.
+
+---
+
+# 19. TAG RENAME
+
+Renomear Tag deve refletir naturalmente em transações associadas.
+
+Não copiar nome da Tag para a join table.
+
+---
+
+# 20. OWNERSHIP
+
+CRÍTICO.
+
+Transaction.owner deve ser igual a Tag.owner.
+
+---
+
+# 21. REQUEST SPOOFING
+
+Cliente envia apenas IDs das Tags.
+
+Nunca:
+
+tagOwnerId.
+
+---
+
+# 22. VALIDATION
+
+Para cada tagId recebido:
+
+- Tag deve existir;
+- pertencer ao CurrentUser;
+- estar ativa quando estiver sendo adicionada.
+
+---
+
+# 23. OTHER OWNER
+
+Se User A envia UUID de Tag de User B:
+
+não permitir associação.
+
+---
+
+# 24. INFORMATION LEAK
+
+Seguir política de private resources.
+
+Preferência:
+
+404.
+
+Não revelar:
+
+"Essa Tag pertence a outro usuário."
+
+---
+
+# 25. NONEXISTENT TAG
+
+Mesmo comportamento de Tag de outro owner quando possível:
+
+404.
+
+---
+
+# 26. INACTIVE TAG — NEW ASSOCIATION
+
+Tag inativa:
+
+não pode ser adicionada a nova associação.
+
+---
+
+# 27. STATUS
+
+Preferência:
+
+409 Conflict
+
+para Tag própria existente porém inativa.
+
+Seguir ADR/convenção real.
+
+---
+
+# 28. EXISTING HISTORICAL INACTIVE TAG
+
+Uma transação que já possui Tag e depois ela é desativada:
+
+continua associada.
+
+---
+
+# 29. UPDATE TRANSACTION WITH HISTORICAL INACTIVE TAG
+
+Este cenário deve ser tratado cuidadosamente.
+
+Exemplo:
+
+Expense possui:
+
+Tag A ativa
+Tag B posteriormente desativada.
+
+Usuário edita apenas:
+
+description.
+
+Não é aceitável apagar Tag B acidentalmente.
+
+---
+
+# 30. DECISÃO
+
+Se update de transação envia conjunto completo de tagIds:
+
+a UI precisa preservar Tags históricas já associadas quando não estiver
+editando a associação.
+
+---
+
+# 31. INACTIVE EXISTING TAG
+
+Uma Tag inativa já associada pode permanecer associada.
+
+---
+
+# 32. INACTIVE NEW TAG
+
+Uma Tag inativa não pode ser adicionada a uma transação que ainda não a
+possuía.
+
+---
+
+# 33. REMOVE INACTIVE TAG
+
+Se política permitir editar metadata:
+
+usuário pode remover associação histórica inativa.
+
+Depois de removida:
+
+não pode readicioná-la enquanto permanecer inativa.
+
+---
+
+# 34. CANCELLED TRANSACTION
+
+Seguir exatamente ADR 4.0.
+
+Se transação CANCELLED é imutável:
+
+não permitir alterar Tags após cancelamento.
+
+---
+
+# 35. NÃO INVENTAR
+
+Não criar endpoint especial para burlar imutabilidade de cancelled
+transaction.
+
+---
+
+# 36. API STRATEGY
+
+Seguir decisão obrigatória do ADR 4.0.
+
+Se ADR escolheu Tags dentro dos comandos de Expense/Income/Transfer:
+
+implementar essa estratégia.
+
+Se escolheu endpoint específico:
+
+implementar endpoint específico.
+
+Não misturar duas estratégias sem justificativa.
+
+---
+
+# 37. ESTRATÉGIA A — COMMAND
+
+Se ADR aprovou command:
+
+Create/Update recebem:
+
+tagIds: UUID[]
+
+ou equivalente.
+
+---
+
+# 38. CREATE
+
+tagIds:
+
+opcional.
+
+Ausente ou []:
+
+sem Tags.
+
+---
+
+# 39. DUPLICATE TAG IDS
+
+Request:
+
+[tagA, tagA]
+
+não deve gerar associação duplicada.
+
+Preferência:
+
+rejeitar 400
+
+ou normalizar se ADR explicitamente definiu.
+
+Escolher comportamento consistente e testar.
+
+---
+
+# 40. UPDATE
+
+Definir claramente semântica.
+
+Preferência:
+
+tagIds representa o conjunto final completo.
+
+Exemplo:
+
+atual:
+[A, B]
+
+request:
+[B, C]
+
+resultado:
+[B, C].
+
+---
+
+# 41. NÃO APPEND IMPLÍCITO
+
+PUT não deve significar append silencioso.
+
+---
+
+# 42. ESTRATÉGIA B — METADATA ENDPOINT
+
+Se ADR escolheu:
+
+PUT /api/transactions/{id}/tags
+
+seguir contrato aprovado.
+
+---
+
+# 43. ATOMICIDADE
+
+Se Tags fazem parte do Create/Update command:
+
+persistência da transação e associação das Tags deve ser atômica na
+transação de banco apropriada.
+
+---
+
+# 44. INVALID TAG ON CREATE
+
+Se uma Tag for inválida:
+
+não criar parcialmente a transação.
+
+---
+
+# 45. INVALID TAG ON UPDATE
+
+Não modificar parcialmente:
+
+- transação;
+- ledger;
+- tags.
+
+Estado anterior deve permanecer.
+
+---
+
+# 46. EXPENSE CREATE
+
+Expense pode receber 0..N Tags.
+
+---
+
+# 47. EXPENSE UPDATE
+
+Pode atualizar Tags conforme contrato.
+
+---
+
+# 48. EXPENSE RESPONSE
+
+Adicionar Tags conforme contrato aprovado.
+
+Preferência:
+
+resumo tipado:
+
+tags: [
+  {
+    id,
+    name,
+    active
+  }
+]
+
+Não expor:
+
+ownerId;
+normalizedName.
+
+---
+
+# 49. INCOME
+
+Mesmo comportamento semântico.
+
+---
+
+# 50. TRANSFER
+
+Mesmo comportamento semântico.
+
+---
+
+# 51. TRANSFER RESPONSE
+
+Uma lista:
+
+tags: [...]
+
+Não:
+
+sourceTags;
+destinationTags.
+
+---
+
+# 52. TYPE INDEPENDENCE
+
+Tag não possui applicability como Category.
+
+A mesma Tag pode ser usada em:
+
+Expense;
+Income;
+Transfer.
+
+---
+
+# 53. EXEMPLO
+
+Tag:
+
+"Viagem"
+
+pode marcar:
+
+Expense de hotel;
+Income de reembolso;
+Transfer para conta de viagem.
+
+---
+
+# 54. TAG DOES NOT REPLACE CATEGORY
+
+Category continua obrigatória/opcional conforme contrato financeiro
+existente.
+
+Não alterar regra de Category.
+
+---
+
+# 55. DTO
+
+Criar DTO compartilhado de resumo de Tag somente se arquitetura atual
+justificar.
+
+Exemplo:
+
+TagSummaryResponse.
+
+---
+
+# 56. NÃO EXPOR ENTITY
+
+Não serializar JPA Tag diretamente.
+
+---
+
+# 57. N+1
+
+Adicionar Tags às responses não pode criar:
+
+1 query transactions
++
+N queries tags.
+
+---
+
+# 58. LIST EXPENSE
+
+Auditar queries.
+
+---
+
+# 59. LIST INCOME
+
+Auditar queries.
+
+---
+
+# 60. LIST TRANSFER
+
+Auditar queries.
+
+---
+
+# 61. HISTORY
+
+Se History já reutiliza projeção de FinancialTransaction:
+
+avaliar forma eficiente de disponibilizar Tags futuramente.
+
+---
+
+# 62. NÃO QUEBRAR PAGINATION
+
+JOIN N:M pode multiplicar linhas.
+
+CRÍTICO:
+
+não quebrar:
+
+- page size;
+- totalElements;
+- totalPages;
+- ordering.
+
+---
+
+# 63. CUIDADO COM FETCH JOIN
+
+Não usar collection fetch join com paginação de forma que cause
+paginação em memória ou resultados incorretos.
+
+---
+
+# 64. QUERY STRATEGY
+
+Considere padrão seguro:
+
+1. paginar IDs/transações;
+2. carregar Tags em batch para IDs da página;
+
+ou projeção equivalente.
+
+Escolher com base na arquitetura real.
+
+---
+
+# 65. ORDER
+
+Tags dentro de uma transação devem ter ordem previsível.
+
+Preferência:
+
+name ASC.
+
+---
+
+# 66. TAG DUPLICATION RESPONSE
+
+Nunca retornar mesma Tag duas vezes.
+
+---
+
+# 67. OPENAPI
+
+Atualizar contratos relevantes.
+
+---
+
+# 68. DOCUMENTAR
+
+Documentar:
+
+- tagIds;
+- optional/empty behavior;
+- inactive behavior;
+- ownership;
+- response tags;
+- update semantics.
+
+---
+
+# 69. PROBLEM DETAILS
+
+Preservar padrão.
+
+---
+
+# 70. ERRORS
+
+Esperado conceitualmente:
+
+400 — malformed/duplicate invalid request
+401 — unauthenticated
+404 — transaction/Tag inexistente ou outro owner
+409 — Tag própria inativa/estado incompatível
+
+Seguir contrato real.
+
+---
+
+# 71. REQUEST ID
+
+Preservar.
+
+---
+
+# 72. FRONTEND — OBJETIVO
+
+Integrar seleção de Tags aos formulários de:
+
+- Despesa;
+- Receita;
+- Transferência.
+
+---
+
+# 73. COMPONENT
+
+Criar componente reutilizável:
+
+TagSelectorComponent
+
+ou nome coerente.
+
+---
+
+# 74. NÃO DUPLICAR
+
+Não criar:
+
+ExpenseTagSelector
+IncomeTagSelector
+TransferTagSelector.
+
+---
+
+# 75. COMPONENT RESPONSIBILITY
+
+Responsável por:
+
+- receber Tags disponíveis;
+- receber seleção atual;
+- permitir múltipla seleção;
+- emitir IDs selecionados;
+- mostrar Tags já associadas.
+
+---
+
+# 76. COMPONENT NÃO FAZ LEDGER
+
+TagSelector não conhece:
+
+amount;
+account;
+source;
+destination;
+balance;
+category.
+
+---
+
+# 77. UI LIBRARY
+
+Usar Angular Material/Design System existente.
+
+Não adicionar nova biblioteca de chips/select.
+
+---
+
+# 78. MULTISELECT
+
+Tags devem permitir seleção múltipla.
+
+---
+
+# 79. PRESENTATION
+
+Preferência:
+
+chips + autocomplete/multi-select
+
+se Angular Material atual suportar bem.
+
+Priorizar:
+
+- acessibilidade;
+- mobile;
+- simplicidade.
+
+---
+
+# 80. ACTIVE TAGS
+
+Para nova associação:
+
+carregar Tags ativas.
+
+---
+
+# 81. API
+
+Reutilizar TagService da TASK-4.2.
+
+---
+
+# 82. NÃO RECRIAR TAG API
+
+Não duplicar service.
+
+---
+
+# 83. CREATE INLINE TAG
+
+NÃO implementar criação inline nesta TASK por padrão.
+
+Usuário cria Tags pela tela:
+
+/tags.
+
+---
+
+# 84. NO TAGS AVAILABLE
+
+Se usuário não possui Tags:
+
+mostrar mensagem curta:
+
+"Você ainda não possui tags."
+
+Oferecer ação:
+
+"Gerenciar tags"
+
+ou
+
+"Criar tags"
+
+navegando para /tags.
+
+---
+
+# 85. NÃO BLOQUEAR TRANSACTION
+
+Tags são opcionais.
+
+Ausência de Tags não impede criar:
+
+Expense;
+Income;
+Transfer.
+
+---
+
+# 86. EXPENSE FORM
+
+Adicionar campo:
+
+Tags
+
+após Category ou em posição coerente.
+
+---
+
+# 87. INCOME FORM
+
+Adicionar:
+
+Tags.
+
+---
+
+# 88. TRANSFER FORM
+
+Adicionar:
+
+Tags.
+
+---
+
+# 89. NOTES
+
+Preservar Notes.
+
+Não substituir Notes por Tags.
+
+---
+
+# 90. CREATE REQUEST FRONTEND
+
+Enviar tagIds conforme contrato.
+
+---
+
+# 91. EDIT
+
+Carregar Tags atuais da transação.
+
+---
+
+# 92. EDIT ACTIVE TAG
+
+Selecionável normalmente.
+
+---
+
+# 93. EDIT INACTIVE HISTORICAL TAG
+
+Deve continuar visível.
+
+---
+
+# 94. VISUAL INACTIVE
+
+Indicar:
+
+"Inativa"
+
+sem depender somente de cor.
+
+---
+
+# 95. DO NOT OFFER AS NEW
+
+Tag inativa histórica não deve aparecer como nova opção para adicionar.
+
+---
+
+# 96. REMOVE HISTORICAL
+
+Se política permite:
+
+pode ser removida da seleção.
+
+---
+
+# 97. RE-ADD
+
+Após remover:
+
+não pode ser adicionada novamente enquanto inativa.
+
+---
+
+# 98. CANCELLED FORM
+
+Seguir política de edição de transação CANCELLED.
+
+Não permitir Tag edit se transação inteira é read-only.
+
+---
+
+# 99. FORM VALIDATION
+
+Tag IDs inválidos são autoridade do backend.
+
+Frontend valida apenas estado conhecido.
+
+---
+
+# 100. SUBMIT
+
+Desabilitar durante request.
+
+---
+
+# 101. ERROR TAG INACTIVE
+
+Se Tag foi desativada em outra sessão entre carregar form e submit:
+
+backend pode responder conflito.
+
+Mostrar mensagem amigável.
+
+Exemplo:
+
+"Uma das tags selecionadas não está mais disponível."
+
+---
+
+# 102. ERROR TAG NOT FOUND
+
+Mensagem genérica segura.
+
+Não revelar ownership.
+
+---
+
+# 103. LIST UI — EXPENSE
+
+Exibir Tags de forma discreta se response agora as inclui.
+
+---
+
+# 104. LIST UI — INCOME
+
+Mesmo padrão.
+
+---
+
+# 105. LIST UI — TRANSFER
+
+Mesmo padrão.
+
+---
+
+# 106. NÃO POLUIR TABLE
+
+Se muitas Tags:
+
+mostrar quantidade limitada visualmente.
+
+Exemplo:
+
+Viagem
+Trabalho
++2
+
+---
+
+# 107. ACCESSIBILITY
+
+O `+2` deve possuir accessible label/contexto adequado.
+
+---
+
+# 108. TOOLTIP
+
+Pode mostrar Tags restantes se padrão atual suporta.
+
+Não depender exclusivamente de hover.
+
+---
+
+# 109. MOBILE
+
+Tags devem quebrar/wrap sem gerar horizontal overflow.
+
+---
+
+# 110. HISTORY
+
+Nesta TASK:
+
+se History response já passa naturalmente a possuir Tags e integração
+for trivial/prevista no ADR, pode preparar model.
+
+Mas NÃO transformar a TASK em implementação completa da 4.7.
+
+---
+
+# 111. DASHBOARD
+
+Não é necessário mostrar Tags no Dashboard.
+
+---
+
+# 112. RECENT TRANSACTIONS
+
+Não adicionar Tags por padrão.
+
+---
+
+# 113. FILTER BY TAG
+
+Deixar para TASK-4.7 salvo decisão explícita do ADR.
+
+---
+
+# 114. TAG DELETE
+
+Não existe.
+
+---
+
+# 115. TAG DEACTIVATION
+
+Não remover vínculos.
+
+---
+
+# 116. TAG RENAME
+
+Transações devem exibir novo nome automaticamente após refresh.
+
+---
+
+# 117. LEDGER TEST — EXPENSE
+
+Conta:
+
+1000.
+
+Expense:
+
+200.
+
+Saldo:
+
+800.
+
+Adicionar Tags:
+
+Viagem
+Trabalho.
+
+Saldo continua:
+
+800.
+
+---
+
+# 118. LEDGER TEST — INCOME
+
+Conta:
+
+1000.
+
+Income:
+
+200.
+
+Saldo:
+
+1200.
+
+Adicionar Tags:
+
+Reembolsável.
+
+Saldo continua:
+
+1200.
+
+---
+
+# 119. LEDGER TEST — TRANSFER
+
+A:
+
+1000.
+
+B:
+
+500.
+
+Transfer:
+
+A → B 300.
+
+Esperado:
+
+A = 700
+B = 800
+Net Worth = 1500.
+
+Adicionar:
+
+Viagem
+Reserva.
+
+Esperado:
+
+A = 700
+B = 800
+Net Worth = 1500.
+
+---
+
+# 120. TAG UPDATE LEDGER INVARIANCE
+
+Alterar:
+
+[A, B]
+para
+[B, C].
+
+Balances:
+
+inalterados.
+
+---
+
+# 121. TAG REMOVE LEDGER INVARIANCE
+
+Remover todas:
+
+balances inalterados.
+
+---
+
+# 122. CATEGORY
+
+Tags não alteram Category.
+
+---
+
+# 123. OCCURRED AT
+
+Tags não alteram occurredAt.
+
+---
+
+# 124. STATUS
+
+Tags não alteram ACTIVE/CANCELLED.
+
+---
+
+# 125. ACCOUNT MOVEMENTS
+
+Comparar movements antes/depois de mudança apenas de Tags.
+
+Esperado:
+
+mesmos movements.
+
+---
+
+# 126. CRITICAL TEST
+
+Atualizar SOMENTE Tags de Transfer não pode recriar movements de forma
+que saldo seja aplicado duas vezes.
+
+---
+
+# 127. CRITICAL TEST — EXPENSE
+
+Mesmo princípio.
+
+---
+
+# 128. CRITICAL TEST — INCOME
+
+Mesmo princípio.
+
+---
+
+# 129. INVALID TAG ATOMICITY — EXPENSE
+
+Create Expense com:
+
+Tag A válida
+Tag B de outro owner.
+
+Resultado:
+
+Expense não criada.
+
+Nenhum movement criado.
+
+---
+
+# 130. INVALID TAG ATOMICITY — INCOME
+
+Mesmo.
+
+---
+
+# 131. INVALID TAG ATOMICITY — TRANSFER
+
+Mesmo.
+
+Nenhum half-transfer.
+
+---
+
+# 132. UPDATE ATOMICITY
+
+Expense existente:
+
+amount 100
+Tags [A].
+
+Request tenta:
+
+amount 200
+Tags [B inválida].
+
+Resultado:
+
+Expense permanece:
+
+amount 100
+Tags [A].
+
+Ledger permanece efeito 100.
+
+---
+
+# 133. TRANSFER UPDATE ATOMICITY
+
+Transfer existente:
+
+A → B 100
+Tags [X].
+
+Request tenta:
+
+A → B 250
+Tags [Tag de outro owner].
+
+Resultado:
+
+transfer original intacta.
+
+Nenhum movimento parcial.
+
+---
+
+# 134. USER A/B TEST
+
+User A:
+
+Tag Viagem.
+
+User B:
+
+Expense própria.
+
+B tenta associar UUID da Tag de A.
+
+404.
+
+---
+
+# 135. USER A/B REVERSE
+
+A não consegue usar Tag de B.
+
+---
+
+# 136. LIST ISOLATION
+
+Responses de A nunca contêm Tags de B.
+
+---
+
+# 137. HISTORY ISOLATION
+
+Nenhuma preparação de History pode vazar Tag de outro usuário.
+
+---
+
+# 138. MASS ASSIGNMENT
+
+Requests nunca aceitam:
+
+tag.ownerId;
+tag.normalizedName;
+tag.active;
+tag.createdAt.
+
+Apenas:
+
+tagIds.
+
+---
+
+# 139. DUPLICATE ASSOCIATION DB
+
+Constraint protege:
+
+(transaction_id, tag_id).
+
+---
+
+# 140. TESTS — DOMAIN
+
+Cobrir comportamento de associação se domínio contém métodos:
+
+replaceTags;
+addTag;
+removeTag
+
+ou equivalente.
+
+---
+
+# 141. TESTS — REPOSITORY
+
+Cobrir join table e ownership.
+
+---
+
+# 142. TESTS — API EXPENSE
+
+Create sem Tags:
+PASS
+
+Create com Tags:
+PASS
+
+Update Tags:
+PASS
+
+Remove Tags:
+PASS
+
+Inactive:
+PASS
+
+Other owner:
+PASS
+
+---
+
+# 143. TESTS — API INCOME
+
+Mesmo conjunto.
+
+---
+
+# 144. TESTS — API TRANSFER
+
+Mesmo conjunto.
+
+---
+
+# 145. TESTS — DUPLICATE IDS
+
+Cobrir comportamento decidido.
+
+---
+
+# 146. TESTS — CANCELLED
+
+Cobrir política do ADR.
+
+---
+
+# 147. TESTS — N+1
+
+Listagens com várias transações e Tags.
+
+Garantir ausência de N+1 estrutural.
+
+---
+
+# 148. TESTS — PAGINATION
+
+Tags não podem alterar:
+
+page size;
+totalElements;
+totalPages.
+
+---
+
+# 149. TESTCONTAINERS
+
+Join table/FKs/constraints:
+
+MySQL real.
+
+---
+
+# 150. CLEAN MIGRATION
+
+Banco vazio:
+
+todas migrations passam.
+
+---
+
+# 151. UPGRADE MIGRATION
+
+Schema da TASK-4.2 → nova migration:
+
+PASS.
+
+---
+
+# 152. FRONTEND TEST — TAG SELECTOR
+
+Nenhuma Tag.
+
+Uma Tag.
+
+Múltiplas Tags.
+
+Tag inativa histórica.
+
+---
+
+# 153. FRONTEND TEST — EXPENSE
+
+Create com Tags.
+
+Edit Tags.
+
+Remove Tags.
+
+---
+
+# 154. FRONTEND TEST — INCOME
+
+Mesmo.
+
+---
+
+# 155. FRONTEND TEST — TRANSFER
+
+Mesmo.
+
+---
+
+# 156. FRONTEND TEST — ERROR
+
+409 inactive.
+
+404 unavailable.
+
+---
+
+# 157. FRONTEND TEST — MOBILE
+
+Tag selector utilizável em:
+
+360 × 800.
+
+---
+
+# 158. KEYBOARD
+
+Tag selector utilizável por teclado.
+
+---
+
+# 159. SCREEN READER
+
+Tags selecionadas precisam ter nome acessível.
+
+Ação de remover precisa ter accessible name.
+
+Exemplo:
+
+"Remover tag Viagem".
+
+---
+
+# 160. FOCUS
+
+Adicionar/remover Tag não deve gerar foco imprevisível.
+
+---
+
+# 161. LONG TAG
+
+Nome próximo ao limite:
+
+não quebra form.
+
+---
+
+# 162. MANY TAGS
+
+Testar quantidade razoável.
+
+Layout deve:
+
+wrap/scroll interno apropriado.
+
+Não criar overflow global.
+
+---
+
+# 163. E2E — EXPENSE
+
+Login
+→ criar Tag "Viagem"
+→ criar Expense com "Viagem"
+→ abrir Expense
+→ Tag aparece.
+
+---
+
+# 164. E2E — INCOME
+
+Criar Tag "Reembolsável"
+→ criar Income
+→ associar
+→ editar
+→ persistência correta.
+
+---
+
+# 165. E2E — TRANSFER
+
+Criar Tags:
+
+Viagem
+Reserva
+
+→ Transfer A → B
+→ selecionar ambas
+→ salvar
+→ Transfer mostra as duas uma única vez.
+
+---
+
+# 166. E2E — INACTIVE
+
+Criar Tag
+→ associar Expense
+→ desativar Tag
+→ Expense continua exibindo Tag como inativa
+→ nova Expense não consegue selecioná-la.
+
+---
+
+# 167. E2E — FINANCIAL
+
+Durante E2E:
+
+capturar saldo antes/depois de alteração apenas de Tags.
+
+Esperado:
+
+igual.
+
+---
+
+# 168. E2E — MULTIUSER
+
+Se infraestrutura suporta:
+
+A cria Tag.
+
+B não consegue associá-la.
+
+---
+
+# 169. BACKEND BUILD
+
+PASS.
+
+---
+
+# 170. FRONTEND LINT
+
+PASS.
+
+---
+
+# 171. FRONTEND TESTS
+
+PASS.
+
+---
+
+# 172. FRONTEND BUILD
+
+PASS.
+
+---
+
+# 173. FINANCIAL REGRESSION
+
+Executar suíte crítica da Sprint 3.
+
+---
+
+# 174. GOLDEN SCENARIO
+
+A initial = 1000
+B initial = 500
+
+Income A = 700 com Tag "Trabalho"
+
+Expense A = 200 com Tags "Casa", "Mensal"
+
+Transfer A → B = 300 com Tag "Reserva"
+
+Esperado:
+
+A = 1200
+B = 800
+Net Worth = 2000
+
+Dashboard:
+
+Entradas = 700
+Saídas = 200
+Saldo = 500.
+
+History:
+
+3 transações lógicas.
+
+Transfer:
+
+1 ocorrência.
+
+Tags:
+
+não alteram nenhum valor financeiro.
+
+---
+
+# 175. CANCEL GOLDEN
+
+Cancelar Transfer:
+
+efeito financeiro segue exatamente Sprint 3.
+
+Tags permanecem conforme ADR.
+
+---
+
+# 176. PERFORMANCE
+
+Não aceitar regressão grosseira em:
+
+Expense list;
+Income list;
+Transfer list;
+History;
+Dashboard.
+
+---
+
+# 177. DASHBOARD
+
+Se Dashboard não precisa Tags:
+
+não aumentar queries do Dashboard para carregar Tags.
+
+---
+
+# 178. SEPARATION
+
+Metadata de Tags não deve obrigar todas as queries financeiras a
+carregar coleção Tags.
+
+---
+
+# 179. LAZY LOADING
+
+Cuidado com serialization acidental de coleção lazy.
+
+Não expor JPA entities.
+
+---
+
+# 180. ATTACHMENTS
+
+NÃO implementar:
+
+TransactionAttachment;
+Storage;
+Upload;
+Download;
+Delete;
+MIME;
+filesystem.
+
+---
+
+# 181. NO TAG COLOR
+
+Não implementar.
+
+---
+
+# 182. NO TAG ICON
+
+Não implementar.
+
+---
+
+# 183. NO INLINE CREATE
+
+Não implementar criação de Tag dentro do transaction form salvo se ADR
+4.0 explicitamente determinou isso.
+
+---
+
+# 184. NO GENERIC TRANSACTION CRUD
+
+Não criar:
+
+GenericTransactionForm;
+GenericTransactionController;
+GenericFinancialCrudService.
+
+---
+
+# 185. NO GENERIC METADATA ENGINE
+
+Não criar framework genérico para:
+
+Tag
+Attachment
+Category
+
+nesta TASK.
+
+---
+
+# 186. DOCUMENTATION
+
+Atualizar documentação técnica com:
+
+- associação N:M;
+- ownership;
+- inactive semantics;
+- API;
+- atomicidade;
+- ledger invariance.
+
+---
+
+# 187. OPENAPI
+
+Atualizar exemplos de Expense/Income/Transfer com Tags.
+
+---
+
+# 188. DEFINITION OF DONE
+
+TASK-4.3 estará concluída quando:
+
+- migration da associação existir;
+- FK transaction → association estiver correta;
+- FK tag → association estiver correta;
+- duplicidade estiver impedida;
+- Expense aceitar Tags;
+- Income aceitar Tags;
+- Transfer aceitar Tags;
+- zero Tags continuar válido;
+- múltiplas Tags funcionarem;
+- Transfer possuir conjunto único;
+- Tag pertencer à transação lógica;
+- nenhuma Tag estiver ligada a AccountMovement;
+- cross-user Tag association estiver bloqueada;
+- inactive Tag não puder ser adicionada;
+- inactive Tag histórica permanecer;
+- cancelled behavior seguir ADR;
+- update semantics estiver clara;
+- invalid Tag não causar partial write;
+- responses forem tipadas;
+- owner não for exposto;
+- normalizedName não for exposto;
+- listagens não sofrerem N+1 estrutural;
+- paginação permanecer correta;
+- OpenAPI estiver atualizado;
+- TagSelector reutilizável existir;
+- Expense form possuir Tags;
+- Income form possuir Tags;
+- Transfer form possuir Tags;
+- UI mobile funcionar;
+- acessibilidade funcionar;
+- alteração apenas de Tags não modificar ledger;
+- balances permanecerem corretos;
+- netWorth permanecer correto;
+- Dashboard permanecer correto;
+- Transfer continuar aparecendo uma vez;
+- isolamento multiusuário passar;
+- MySQL/Testcontainers passar;
+- backend build passar;
+- frontend lint passar;
+- frontend tests passar;
+- frontend build passar;
+- regressões da Sprint 3 passar;
+- Attachments NÃO tiverem sido implementados.
+
+---
+
+# 189. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-4.3 — ASSOCIAÇÃO DE TAGS ÀS TRANSAÇÕES
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+## 1. ADR
+
+Estratégia utilizada:
+
+## 2. Database
+
+Join table:
+
+Columns:
+
+PK/Unique:
+
+FKs:
+
+Indexes:
+
+## 3. Domain
+
+Tag ↔ Transaction:
+
+Cardinality:
+
+Transfer semantics:
+
+## 4. Ownership
+
+Transaction/Tag same owner:
+PASS / FAIL
+
+Cross-user protection:
+PASS / FAIL
+
+## 5. Inactive Tags
+
+New association:
+PASS / FAIL
+
+Historical association:
+PASS / FAIL
+
+Remove:
+PASS / FAIL
+
+Re-add:
+PASS / FAIL
+
+## 6. Cancelled Transactions
+
+Política:
+
+PASS / FAIL
+
+## 7. Expense
+
+Create with Tags:
+PASS / FAIL
+
+Update Tags:
+PASS / FAIL
+
+Remove Tags:
+PASS / FAIL
+
+Response:
+PASS / FAIL
+
+## 8. Income
+
+Create with Tags:
+PASS / FAIL
+
+Update Tags:
+PASS / FAIL
+
+Remove Tags:
+PASS / FAIL
+
+Response:
+PASS / FAIL
+
+## 9. Transfer
+
+Create with Tags:
+PASS / FAIL
+
+Update Tags:
+PASS / FAIL
+
+Remove Tags:
+PASS / FAIL
+
+Single Tag set:
+PASS / FAIL
+
+## 10. Atomicity
+
+Expense:
+PASS / FAIL
+
+Income:
+PASS / FAIL
+
+Transfer:
+PASS / FAIL
+
+Invalid Tag rollback:
+PASS / FAIL
+
+## 11. Ledger Invariance
+
+Expense Tag change:
+PASS / FAIL
+
+Income Tag change:
+PASS / FAIL
+
+Transfer Tag change:
+PASS / FAIL
+
+AccountMovement unchanged:
+PASS / FAIL
+
+## 12. Balance
+
+PASS / FAIL
+
+## 13. Net Worth
+
+PASS / FAIL
+
+## 14. Dashboard
+
+PASS / FAIL
+
+## 15. History
+
+Transfer once:
+PASS / FAIL
+
+Financial count unchanged:
+PASS / FAIL
+
+## 16. API
+
+DTOs:
+PASS / FAIL
+
+Problem Details:
+PASS / FAIL
+
+Request ID:
+PASS / FAIL
+
+OpenAPI:
+PASS / FAIL
+
+## 17. Performance
+
+N+1:
+PASS / FAIL
+
+Pagination:
+PASS / FAIL
+
+Dashboard query regression:
+PASS / FAIL
+
+## 18. Angular
+
+TagSelector:
+PASS / FAIL
+
+Expense:
+PASS / FAIL
+
+Income:
+PASS / FAIL
+
+Transfer:
+PASS / FAIL
+
+Inactive historical Tags:
+PASS / FAIL
+
+## 19. Accessibility
+
+Keyboard:
+PASS / FAIL
+
+Focus:
+PASS / FAIL
+
+Screen reader:
+PASS / FAIL
+
+## 20. Responsive
+
+360 × 800:
+PASS / FAIL
+
+390 × 844:
+PASS / FAIL
+
+768 × 1024:
+PASS / FAIL
+
+1280 × 720:
+PASS / FAIL
+
+1920 × 1080:
+PASS / FAIL
+
+## 21. Tests
+
+Domain:
+PASS / FAIL
+
+Repository:
+PASS / FAIL
+
+API:
+PASS / FAIL
+
+Security:
+PASS / FAIL
+
+Integration:
+PASS / FAIL
+
+Testcontainers:
+PASS / FAIL
+
+Frontend:
+PASS / FAIL
+
+E2E:
+PASS / FAIL / NÃO CONFIGURADO
+
+## 22. Golden Scenario
+
+Account A:
+
+Account B:
+
+Net Worth:
+
+Entradas:
+
+Saídas:
+
+Saldo:
+
+History count:
+
+Transfer count:
+
+Resultado:
+PASS / FAIL
+
+## 23. Multi-user
+
+PASS / FAIL
+
+## 24. Migration
+
+Arquivo:
+
+Clean DB:
+PASS / FAIL
+
+Upgrade:
+PASS / FAIL
+
+## 25. Builds
+
+Backend:
+PASS / FAIL
+
+Frontend lint:
+PASS / FAIL
+
+Frontend tests:
+PASS / FAIL
+
+Frontend production:
+PASS / FAIL
+
+## 26. Files
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 27. Bugs encontrados
+
+Para cada:
+
+Severidade:
+Problema:
+Causa:
+Correção:
+Teste:
+
+## 28. Divergências do ADR
+
+Esperado:
+
+NENHUMA.
+
+## 29. Fora de escopo confirmado
+
+Attachments:
+NÃO IMPLEMENTADOS
+
+Upload:
+NÃO IMPLEMENTADO
+
+Download:
+NÃO IMPLEMENTADO
+
+Attachment Storage:
+NÃO IMPLEMENTADO
+
+History Tag Filter completo:
+NÃO IMPLEMENTADO, salvo decisão explícita do ADR
+
+## 30. Próxima Task
+
+Se TASK-4.3 estiver aprovada, declarar prontidão para:
+
+# TASK-4.4 — Infraestrutura Segura de Anexos
+
+NÃO implementar TASK-4.4 nesta execução.

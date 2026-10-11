@@ -1,0 +1,1839 @@
+# TASK-4.1 — Domínio, Persistência e API de Tags
+
+Estamos na:
+
+# Sprint 4 — Enriquecimento das Transações
+
+Concluída:
+
+- TASK-4.0 — Arquitetura de Tags e Anexos
+
+A Sprint 3 foi aprovada e suas invariantes financeiras estão congeladas.
+
+Agora implemente:
+
+# TASK-4.1 — Domínio, Persistência e API de Tags
+
+Objetivo:
+
+Implementar o recurso Tag no backend do Equilibra:
+
+- domínio;
+- persistência;
+- migration;
+- repository;
+- casos de uso;
+- API REST;
+- validações;
+- segurança;
+- isolamento multiusuário;
+- Problem Details;
+- OpenAPI;
+- testes.
+
+NÃO implementar ainda:
+
+- interface Angular de Tags;
+- associação Tag ↔ Transaction;
+- alteração dos DTOs de Expense;
+- alteração dos DTOs de Income;
+- alteração dos DTOs de Transfer;
+- filtro do histórico por Tag;
+- Attachments;
+- upload/download;
+- Dashboard com Tags.
+
+Esses itens pertencem às próximas TASKs.
+
+---
+
+# 1. FONTE DE VERDADE
+
+Antes de modificar código, leia obrigatoriamente:
+
+- CLAUDE.md;
+- ADR produzido na TASK-4.0;
+- ADRs anteriores;
+- implementação de Category;
+- implementação de AssetAccount;
+- migrations existentes;
+- repository conventions;
+- CurrentUser;
+- Spring Security;
+- Problem Details;
+- Request ID;
+- OpenAPI;
+- testes de integração;
+- configuração MySQL/Testcontainers.
+
+O ADR da TASK-4.0 é a autoridade para decisões de Tag.
+
+Se alguma recomendação deste prompt divergir do ADR:
+
+SIGA O ADR.
+
+Documente a divergência no relatório final.
+
+Não reinterpretar decisões já aprovadas.
+
+---
+
+# 2. PRÉ-IMPLEMENTATION REPORT
+
+Antes de alterar arquivos, produza:
+
+# TASK-4.1 — PRE-IMPLEMENTATION REPORT
+
+## 1. Decisões do ADR
+
+Resuma especificamente as decisões sobre Tag:
+
+- campos;
+- ownership;
+- normalização;
+- unicidade;
+- active/inactive;
+- lifecycle;
+- associação futura;
+- cancelled transactions;
+- API planejada.
+
+## 2. Padrão existente
+
+Compare Tag com:
+
+- Category;
+- AssetAccount.
+
+Informe o que pode ser reutilizado conceitualmente.
+
+## 3. Domain Model
+
+Mostre modelo proposto.
+
+## 4. Database
+
+Mostre migration proposta.
+
+## 5. Uniqueness
+
+Explique como será garantida inclusive sob concorrência.
+
+## 6. Repository
+
+Liste operações necessárias.
+
+## 7. Use Cases
+
+Liste.
+
+## 8. API
+
+Liste endpoints e DTOs.
+
+## 9. Ownership
+
+Explique proteção contra IDOR/BOLA.
+
+## 10. Errors
+
+Liste códigos HTTP.
+
+## 11. Tests
+
+Liste cenários principais.
+
+## 12. Files
+
+Liste:
+
+- criar;
+- modificar;
+- reutilizar.
+
+Depois implemente.
+
+---
+
+# 3. MODELO DE DOMÍNIO
+
+Implementar entidade:
+
+Tag
+
+conforme ADR da TASK-4.0.
+
+Modelo conceitual esperado:
+
+Tag
+- id
+- ownerId
+- name
+- normalizedName
+- active
+- createdAt
+- updatedAt
+
+Adapte exatamente ao padrão real do projeto.
+
+---
+
+# 4. ID
+
+Usar UUID se esse for o padrão consolidado.
+
+Não introduzir novo tipo de identificador.
+
+---
+
+# 5. OWNER
+
+Toda Tag pertence a exatamente um usuário.
+
+owner deve ser obrigatório.
+
+---
+
+# 6. OWNER SOURCE
+
+ownerId nunca vem do request.
+
+Fluxo obrigatório:
+
+JWT
+→ SecurityContext
+→ CurrentUser
+→ ownerId.
+
+---
+
+# 7. REQUEST DTO
+
+PROIBIDO aceitar:
+
+ownerId
+userId
+email.
+
+---
+
+# 8. NAME
+
+Validar conforme ADR.
+
+No mínimo:
+
+- obrigatório;
+- trim;
+- não vazio;
+- limite de tamanho definido.
+
+Se ADR adotou 100 caracteres:
+
+usar 100.
+
+---
+
+# 9. WHITESPACE
+
+Não aceitar nome contendo apenas:
+
+"   "
+
+---
+
+# 10. PRESENTATION NAME
+
+Preservar grafia fornecida após trim.
+
+Exemplo:
+
+"Viagem São Paulo"
+
+permanece:
+
+"Viagem São Paulo".
+
+---
+
+# 11. NORMALIZED NAME
+
+Gerar no servidor.
+
+Cliente não controla normalizedName.
+
+---
+
+# 12. NORMALIZATION
+
+Usar EXATAMENTE a política aprovada no ADR.
+
+Preferencialmente reutilizar o mesmo mecanismo já consolidado para
+Category/AssetAccount se compatível.
+
+---
+
+# 13. CASE INSENSITIVE
+
+Exemplo:
+
+Viagem
+viagem
+VIAGEM
+
+devem ser considerados equivalentes para unicidade do mesmo owner.
+
+---
+
+# 14. ACCENTS
+
+Não remover acentos se ADR não determinou isso.
+
+Não inventar nova política.
+
+---
+
+# 15. ACTIVE
+
+Tag nova:
+
+active = true.
+
+Servidor controla.
+
+---
+
+# 16. REQUEST NÃO CONTROLA ACTIVE
+
+Create request não deve permitir:
+
+active=false.
+
+---
+
+# 17. LOGICAL DEACTIVATION
+
+Não implementar DELETE físico como fluxo normal.
+
+---
+
+# 18. UNIQUENESS
+
+Mesmo owner não pode possuir duas Tags ATIVAS com o mesmo nome
+normalizado.
+
+---
+
+# 19. CROSS USER UNIQUENESS
+
+User A:
+
+Viagem
+
+User B:
+
+Viagem
+
+é válido.
+
+---
+
+# 20. INACTIVE NAME REUSE
+
+Seguir exatamente ADR.
+
+Se ADR aprovou reutilização do nome de Tag inativa:
+
+Tag inativa "Viagem"
++
+nova Tag ativa "Viagem"
+
+deve ser permitido.
+
+---
+
+# 21. REACTIVATION CONFLICT
+
+Cenário:
+
+Tag antiga "Viagem" está inativa.
+
+Usuário cria nova Tag ativa "Viagem".
+
+Depois tenta reativar a antiga.
+
+Resultado:
+
+409 Conflict.
+
+---
+
+# 22. DATABASE CONCURRENCY
+
+Não confiar apenas em:
+
+SELECT antes de INSERT.
+
+A unicidade precisa ser robusta contra requests concorrentes.
+
+---
+
+# 23. MYSQL
+
+Use estratégia compatível com MySQL e com o padrão já adotado por
+Category/AssetAccount.
+
+---
+
+# 24. NÃO ENGOLIR CONSTRAINT ERROR
+
+Converter conflito esperado para:
+
+409 Problem Details.
+
+Não expor:
+
+SQL;
+nome de constraint;
+stack trace.
+
+---
+
+# 25. TIMESTAMPS
+
+Seguir padrão existente.
+
+Preferencialmente:
+
+createdAt
+updatedAt
+
+gerenciados pelo backend.
+
+---
+
+# 26. DOMAIN INVARIANTS
+
+Evitar entidade anêmica com setters indiscriminados quando o projeto
+já utiliza métodos de domínio.
+
+---
+
+# 27. DOMAIN OPERATIONS
+
+Conceitualmente:
+
+rename(...)
+deactivate()
+activate()
+
+ou padrão equivalente.
+
+---
+
+# 28. NORMALIZED NAME SYNC
+
+Alterar name deve atualizar normalizedName corretamente.
+
+---
+
+# 29. DEACTIVATE IDEMPOTENCY
+
+Preferência:
+
+desativar Tag já inativa não causa erro.
+
+Seguir convenção de Category.
+
+---
+
+# 30. ACTIVATE IDEMPOTENCY
+
+Preferência:
+
+ativar Tag já ativa não causa erro.
+
+Seguir convenção existente.
+
+---
+
+# 31. FUTURE ASSOCIATIONS
+
+NÃO implementar nesta TASK:
+
+Tag ↔ FinancialTransaction.
+
+---
+
+# 32. IMPORTANTE
+
+Mesmo que ADR tenha definido a join table:
+
+NÃO criar associação funcional antecipadamente se a TASK-4.3 será
+responsável por isso.
+
+---
+
+# 33. MIGRATION
+
+Criar nova migration.
+
+Nunca editar migration já aplicada.
+
+---
+
+# 34. TABLE
+
+Criar tabela:
+
+tags
+
+ou nome definido pelo ADR/padrão real.
+
+---
+
+# 35. COLUMNS
+
+Conforme modelo real.
+
+Conceitualmente:
+
+id
+owner_id
+name
+normalized_name
+active
+created_at
+updated_at
+
+---
+
+# 36. FK
+
+owner_id deve referenciar usuário conforme schema atual.
+
+---
+
+# 37. CASCADE
+
+Não adicionar cascade perigoso sem justificativa.
+
+---
+
+# 38. INDEXES
+
+Adicionar apenas índices úteis.
+
+Conceitualmente:
+
+owner;
+owner + active;
+unicidade ativa normalizada.
+
+Adapte à estratégia real.
+
+---
+
+# 39. UNIQUE ACTIVE NAME
+
+Garantir no banco quando possível.
+
+Não confiar exclusivamente na aplicação.
+
+---
+
+# 40. MIGRATION TEST
+
+Validar migration em MySQL real via Testcontainers.
+
+---
+
+# 41. REPOSITORY
+
+Criar TagRepository conforme arquitetura real.
+
+---
+
+# 42. OWNERSHIP-AWARE QUERIES
+
+Operações por ID devem ser owner-scoped.
+
+Exemplo conceitual:
+
+findByIdAndOwnerId(...)
+
+---
+
+# 43. PROIBIDO
+
+Não fazer:
+
+findById(id)
+
+e depois:
+
+if owner != currentUser.
+
+Quando query ownership-aware for possível.
+
+---
+
+# 44. LIST
+
+Repository deve permitir listar Tags do usuário.
+
+---
+
+# 45. ACTIVE LIST
+
+Suportar active-only.
+
+---
+
+# 46. INCLUDE INACTIVE
+
+Suportar listagem histórica/administrativa conforme API.
+
+---
+
+# 47. NAME DUPLICATE CHECK
+
+Repository deve suportar validação de nome ativo normalizado.
+
+---
+
+# 48. EXCLUDE CURRENT ID
+
+Update precisa verificar duplicidade ignorando a própria Tag.
+
+---
+
+# 49. API
+
+Implementar API REST conforme ADR.
+
+Preferência esperada:
+
+POST   /api/tags
+GET    /api/tags
+GET    /api/tags/{id}
+PUT    /api/tags/{id}
+PATCH  /api/tags/{id}/deactivate
+PATCH  /api/tags/{id}/activate
+
+Se ADR aprovou contrato diferente:
+
+seguir ADR.
+
+---
+
+# 50. PRIVATE API
+
+Todos endpoints de Tags são privados.
+
+---
+
+# 51. POST
+
+Criar Tag.
+
+Request conceitual:
+
+{
+  "name": "Viagem"
+}
+
+---
+
+# 52. CREATE — SERVER CONTROLLED
+
+Servidor define:
+
+id;
+owner;
+normalizedName;
+active;
+createdAt;
+updatedAt.
+
+---
+
+# 53. CREATE RESPONSE
+
+Preferência:
+
+201 Created.
+
+---
+
+# 54. LOCATION
+
+Usar Location header se padrão existente fizer isso.
+
+---
+
+# 55. RESPONSE DTO
+
+Conceitualmente:
+
+{
+  "id": "...",
+  "name": "Viagem",
+  "active": true,
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+
+---
+
+# 56. NÃO EXPOR
+
+Não há necessidade de expor:
+
+ownerId;
+normalizedName.
+
+---
+
+# 57. GET LIST
+
+GET /api/tags
+
+retorna apenas Tags do usuário atual.
+
+---
+
+# 58. DEFAULT LIST
+
+Preferência:
+
+somente ativas.
+
+---
+
+# 59. INCLUDE INACTIVE
+
+Suportar:
+
+?includeInactive=true
+
+se ADR/padrão existente aprovou.
+
+---
+
+# 60. DEFAULT
+
+includeInactive=false.
+
+---
+
+# 61. ORDER
+
+Ordenação previsível.
+
+Preferência:
+
+name ASC.
+
+---
+
+# 62. EMPTY
+
+Nenhuma Tag:
+
+200 []
+
+---
+
+# 63. PAGINATION
+
+Não introduzir paginação se Category/AssetAccount não usam e volume
+esperado não justifica nesta fase.
+
+Se ADR determinou paginação:
+
+seguir ADR.
+
+---
+
+# 64. GET BY ID
+
+GET /api/tags/{id}
+
+---
+
+# 65. SAME OWNER
+
+Tag própria:
+
+200.
+
+---
+
+# 66. OTHER OWNER
+
+UUID válido pertencente a outro usuário:
+
+404.
+
+---
+
+# 67. NONEXISTENT
+
+404.
+
+---
+
+# 68. MALFORMED UUID
+
+400 Problem Details.
+
+---
+
+# 69. PUT
+
+Atualizar campos editáveis.
+
+Nesta TASK, provavelmente:
+
+name.
+
+---
+
+# 70. NÃO EDITAR VIA PUT
+
+Não permitir:
+
+owner;
+active;
+id;
+timestamps;
+normalizedName.
+
+---
+
+# 71. UPDATE DUPLICATE
+
+Renomear para nome de outra Tag ativa do mesmo owner:
+
+409.
+
+---
+
+# 72. UPDATE CROSS USER
+
+404.
+
+---
+
+# 73. DEACTIVATE
+
+PATCH /api/tags/{id}/deactivate
+
+---
+
+# 74. LOGICAL ONLY
+
+Não DELETE.
+
+---
+
+# 75. DEACTIVATE HISTORICAL SEMANTICS
+
+Nesta TASK ainda não existem associações com transações.
+
+Mas comportamento deve estar preparado para que desativação futura
+não remova histórico.
+
+---
+
+# 76. ACTIVATE
+
+PATCH /api/tags/{id}/activate
+
+---
+
+# 77. REACTIVATION DUPLICATE
+
+Se existir outra Tag ativa com mesmo normalizedName:
+
+409.
+
+---
+
+# 78. STATUS CODES
+
+Padronizar:
+
+200/201 — sucesso
+400 — validação/request inválido
+401 — não autenticado
+404 — recurso inexistente ou de outro owner
+409 — conflito de unicidade/estado
+
+---
+
+# 79. PROBLEM DETAILS
+
+Todos erros devem seguir infraestrutura existente.
+
+---
+
+# 80. REQUEST ID
+
+Preservar em todos endpoints.
+
+---
+
+# 81. VALIDATION
+
+Testar:
+
+null;
+empty;
+whitespace;
+max length;
+over max length;
+Unicode válido.
+
+---
+
+# 82. UNICODE
+
+Tag como:
+
+"Viagem São Paulo"
+
+deve funcionar.
+
+---
+
+# 83. SPECIAL CHARACTERS
+
+Não rejeitar caracteres legítimos arbitrariamente.
+
+Exemplo:
+
+Casa & Família
+
+se política de domínio não proíbe.
+
+---
+
+# 84. XSS
+
+Backend não precisa destruir texto legítimo.
+
+Frontend deve escapar apresentação.
+
+Não armazenar HTML interpretável como requisito.
+
+---
+
+# 85. MASS ASSIGNMENT
+
+Enviar campos extras como:
+
+ownerId
+active
+normalizedName
+createdAt
+
+não pode alterar estado protegido.
+
+Preferir DTO explícito.
+
+---
+
+# 86. SECURITY TEST — USER A/B
+
+Criar:
+
+User A
+User B.
+
+---
+
+# 87. CREATE ISOLATION
+
+A cria:
+
+Viagem.
+
+B pode criar:
+
+Viagem.
+
+---
+
+# 88. LIST ISOLATION
+
+A não vê Tag de B.
+
+---
+
+# 89. GET IDOR
+
+A conhece UUID de Tag de B:
+
+404.
+
+---
+
+# 90. PUT IDOR
+
+404.
+
+---
+
+# 91. DEACTIVATE IDOR
+
+404.
+
+---
+
+# 92. ACTIVATE IDOR
+
+404.
+
+---
+
+# 93. DUPLICATE SAME OWNER
+
+A:
+
+Viagem
+
+A tenta:
+
+viagem
+
+409.
+
+---
+
+# 94. DUPLICATE DIFFERENT OWNER
+
+A:
+
+Viagem
+
+B:
+
+VIAGEM
+
+válido.
+
+---
+
+# 95. WHITESPACE NORMALIZATION
+
+A:
+
+" Viagem "
+
+depois:
+
+"Viagem"
+
+deve colidir conforme normalização.
+
+---
+
+# 96. CASE NORMALIZATION
+
+Viagem
+VIAGEM
+
+deve colidir.
+
+---
+
+# 97. ACCENT TEST
+
+Seguir política do ADR.
+
+Não inferir.
+
+---
+
+# 98. DEACTIVATE
+
+Tag deixa de aparecer na lista default.
+
+---
+
+# 99. INCLUDE INACTIVE
+
+Tag aparece quando:
+
+includeInactive=true.
+
+---
+
+# 100. REUSE NAME
+
+Se ADR permite:
+
+desativar Viagem
+→ criar nova Viagem
+
+PASS.
+
+---
+
+# 101. REACTIVATION CONFLICT
+
+Reativar antiga:
+
+409.
+
+---
+
+# 102. UPDATE NORMALIZATION
+
+Criar:
+
+Trabalho
+
+renomear:
+
+" Trabalho Remoto "
+
+persistir apresentação normalizada conforme regra e atualizar
+normalizedName.
+
+---
+
+# 103. CONCURRENT CREATE
+
+Duas requests simultâneas:
+
+Viagem
+viagem
+
+para mesmo owner.
+
+Resultado:
+
+apenas uma Tag ativa equivalente.
+
+Outra request:
+
+409.
+
+---
+
+# 104. CONCURRENT UPDATE
+
+Duas Tags sendo renomeadas para mesmo normalizedName.
+
+Banco deve preservar invariantes.
+
+---
+
+# 105. TESTCONTAINERS
+
+Testar comportamento de constraints em MySQL real.
+
+---
+
+# 106. UNIT TESTS — DOMAIN
+
+Cobrir:
+
+creation;
+name validation;
+normalization;
+rename;
+activate;
+deactivate.
+
+---
+
+# 107. REPOSITORY TESTS
+
+Cobrir:
+
+owner-scoped lookup;
+active list;
+include inactive;
+duplicate detection;
+sorting.
+
+---
+
+# 108. API TESTS
+
+Cobrir todos endpoints.
+
+---
+
+# 109. SECURITY TESTS
+
+Cobrir:
+
+401;
+IDOR;
+owner spoofing;
+cross-user uniqueness.
+
+---
+
+# 110. INTEGRATION TESTS
+
+Cobrir:
+
+Controller
+→ Use Case
+→ Repository
+→ MySQL.
+
+---
+
+# 111. OPENAPI
+
+Documentar recurso Tag.
+
+---
+
+# 112. OPENAPI CREATE
+
+Documentar request e response.
+
+---
+
+# 113. OPENAPI LIST
+
+Documentar:
+
+includeInactive.
+
+---
+
+# 114. OPENAPI ERRORS
+
+Documentar:
+
+400;
+401;
+404;
+409.
+
+---
+
+# 115. EXAMPLES
+
+Pode usar exemplos como:
+
+Viagem
+Trabalho
+Reembolsável
+
+sem criar dados reais/seed.
+
+---
+
+# 116. NO DEFAULT TAGS
+
+Não criar Tags automáticas.
+
+---
+
+# 117. NO SEED
+
+Não inserir:
+
+Viagem;
+Casa;
+Trabalho;
+
+automaticamente.
+
+---
+
+# 118. NO SYSTEM TAG
+
+Não criar conceito:
+
+SYSTEM TAG
+
+nesta TASK.
+
+---
+
+# 119. NO COLOR
+
+Não adicionar:
+
+color.
+
+---
+
+# 120. NO ICON
+
+Não adicionar:
+
+icon.
+
+---
+
+# 121. NO DESCRIPTION
+
+Não adicionar:
+
+description
+
+sem ADR.
+
+---
+
+# 122. NO HIERARCHY
+
+Não adicionar:
+
+parentId.
+
+---
+
+# 123. NO TRANSACTION RELATION YET
+
+Não implementar:
+
+transaction_tags
+
+se a TASK-4.0 determinou explicitamente que a associação será criada na
+TASK-4.3.
+
+Se ADR determinou que schema da associação precisa nascer junto com Tag
+por integridade arquitetural, explique antes de fazê-lo.
+
+Preferência desta TASK:
+
+somente `tags`.
+
+---
+
+# 124. NO ATTACHMENTS
+
+Não implementar nada de Attachment nesta TASK.
+
+---
+
+# 125. FRONTEND
+
+NÃO implementar interface Angular de Tags.
+
+---
+
+# 126. SIDEBAR
+
+NÃO adicionar item novo ainda se não existir tela funcional.
+
+---
+
+# 127. DASHBOARD
+
+Nenhuma mudança funcional.
+
+---
+
+# 128. HISTORY
+
+Nenhuma mudança funcional.
+
+---
+
+# 129. EXPENSE
+
+Nenhuma mudança funcional.
+
+---
+
+# 130. INCOME
+
+Nenhuma mudança funcional.
+
+---
+
+# 131. TRANSFER
+
+Nenhuma mudança funcional.
+
+---
+
+# 132. LEDGER INVARIANCE
+
+Depois da implementação, executar regressões financeiras.
+
+Tags não estão associadas ainda, portanto nenhum cálculo financeiro deve
+ter sido alterado.
+
+---
+
+# 133. GOLDEN FINANCIAL REGRESSION
+
+Executar cenário mínimo já consolidado:
+
+A initial = 1000
+B initial = 500
+
+Income A = 700
+Expense A = 200
+Transfer A → B = 300
+
+Esperado:
+
+A = 1200
+B = 800
+Net Worth = 2000
+
+Dashboard:
+
+Entradas = 700
+Saídas = 200
+Saldo = 500.
+
+Criar/editar/desativar Tags não pode alterar nada disso.
+
+---
+
+# 134. DATABASE REGRESSION
+
+Migrations anteriores continuam aplicando corretamente.
+
+---
+
+# 135. CLEAN DATABASE
+
+Subir banco limpo e aplicar todas migrations.
+
+PASS.
+
+---
+
+# 136. EXISTING DATABASE
+
+Aplicar nova migration sobre schema anterior.
+
+PASS.
+
+---
+
+# 137. BACKEND BUILD
+
+PASS.
+
+---
+
+# 138. TESTS
+
+PASS.
+
+---
+
+# 139. FRONTEND REGRESSION
+
+Mesmo sem mudança frontend:
+
+executar lint/build se pipeline do projeto assim determina.
+
+---
+
+# 140. NÃO CRIAR ABSTRAÇÃO GENÉRICA
+
+Não criar:
+
+GenericNamedResource;
+GenericActivatableEntity;
+GenericCrudService;
+GenericCrudController
+
+só porque Tag se parece com Category.
+
+---
+
+# 141. MOTIVO
+
+Semelhança estrutural não significa semântica idêntica.
+
+Reutilize helpers estáveis quando já existirem.
+
+Não invente framework interno.
+
+---
+
+# 142. DUPLICATION
+
+Pequena duplicação explícita entre Category e Tag é aceitável.
+
+---
+
+# 143. REFACTOR EXISTING CODE
+
+Não refatorar Category/AssetAccount sem necessidade.
+
+Se encontrar bug compartilhado:
+
+documente;
+corrija;
+adicione regressão.
+
+---
+
+# 144. DEFINITION OF DONE
+
+TASK-4.1 estará concluída quando:
+
+- ADR 4.0 tiver sido seguido;
+- entidade Tag existir;
+- ownership estiver obrigatório;
+- owner vier de CurrentUser;
+- cliente não puder definir owner;
+- name estiver validado;
+- normalization estiver implementada;
+- normalizedName for server-controlled;
+- active default true;
+- logical deactivation existir;
+- activation existir;
+- duplicate active name do mesmo owner resultar em 409;
+- mesma Tag para owners diferentes for permitida;
+- concorrência não permitir duplicata ativa equivalente;
+- inactive behavior seguir ADR;
+- reactivation conflict estiver protegido;
+- migration nova estiver correta;
+- migration funcionar em MySQL;
+- repository for ownership-aware;
+- POST funcionar;
+- GET list funcionar;
+- GET id funcionar;
+- PUT funcionar;
+- deactivate funcionar;
+- activate funcionar;
+- IDOR resultar em 404;
+- 401 funcionar;
+- Problem Details funcionar;
+- Request ID funcionar;
+- OpenAPI estiver atualizado;
+- Testcontainers passar;
+- testes de domínio passarem;
+- testes de repository passarem;
+- testes de API passarem;
+- testes de segurança passarem;
+- regressão financeira passar;
+- nenhuma funcionalidade de Attachment tiver sido implementada;
+- nenhuma associação Tag ↔ Transaction tiver sido antecipada sem
+  justificativa do ADR.
+
+---
+
+# 145. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-4.1 — DOMÍNIO, PERSISTÊNCIA E API DE TAGS
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+## 1. ADR utilizado
+
+Arquivo:
+
+Decisões relevantes:
+
+## 2. Domain Model
+
+Classe:
+
+Campos:
+
+## 3. Ownership
+
+Estratégia:
+
+PASS / FAIL
+
+## 4. Name Validation
+
+Required:
+PASS / FAIL
+
+Trim:
+PASS / FAIL
+
+Blank:
+PASS / FAIL
+
+Max Length:
+PASS / FAIL
+
+Unicode:
+PASS / FAIL
+
+## 5. Normalization
+
+Estratégia:
+
+Case-insensitive:
+PASS / FAIL
+
+Accent policy:
+
+## 6. Uniqueness
+
+Same owner:
+PASS / FAIL
+
+Different owner:
+PASS / FAIL
+
+Concurrent create:
+PASS / FAIL
+
+## 7. Active/Inactive
+
+Default active:
+PASS / FAIL
+
+Deactivate:
+PASS / FAIL
+
+Activate:
+PASS / FAIL
+
+Inactive list:
+PASS / FAIL
+
+Name reuse:
+PASS / FAIL
+
+Reactivation conflict:
+PASS / FAIL
+
+## 8. Database
+
+Table:
+
+Columns:
+
+Indexes:
+
+Constraints:
+
+FKs:
+
+## 9. Migration
+
+Arquivo:
+
+Clean DB:
+PASS / FAIL
+
+Upgrade:
+PASS / FAIL
+
+## 10. Repository
+
+Liste métodos/queries.
+
+Ownership-aware:
+PASS / FAIL
+
+## 11. API
+
+### POST
+Endpoint:
+Status:
+PASS / FAIL
+
+### GET LIST
+Endpoint:
+PASS / FAIL
+
+### GET ID
+Endpoint:
+PASS / FAIL
+
+### PUT
+Endpoint:
+PASS / FAIL
+
+### DEACTIVATE
+Endpoint:
+PASS / FAIL
+
+### ACTIVATE
+Endpoint:
+PASS / FAIL
+
+## 12. DTOs
+
+Request:
+
+Response:
+
+Campos protegidos:
+
+## 13. HTTP Errors
+
+400:
+PASS / FAIL
+
+401:
+PASS / FAIL
+
+404:
+PASS / FAIL
+
+409:
+PASS / FAIL
+
+## 14. Problem Details
+
+PASS / FAIL
+
+## 15. Request ID
+
+PASS / FAIL
+
+## 16. IDOR/BOLA
+
+GET:
+PASS / FAIL
+
+PUT:
+PASS / FAIL
+
+DEACTIVATE:
+PASS / FAIL
+
+ACTIVATE:
+PASS / FAIL
+
+## 17. Mass Assignment
+
+ownerId:
+PASS / FAIL
+
+active:
+PASS / FAIL
+
+normalizedName:
+PASS / FAIL
+
+timestamps:
+PASS / FAIL
+
+## 18. OpenAPI
+
+PASS / FAIL
+
+## 19. Tests
+
+### Domain
+PASS / FAIL
+
+### Repository
+PASS / FAIL
+
+### API
+PASS / FAIL
+
+### Security
+PASS / FAIL
+
+### Integration
+PASS / FAIL
+
+### Testcontainers/MySQL
+PASS / FAIL
+
+## 20. Financial Regression
+
+Account A:
+resultado:
+
+Account B:
+resultado:
+
+Net Worth:
+resultado:
+
+Dashboard Entradas:
+resultado:
+
+Dashboard Saídas:
+resultado:
+
+Dashboard Saldo:
+resultado:
+
+PASS / FAIL
+
+## 21. Frontend Regression
+
+Lint:
+PASS / FAIL
+
+Build:
+PASS / FAIL
+
+## 22. Backend Build
+
+PASS / FAIL
+
+## 23. Files
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 24. Bugs encontrados
+
+Para cada bug:
+
+Severidade:
+Problema:
+Causa:
+Correção:
+Teste:
+
+## 25. Divergências do ADR
+
+Esperado:
+
+NENHUMA.
+
+Se houver:
+
+explique.
+
+## 26. Dívida técnica
+
+Liste.
+
+## 27. Fora de escopo confirmado
+
+### Tag UI
+NÃO IMPLEMENTADA
+
+### Tag ↔ Transaction
+NÃO IMPLEMENTADA
+
+### Attachments
+NÃO IMPLEMENTADOS
+
+### History Tag Filter
+NÃO IMPLEMENTADO
+
+## 28. Próxima Task
+
+Se TASK-4.1 estiver aprovada, declarar prontidão para:
+
+# TASK-4.2 — Interface de Tags
+
+NÃO implementar TASK-4.2 nesta execução.

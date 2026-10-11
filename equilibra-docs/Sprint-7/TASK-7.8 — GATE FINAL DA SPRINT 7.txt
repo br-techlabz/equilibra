@@ -1,0 +1,1056 @@
+# TASK-7.8 — GATE FINAL DA SPRINT 7
+
+PROJETO: EQUILIBRA
+SPRINT: 7 — PREVISIBILIDADE FINANCEIRA
+
+STACK:
+Spring Boot 4
+Angular 19
+Angular Material
+ECharts
+MySQL
+Flyway
+Testcontainers
+
+CONTEXTO
+
+Sprints 0 a 6 aprovadas.
+
+TASK-7.0 — Arquitetura e ADR concluídos.
+TASK-7.1 — Backend de Recorrências concluído.
+TASK-7.2 — Frontend de Recorrências concluído.
+TASK-7.3 — Backend de Compromissos Futuros concluído.
+TASK-7.4 — Calendário Financeiro concluído.
+TASK-7.5 — Projeção de Fluxo de Caixa concluída.
+TASK-7.6 — Indicadores de Vencimentos concluídos.
+TASK-7.7 — Dashboard e Relatórios concluídos.
+
+OBJETIVO
+
+Realizar auditoria final da Sprint 7.
+
+Verificar integração, integridade financeira,
+segurança, qualidade, responsividade,
+documentação e regressões.
+
+Corrigir defeitos identificados
+dentro do escopo da Sprint 7.
+
+Não desenvolver novas funcionalidades.
+
+Não iniciar Sprint 8.
+
+==================================================
+1. INSPEÇÃO INICIAL
+==================================================
+
+Antes de editar, ler:
+
+- CLAUDE.md;
+- ADR da TASK-7.0;
+- relatórios finais das TASKS 7.1–7.7;
+- migrations;
+- OpenAPI;
+- modelos de domínio;
+- controllers;
+- services;
+- repositories;
+- frontend;
+- testes;
+- configuração de build;
+- relatórios de cobertura, se existirem.
+
+Não presumir que uma TASK está correta
+apenas porque foi marcada como concluída.
+
+==================================================
+2. INVENTÁRIO DE IMPLEMENTAÇÃO
+==================================================
+
+Mapear componentes implementados:
+
+RecurrenceRule;
+FinancialCommitment/Occurrence;
+FinancialTransaction;
+Expense;
+Income;
+AccountMovement;
+AssetAccount;
+Category;
+Calendar;
+CashFlowForecast;
+DueIndicators;
+Dashboard;
+Reports.
+
+Usar nomes reais do projeto.
+
+Identificar duplicações e lacunas.
+
+==================================================
+3. MATRIZ DE RASTREABILIDADE
+==================================================
+
+Criar matriz:
+
+Requisito do ADR;
+TASK responsável;
+Código implementado;
+Teste correspondente;
+Resultado;
+Evidência;
+Pendência.
+
+Não marcar PASS sem evidência.
+
+==================================================
+4. AUDITORIA DO ADR
+==================================================
+
+Conferir decisões da TASK-7.0.
+
+Verificar:
+
+separação previsão/realizado;
+periodicidades;
+datas;
+estados;
+transições;
+ocorrências;
+efetivação;
+cancelamento;
+idempotência;
+concorrência;
+ownership;
+projeção;
+indicadores;
+relatórios.
+
+Registrar divergências.
+
+==================================================
+5. AUDITORIA DE RECORRÊNCIAS
+==================================================
+
+Verificar:
+
+CRUD;
+tipos;
+periodicidades;
+datas;
+dia 31;
+29 de fevereiro;
+pausa;
+reativação;
+encerramento;
+edição;
+ownership.
+
+Não aceitar regras divergentes do ADR.
+
+==================================================
+6. AUDITORIA DE OCORRÊNCIAS
+==================================================
+
+Verificar:
+
+identidade;
+vínculo com recorrência;
+geração;
+horizonte;
+unicidade;
+edição;
+cancelamento;
+estados;
+datas;
+integridade histórica.
+
+==================================================
+7. GERAÇÃO IDEMPOTENTE
+==================================================
+
+Executar geração repetida.
+
+Esperado:
+
+nenhuma ocorrência duplicada.
+
+Testar concorrência
+quando arquitetura exigir.
+
+==================================================
+8. AUDITORIA DE COMPROMISSOS
+==================================================
+
+Verificar:
+
+criação;
+consulta;
+edição;
+vencimento;
+estados;
+transições;
+cancelamento;
+efetivação.
+
+==================================================
+9. PREVISÃO NÃO ALTERA LEDGER
+==================================================
+
+Criar recorrência.
+
+Criar compromisso previsto.
+
+Gerar ocorrências.
+
+Esperado:
+
+nenhuma alteração em saldo real;
+nenhuma transação real;
+nenhum movimento real.
+
+==================================================
+10. EFETIVAÇÃO DE DESPESA
+==================================================
+
+Conta A inicial=1000.00.
+
+Compromisso EXPENSE=200.00.
+
+Efetivar.
+
+Esperado:
+
+saldo A=800.00;
+uma transação lógica;
+um movimento negativo;
+compromisso efetivado.
+
+==================================================
+11. EFETIVAÇÃO DE RECEITA
+==================================================
+
+Conta A inicial=1000.00.
+
+Compromisso INCOME=500.00.
+
+Efetivar.
+
+Esperado:
+
+saldo A=1500.00;
+uma transação lógica;
+um movimento positivo.
+
+==================================================
+12. DUPLA EFETIVAÇÃO
+==================================================
+
+Efetivar mesmo compromisso
+duas vezes.
+
+Esperado:
+
+somente uma transação real;
+somente um efeito no ledger.
+
+==================================================
+13. CONCORRÊNCIA
+==================================================
+
+Executar efetivações simultâneas.
+
+Esperado:
+
+um único lançamento real;
+estado consistente;
+sem movimentos duplicados.
+
+==================================================
+14. ROLLBACK
+==================================================
+
+Simular falha durante efetivação.
+
+Esperado:
+
+rollback integral;
+sem transação órfã;
+sem movimento parcial;
+sem estado inconsistente.
+
+==================================================
+15. CANCELAMENTO
+==================================================
+
+Cancelar compromisso pendente.
+
+Esperado:
+
+sem movimento financeiro.
+
+Para compromisso efetivado,
+seguir política de cancelamento
+ou estorno do ADR.
+
+==================================================
+16. DATAS
+==================================================
+
+Auditar:
+
+LocalDate;
+dueDate;
+occurredAt;
+timezone;
+virada do dia;
+virada do mês;
+ano bissexto;
+dia 31;
+limites inclusivos/exclusivos.
+
+==================================================
+17. ESTADOS
+==================================================
+
+Verificar estados persistidos
+e classificações derivadas.
+
+Não persistir OVERDUE
+se ADR definiu cálculo derivado.
+
+Não permitir transições inválidas.
+
+==================================================
+18. SALDOS REAIS
+==================================================
+
+Reconciliar ledger.
+
+Não usar previsões como saldo real.
+
+Não alterar fórmulas aprovadas
+das Sprints anteriores.
+
+==================================================
+19. PROJEÇÃO DE FLUXO DE CAIXA
+==================================================
+
+Verificar:
+
+saldo inicial;
+compromissos elegíveis;
+receitas;
+despesas;
+cancelados;
+efetivados;
+atrasados;
+contas;
+horizonte;
+datas;
+precisão;
+reconciliação.
+
+==================================================
+20. DUPLA CONTAGEM NA PROJEÇÃO
+==================================================
+
+Compromisso previsto:
+200.00.
+
+Antes da efetivação:
+
+saldo real=1000.00;
+saldo projetado=800.00.
+
+Após efetivação:
+
+saldo real=800.00;
+saldo projetado=800.00.
+
+Não projetar o mesmo pagamento duas vezes.
+
+==================================================
+21. CANCELAMENTO NA PROJEÇÃO
+==================================================
+
+Saldo real=1000.00.
+
+Compromisso pendente=200.00.
+
+Antes:
+projeção=800.00.
+
+Após cancelamento:
+projeção=1000.00.
+
+==================================================
+22. MÚLTIPLAS CONTAS
+==================================================
+
+Conta A=1000.00.
+Conta B=2000.00.
+
+Despesa futura A=200.00.
+Receita futura B=500.00.
+
+Esperado:
+
+A projetada=800.00;
+B projetada=2500.00;
+consolidado=3300.00.
+
+==================================================
+23. INDICADORES DE VENCIMENTO
+==================================================
+
+Verificar:
+
+atrasados;
+vence hoje;
+próximos;
+futuros;
+efetivados;
+cancelados.
+
+Classificação conforme ADR.
+
+==================================================
+24. VIRADA DO DIA
+==================================================
+
+Compromisso vence em 10/10/2026.
+
+Referência 10/10:
+vence hoje.
+
+Referência 11/10:
+atrasado, se pendente.
+
+==================================================
+25. EXCLUSIVIDADE DE CLASSES
+==================================================
+
+Verificar ausência de dupla contagem
+entre classes mutuamente exclusivas.
+
+==================================================
+26. RECEITAS E DESPESAS
+==================================================
+
+Separar:
+
+a pagar;
+a receber.
+
+Não somar obrigações de tipos
+distintos como se fossem iguais.
+
+==================================================
+27. CALENDÁRIO
+==================================================
+
+Verificar:
+
+navegação mensal;
+agenda;
+filtros;
+datas;
+detalhes;
+efetivação;
+cancelamento;
+atualização;
+estados.
+
+==================================================
+28. DASHBOARD
+==================================================
+
+Verificar:
+
+saldo real;
+saldo projetado;
+compromissos;
+indicadores;
+períodos;
+navegação;
+loading;
+empty;
+error.
+
+Não substituir indicadores reais
+por valores previstos.
+
+==================================================
+29. RELATÓRIOS
+==================================================
+
+Verificar:
+
+realizado versus previsto;
+períodos;
+categorias;
+contas;
+estados;
+agregações;
+filtros;
+consistência.
+
+==================================================
+30. EXPORTAÇÃO CSV
+==================================================
+
+Se implementada:
+
+validar valores;
+datas;
+estados;
+filtros;
+ownership;
+CSV injection;
+encoding.
+
+==================================================
+31. EXPORTAÇÃO PDF
+==================================================
+
+Se implementada:
+
+validar conteúdo;
+layout;
+período;
+filtros;
+realizado/previsto;
+ownership.
+
+==================================================
+32. REGRESSÃO FINANCEIRA GOLDEN
+==================================================
+
+Conta A inicial=1000.00.
+Conta B inicial=500.00.
+
+Income A=700.00.
+Expense A=200.00.
+Transfer A->B=300.00.
+
+Esperado:
+
+A=1200.00;
+B=800.00;
+patrimônio=2000.00;
+receitas=700.00;
+despesas=200.00;
+resultado=500.00;
+histórico=3 transações lógicas.
+
+==================================================
+33. REGRESSÃO DE ORÇAMENTOS
+==================================================
+
+Verificar:
+
+plannedAmount;
+actualAmount;
+remainingAmount;
+percentual;
+alertas;
+cancelamentos.
+
+Compromissos previstos
+não devem inflar actualAmount.
+
+==================================================
+34. REGRESSÃO DE METAS
+==================================================
+
+Verificar:
+
+progresso;
+estados;
+cálculos;
+ownership.
+
+Não modificar modelo de progresso
+aprovado na Sprint 6.
+
+==================================================
+35. REGRESSÃO DE TRANSFERÊNCIAS
+==================================================
+
+Verificar:
+
+dupla entrada;
+neutralidade consolidada;
+cancelamento;
+histórico;
+saldo.
+
+==================================================
+36. SEGURANÇA JWT
+==================================================
+
+Validar:
+
+401 sem token;
+expiração;
+logout;
+token somente em memória;
+403 sem logout indevido.
+
+==================================================
+37. ISOLAMENTO MULTIUSER
+==================================================
+
+User A e User B.
+
+Testar:
+
+recorrências;
+compromissos;
+efetivação;
+calendário;
+projeção;
+indicadores;
+dashboard;
+relatórios;
+exports.
+
+Nenhum vazamento entre usuários.
+
+==================================================
+38. IDS ESTRANGEIROS
+==================================================
+
+IDs de outros usuários
+devem ser indistinguíveis
+de recursos inexistentes.
+
+Não revelar dados privados.
+
+==================================================
+39. VALIDAÇÃO DE ENTRADAS
+==================================================
+
+Verificar:
+
+BigDecimal;
+DECIMAL(19,2);
+datas;
+enums;
+IDs;
+filtros;
+paginação;
+estados;
+transições.
+
+Não arredondar silenciosamente.
+
+==================================================
+40. BANCO DE DADOS
+==================================================
+
+Auditar:
+
+Flyway;
+FKs;
+índices;
+constraints;
+unicidade;
+locking;
+transações;
+integridade referencial.
+
+Não editar migrations já aplicadas.
+
+==================================================
+41. PERFORMANCE
+==================================================
+
+Verificar:
+
+N+1;
+consultas owner-scoped;
+agregações;
+paginação;
+horizontes;
+geração limitada;
+consultas de projeção;
+dashboard.
+
+Registrar evidências.
+
+==================================================
+42. OPENAPI
+==================================================
+
+Verificar documentação
+de todos os endpoints da Sprint 7.
+
+Comparar OpenAPI com implementação real.
+
+==================================================
+43. PROBLEM DETAILS
+==================================================
+
+Validar:
+
+400;
+401;
+403;
+404;
+409;
+422, se aplicável;
+500.
+
+Preservar Request ID.
+
+Não expor detalhes internos.
+
+==================================================
+44. FRONTEND — INTEGRAÇÃO
+==================================================
+
+Auditar:
+
+rotas;
+sidebar;
+services;
+models;
+interceptors;
+guards;
+formulários;
+dialogs;
+ECharts;
+filtros;
+estados.
+
+==================================================
+45. FRONTEND — REQUESTS
+==================================================
+
+Testar trocas rápidas de filtros.
+
+Não renderizar respostas obsoletas.
+
+Verificar limpeza de subscriptions.
+
+==================================================
+46. FRONTEND — EFETIVAÇÃO
+==================================================
+
+Validar:
+
+confirmação;
+loading;
+duplo clique;
+timeout;
+retry;
+reconsulta;
+atualização de dados.
+
+Frontend não pode criar
+lançamentos financeiros paralelos.
+
+==================================================
+47. FRONTEND — RESPONSIVIDADE
+==================================================
+
+Validar:
+
+360x800;
+390x844;
+768x1024;
+1024x768;
+1280x720;
+1366x768;
+1920x1080.
+
+Sem overflow horizontal global.
+
+==================================================
+48. FRONTEND — ACESSIBILIDADE
+==================================================
+
+Verificar:
+
+labels;
+teclado;
+foco;
+contraste;
+status textual;
+mensagens;
+dialogs;
+gráficos;
+alternativas textuais.
+
+==================================================
+49. TESTES UNITÁRIOS BACKEND
+==================================================
+
+Executar suíte relevante.
+
+Registrar:
+
+comandos;
+quantidade;
+PASS/FAIL;
+falhas;
+correções.
+
+==================================================
+50. TESTCONTAINERS/MYSQL
+==================================================
+
+Executar integração real.
+
+Não substituir por H2.
+
+Testar transações, constraints,
+concorrência e ownership.
+
+==================================================
+51. TESTES FRONTEND
+==================================================
+
+Executar testes Angular.
+
+Cobrir funcionalidades Sprint 7
+e regressões relevantes.
+
+==================================================
+52. TESTES E2E
+==================================================
+
+Se infraestrutura existir:
+
+executar fluxos completos.
+
+Se não existir:
+
+registrar NOT RUN
+e limitação.
+
+Não declarar PASS sem execução.
+
+==================================================
+53. LINT
+==================================================
+
+Executar lint frontend
+e verificações equivalentes backend.
+
+Corrigir problemas introduzidos
+na Sprint 7.
+
+==================================================
+54. BUILDS
+==================================================
+
+Executar:
+
+backend build;
+Angular production build.
+
+Registrar resultados reais.
+
+==================================================
+55. TESTES DE EXPORTAÇÃO
+==================================================
+
+Validar CSV/PDF existentes
+e novas exportações, se houver.
+
+==================================================
+56. TESTES DE REGRESSÃO
+==================================================
+
+Cobrir:
+
+Authentication;
+Asset Accounts;
+Categories;
+Expenses;
+Income;
+Transfers;
+History;
+Dashboard;
+Reports;
+Exports;
+Tags;
+Attachments;
+Budgets;
+Budget Alerts;
+Financial Goals;
+Recurrences;
+Commitments;
+Calendar;
+Forecast;
+Due Indicators.
+
+==================================================
+57. CORREÇÃO DE DEFEITOS
+==================================================
+
+Corrigir bugs encontrados
+dentro do escopo Sprint 7.
+
+Cada correção deve ter
+teste de regressão.
+
+Não refatorar áreas não relacionadas
+sem necessidade comprovada.
+
+==================================================
+58. CLASSIFICAÇÃO DE PROBLEMAS
+==================================================
+
+Classificar:
+
+BLOCKER;
+CRITICAL;
+MAJOR;
+MINOR.
+
+Definir impacto e evidência.
+
+Nenhum BLOCKER ou CRITICAL aberto
+para aprovação final.
+
+==================================================
+59. DOCUMENTAÇÃO
+==================================================
+
+Atualizar:
+
+ADRs, se necessário;
+OpenAPI;
+README;
+notas de implementação;
+limitações conhecidas;
+evidências de teste.
+
+Não reescrever decisões
+sem justificativa.
+
+==================================================
+60. MATRIZ DE APROVAÇÃO
+==================================================
+
+Para cada área:
+
+Requisito;
+Teste;
+Resultado;
+Evidência;
+Status.
+
+Áreas:
+
+Recurrences;
+Commitments;
+Settlement;
+Calendar;
+Forecast;
+Indicators;
+Dashboard;
+Reports;
+Security;
+Database;
+Frontend;
+Regressions.
+
+==================================================
+61. CRITÉRIO DE APROVAÇÃO
+==================================================
+
+Aprovar Sprint 7 somente se:
+
+- requisitos do ADR atendidos;
+- fluxos integrados;
+- ledger íntegro;
+- idempotência comprovada;
+- concorrência protegida;
+- rollback comprovado;
+- projeção reconciliada;
+- indicadores corretos;
+- dashboard consistente;
+- relatórios consistentes;
+- ownership comprovado;
+- builds aprovados;
+- testes obrigatórios aprovados;
+- nenhuma falha BLOCKER/CRITICAL;
+- nenhuma divergência essencial não resolvida.
+
+Se testes obrigatórios não puderem
+ser executados, não declarar
+aprovação integral.
+
+==================================================
+62. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-7.8 — GATE FINAL DA SPRINT 7
+
+STATUS:
+APPROVED / REJECTED / BLOCKED
+
+1. Resumo executivo.
+2. ADR utilizado.
+3. Matriz de rastreabilidade.
+4. Inventário implementado.
+5. Recorrências.
+6. Ocorrências.
+7. Compromissos.
+8. Efetivação.
+9. Ledger.
+10. Idempotência.
+11. Concorrência.
+12. Rollback.
+13. Datas.
+14. Estados.
+15. Projeção.
+16. Indicadores.
+17. Calendário.
+18. Dashboard.
+19. Relatórios.
+20. CSV.
+21. PDF.
+22. Orçamentos.
+23. Metas.
+24. Segurança.
+25. Multiuser.
+26. Banco de dados.
+27. OpenAPI.
+28. Performance.
+29. Responsividade.
+30. Acessibilidade.
+31. Testes backend.
+32. Testcontainers/MySQL.
+33. Testes frontend.
+34. E2E.
+35. Lint.
+36. Builds.
+37. Regressões.
+38. Bugs corrigidos.
+39. Bugs pendentes.
+40. Riscos.
+41. Dívidas técnicas.
+42. Arquivos modificados.
+43. Evidências.
+44. Decisão final.
+
+Se aprovado:
+
+SPRINT 7 — APPROVED
+
+READY FOR SPRINT 8 PLANNING.
+
+Não iniciar Sprint 8 automaticamente.
+
+Se não aprovado:
+
+listar pendências e plano de correção,
+sem declarar conclusão.

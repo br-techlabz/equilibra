@@ -1,0 +1,1743 @@
+# TASK-3.0 — Arquitetura do Ledger e Regras Financeiras
+
+A Sprint 2 do Equilibra foi concluída e aprovada.
+
+Estado atual:
+
+- autenticação multiusuário;
+- JWT;
+- CurrentUser;
+- Contas de Ativo;
+- Categorias;
+- Dashboard inicial;
+- patrimônio temporariamente baseado em initialBalance;
+- isolamento multiusuário validado;
+- MySQL/Testcontainers;
+- Angular frontend consolidado.
+
+Agora iniciaremos:
+
+# SPRINT 3 — TRANSAÇÕES FINANCEIRAS
+
+Esta Sprint introduzirá o núcleo financeiro do Equilibra.
+
+Antes de implementar entidades, migrations ou APIs, execute:
+
+# TASK-3.0 — Arquitetura do Ledger e Regras Financeiras
+
+IMPORTANTE:
+
+Esta TASK é principalmente de ANÁLISE E DECISÃO ARQUITETURAL.
+
+NÃO implemente ainda:
+
+- Expense;
+- Income;
+- Transfer;
+- Transaction;
+- migrations financeiras;
+- endpoints;
+- telas;
+- anexos;
+- Dashboard novo.
+
+Pequenas atualizações exclusivamente documentais são permitidas.
+
+---
+
+# 1. OBJETIVO
+
+Definir uma arquitetura financeira consistente para suportar:
+
+- Despesas;
+- Receitas;
+- Transferências;
+- saldo corrente das contas;
+- patrimônio líquido;
+- histórico;
+- edição;
+- cancelamento;
+- categorias;
+- tags futuras;
+- anexos;
+- relatórios;
+- auditoria.
+
+As decisões desta TASK orientarão toda a Sprint 3.
+
+---
+
+# 2. PRIMEIRO PASSO
+
+Leia integralmente:
+
+- CLAUDE.md
+- README.md
+- docs/architecture.md
+- docs/security.md
+- docs/api-guidelines.md
+- docs/frontend-architecture.md
+- ADRs
+- documentação das Sprints anteriores
+
+Analise código real de:
+
+- User;
+- AssetAccount;
+- Category;
+- repositories;
+- services;
+- migrations;
+- auditoria;
+- timestamps;
+- ownership;
+- Dashboard;
+- helpers monetários;
+- testes.
+
+O código atual é a fonte de verdade.
+
+---
+
+# 3. ESTADO ATUAL
+
+Produza inicialmente um diagnóstico contendo:
+
+## AssetAccount
+
+Campos relevantes.
+
+## Category
+
+Campos relevantes.
+
+## Ownership
+
+Como funciona.
+
+## Money
+
+Como BigDecimal/DECIMAL está configurado.
+
+## Dashboard
+
+Como patrimônio é calculado atualmente.
+
+## Migrations
+
+Estratégia utilizada.
+
+## Auditabilidade
+
+O que já existe.
+
+---
+
+# 4. PRINCÍPIO CENTRAL
+
+O ledger de transações deverá ser a fonte de verdade para movimentações
+financeiras.
+
+NÃO queremos como arquitetura principal:
+
+AssetAccount.currentBalance mutável
+e atualizado manualmente a cada operação.
+
+---
+
+# 5. SALDO
+
+Conceitualmente:
+
+currentBalance(account) =
+
+initialBalance
++ receitas
+- despesas
++ transferências recebidas
+- transferências enviadas
+
+Analise essa fórmula e confirme ou proponha melhoria.
+
+---
+
+# 6. SOURCE OF TRUTH
+
+A fonte de verdade deve ser:
+
+initialBalance
++
+ledger de transações.
+
+O saldo corrente deverá ser derivado.
+
+---
+
+# 7. NÃO DUPLICAR SALDO
+
+Evitar persistir:
+
+currentBalance
+
+em AssetAccount nesta fase.
+
+Isso poderia criar inconsistências:
+
+transação existe
+mas saldo não foi atualizado;
+
+ou:
+
+saldo atualizado
+mas transação falhou.
+
+---
+
+# 8. PERFORMANCE
+
+O sistema é inicialmente doméstico e de baixo volume.
+
+Portanto prefira:
+
+correção
++
+auditabilidade
++
+simplicidade
+
+antes de otimizações prematuras.
+
+Caso futuramente necessário, poderemos introduzir:
+
+- snapshots;
+- materialized summaries;
+- cache;
+- agregações.
+
+Não agora.
+
+---
+
+# 9. QUESTÃO ARQUITETURAL PRINCIPAL
+
+Avalie duas estratégias:
+
+## A — Entidade única FinancialTransaction
+
+Exemplo conceitual:
+
+FinancialTransaction
+
+- id
+- ownerId
+- type
+- description
+- occurredAt
+- amount
+- categoryId
+- sourceAccountId
+- destinationAccountId
+- notes
+- createdAt
+- updatedAt
+
+type:
+
+EXPENSE
+INCOME
+TRANSFER
+
+---
+
+## B — Agregados separados
+
+Expense
+Income
+Transfer
+
+cada um com entidade/tabela própria.
+
+---
+
+# 10. DECISÃO
+
+Compare A × B considerando:
+
+- simplicidade;
+- invariantes;
+- consultas;
+- relatórios;
+- histórico unificado;
+- auditoria;
+- evolução;
+- transferências;
+- frontend;
+- JPA;
+- migrations;
+- manutenção.
+
+Escolha uma arquitetura.
+
+Não escolha apenas porque exige menos código.
+
+---
+
+# 11. RECOMENDAÇÃO A SER AVALIADA
+
+Minha preferência inicial é:
+
+FinancialTransaction como conceito central,
+
+com:
+
+TransactionType:
+
+EXPENSE
+INCOME
+TRANSFER
+
+Porém Claude deve validar isso contra o código real e os requisitos.
+
+---
+
+# 12. TRANSFERÊNCIA
+
+Transferência é especial.
+
+Ela possui:
+
+sourceAccount
+destinationAccount
+
+e:
+
+sourceAccount != destinationAccount.
+
+---
+
+# 13. TRANSFERÊNCIA NÃO É RECEITA
+
+Transferência recebida NÃO deve contar como Receita.
+
+---
+
+# 14. TRANSFERÊNCIA NÃO É DESPESA
+
+Transferência enviada NÃO deve contar como Despesa.
+
+---
+
+# 15. DASHBOARD
+
+Portanto:
+
+Entradas =
+soma de INCOME
+
+Saídas =
+soma de EXPENSE
+
+Transferências não entram nesses dois KPIs.
+
+---
+
+# 16. PATRIMÔNIO
+
+Transferência entre contas do mesmo usuário:
+
+NÃO altera patrimônio líquido total.
+
+Exemplo:
+
+Banco:
+1000 → 800
+
+Carteira:
+100 → 300
+
+Patrimônio:
+
+1100 antes
+1100 depois.
+
+Essa propriedade deverá virar teste obrigatório futuramente.
+
+---
+
+# 17. CONTA DE ORIGEM
+
+EXPENSE:
+
+deve possuir uma AssetAccount que financia a despesa.
+
+---
+
+# 18. CONTA DE DESTINO
+
+INCOME:
+
+deve possuir AssetAccount que recebe a receita.
+
+---
+
+# 19. TRANSFER
+
+TRANSFER:
+
+deve possuir:
+
+sourceAccount
+destinationAccount.
+
+---
+
+# 20. MODELAGEM DE CONTAS
+
+Se escolher entidade única, avalie estrutura clara para representar:
+
+EXPENSE:
+sourceAccount = conta
+destinationAccount = null
+
+INCOME:
+sourceAccount = null
+destinationAccount = conta
+
+TRANSFER:
+sourceAccount = conta A
+destinationAccount = conta B
+
+Compare isso com alternativas.
+
+---
+
+# 21. ALTERNATIVA
+
+Uma alternativa seria:
+
+accountId
+
+para EXPENSE/INCOME
+
+e:
+
+sourceAccountId
+destinationAccountId
+
+para TRANSFER.
+
+Analise qual modelo produz invariantes mais claras.
+
+---
+
+# 22. BANCO
+
+Evite esquema que permita grande quantidade de estados inválidos.
+
+Exemplo inválido:
+
+EXPENSE
+sem conta.
+
+Exemplo inválido:
+
+TRANSFER
+sem destinationAccount.
+
+---
+
+# 23. INVARIANTES
+
+Defina formalmente invariantes para:
+
+EXPENSE
+INCOME
+TRANSFER.
+
+---
+
+# 24. AMOUNT
+
+Todos os valores devem utilizar:
+
+BigDecimal
+
+no Java.
+
+Banco:
+
+DECIMAL apropriado.
+
+Nunca:
+
+float
+double.
+
+---
+
+# 25. SINAL DO AMOUNT
+
+Decida uma regra importante:
+
+Preferência:
+
+amount SEMPRE positivo.
+
+Exemplo:
+
+Despesa:
+amount = 100
+
+Receita:
+amount = 100
+
+Transferência:
+amount = 100
+
+O efeito no saldo é determinado pelo TransactionType.
+
+---
+
+# 26. NÃO USAR SINAL PARA TIPO
+
+Evite:
+
+-100 = despesa
++100 = receita
+
+Isso mistura:
+
+tipo
+e
+valor.
+
+---
+
+# 27. ZERO
+
+Decida se:
+
+amount = 0
+
+é permitido.
+
+Preferência:
+
+NÃO.
+
+Transação financeira deve possuir:
+
+amount > 0.
+
+---
+
+# 28. ESCALA
+
+Máximo:
+
+2 casas decimais
+
+para BRL nesta versão.
+
+Não arredondar silenciosamente.
+
+---
+
+# 29. MOEDA
+
+Nesta versão:
+
+BRL.
+
+Não implementar multi-currency ainda.
+
+Decida se currency precisa ser persistida agora.
+
+Preferência:
+
+NÃO, enquanto sistema é explicitamente BRL.
+
+---
+
+# 30. DESCRIPTION
+
+Obrigatória.
+
+Defina:
+
+trim
+maxLength.
+
+Preferência inicial:
+
+255 caracteres.
+
+---
+
+# 31. DATA DA TRANSAÇÃO
+
+O requisito permite editar:
+
+data
++
+hora.
+
+Defina campo conceitual:
+
+occurredAt
+
+ou equivalente.
+
+---
+
+# 32. occurredAt × createdAt
+
+Diferencie:
+
+occurredAt
+=
+quando movimentação ocorreu.
+
+createdAt
+=
+quando registro foi criado no Equilibra.
+
+Esses conceitos não podem ser confundidos.
+
+---
+
+# 33. TIMEZONE
+
+Defina política explícita.
+
+Considere:
+
+frontend envia instante;
+backend normaliza;
+persistência UTC;
+UI apresenta timezone do usuário/sistema.
+
+Analise padrão já existente.
+
+---
+
+# 34. TRANSAÇÃO FUTURA
+
+Decida se occurredAt futuro será permitido.
+
+Não introduza agendamento financeiro automaticamente.
+
+Preferência inicial:
+
+permitir apenas se houver necessidade real.
+
+Avalie.
+
+---
+
+# 35. CATEGORY
+
+EXPENSE:
+
+categoria deve ser:
+
+EXPENSE ou BOTH.
+
+---
+
+# 36. INCOME
+
+Categoria deve ser:
+
+INCOME ou BOTH.
+
+---
+
+# 37. TRANSFER
+
+Decida se Transfer deve exigir Category.
+
+O requisito original inclui categoria em Transferência.
+
+Portanto arquitetura deve suportar categoria.
+
+Mas avalie semântica:
+
+uma transferência não é receita/despesa.
+
+Pode ser necessário permitir categoria BOTH ou criar política específica.
+
+Documente decisão.
+
+---
+
+# 38. CATEGORY INATIVA
+
+Categoria inativa:
+
+não pode ser selecionada para NOVA transação.
+
+---
+
+# 39. HISTÓRICO
+
+Se categoria posteriormente for desativada:
+
+transações antigas continuam válidas.
+
+---
+
+# 40. CONTA INATIVA
+
+Conta inativa:
+
+não pode ser utilizada em NOVA transação.
+
+---
+
+# 41. HISTÓRICO DA CONTA
+
+Transações antigas associadas a conta posteriormente inativa continuam
+válidas.
+
+---
+
+# 42. OWNERSHIP
+
+Transação pertence a um usuário.
+
+Todas as entidades relacionadas devem pertencer ao MESMO usuário:
+
+Transaction.owner
+Account.owner
+Category.owner
+
+---
+
+# 43. REGRA CRÍTICA
+
+User A jamais poderá criar transação usando:
+
+conta de User B
+
+ou:
+
+categoria de User B.
+
+---
+
+# 44. IDOR/BOLA
+
+Todas as consultas de recursos relacionados devem ser ownership-aware.
+
+Não basta receber UUID e usar:
+
+findById.
+
+---
+
+# 45. TRANSFERÊNCIA CROSS-USER
+
+Nesta versão:
+
+NÃO permitir transferência entre usuários.
+
+Source e destination devem pertencer ao mesmo owner.
+
+---
+
+# 46. MESMA CONTA
+
+Transfer:
+
+sourceAccount != destinationAccount.
+
+---
+
+# 47. SALDO NEGATIVO
+
+Decida política.
+
+Como initialBalance negativo já é permitido, recomendo:
+
+permitir transações que deixem conta negativa.
+
+Não implementar bloqueio por saldo insuficiente nesta versão.
+
+Documente.
+
+---
+
+# 48. OVERDRAFT
+
+Não implementar limite de cheque especial.
+
+---
+
+# 49. EDIÇÃO
+
+Precisamos definir impacto de editar transação.
+
+Como saldo será derivado do ledger:
+
+editar uma transação altera naturalmente o saldo derivado.
+
+Isso é uma vantagem da arquitetura.
+
+---
+
+# 50. EXEMPLO
+
+Conta inicial:
+
+1000
+
+Despesa:
+100
+
+Saldo:
+900
+
+Editar despesa:
+100 → 150
+
+Saldo derivado:
+
+850.
+
+Nenhuma atualização manual de saldo necessária.
+
+---
+
+# 51. EXCLUSÃO
+
+Decida política.
+
+Para sistema financeiro/auditoria, considere evitar DELETE físico.
+
+Compare:
+
+- soft delete;
+- cancellation;
+- reversal;
+- status.
+
+---
+
+# 52. RECOMENDAÇÃO
+
+Avalie introduzir:
+
+TransactionStatus
+
+ACTIVE
+CANCELLED
+
+ou equivalente.
+
+Uma transação cancelada:
+
+- permanece no histórico;
+- não afeta saldo;
+- registra auditabilidade.
+
+---
+
+# 53. REVERSAL
+
+Não implemente contabilidade de partidas dobradas completa sem necessidade.
+
+Avalie se CANCELLED é suficiente para MVP.
+
+---
+
+# 54. RESTAURAÇÃO
+
+Decida se transação cancelada poderá ser reativada.
+
+Analise implicações.
+
+Não adicione funcionalidade apenas por simetria.
+
+---
+
+# 55. AUDITORIA
+
+Precisaremos preservar pelo menos:
+
+createdAt
+updatedAt
+
+e status/cancelamento.
+
+Avalie se precisamos:
+
+cancelledAt
+
+nesta fase.
+
+---
+
+# 56. QUEM ALTEROU
+
+Como cada usuário opera os próprios dados nesta versão, não precisamos
+necessariamente:
+
+createdBy
+updatedBy.
+
+Mas documente decisão.
+
+---
+
+# 57. NOTES
+
+Campo:
+
+notes
+
+multiline.
+
+Defina limite.
+
+Sugestão:
+
+2000 ou 4000 caracteres.
+
+---
+
+# 58. TAG
+
+Requisito prevê tag.
+
+Decida se Tag será:
+
+entidade;
+string;
+relação N:N.
+
+NÃO implemente agora.
+
+Apenas faça recomendação para task futura.
+
+---
+
+# 59. ANEXO
+
+Requisito prevê:
+
+PDF
+imagem.
+
+NÃO implemente storage agora.
+
+Defina apenas arquitetura futura.
+
+---
+
+# 60. ANEXO NÃO DEVE SER BLOB AUTOMATICAMENTE
+
+Avalie armazenamento:
+
+metadata no banco
++
+arquivo em storage/filesystem/object storage.
+
+Evite decidir BLOB sem análise.
+
+---
+
+# 61. HISTÓRICO UNIFICADO
+
+Precisamos futuramente listar:
+
+Expense
+Income
+Transfer
+
+cronologicamente.
+
+Essa necessidade deve influenciar decisão entidade única × entidades
+separadas.
+
+---
+
+# 62. RELATÓRIO DE AUDITORIA
+
+Precisaremos consultar todas as transações do usuário.
+
+A arquitetura deve facilitar isso.
+
+---
+
+# 63. RELATÓRIO POR CATEGORIA
+
+Precisaremos filtrar:
+
+período;
+categoria;
+conta;
+tipo.
+
+Considere isso no desenho.
+
+---
+
+# 64. FILTRO POR CONTAS
+
+Relatórios poderão selecionar:
+
+uma ou mais contas.
+
+Considere impacto de transferências.
+
+---
+
+# 65. ÍNDICES
+
+Proponha índices futuros para:
+
+owner;
+occurredAt;
+type;
+category;
+accounts;
+status.
+
+Não implemente migration nesta TASK.
+
+---
+
+# 66. CONSULTA DE SALDO
+
+Defina conceitualmente query/serviço para:
+
+currentBalance(accountId).
+
+---
+
+# 67. SALDO ATÉ UMA DATA
+
+Arquitetura deve permitir futuramente:
+
+balanceAt(accountId, instant).
+
+Isso será importante para gráficos.
+
+---
+
+# 68. FÓRMULA TEMPORAL
+
+Conceitualmente:
+
+initialBalance
++
+efeitos de todas as transações ACTIVE
+até T.
+
+---
+
+# 69. GRÁFICO
+
+"Evolução do saldo"
+
+deverá futuramente derivar do ledger.
+
+Não armazenar pontos de gráfico como fonte de verdade.
+
+---
+
+# 70. PATRIMÔNIO
+
+Defina:
+
+netWorth(now)
+
+=
+soma de currentBalance de contas ativas
+
+ou política equivalente.
+
+---
+
+# 71. CONTA DESATIVADA E PATRIMÔNIO
+
+Analise cuidadosamente:
+
+Hoje Dashboard ignora contas inativas.
+
+Mas uma conta inativa pode possuir saldo histórico diferente de zero.
+
+Decida semântica futura:
+
+desativar significa apenas esconder de novos lançamentos?
+
+Se sim, excluir seu saldo do patrimônio pode produzir patrimônio
+incorreto.
+
+Esta é uma decisão importante.
+
+---
+
+# 72. RECOMENDAÇÃO
+
+Considere separar conceitos:
+
+active
+=
+disponível para novos lançamentos
+
+e
+
+includeInNetWorth
+=
+participa do patrimônio
+
+Mas NÃO adicione campo sem necessidade.
+
+Analise alternativas e recomende política.
+
+---
+
+# 73. INITIAL BALANCE
+
+Hoje initialBalance é editável.
+
+Com transações existentes, isso pode reescrever implicitamente todo o
+histórico.
+
+Defina política futura.
+
+---
+
+# 74. ALTERNATIVAS
+
+Compare:
+
+A) continuar permitindo editar initialBalance;
+
+B) bloquear após primeira transação;
+
+C) representar saldo inicial como evento do ledger;
+
+D) permitir ajuste explícito.
+
+---
+
+# 75. RECOMENDAÇÃO
+
+Escolha abordagem para o MVP e documente consequências.
+
+Não implemente nesta TASK.
+
+---
+
+# 76. CATEGORY APPLICABILITY
+
+Hoje CategoryApplicability pode ser alterada.
+
+Com transações históricas isso pode criar:
+
+categoria INCOME
+
+associada a Expense antiga.
+
+---
+
+# 77. DECISÃO
+
+Defina política futura para mudança de applicability.
+
+Alternativas:
+
+- bloquear alterações incompatíveis com histórico;
+- permitir e preservar histórico;
+- migrar para outra categoria.
+
+Escolha abordagem simples e consistente.
+
+---
+
+# 78. TRANSAÇÕES ATÔMICAS
+
+Transferência precisa ser atomicamente válida.
+
+Nunca pode existir estado:
+
+débito aplicado
+sem crédito correspondente.
+
+Se modelada como uma única entidade Transfer, isso é natural.
+
+Se modelada como duas ledger entries, deve haver transação de banco
+atômica.
+
+Considere isso na decisão.
+
+---
+
+# 79. PARTIDAS DOBRADAS
+
+Avalie se Equilibra realmente precisa de double-entry bookkeeping agora.
+
+Provavelmente não.
+
+Não introduza complexidade contábil sem requisito.
+
+Mas explique diferença entre:
+
+ledger simples
+e
+double-entry.
+
+---
+
+# 80. IDEMPOTÊNCIA
+
+Avalie risco de requests duplicados criarem transação duas vezes.
+
+Defina se MVP precisa de:
+
+Idempotency-Key.
+
+Não implemente sem necessidade, mas registre decisão.
+
+---
+
+# 81. CONCORRÊNCIA
+
+Como saldo é derivado, concorrência de duas despesas simultâneas não
+deve causar lost update em currentBalance.
+
+Isso é uma vantagem.
+
+Documente.
+
+---
+
+# 82. VERSIONAMENTO
+
+Avalie necessidade de:
+
+@Version
+
+optimistic locking
+
+em FinancialTransaction.
+
+Faça recomendação.
+
+---
+
+# 83. RESPONSE DTO
+
+Planeje DTO conceitual para transações.
+
+Não implemente.
+
+---
+
+# 84. FRONTEND
+
+Planeje estratégia para formulários:
+
+Despesa
+Receita
+Transferência.
+
+---
+
+# 85. REUTILIZAÇÃO
+
+Os três formulários compartilham campos:
+
+description
+occurredAt
+amount
+category
+tag
+attachment
+notes
+
+Mas possuem regras de conta diferentes.
+
+Não crie DynamicForm genérico prematuramente.
+
+---
+
+# 86. UX
+
+Recomende componentes compartilhados apenas para elementos realmente
+iguais.
+
+---
+
+# 87. MONEY INPUT
+
+Reutilizar estratégia segura já utilizada em AssetAccount.
+
+---
+
+# 88. DATE/TIME INPUT
+
+Defina estratégia Angular adequada para data/hora.
+
+Não adicionar biblioteca pesada sem necessidade.
+
+---
+
+# 89. CATEGORY SELECT
+
+Frontend deverá carregar somente categorias aplicáveis e ativas.
+
+Despesa:
+
+EXPENSE + BOTH.
+
+Receita:
+
+INCOME + BOTH.
+
+---
+
+# 90. TRANSFER CATEGORY
+
+Defina como UI deverá tratar categoria para Transferência conforme decisão
+arquitetural desta TASK.
+
+---
+
+# 91. ACCOUNT SELECT
+
+Somente contas permitidas para novos lançamentos.
+
+Normalmente:
+
+active = true.
+
+---
+
+# 92. TRANSFER ACCOUNT SELECT
+
+Após escolher origem:
+
+destino não poderá ser a mesma conta.
+
+---
+
+# 93. API FUTURA
+
+Proponha estratégia de endpoints.
+
+Compare:
+
+/api/transactions
+
+versus:
+
+/api/expenses
+/api/incomes
+/api/transfers
+
+Mesmo que domínio utilize entidade única.
+
+---
+
+# 94. RECOMENDAÇÃO DE API
+
+Uma possibilidade:
+
+POST /api/expenses
+POST /api/incomes
+POST /api/transfers
+
+com casos de uso explícitos,
+
+enquanto persistência utiliza FinancialTransaction unificada.
+
+Analise vantagens.
+
+---
+
+# 95. HISTÓRICO
+
+Pode utilizar:
+
+GET /api/transactions
+
+para visão unificada.
+
+Avalie.
+
+---
+
+# 96. NÃO IMPLEMENTAR
+
+Esta TASK termina com decisões.
+
+Não crie controllers.
+
+---
+
+# 97. ADR
+
+Crie ADR formal para arquitetura escolhida.
+
+Sugestão:
+
+docs/adr/XXXX-financial-ledger-architecture.md
+
+Siga numeração/convenção existente.
+
+---
+
+# 98. ADR DEVE REGISTRAR
+
+- contexto;
+- problema;
+- alternativas;
+- decisão;
+- consequências;
+- invariantes;
+- fórmulas;
+- trade-offs;
+- decisões adiadas.
+
+---
+
+# 99. DOCUMENTO DE DOMÍNIO
+
+Se arquitetura atual possuir local apropriado, documente também:
+
+TransactionType
+TransactionStatus
+efeito sobre saldo
+regras de Category
+ownership.
+
+Não duplique conteúdo desnecessariamente.
+
+---
+
+# 100. MATRIZ DE EFEITOS
+
+Inclua no ADR uma matriz semelhante:
+
+| Type | Source | Destination | Efeito |
+|------|--------|-------------|--------|
+| EXPENSE | A | — | A -= amount |
+| INCOME | — | A | A += amount |
+| TRANSFER | A | B | A -= amount; B += amount |
+
+Ajuste à arquitetura escolhida.
+
+---
+
+# 101. MATRIZ DE KPI
+
+Documente:
+
+| Tipo | Entradas | Saídas | Patrimônio |
+|------|----------|--------|------------|
+| INCOME | +amount | — | aumenta |
+| EXPENSE | — | +amount | diminui |
+| TRANSFER | — | — | neutro |
+
+---
+
+# 102. MATRIZ DE INVARIANTES
+
+Documente por tipo:
+
+EXPENSE
+INCOME
+TRANSFER
+
+contas obrigatórias/proibidas;
+categoria;
+amount;
+ownership;
+status.
+
+---
+
+# 103. CASOS DE TESTE FUTUROS
+
+Produza catálogo de testes que as próximas tasks deverão implementar.
+
+Inclua no mínimo:
+
+- income aumenta saldo;
+- expense reduz saldo;
+- transfer reduz origem;
+- transfer aumenta destino;
+- transfer não altera patrimônio;
+- transfer não conta como entrada/saída;
+- cancelled transaction não afeta saldo;
+- cross-user bloqueado;
+- inactive account bloqueada para nova transação;
+- inactive category bloqueada;
+- historical records permanecem válidos;
+- precisão decimal;
+- alteração de transação recalcula saldo derivado;
+- períodos;
+- saldo até uma data.
+
+---
+
+# 104. NÃO IMPLEMENTAR TESTES AINDA
+
+Apenas documente catálogo.
+
+Os testes serão implementados junto das próximas tasks.
+
+---
+
+# 105. RISCOS
+
+Produza seção:
+
+Riscos arquiteturais
+
+Classifique:
+
+HIGH
+MEDIUM
+LOW
+
+---
+
+# 106. DECISÕES ADIADAS
+
+Liste explicitamente itens adiados:
+
+- Tags;
+- Attachments;
+- recurring transactions;
+- multi-currency;
+- budgets;
+- double-entry;
+- snapshots;
+- reconciliation;
+- import bancário;
+- parcelamento;
+- cartão de crédito;
+
+salvo algo já existente no escopo.
+
+---
+
+# 107. CARTÃO DE CRÉDITO
+
+Não tente modelar cartão/fatura nesta Sprint sem requisito específico.
+
+Pode registrar como evolução futura.
+
+---
+
+# 108. "CONTAS DE DESPESAS"
+
+O requisito original menciona:
+
+Contas de Despesas.
+
+NÃO assuma automaticamente que isso significa AssetAccount.
+
+Analise o termo separadamente.
+
+Pode representar:
+
+- favorecido;
+- conta recorrente;
+- fornecedor;
+- obrigação;
+- classificação.
+
+Registre como requisito que precisa de definição antes de implementação.
+
+Não modele nesta TASK.
+
+---
+
+# 109. RESULTADO ESPERADO
+
+Ao final da TASK devemos saber exatamente:
+
+1. qual é o agregado financeiro;
+2. como Expense é representada;
+3. como Income é representada;
+4. como Transfer é representada;
+5. como saldo é calculado;
+6. como patrimônio é calculado;
+7. como cancelamento funciona;
+8. como edição funciona;
+9. como categorias funcionam;
+10. como ownership funciona;
+11. como contas inativas funcionam;
+12. como API será estruturada;
+13. quais decisões ficaram adiadas.
+
+---
+
+# 110. RELATÓRIO FINAL
+
+Apresente:
+
+# TASK-3.0 — ARCHITECTURE DECISION
+
+Status:
+
+APROVADA / BLOQUEADA
+
+## 1. Arquitetura escolhida
+
+Explique modelo.
+
+## 2. Alternativas rejeitadas
+
+Explique por quê.
+
+## 3. FinancialTransaction
+
+Apresente modelo conceitual final.
+
+## 4. TransactionType
+
+Liste tipos.
+
+## 5. TransactionStatus
+
+Liste status, se adotado.
+
+## 6. Expense
+
+Explique representação.
+
+## 7. Income
+
+Explique representação.
+
+## 8. Transfer
+
+Explique representação.
+
+## 9. Amount
+
+Informe:
+
+tipo Java;
+tipo MySQL;
+escala;
+sinal;
+zero.
+
+## 10. Accounts
+
+Defina source/destination.
+
+## 11. Categories
+
+Defina regras para:
+
+EXPENSE;
+INCOME;
+TRANSFER;
+inactive.
+
+## 12. Ownership
+
+Defina invariantes multiusuário.
+
+## 13. Saldo
+
+Apresente fórmula final.
+
+## 14. Saldo temporal
+
+Explique balanceAt(T).
+
+## 15. Patrimônio
+
+Apresente fórmula.
+
+## 16. Contas inativas
+
+Apresente decisão.
+
+## 17. initialBalance
+
+Apresente política após existirem transações.
+
+## 18. CategoryApplicability
+
+Apresente política após existir histórico.
+
+## 19. Edição
+
+Explique efeito.
+
+## 20. Cancelamento
+
+Explique estratégia.
+
+## 21. Exclusão
+
+Informe política.
+
+## 22. Concorrência
+
+Explique estratégia.
+
+## 23. API futura
+
+Liste endpoints conceituais.
+
+## 24. Índices
+
+Liste índices planejados.
+
+## 25. Frontend
+
+Explique estratégia dos três formulários.
+
+## 26. Tags
+
+Decisão futura.
+
+## 27. Attachments
+
+Arquitetura futura.
+
+## 28. Contas de Despesas
+
+Informe que interpretação permanece pendente, se aplicável.
+
+## 29. Testes futuros
+
+Liste catálogo.
+
+## 30. Riscos
+
+Liste por severidade.
+
+## 31. Decisões adiadas
+
+Liste.
+
+## 32. ADR
+
+Informe arquivo criado/atualizado.
+
+## 33. Código alterado
+
+Esperado:
+
+NENHUM CÓDIGO DE PRODUÇÃO
+
+## 34. Próxima tarefa
+
+Se arquitetura estiver aprovada, informe prontidão para:
+
+# TASK-3.1 — Domínio e Persistência de Transações Financeiras
+
+NÃO implemente TASK-3.1.

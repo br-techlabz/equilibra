@@ -1,0 +1,546 @@
+# EQUILIBRA — VISUALIZAÇÃO DOS LANÇAMENTOS DA FATURA ATUAL
+
+TIPO: Melhoria funcional da Sprint 8
+MÓDULO: Cartões de Crédito
+STACK: Angular 19, Angular Material, Spring Boot 4, MySQL
+
+OBJETIVO
+
+Implementar uma opção para visualizar os lançamentos
+da fatura em andamento de cada cartão de crédito.
+
+Atualmente, a tela de Cartões de Crédito apresenta
+os cartões cadastrados em formato de cards.
+
+Desejo adicionar a cada card uma ação chamada:
+
+"Ver fatura atual"
+
+Ao acioná-la, o usuário deverá visualizar os lançamentos
+que compõem a fatura em andamento daquele cartão.
+
+IMPORTANTE
+
+Preservar integralmente o comportamento atual dos cards.
+
+Não alterar o funcionamento financeiro do sistema.
+
+Não implementar novas regras de cobrança ou pagamento.
+
+==================================================
+1. INSPEÇÃO INICIAL
+==================================================
+
+Antes de implementar, analisar:
+
+- CLAUDE.md;
+- ADR da Sprint 8;
+- implementação atual de CreditCard;
+- implementação atual de CreditCardPurchase;
+- parcelas de compras;
+- CreditCardStatement, se existente;
+- endpoints REST;
+- OpenAPI;
+- tela de listagem de cartões;
+- componentes Angular existentes;
+- roteamento;
+- serviços HTTP;
+- regras de fechamento e vencimento;
+- autenticação e ownership;
+- testes existentes.
+
+Não presumir que entidades, endpoints ou
+funcionalidades estejam implementados.
+
+Produzir um breve PRE-IMPLEMENTATION REPORT.
+
+==================================================
+2. AÇÃO NO CARD DO CARTÃO
+==================================================
+
+Adicionar um botão ou ação claramente visível:
+
+"Ver fatura atual"
+
+Utilizar ícone apropriado, como receipt ou list.
+
+Manter ações atuais de edição,
+detalhamento e desativação.
+
+O botão deve estar disponível em cada card
+de cartão, conforme permissões e estado.
+
+Ao clicar, abrir o detalhamento
+da fatura do cartão selecionado.
+
+==================================================
+3. NAVEGAÇÃO
+==================================================
+
+Preferir uma rota dedicada, por exemplo:
+
+/credit-cards/:cardId/current-statement
+
+Ou seguir padrão de rotas já existente.
+
+A tela deverá conter:
+
+- botão Voltar;
+- identificação do cartão;
+- resumo da fatura;
+- lista de lançamentos;
+- totalizadores.
+
+Não criar rota duplicada.
+
+==================================================
+4. IDENTIFICAÇÃO DA FATURA ATUAL
+==================================================
+
+A fatura em andamento deve ser identificada
+pela regra de ciclo aprovada no ADR.
+
+Considerar:
+
+- dia de fechamento;
+- dia de vencimento;
+- data atual;
+- ciclos mensais;
+- virada de mês;
+- virada de ano;
+- meses curtos;
+- anos bissextos.
+
+IMPORTANTE:
+
+Não considerar simplesmente todas as compras
+realizadas no mês atual.
+
+A fatura deve ser determinada pelo ciclo
+de faturamento real.
+
+Se houver endpoint autoritativo para a
+fatura atual, utilizá-lo.
+
+Não duplicar regra de fechamento no frontend.
+
+==================================================
+5. CABEÇALHO DA TELA
+==================================================
+
+Exibir:
+
+Nome do cartão;
+Instituição, se disponível;
+Identificação da fatura;
+Status;
+Data de fechamento;
+Data de vencimento.
+
+Seguir identidade visual do Equilibra.
+
+==================================================
+6. RESUMO FINANCEIRO
+==================================================
+
+Apresentar, conforme dados reais:
+
+- valor total da fatura;
+- quantidade de lançamentos;
+- data de fechamento;
+- data de vencimento;
+- situação da fatura.
+
+Se disponível:
+
+- valor já pago;
+- saldo ainda devido.
+
+Não inventar valores.
+
+==================================================
+7. LISTAGEM DE LANÇAMENTOS
+==================================================
+
+Para cada lançamento exibir:
+
+- data da compra;
+- descrição;
+- categoria;
+- valor lançado na fatura;
+- número da parcela, se aplicável;
+- quantidade total de parcelas;
+- identificação da compra.
+
+Utilizar os campos efetivamente disponíveis
+na API.
+
+==================================================
+8. COMPRAS PARCELADAS
+==================================================
+
+Se uma compra foi parcelada,
+mostrar apenas a parcela pertencente
+à fatura em andamento.
+
+Exemplo:
+
+Compra de R$ 1.200,00 em 3 parcelas.
+
+Na fatura atual:
+
+Notebook — Parcela 1/3 — R$ 400,00.
+
+Não exibir R$ 1.200,00 como valor devido
+na fatura atual, salvo se essa for
+explicitamente a regra aprovada no ADR.
+
+As parcelas futuras deverão pertencer
+às faturas correspondentes.
+
+==================================================
+9. ORDENAÇÃO
+==================================================
+
+Ordenar lançamentos por data da compra
+ou critério aprovado no ADR.
+
+Usar critério estável para lançamentos
+com a mesma data.
+
+Se útil, permitir alternar ordem
+mais recente/mais antiga.
+
+==================================================
+10. FILTROS
+==================================================
+
+Se houver suporte real:
+
+- categoria;
+- período dentro do ciclo;
+- descrição;
+- compras parceladas.
+
+Não adicionar filtros fictícios.
+
+==================================================
+11. TOTALIZAÇÃO
+==================================================
+
+O total exibido deverá corresponder
+ao total autoritativo da fatura.
+
+Não somar o valor integral de uma compra
+parcelada quando apenas uma parcela
+pertence ao ciclo.
+
+Evitar erros de precisão monetária.
+
+==================================================
+12. FATURA SEM LANÇAMENTOS
+==================================================
+
+Exibir:
+
+"Nenhum lançamento nesta fatura."
+
+Manter identificação do cartão,
+período e vencimento.
+
+Não confundir resposta vazia com erro HTTP.
+
+==================================================
+13. CARREGAMENTO
+==================================================
+
+Mostrar skeleton ou loading
+durante consulta.
+
+Evitar exibir lançamentos do cartão anterior
+enquanto outro cartão estiver carregando.
+
+==================================================
+14. ERROS
+==================================================
+
+Tratar:
+
+400;
+401;
+403;
+404;
+409;
+500.
+
+Exibir mensagem amigável.
+
+Oferecer botão Tentar novamente.
+
+Respeitar Problem Details.
+
+==================================================
+15. SEGURANÇA
+==================================================
+
+O backend deve derivar ownerId do JWT.
+
+O frontend não deve enviar ownerId.
+
+Usuário A não pode visualizar
+faturas ou lançamentos do usuário B.
+
+IDs de outro usuário devem ser tratados
+conforme política de recurso inexistente.
+
+==================================================
+16. BACKEND
+==================================================
+
+Verificar se já existe endpoint capaz
+de retornar a fatura em andamento
+e seus lançamentos.
+
+Se existir, reutilizar.
+
+Se não existir e o ADR autorizar:
+
+criar endpoint REST read-only
+seguindo convenções do projeto.
+
+Exemplo conceitual:
+
+GET /api/credit-cards/{cardId}/current-statement
+
+A resposta deverá conter os dados
+autoritativos da fatura e seus itens.
+
+Não criar lógica financeira paralela.
+
+Não gerar cobranças ou movimentos bancários
+durante uma consulta GET.
+
+Não alterar a fatura apenas porque
+o usuário abriu a tela, salvo estratégia
+de materialização expressamente aprovada.
+
+==================================================
+17. FRONTEND
+==================================================
+
+Criar ou reutilizar:
+
+CurrentStatementComponent;
+CreditCardStatementService;
+DTOs tipados.
+
+Seguir nomes e padrões reais do projeto.
+
+Usar Angular 19 e Angular Material.
+
+Não utilizar any desnecessariamente.
+
+Usar RxJS com cancelamento de
+requisições obsoletas.
+
+==================================================
+18. RESPONSIVIDADE
+==================================================
+
+Desktop:
+
+tabela ou lista estruturada
+com todos os campos relevantes.
+
+Mobile:
+
+lista compacta com descrição,
+data, parcela e valor.
+
+Validar:
+
+360x800;
+390x844;
+768x1024;
+1366x768;
+1920x1080.
+
+Sem overflow horizontal global.
+
+==================================================
+19. ACESSIBILIDADE
+==================================================
+
+Garantir:
+
+navegação por teclado;
+foco visível;
+rótulos acessíveis;
+contraste;
+botões identificáveis;
+valores legíveis;
+status não dependentes apenas de cor.
+
+==================================================
+20. INTEGRIDADE FINANCEIRA
+==================================================
+
+Visualizar fatura não pode:
+
+- alterar saldo bancário;
+- criar despesa adicional;
+- gerar movimento no ledger;
+- registrar pagamento;
+- duplicar parcela;
+- modificar limite disponível;
+- mudar status indevidamente.
+
+A funcionalidade é de consulta.
+
+==================================================
+21. GOLDEN SCENARIO — FATURA SIMPLES
+==================================================
+
+Cartão limite: 5000,00.
+
+Fatura atual contém:
+
+Supermercado: 450,00.
+Farmácia: 200,00.
+Notebook parcela 1/3: 400,00.
+
+Esperado:
+
+3 lançamentos;
+total da fatura = 1050,00.
+
+O valor integral do notebook
+não deve ser somado à fatura.
+
+==================================================
+22. GOLDEN SCENARIO — ISOLAMENTO
+==================================================
+
+User A possui Cartão A.
+User B possui Cartão B.
+
+User A consulta sua fatura.
+
+Esperado:
+
+apenas lançamentos do Cartão A.
+
+Tentativa de consultar Cartão B
+não revela informações privadas.
+
+==================================================
+23. GOLDEN SCENARIO — SALDO
+==================================================
+
+Conta bancária A: 1000,00.
+
+Cartão possui fatura aberta de 200,00.
+
+Abrir e consultar fatura repetidamente.
+
+Esperado:
+
+saldo bancário permanece 1000,00;
+nenhuma nova transação;
+nenhum novo movimento;
+nenhuma alteração no ledger.
+
+==================================================
+24. TESTES
+==================================================
+
+Executar:
+
+testes unitários backend, se alterado;
+Testcontainers/MySQL, se alterado;
+testes de serviços Angular;
+testes do componente;
+teste de navegação;
+teste de fatura vazia;
+teste de compras parceladas;
+teste de ciclo de fechamento;
+teste de ownership;
+teste de totalização;
+teste de loading;
+teste de erro/retry;
+lint;
+production build.
+
+Executar regressões financeiras relevantes.
+
+Não declarar PASS sem executar.
+
+==================================================
+25. FORA DO ESCOPO
+==================================================
+
+Não implementar nesta melhoria:
+
+- pagamento de fatura;
+- parcelamento de fatura;
+- juros e multas;
+- novos lançamentos;
+- edição de compras;
+- exclusão de compras;
+- fechamento manual;
+- novos relatórios;
+- alteração do ledger;
+- reformulação completa da tela de cartões.
+
+==================================================
+26. DEFINITION OF DONE
+==================================================
+
+A funcionalidade estará concluída quando:
+
+1. Cada card tiver a ação Ver fatura atual.
+2. O clique abrir a fatura correta do cartão.
+3. O ciclo de faturamento estiver correto.
+4. Os lançamentos forem exibidos.
+5. As parcelas forem identificadas.
+6. Os valores forem reconciliados.
+7. O total da fatura estiver correto.
+8. O usuário puder voltar à lista.
+9. A interface for responsiva.
+10. Loading/empty/error funcionarem.
+11. O isolamento entre usuários estiver preservado.
+12. Nenhum saldo ou ledger for alterado.
+13. Os testes relevantes forem aprovados.
+14. O build de produção for aprovado.
+
+==================================================
+27. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# VISUALIZAÇÃO DA FATURA ATUAL — RELATÓRIO FINAL
+
+STATUS:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+Informar:
+
+- ADR utilizado;
+- endpoint reutilizado ou criado;
+- componentes;
+- rotas;
+- campos exibidos;
+- regras de ciclo;
+- parcelas;
+- totalização;
+- segurança;
+- responsividade;
+- testes;
+- builds;
+- arquivos modificados;
+- bugs corrigidos;
+- limitações;
+- evidências.
+
+Não iniciar outra funcionalidade automaticamente.

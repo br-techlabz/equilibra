@@ -1,0 +1,1050 @@
+# TASK-5.7 — EXPORTAÇÃO DOS RELATÓRIOS FINANCEIROS
+
+PROJETO: Equilibra
+SPRINT: 5 — Relatórios Financeiros
+STACK: Spring Boot 4 + Angular 19 + MySQL
+
+CONTEXTO
+TASK-5.0 — ADR dos relatórios concluído.
+TASK-5.1 — Backend do Relatório Financeiro concluído.
+TASK-5.2 — Verificar status real no repositório.
+TASK-5.3 — Backend do Relatório por Categoria concluído.
+TASK-5.4 — Interface do Relatório por Categoria concluída.
+TASK-5.5 — Backend do Relatório de Auditoria concluído.
+TASK-5.6 — Interface do Relatório de Auditoria concluída.
+
+OBJETIVO
+
+Implementar exportação dos três relatórios:
+
+1. Relatório Financeiro
+2. Relatório por Categoria
+3. Relatório de Auditoria
+
+Formatos:
+- PDF
+- CSV
+
+Os arquivos devem representar exatamente os filtros aplicados
+e as regras financeiras já existentes.
+
+Não implementar XLSX nesta TASK, salvo se o ADR 5.0 exigir.
+
+PRINCÍPIO CENTRAL:
+
+A exportação é uma REPRESENTAÇÃO dos read models existentes.
+Ela não deve criar uma segunda implementação das regras financeiras.
+
+==================================================
+1. INSPEÇÃO OBRIGATÓRIA
+==================================================
+
+Antes de modificar código, ler:
+
+- CLAUDE.md;
+- ADR da TASK-5.0;
+- ADR do ledger;
+- contratos OpenAPI;
+- backend do Relatório Financeiro;
+- backend do Relatório por Categoria;
+- backend do Relatório de Auditoria;
+- services e queries existentes;
+- frontend dos três relatórios;
+- componentes de filtros;
+- autenticação e CurrentUser;
+- padrões de download autenticado;
+- Request ID e Problem Details;
+- testes existentes;
+- migrations e índices.
+
+O ADR e a implementação real são a fonte de verdade.
+
+Se o ADR não aprovou exportação ou formatos específicos,
+registrar divergência e implementar apenas o escopo autorizado
+por esta TASK, sem modificar regras de domínio.
+
+==================================================
+2. PRE-IMPLEMENTATION REPORT
+==================================================
+
+ANTES de editar arquivos, apresentar:
+
+# TASK-5.7 — PRE-IMPLEMENTATION REPORT
+
+1. Contratos dos três relatórios.
+2. Filtros disponíveis por relatório.
+3. Read models reutilizáveis.
+4. Estratégia de exportação.
+5. Endpoints propostos.
+6. Formato PDF.
+7. Formato CSV.
+8. Tratamento de paginação.
+9. Limites e proteção de recursos.
+10. Autenticação e ownership.
+11. Estratégia de download Angular.
+12. Bibliotecas já disponíveis.
+13. Plano de testes.
+14. Arquivos previstos.
+
+Somente depois implementar.
+
+==================================================
+3. ARQUITETURA
+==================================================
+
+Preferir:
+
+Report Query Services
+       |
+       +-- JSON API
+       |
+       +-- Export Service
+              |
+              +-- PDF Renderer
+              |
+              +-- CSV Renderer
+
+Os serviços de exportação devem consumir a mesma
+semântica e os mesmos dados dos relatórios existentes.
+
+Não duplicar fórmulas de saldo, resultado ou transferências.
+
+Não criar segundo ledger.
+
+Não criar GenericReportEngine complexo.
+
+==================================================
+4. ENDPOINTS
+==================================================
+
+Seguir o ADR e o padrão REST existente.
+
+Sugestão conceitual:
+
+GET /api/reports/financial/export?format=pdf
+GET /api/reports/financial/export?format=csv
+
+GET /api/reports/categories/export?format=pdf
+GET /api/reports/categories/export?format=csv
+
+GET /api/reports/audit/export?format=pdf
+GET /api/reports/audit/export?format=csv
+
+Se o ADR definiu endpoints distintos por formato,
+utilizar o contrato aprovado.
+
+Não criar rotas redundantes.
+
+==================================================
+5. FILTROS
+==================================================
+
+Cada exportação deve aceitar exatamente os filtros
+aplicáveis ao relatório de origem.
+
+Financeiro:
+- período;
+- contas;
+- demais filtros aprovados.
+
+Categoria:
+- período;
+- contas;
+- categorias/tags, somente se suportadas.
+
+Auditoria:
+- período;
+- contas;
+- tipo;
+- status;
+- categorias/tags, se suportados;
+- ordenação, se suportada.
+
+Não aceitar ownerId.
+
+Não inventar filtros adicionais.
+
+==================================================
+6. SEMÂNTICA TEMPORAL
+==================================================
+
+Preservar occurredAt e intervalo definidos no ADR.
+
+Se [from,to):
+
+from incluído;
+to excluído.
+
+O PDF/CSV deve identificar claramente o período
+selecionado pelo usuário.
+
+Evitar divergência por timezone.
+
+==================================================
+7. CONTAS
+==================================================
+
+Exportação deve respeitar:
+
+- todas as contas;
+- uma conta;
+- múltiplas contas;
+- contas inativas históricas conforme ADR.
+
+IDs estrangeiros ou inexistentes devem receber
+tratamento seguro conforme política atual.
+
+Transferências entre duas contas selecionadas
+não podem aparecer duplicadas.
+
+==================================================
+8. RELATÓRIO FINANCEIRO
+==================================================
+
+Exportar conforme contrato real:
+
+- período;
+- contas selecionadas;
+- saldo inicial;
+- receitas;
+- despesas;
+- resultado financeiro;
+- transferências internas;
+- transferências de entrada na seleção;
+- transferências de saída da seleção;
+- variação do saldo;
+- saldo final;
+- detalhamento por conta, se existente;
+- movimentações detalhadas, se previstas.
+
+Invariante:
+
+Saldo final = Saldo inicial + Variação do saldo.
+
+Transferências não podem ser classificadas como
+receita ou despesa.
+
+==================================================
+9. RELATÓRIO POR CATEGORIA
+==================================================
+
+Exportar:
+
+- período;
+- contas;
+- resumo de receitas;
+- resumo de despesas;
+- resultado;
+- agrupamentos por categoria;
+- percentuais, se existentes.
+
+Categoria BOTH:
+
+receitas e despesas separadas.
+
+Categorias inativas históricas:
+
+preservadas.
+
+Sem categoria:
+
+usar agrupamento real.
+
+Transferências:
+
+não incluídas nos totais de receitas/despesas.
+
+==================================================
+10. RELATÓRIO DE AUDITORIA
+==================================================
+
+Exportar transações lógicas conforme filtros.
+
+Incluir ACTIVE e CANCELLED conforme seleção.
+
+Cada Transfer aparece UMA vez.
+
+Não inventar histórico imutável de alterações.
+
+Usar somente metadados reais disponíveis:
+
+transactionId;
+type;
+status;
+description;
+amount;
+occurredAt;
+createdAt;
+updatedAt;
+account/source/destination;
+category;
+tags;
+attachmentCount.
+
+Selecionar apenas campos aprovados no ADR/API.
+
+Não exportar bytes de anexos.
+
+==================================================
+11. PAGINAÇÃO DA AUDITORIA
+==================================================
+
+CRÍTICO.
+
+A exportação deve representar TODO o conjunto filtrado,
+não apenas a página atual.
+
+Exemplo:
+
+137 transações filtradas.
+UI mostra 20.
+
+CSV/PDF deve conter as 137 transações,
+salvo limite explícito de segurança.
+
+Não usar paginação client-side para exportar.
+
+Não fazer N requests Angular para reunir páginas.
+
+==================================================
+12. EXPORTAÇÃO ESCALÁVEL
+==================================================
+
+Não carregar volume ilimitado de transações na memória.
+
+Usar paginação interna em lotes, cursor ou streaming,
+conforme arquitetura existente.
+
+Para volumes grandes:
+
+definir limite seguro de registros;
+definir política de tamanho de arquivo;
+definir tratamento de timeout;
+documentar comportamento.
+
+Não introduzir filas/background jobs nesta TASK
+sem necessidade comprovada.
+
+Se o limite for excedido:
+
+retornar erro claro e seguro, conforme contrato.
+
+Não gerar arquivo parcial silenciosamente.
+
+==================================================
+13. ORDENAMENTO
+==================================================
+
+Auditoria deve preservar a ordenação determinística
+do backend.
+
+Preferência:
+
+occurredAt DESC + id DESC,
+
+se essa for a ordenação aprovada.
+
+Lotes de exportação não podem:
+
+duplicar;
+omitir;
+reordenar indevidamente.
+
+==================================================
+14. CSV — FORMATO
+==================================================
+
+Gerar CSV compatível com Excel/LibreOffice.
+
+Requisitos:
+
+- UTF-8;
+- cabeçalho;
+- nomes de colunas em português;
+- valores monetários consistentes;
+- datas consistentes;
+- delimitador documentado;
+- escaping correto de aspas, delimitadores e quebras de linha.
+
+Considerar BOM UTF-8 se necessário para compatibilidade,
+conforme convenção do projeto.
+
+Definir estratégia explícita para valores decimais,
+evitando ambiguidades de localidade.
+
+Não converter BigDecimal para double.
+
+==================================================
+15. CSV — SEGURANÇA
+==================================================
+
+Proteger contra CSV Formula Injection.
+
+Campos controlados pelo usuário podem começar com:
+
+=
++
+-
+@
+tab
+CR
+LF
+
+Aplicar neutralização segura a campos textuais
+não confiáveis antes da serialização.
+
+Não alterar os dados persistidos.
+
+Testar descrições, nomes de contas, categorias,
+tags e observações maliciosas.
+
+==================================================
+16. CSV — CONSISTÊNCIA
+==================================================
+
+Uma linha por agrupamento no relatório por categoria.
+
+Uma linha por transação lógica na auditoria.
+
+Para o relatório financeiro, definir estrutura clara
+para resumo e detalhamento conforme ADR.
+
+Não gerar linhas duplicadas por joins com tags/anexos.
+
+==================================================
+17. PDF — APRESENTAÇÃO
+==================================================
+
+Criar PDF profissional, legível e consistente
+com a identidade visual do Equilibra.
+
+Incluir:
+
+- nome Equilibra;
+- título do relatório;
+- período;
+- filtros aplicados;
+- data/hora de geração;
+- indicadores;
+- tabelas;
+- paginação;
+- rodapé discreto.
+
+Não incluir dados pessoais desnecessários.
+
+==================================================
+18. PDF — RELATÓRIO FINANCEIRO
+==================================================
+
+Apresentar indicadores principais com boa hierarquia:
+
+Saldo inicial;
+Receitas;
+Despesas;
+Resultado financeiro;
+Transferências;
+Variação;
+Saldo final.
+
+Separar transferências visual e semanticamente.
+
+==================================================
+19. PDF — CATEGORIAS
+==================================================
+
+Apresentar tabela:
+
+Categoria;
+Receitas;
+Despesas;
+Resultado;
+Participação, se disponível.
+
+Evitar gráficos complexos desnecessários.
+
+Se houver gráfico, deve usar dados reais e não
+prejudicar legibilidade.
+
+==================================================
+20. PDF — AUDITORIA
+==================================================
+
+Apresentar tabela de transações com colunas essenciais.
+
+Se houver muitas colunas:
+
+usar orientação paisagem;
+reduzir colunas com critério;
+ou distribuir informações em linhas complementares.
+
+Não truncar dados importantes silenciosamente.
+
+Suportar múltiplas páginas.
+
+Repetir cabeçalho da tabela quando adequado.
+
+==================================================
+21. PDF — QUALIDADE
+==================================================
+
+Testar:
+
+- textos longos;
+- valores monetários grandes;
+- nomes extensos;
+- múltiplas páginas;
+- caracteres acentuados;
+- categorias inativas;
+- transações canceladas;
+- ausência de dados;
+- páginas sem conteúdo cortado.
+
+Utilizar biblioteca adequada ao ecossistema Java,
+preferencialmente uma já aprovada no projeto.
+
+Verificar licença e manutenção da biblioteca antes
+de adicionar dependência.
+
+==================================================
+22. PDF — SEGURANÇA
+==================================================
+
+Não incluir:
+
+JWT;
+storageKey;
+filesystem path;
+stack trace;
+dados de outro usuário;
+metadados privados internos.
+
+Escapar/sanitizar texto conforme mecanismo da biblioteca.
+
+Não permitir HTML externo ou recursos remotos
+não confiáveis durante a renderização.
+
+==================================================
+23. HEADERS HTTP
+==================================================
+
+Configurar Content-Type correto:
+
+application/pdf
+
+text/csv; charset=UTF-8
+
+Content-Disposition:
+
+attachment; filename=...
+
+Usar filenames previsíveis e seguros.
+
+Exemplos:
+
+equilibra-financeiro-2026-10.pdf
+equilibra-categorias-2026-10.csv
+equilibra-auditoria-2026-10.pdf
+
+Não usar dados do usuário sem sanitização no filename.
+
+==================================================
+24. CACHE E PRIVACIDADE
+==================================================
+
+Exportações contêm informações financeiras privadas.
+
+Aplicar política HTTP apropriada:
+
+Cache-Control: no-store
+
+e demais headers necessários conforme
+infraestrutura de segurança existente.
+
+Não armazenar arquivos exportados em diretório público.
+
+Se geração temporária for necessária:
+
+usar local privado;
+limpar após uso;
+não deixar órfãos.
+
+==================================================
+25. AUTENTICAÇÃO
+==================================================
+
+JWT obrigatório.
+
+Identidade vem de CurrentUser.
+
+Nenhum endpoint público de exportação.
+
+Não enviar JWT por query string.
+
+==================================================
+26. OWNERSHIP
+==================================================
+
+Todas as consultas devem permanecer owner-scoped.
+
+User A nunca exporta dados de User B.
+
+Validar IDs de contas, categorias e tags
+conforme política existente.
+
+Não permitir IDOR/BOLA.
+
+==================================================
+27. FRONTEND — BOTÕES
+==================================================
+
+Adicionar nas três páginas:
+
+Exportar PDF
+Exportar CSV
+
+Preferir menu de ações:
+
+Exportar
+  PDF
+  CSV
+
+Reutilizar componentes Angular Material existentes.
+
+==================================================
+28. FRONTEND — FILTROS APLICADOS
+==================================================
+
+CRÍTICO.
+
+Exportar exatamente appliedFilters.
+
+Nunca exportar draftFilters ainda não aplicados.
+
+Exemplo:
+
+Relatório exibido: setembro.
+Usuário alterou draft para outubro.
+Ainda não clicou Aplicar.
+
+Exportação deve usar setembro.
+
+==================================================
+29. FRONTEND — DOWNLOAD
+==================================================
+
+Usar HttpClient autenticado.
+
+responseType: blob.
+
+Criar objectURL temporária para download.
+
+Revogar objectURL após uso.
+
+Não usar window.open com token na URL.
+
+Não usar links públicos diretos.
+
+==================================================
+30. FRONTEND — ESTADOS
+==================================================
+
+Implementar:
+
+idle;
+exporting;
+success;
+error.
+
+Desabilitar ação durante exportação em andamento
+para evitar downloads duplicados acidentais.
+
+Mostrar feedback acessível.
+
+Não bloquear a tela inteira sem necessidade.
+
+==================================================
+31. FRONTEND — ERROS
+==================================================
+
+Tratar:
+
+400;
+401;
+403;
+404;
+413 ou limite equivalente;
+500;
+timeout.
+
+Se erro vier como Blob contendo Problem Details,
+interpretar de forma segura conforme infraestrutura atual.
+
+Não apresentar mensagem de sucesso antes do download.
+
+==================================================
+32. FRONTEND — FILENAMES
+==================================================
+
+Preferir filename seguro fornecido pelo backend
+via Content-Disposition.
+
+Implementar fallback consistente.
+
+Não confiar cegamente em filename malicioso.
+
+==================================================
+33. FRONTEND — ABSTRAÇÃO
+==================================================
+
+Criar serviço de exportação reutilizável
+somente na medida necessária.
+
+Exemplo conceitual:
+
+ReportExportService
+
+Evitar duplicar download Blob nas três telas.
+
+Não criar framework genérico de relatórios.
+
+==================================================
+34. TESTES — FINANCEIRO
+==================================================
+
+Validar:
+
+- período;
+- contas;
+- saldo inicial;
+- receitas;
+- despesas;
+- resultado;
+- transferências;
+- variação;
+- saldo final;
+- reconciliação com JSON API;
+- valores negativos;
+- zero;
+- BigDecimal.
+
+==================================================
+35. TESTES — CATEGORIAS
+==================================================
+
+Validar:
+
+- EXPENSE;
+- INCOME;
+- BOTH;
+- categorias inativas;
+- sem categoria, se permitido;
+- canceladas excluídas dos totais;
+- transferências excluídas;
+- reconciliação com JSON API.
+
+==================================================
+36. TESTES — AUDITORIA
+==================================================
+
+Validar:
+
+- ACTIVE;
+- CANCELLED;
+- ALL;
+- uma conta;
+- várias contas;
+- todas;
+- transferências uma vez;
+- tags;
+- attachmentCount;
+- ordenação;
+- mais registros que uma página;
+- filtros combinados.
+
+==================================================
+37. GOLDEN SCENARIO
+==================================================
+
+Contas:
+
+A initial=1000
+B initial=500
+C initial=200
+
+Antes do período:
+
+Income A=100
+
+No período:
+
+Income A=700, Salário
+Expense A=200, Moradia
+Transfer A→B=300
+Transfer C→A=50
+
+Adicionar:
+
+Expense cancelada=999.
+
+Financeiro — Todas as contas:
+
+Opening=1800
+Income=700
+Expense=200
+Result=500
+Closing=2300
+
+Categoria:
+
+Salário income=700
+Moradia expense=200
+Net=500
+
+Auditoria ALL:
+
+5 transações no período,
+incluindo Expense cancelada.
+
+Auditoria ACTIVE:
+
+4 transações.
+
+Transferências:
+
+cada uma aparece uma vez.
+
+==================================================
+38. GOLDEN — ACCOUNT A
+==================================================
+
+Financeiro:
+
+Opening=1100
+Income=700
+Expense=200
+Incoming Boundary=50
+Outgoing Boundary=300
+Balance Change=250
+Closing=1350
+
+Categoria:
+
+Income=700
+Expense=200
+Net=500
+
+Auditoria:
+
+apenas transações envolvendo A,
+sem duplicações.
+
+==================================================
+39. GOLDEN — MULTIUSER
+==================================================
+
+Criar User A e User B.
+
+Exportações de A não podem conter dados de B.
+
+Testar IDs estrangeiros explícitos.
+
+==================================================
+40. TESTES CSV
+==================================================
+
+Testar:
+
+- UTF-8;
+- acentos;
+- aspas;
+- delimitadores;
+- quebras de linha;
+- BigDecimal;
+- valores negativos;
+- descrição com =SUM(...);
+- descrição com +CMD;
+- descrição com @;
+- tabs e CR/LF;
+- filename;
+- Content-Type;
+- Content-Disposition;
+- no-store.
+
+==================================================
+41. TESTES PDF
+==================================================
+
+Validar:
+
+- arquivo PDF válido;
+- conteúdo esperado;
+- múltiplas páginas;
+- caracteres Unicode;
+- valores financeiros;
+- cabeçalhos;
+- rodapés;
+- textos longos;
+- ausência de dados privados;
+- sem truncamento crítico.
+
+Não considerar somente bytes não vazios como
+teste suficiente.
+
+==================================================
+42. TESTES DE LIMITE
+==================================================
+
+Gerar dataset acima de uma página.
+
+Gerar dataset próximo do limite configurado.
+
+Testar comportamento acima do limite.
+
+Não permitir consumo ilimitado de memória.
+
+==================================================
+43. TESTES FRONTEND
+==================================================
+
+Testar:
+
+- PDF;
+- CSV;
+- appliedFilters;
+- conta única;
+- múltiplas contas;
+- todas as contas;
+- status de auditoria;
+- blob download;
+- filename;
+- URL revoke;
+- loading;
+- erro;
+- Problem Details em Blob;
+- não duplicar requests;
+- 401/403;
+- não incluir JWT na URL.
+
+==================================================
+44. TESTCONTAINERS
+==================================================
+
+Executar integração com MySQL real
+via Testcontainers conforme padrão existente.
+
+Não substituir testes SQL relevantes por H2
+se comportamento MySQL for importante.
+
+==================================================
+45. REGRESSÕES
+==================================================
+
+Verificar:
+
+Ledger;
+Dashboard;
+Accounts;
+Categories;
+Tags;
+Expenses;
+Income;
+Transfers;
+History;
+Attachments;
+Financial Report;
+Category Report;
+Audit Report.
+
+Exportação não pode alterar dados financeiros.
+
+==================================================
+46. FORA DO ESCOPO
+==================================================
+
+Não implementar:
+
+XLSX, salvo exigência do ADR;
+envio por email;
+relatórios agendados;
+armazenamento permanente de arquivos exportados;
+compartilhamento;
+assinatura digital;
+histórico imutável de edições;
+event sourcing;
+novas regras financeiras;
+contas de despesas;
+gerador de relatórios customizados.
+
+==================================================
+47. DEFINITION OF DONE
+==================================================
+
+TASK-5.7 concluída quando:
+
+- PDF dos três relatórios funciona;
+- CSV dos três relatórios funciona;
+- filtros aplicados são preservados;
+- exportação não depende da página visível;
+- dados reconciliam com JSON API;
+- transferências não duplicam;
+- canceladas seguem semântica correta;
+- BigDecimal preservado;
+- CSV injection mitigada;
+- PDFs legíveis e paginados;
+- downloads autenticados;
+- ownership validado;
+- limites de recursos definidos;
+- Content-Type correto;
+- Content-Disposition seguro;
+- Cache-Control no-store;
+- frontend possui ações de exportação;
+- estados de exportação funcionam;
+- testes backend/frontend passam;
+- Testcontainers passa;
+- builds passam;
+- regressões essenciais passam.
+
+==================================================
+48. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-5.7 — EXPORTAÇÃO DOS RELATÓRIOS
+
+Status:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+1. ADR e contratos utilizados.
+2. Endpoints implementados.
+3. Filtros por relatório.
+4. Arquitetura de reutilização.
+5. PDF Financeiro.
+6. CSV Financeiro.
+7. PDF Categorias.
+8. CSV Categorias.
+9. PDF Auditoria.
+10. CSV Auditoria.
+11. Paginação e limites.
+12. Segurança CSV Injection.
+13. Segurança PDF.
+14. Ownership e isolamento.
+15. Headers e privacidade.
+16. Frontend e downloads.
+17. Golden Scenario.
+18. Reconciliação JSON versus exportação.
+19. Testes executados e resultados reais.
+20. Testcontainers/MySQL.
+21. Lint e builds.
+22. Regressões.
+23. Arquivos criados/modificados.
+24. Bugs corrigidos.
+25. Divergências do ADR.
+26. Dívidas técnicas.
+27. Fora do escopo confirmado.
+
+Se concluída:
+
+READY FOR TASK-5.8 — Gate de Aprovação da Sprint 5.
+
+NÃO implementar TASK-5.8 nesta execução.

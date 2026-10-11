@@ -1,0 +1,1782 @@
+# TASK-4.2 — Interface de Tags
+
+Estamos na:
+
+# Sprint 4 — Enriquecimento das Transações
+
+Concluídas:
+
+- TASK-4.0 — Arquitetura de Tags e Anexos
+- TASK-4.1 — Domínio, Persistência e API de Tags
+
+Agora implemente:
+
+# TASK-4.2 — Interface de Tags
+
+Objetivo:
+
+Implementar no Angular a interface completa para gerenciamento das Tags
+do usuário autenticado, consumindo exclusivamente a API real criada na
+TASK-4.1.
+
+A implementação deve reutilizar o Design System consolidado e os padrões
+já utilizados em:
+
+- Contas de Ativo;
+- Categorias;
+- Despesas;
+- Receitas;
+- Transferências;
+- Histórico.
+
+NÃO implementar ainda associação de Tags às transações.
+
+---
+
+# 1. FONTE DE VERDADE
+
+Antes de modificar código, leia:
+
+- CLAUDE.md;
+- ADR da TASK-4.0;
+- relatório final da TASK-4.1;
+- OpenAPI atual;
+- implementação real da API de Tags;
+- tela de Categorias;
+- tela de Contas;
+- Design System;
+- Auth Guard;
+- Authorization interceptor;
+- Request ID interceptor;
+- Problem Details handling;
+- padrões de loading/error/empty state;
+- padrões responsivos;
+- testes Angular existentes.
+
+O contrato real implementado na TASK-4.1 é a fonte de verdade.
+
+Se este prompt divergir da implementação aprovada/ADR:
+
+seguir ADR + contrato real.
+
+Não alterar backend apenas para adaptar a UI, salvo bug bloqueante real.
+
+---
+
+# 2. PRE-IMPLEMENTATION REPORT
+
+Antes de alterar arquivos, produza:
+
+# TASK-4.2 — PRE-IMPLEMENTATION REPORT
+
+## 1. API real de Tags
+
+Liste:
+
+- endpoints;
+- requests;
+- responses;
+- includeInactive;
+- ordenação;
+- códigos HTTP;
+- Problem Details.
+
+## 2. Padrão visual reutilizado
+
+Compare:
+
+Tags
+vs
+Categories
+vs
+AssetAccounts.
+
+## 3. Componentes existentes reutilizáveis
+
+Liste.
+
+## 4. Componentes novos
+
+Liste apenas os realmente necessários.
+
+## 5. Estado
+
+Explique estratégia.
+
+## 6. Responsividade
+
+Explique desktop/mobile.
+
+## 7. Formulário
+
+Explique campos e validações.
+
+## 8. Error handling
+
+Explique 400/401/404/409.
+
+## 9. Accessibility
+
+Explique abordagem.
+
+## 10. Tests
+
+Liste testes planejados.
+
+## 11. Files
+
+Liste:
+
+- criar;
+- modificar;
+- reutilizar.
+
+Depois implemente.
+
+---
+
+# 3. ROTA
+
+Criar rota privada para Tags.
+
+Preferência:
+
+/tags
+
+Se arquitetura atual adota outro padrão:
+
+seguir padrão existente.
+
+---
+
+# 4. LAZY LOADING
+
+Manter estratégia atual de lazy loading.
+
+Não aumentar bundle principal desnecessariamente.
+
+---
+
+# 5. AUTH
+
+Rota protegida pelo mecanismo existente.
+
+Usuário não autenticado:
+
+não acessa Tags.
+
+---
+
+# 6. SIDEBAR
+
+Adicionar:
+
+Tags
+
+ao menu autenticado.
+
+Posicionamento recomendado:
+
+Dashboard
+
+Contas
+  Ativos
+  ...
+
+Categorias
+
+Tags
+
+Transações
+  Despesas
+  Receitas
+  Transferências
+  Todas as transações
+
+Relatórios
+
+Adapte à estrutura real.
+
+---
+
+# 7. NÃO INVENTAR SUBMENU
+
+Se Tags é uma única tela:
+
+item simples.
+
+---
+
+# 8. ACTIVE NAVIGATION
+
+Ao acessar /tags:
+
+menu deve indicar corretamente item ativo.
+
+---
+
+# 9. PAGE STRUCTURE
+
+Usar padrão consolidado:
+
+AuthenticatedLayout
+→ PageHeader
+→ ContentPanel
+→ conteúdo.
+
+---
+
+# 10. PAGE HEADER
+
+Título:
+
+Tags
+
+Subtítulo:
+
+Organize suas movimentações com marcadores personalizados.
+
+Ação principal:
+
++ Nova tag
+
+---
+
+# 11. BREADCRUMB
+
+Usar breadcrumb se esse padrão está consolidado.
+
+Exemplo:
+
+Início / Tags
+
+---
+
+# 12. DESIGN SYSTEM
+
+NÃO criar nova linguagem visual.
+
+Reutilizar:
+
+- spacing;
+- typography;
+- colors;
+- radius;
+- shadows;
+- buttons;
+- inputs;
+- panels;
+- drawers/dialogs;
+- status;
+- empty states;
+- loading;
+- error feedback.
+
+---
+
+# 13. DESKTOP LIST
+
+Em desktop, preferencialmente tabela.
+
+Colunas:
+
+Tag
+Status
+Atualizada em
+Ações
+
+Não adicionar colunas inexistentes apenas para preencher espaço.
+
+---
+
+# 14. TAG NAME
+
+Mostrar `name`.
+
+Nunca:
+
+normalizedName.
+
+---
+
+# 15. OWNER
+
+Nunca mostrar:
+
+ownerId
+userId
+email do proprietário.
+
+---
+
+# 16. STATUS
+
+Exibir:
+
+Ativa
+Inativa
+
+componente visual consistente com Categories.
+
+---
+
+# 17. STATUS ACCESSIBILITY
+
+Não comunicar estado somente por cor.
+
+Usar texto.
+
+---
+
+# 18. UPDATED AT
+
+Exibir conforme padrão de data/hora já utilizado.
+
+pt-BR.
+
+---
+
+# 19. ACTIONS
+
+Para Tag ativa:
+
+Editar
+Desativar
+
+Para Tag inativa:
+
+Editar, se API/política permitir
+Reativar
+
+Seguir contrato real.
+
+---
+
+# 20. NO DELETE
+
+Não apresentar:
+
+Excluir
+
+se backend não possui physical delete.
+
+---
+
+# 21. MOBILE
+
+Em telas pequenas:
+
+não comprimir tabela até ficar ilegível.
+
+Usar padrão mobile já adotado, preferencialmente cards/list items.
+
+---
+
+# 22. MOBILE CARD
+
+Mostrar prioritariamente:
+
+nome;
+status;
+ações.
+
+Data de atualização pode aparecer como informação secundária.
+
+---
+
+# 23. TOOLBAR
+
+Adicionar controle:
+
+Mostrar tags inativas
+
+somente se API suporta `includeInactive`.
+
+---
+
+# 24. DEFAULT
+
+Por padrão:
+
+mostrar somente Tags ativas.
+
+---
+
+# 25. INCLUDE INACTIVE
+
+Ao ativar:
+
+carregar lista incluindo inativas.
+
+Não simular com cache parcial se API já fornece comportamento correto.
+
+---
+
+# 26. SERVER AUTHORITY
+
+Frontend não decide quais Tags pertencem ao usuário.
+
+Backend continua autoridade.
+
+---
+
+# 27. SORTING
+
+Respeitar ordenação da API.
+
+Não criar ordenação conflitante desnecessária.
+
+---
+
+# 28. PAGINATION
+
+Se API da TASK-4.1 não possui paginação:
+
+NÃO inventar paginação client-side.
+
+---
+
+# 29. SEARCH
+
+Não adicionar campo de busca se API não possui busca e não existe
+necessidade aprovada.
+
+---
+
+# 30. EMPTY STATE
+
+Sem Tags ativas:
+
+mostrar estado legítimo.
+
+Sugestão:
+
+"Você ainda não possui tags."
+
+Texto complementar:
+
+"Crie tags para organizar suas movimentações."
+
+CTA:
+
+Criar primeira tag
+
+---
+
+# 31. EMPTY WITH INACTIVE
+
+Se existem somente Tags inativas e filtro padrão mostra ativas:
+
+não dizer necessariamente que usuário nunca criou Tags.
+
+Se for simples identificar pelo contrato/estado:
+
+oferecer:
+
+"Mostrar tags inativas"
+
+Caso contrário, manter mensagem neutra.
+
+---
+
+# 32. LOADING
+
+Mostrar estado de carregamento coerente com restante do sistema.
+
+---
+
+# 33. FALSE EMPTY
+
+Não mostrar empty state enquanto request ainda está carregando.
+
+---
+
+# 34. ERROR
+
+Falha ao carregar:
+
+não representar como lista vazia.
+
+Mostrar:
+
+"Não foi possível carregar as tags."
+
+com ação:
+
+Tentar novamente.
+
+---
+
+# 35. RETRY
+
+Retry deve repetir request sem reload completo da aplicação.
+
+---
+
+# 36. CREATE/EDIT UI
+
+Reutilizar padrão consolidado de:
+
+drawer lateral desktop
+
+e comportamento mobile equivalente.
+
+Se Categories usa drawer:
+
+seguir Categories.
+
+Não inventar modal diferente sem motivo.
+
+---
+
+# 37. CREATE TITLE
+
+Nova tag
+
+---
+
+# 38. EDIT TITLE
+
+Editar tag
+
+---
+
+# 39. FORM FIELDS
+
+Apenas:
+
+Nome
+
+Nada mais.
+
+---
+
+# 40. NÃO MOSTRAR
+
+Não mostrar:
+
+- ID;
+- owner;
+- normalizedName;
+- active;
+- createdAt;
+- updatedAt;
+- cor;
+- ícone;
+- descrição;
+- categoria;
+- transações.
+
+---
+
+# 41. NAME INPUT
+
+Label:
+
+Nome
+
+Placeholder opcional:
+
+Ex.: Viagem
+
+---
+
+# 42. AUTOCOMPLETE
+
+Não necessário.
+
+---
+
+# 43. VALIDATION
+
+Frontend deve refletir regras reais da API.
+
+No mínimo, se contrato assim definiu:
+
+required;
+trim;
+blank inválido;
+max length.
+
+---
+
+# 44. MAX LENGTH
+
+Usar exatamente limite do backend.
+
+Não duplicar magic number espalhado.
+
+Centralizar no model/config apropriado se arquitetura justificar.
+
+---
+
+# 45. WHITESPACE
+
+"   "
+
+não deve ser submit válido.
+
+---
+
+# 46. TRIM
+
+Pode normalizar visualmente antes do envio.
+
+Backend continua autoridade.
+
+---
+
+# 47. NORMALIZED NAME
+
+Frontend nunca envia.
+
+---
+
+# 48. ACTIVE
+
+Frontend não envia em create/update se contrato não aceita.
+
+---
+
+# 49. OWNER
+
+Frontend nunca envia.
+
+---
+
+# 50. CREATE REQUEST
+
+Usar DTO tipado real.
+
+Conceitualmente:
+
+{
+  name: string
+}
+
+---
+
+# 51. CREATE SUCCESS
+
+Após sucesso:
+
+- fechar form;
+- atualizar lista;
+- mostrar feedback discreto de sucesso se padrão existe;
+- nova Tag deve aparecer.
+
+---
+
+# 52. CREATE DUPLICATE
+
+409:
+
+mostrar mensagem amigável próxima ao formulário.
+
+Preferência:
+
+"Já existe uma tag ativa com esse nome."
+
+Se Problem Details já fornece mensagem adequada e segura:
+
+reutilizar mapeamento existente.
+
+---
+
+# 53. CREATE VALIDATION
+
+400:
+
+mostrar validação sem destruir estado digitado.
+
+---
+
+# 54. CREATE 401
+
+Usar fluxo global existente.
+
+Não criar tratamento paralelo.
+
+---
+
+# 55. DOUBLE SUBMIT
+
+Enquanto create estiver em andamento:
+
+desabilitar submit.
+
+Evitar requests duplicadas por duplo clique.
+
+---
+
+# 56. EDIT
+
+Carregar Tag selecionada.
+
+---
+
+# 57. EDIT FIELD
+
+Somente Nome.
+
+---
+
+# 58. EDIT SUCCESS
+
+Atualizar lista sem exigir reload completo.
+
+---
+
+# 59. EDIT DUPLICATE
+
+409:
+
+"Já existe uma tag ativa com esse nome."
+
+---
+
+# 60. EDIT OTHER OWNER
+
+Se estado stale/IDOR resultar 404:
+
+mostrar erro seguro.
+
+Nunca expor owner.
+
+---
+
+# 61. DEACTIVATE
+
+Ação:
+
+Desativar.
+
+---
+
+# 62. CONFIRMATION
+
+Exigir confirmação.
+
+Texto recomendado:
+
+"Desativar esta tag?"
+
+Complemento:
+
+"A tag deixará de ficar disponível para novas associações, mas poderá
+continuar aparecendo no histórico."
+
+Isso prepara semanticamente a futura TASK-4.3.
+
+---
+
+# 63. CONFIRMATION ACTIONS
+
+Cancelar
+Desativar
+
+---
+
+# 64. DEACTIVATE SUCCESS
+
+Atualizar lista.
+
+Se filtro padrão mostra apenas ativas:
+
+Tag desaparece da lista.
+
+Isso é comportamento esperado.
+
+---
+
+# 65. REACTIVATE
+
+Para Tag inativa:
+
+Reativar.
+
+---
+
+# 66. REACTIVATE SUCCESS
+
+Atualizar estado.
+
+---
+
+# 67. REACTIVATION CONFLICT
+
+Cenário:
+
+Tag antiga "Viagem" inativa.
+
+Outra Tag ativa "Viagem".
+
+Usuário tenta reativar antiga.
+
+409.
+
+Mensagem amigável:
+
+"Já existe uma tag ativa com esse nome."
+
+---
+
+# 68. CONFIRM REACTIVATE
+
+Não precisa confirmação adicional se padrão atual de Categories não usa.
+
+Seguir consistência existente.
+
+---
+
+# 69. HTTP 404
+
+Para recurso que desapareceu/stale:
+
+mensagem amigável.
+
+Exemplo:
+
+"Esta tag não está mais disponível."
+
+Depois atualizar lista.
+
+---
+
+# 70. PROBLEM DETAILS
+
+Reutilizar parser/mapeamento existente.
+
+Não implementar parser específico de Tags se já há infraestrutura
+compartilhada.
+
+---
+
+# 71. REQUEST ID
+
+Se UI atual apresenta Request ID em erro técnico:
+
+preservar padrão.
+
+Não inventar nova apresentação.
+
+---
+
+# 72. TAG MODEL
+
+Criar models tipados.
+
+Exemplo conceitual:
+
+interface Tag {
+  id: string;
+  name: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+Adapte ao contrato real.
+
+---
+
+# 73. CREATE DTO
+
+Tipado.
+
+---
+
+# 74. UPDATE DTO
+
+Tipado.
+
+---
+
+# 75. NO ANY
+
+Não usar `any`.
+
+---
+
+# 76. TAG SERVICE
+
+Criar service tipado.
+
+Responsabilidades:
+
+list;
+get;
+create;
+update;
+deactivate;
+activate.
+
+---
+
+# 77. URL
+
+Centralizar conforme padrão API existente.
+
+---
+
+# 78. AUTH HEADER
+
+Não manipular JWT dentro do TagService.
+
+Authorization interceptor já é responsável.
+
+---
+
+# 79. REQUEST ID
+
+Não duplicar lógica.
+
+---
+
+# 80. STATE
+
+Para CRUD simples:
+
+não introduzir NgRx apenas para Tags.
+
+---
+
+# 81. RXJS
+
+Usar estratégia consistente com telas existentes.
+
+---
+
+# 82. REQUEST RACE
+
+Mudança rápida de:
+
+includeInactive
+
+não deve permitir resposta antiga sobrescrever estado mais novo.
+
+Se padrão atual usa switchMap/signals/equivalente:
+
+reutilizar.
+
+---
+
+# 83. DESTROY
+
+Evitar subscriptions vazando.
+
+Usar mecanismo moderno existente:
+
+takeUntilDestroyed
+
+ou equivalente.
+
+---
+
+# 84. REFRESH
+
+Após mutation:
+
+preferir estratégia simples e confiável.
+
+Exemplo:
+
+refetch da lista.
+
+Não criar cache complexo.
+
+---
+
+# 85. SHARED COMPONENTS
+
+Reutilizar componentes existentes:
+
+PageHeader;
+ContentPanel;
+EmptyState;
+status indicator;
+form shell;
+confirmation dialog;
+error presentation.
+
+Somente se já forem adequados.
+
+---
+
+# 86. NÃO CRIAR GENERIC CRUD
+
+PROIBIDO aproveitar esta TASK para criar:
+
+GenericCrudPage
+GenericCrudTable
+GenericEntityForm
+DynamicCrudConfig
+NamedResourceCrud.
+
+---
+
+# 87. MOTIVO
+
+Tags parecem Categories estruturalmente, mas futuras associações e
+semântica são diferentes.
+
+---
+
+# 88. SMALL REUSE
+
+Pode extrair helper/componente pequeno somente se:
+
+- repetição real já existe;
+- API é estável;
+- abstração é simples;
+- não reduz clareza.
+
+---
+
+# 89. ACCESSIBILITY — FORM
+
+Nome deve possuir label programático.
+
+---
+
+# 90. VALIDATION ACCESSIBILITY
+
+Erros devem ser associados ao input.
+
+---
+
+# 91. DRAWER FOCUS
+
+Ao abrir:
+
+foco deve ir para primeiro campo relevante.
+
+---
+
+# 92. CLOSE FOCUS
+
+Ao fechar:
+
+foco retorna ao elemento que abriu quando possível.
+
+---
+
+# 93. KEYBOARD
+
+CRUD completo utilizável por teclado.
+
+---
+
+# 94. ESC
+
+Drawer/dialog segue comportamento do componente consolidado.
+
+Não fechar durante operação crítica se isso gerar estado confuso.
+
+---
+
+# 95. CONFIRM DIALOG
+
+Foco controlado.
+
+---
+
+# 96. BUTTON NAMES
+
+Botões de ícone precisam accessible name.
+
+---
+
+# 97. STATUS
+
+Ativa/Inativa:
+
+não somente cor.
+
+---
+
+# 98. RESPONSIVE
+
+Validar:
+
+360 × 800
+390 × 844
+768 × 1024
+1024 × 768
+1280 × 720
+1366 × 768
+1920 × 1080.
+
+---
+
+# 99. 360px
+
+Validar:
+
+- título;
+- CTA;
+- cards;
+- formulário;
+- botões;
+- confirmação;
+- mensagens.
+
+---
+
+# 100. NO GLOBAL HORIZONTAL SCROLL
+
+Nenhuma largura deve quebrar viewport.
+
+---
+
+# 101. LONG TAG NAME
+
+Testar nome próximo ao limite máximo.
+
+UI deve:
+
+wrap;
+truncate com acesso ao conteúdo;
+ou estratégia consistente.
+
+Não quebrar layout.
+
+---
+
+# 102. UNICODE DISPLAY
+
+Testar:
+
+Viagem São Paulo
+Casa & Família
+Reembolsável
+
+---
+
+# 103. TESTS — SERVICE
+
+Testar:
+
+list;
+includeInactive;
+create;
+update;
+deactivate;
+activate.
+
+---
+
+# 104. TESTS — PAGE
+
+Testar:
+
+loading;
+success;
+empty;
+error;
+retry.
+
+---
+
+# 105. TEST — CREATE
+
+Abrir form
+→ preencher
+→ salvar
+→ Tag aparece.
+
+---
+
+# 106. TEST — CREATE VALIDATION
+
+Blank:
+
+submit bloqueado.
+
+---
+
+# 107. TEST — DUPLICATE
+
+409:
+
+mensagem correta.
+
+---
+
+# 108. TEST — EDIT
+
+Alterar nome:
+
+lista atualiza.
+
+---
+
+# 109. TEST — DEACTIVATE
+
+Confirmar:
+
+Tag some da lista active-only.
+
+---
+
+# 110. TEST — CANCEL DEACTIVATE
+
+Nada muda.
+
+---
+
+# 111. TEST — INCLUDE INACTIVE
+
+Toggle:
+
+request correto;
+Tag inativa aparece.
+
+---
+
+# 112. TEST — REACTIVATE
+
+Tag volta a ativa.
+
+---
+
+# 113. TEST — REACTIVATE CONFLICT
+
+409 tratado.
+
+---
+
+# 114. TEST — 401
+
+Fluxo global de auth continua funcionando.
+
+---
+
+# 115. TEST — 403
+
+Não limpar sessão.
+
+---
+
+# 116. TEST — 404 STALE
+
+Estado recuperável.
+
+---
+
+# 117. TEST — REQUEST RACE
+
+Resposta antiga não sobrescreve filtro atual.
+
+---
+
+# 118. TEST — DOUBLE SUBMIT
+
+Uma operação em voo.
+
+---
+
+# 119. E2E
+
+Se infraestrutura E2E está configurada:
+
+executar fluxo real:
+
+login
+→ Tags
+→ criar "Viagem"
+→ editar para "Viagem 2026"
+→ desativar
+→ mostrar inativas
+→ reativar.
+
+---
+
+# 120. E2E DUPLICATE
+
+Criar:
+
+Trabalho
+
+tentar:
+
+trabalho
+
+esperado:
+
+409 apresentado corretamente.
+
+---
+
+# 121. E2E MULTIUSER
+
+Se suíte suporta dois usuários:
+
+User A cria:
+
+Viagem.
+
+User B:
+
+não vê Tag de A.
+
+User B pode criar:
+
+Viagem.
+
+---
+
+# 122. MOBILE E2E
+
+Executar fluxo principal em:
+
+360 × 800
+
+se infraestrutura permitir.
+
+---
+
+# 123. BACKEND
+
+Não modificar backend sem necessidade.
+
+---
+
+# 124. BACKEND BUG
+
+Se API real impedir implementação correta por bug:
+
+1. reproduzir;
+2. criar teste backend falhando;
+3. corrigir menor escopo possível;
+4. executar regressão;
+5. documentar no relatório.
+
+---
+
+# 125. LEDGER REGRESSION
+
+Tags continuam sem associação com transações nesta TASK.
+
+Mesmo assim:
+
+não deve haver qualquer mudança no ledger.
+
+---
+
+# 126. FINANCIAL REGRESSION
+
+Executar suíte financeira crítica existente.
+
+Especialmente:
+
+Expense;
+Income;
+Transfer;
+currentBalance;
+netWorth;
+Dashboard;
+History.
+
+---
+
+# 127. TRANSFER ONCE
+
+Histórico continua mostrando Transfer uma vez.
+
+---
+
+# 128. DASHBOARD
+
+Sem mudança funcional.
+
+---
+
+# 129. NO FAKE DATA
+
+Não criar Tags falsas para preencher interface.
+
+---
+
+# 130. NO SEED
+
+Não criar Tags default.
+
+---
+
+# 131. NO TRANSACTION TAG SELECTOR
+
+Ainda NÃO adicionar Tags nos formulários de:
+
+Expense;
+Income;
+Transfer.
+
+---
+
+# 132. NO HISTORY TAG
+
+Ainda NÃO mostrar Tags no Histórico.
+
+---
+
+# 133. NO TAG FILTER
+
+Ainda NÃO filtrar histórico por Tag.
+
+---
+
+# 134. NO ATTACHMENT
+
+Não implementar Attachment.
+
+---
+
+# 135. NO COLOR/ICON
+
+Não adicionar customização visual de Tag ainda.
+
+---
+
+# 136. BUILD
+
+Executar:
+
+frontend lint;
+frontend tests;
+frontend production build.
+
+---
+
+# 137. BACKEND REGRESSION
+
+Executar testes backend relevantes se pipeline permitir.
+
+---
+
+# 138. DEFINITION OF DONE
+
+TASK-4.2 estará concluída quando:
+
+- rota privada de Tags existir;
+- sidebar possuir acesso à tela;
+- active navigation funcionar;
+- PageHeader estiver consistente;
+- lista real de Tags funcionar;
+- desktop estiver adequado;
+- mobile estiver adequado;
+- active/inactive estiver visível;
+- includeInactive funcionar;
+- empty state funcionar;
+- loading funcionar;
+- error funcionar;
+- retry funcionar;
+- criação funcionar;
+- edição funcionar;
+- desativação funcionar;
+- reativação funcionar;
+- confirmação de desativação funcionar;
+- conflito 409 estiver amigável;
+- validações estiverem coerentes com backend;
+- DTOs forem tipados;
+- não houver `any` desnecessário;
+- auth continuar centralizada;
+- 401 funcionar;
+- 403 não destruir sessão;
+- Request ID continuar preservado;
+- accessibility estiver adequada;
+- responsividade passar;
+- frontend lint passar;
+- frontend tests passarem;
+- production build passar;
+- regressões financeiras passarem;
+- nenhuma associação Tag ↔ Transaction tiver sido implementada;
+- nenhum Attachment tiver sido implementado.
+
+---
+
+# 139. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-4.2 — INTERFACE DE TAGS
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+## 1. Route
+
+Path:
+
+Lazy:
+PASS / FAIL
+
+Auth:
+PASS / FAIL
+
+## 2. Sidebar
+
+Item:
+PASS / FAIL
+
+Active state:
+PASS / FAIL
+
+## 3. Page
+
+Title:
+
+Subtitle:
+
+CTA:
+
+## 4. Desktop
+
+Table:
+PASS / FAIL
+
+Columns:
+
+## 5. Mobile
+
+Cards/list:
+PASS / FAIL
+
+## 6. Tag List
+
+Real API:
+PASS / FAIL
+
+Active-only:
+PASS / FAIL
+
+Include inactive:
+PASS / FAIL
+
+Ordering:
+PASS / FAIL
+
+## 7. States
+
+Loading:
+PASS / FAIL
+
+Empty:
+PASS / FAIL
+
+Filtered empty:
+PASS / FAIL / N/A
+
+Error:
+PASS / FAIL
+
+Retry:
+PASS / FAIL
+
+## 8. Create
+
+PASS / FAIL
+
+Fields:
+
+Validation:
+
+409:
+PASS / FAIL
+
+Double submit protection:
+PASS / FAIL
+
+## 9. Edit
+
+PASS / FAIL
+
+409:
+PASS / FAIL
+
+## 10. Deactivate
+
+PASS / FAIL
+
+Confirmation:
+PASS / FAIL
+
+## 11. Reactivate
+
+PASS / FAIL
+
+Conflict:
+PASS / FAIL
+
+## 12. API Service
+
+Typed:
+PASS / FAIL
+
+No any:
+PASS / FAIL
+
+Auth interceptor:
+PASS / FAIL
+
+## 13. Problem Details
+
+PASS / FAIL
+
+## 14. 401/403
+
+401:
+PASS / FAIL
+
+403:
+PASS / FAIL
+
+## 15. Accessibility
+
+Keyboard:
+PASS / FAIL
+
+Focus:
+PASS / FAIL
+
+Labels:
+PASS / FAIL
+
+Errors:
+PASS / FAIL
+
+Status semantics:
+PASS / FAIL
+
+## 16. Responsive
+
+360 × 800:
+PASS / FAIL
+
+390 × 844:
+PASS / FAIL
+
+768 × 1024:
+PASS / FAIL
+
+1024 × 768:
+PASS / FAIL
+
+1280 × 720:
+PASS / FAIL
+
+1366 × 768:
+PASS / FAIL
+
+1920 × 1080:
+PASS / FAIL
+
+## 17. Tests
+
+Service:
+PASS / FAIL
+
+Component:
+PASS / FAIL
+
+E2E:
+PASS / FAIL / NÃO CONFIGURADO
+
+Mobile E2E:
+PASS / FAIL / NÃO CONFIGURADO
+
+## 18. Builds
+
+Lint:
+PASS / FAIL
+
+Tests:
+PASS / FAIL
+
+Production build:
+PASS / FAIL
+
+## 19. Financial Regression
+
+Expense:
+PASS / FAIL
+
+Income:
+PASS / FAIL
+
+Transfer:
+PASS / FAIL
+
+Balance:
+PASS / FAIL
+
+Net Worth:
+PASS / FAIL
+
+Dashboard:
+PASS / FAIL
+
+History:
+PASS / FAIL
+
+## 20. Backend Changes
+
+Esperado:
+
+NENHUMA.
+
+Se houver:
+
+explique.
+
+## 21. Files
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 22. Bugs encontrados
+
+Liste:
+
+Severidade:
+Problema:
+Correção:
+Teste:
+
+## 23. Divergências do ADR/API
+
+Esperado:
+
+NENHUMA.
+
+## 24. Fora de escopo confirmado
+
+Tag ↔ Transaction:
+NÃO IMPLEMENTADO
+
+Tags em Expense:
+NÃO IMPLEMENTADO
+
+Tags em Income:
+NÃO IMPLEMENTADO
+
+Tags em Transfer:
+NÃO IMPLEMENTADO
+
+History Tag Filter:
+NÃO IMPLEMENTADO
+
+Attachments:
+NÃO IMPLEMENTADOS
+
+## 25. Próxima Task
+
+Se TASK-4.2 estiver aprovada, declarar prontidão para:
+
+# TASK-4.3 — Associação de Tags às Transações
+
+NÃO implementar TASK-4.3 nesta execução.

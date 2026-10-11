@@ -1,0 +1,1837 @@
+# TASK-2.5 — Casos de Uso e API REST de Categorias
+
+Estamos na:
+
+# Sprint 2 — Contas e Categorias
+
+Já foram concluídas:
+
+- TASK-2.1 — Domínio e persistência de Contas de Ativo
+- TASK-2.2 — Casos de Uso e API REST de Contas de Ativo
+- TASK-2.3 — Interface de Contas de Ativo
+- TASK-2.4 — Modelo de domínio e persistência de Categorias
+
+Agora implemente:
+
+# Casos de Uso e API REST de Categorias
+
+Esta TASK deverá disponibilizar uma API REST segura para gerenciamento das
+categorias financeiras pertencentes ao usuário autenticado.
+
+Operações:
+
+- criar categoria;
+- listar categorias;
+- consultar categoria;
+- atualizar categoria;
+- desativar categoria;
+- reativar categoria;
+- filtrar categorias por aplicabilidade.
+
+NÃO implemente ainda:
+
+- frontend de Categorias;
+- Despesas;
+- Receitas;
+- Transferências;
+- Tags;
+- Relatórios;
+- Dashboard financeiro real;
+- categorias globais;
+- categorias padrão;
+- subcategorias.
+
+A interface será implementada na TASK-2.6.
+
+---
+
+# 1. REGRA FUNDAMENTAL
+
+Antes de escrever código, analise a implementação REAL resultante da
+TASK-2.4.
+
+NÃO suponha que ela foi implementada exatamente conforme o planejamento.
+
+O código atual é a fonte de verdade.
+
+Analise:
+
+- Category;
+- CategoryApplicability;
+- CategoryRepository;
+- normalização;
+- unicidade;
+- active;
+- timestamps;
+- ownership;
+- migration;
+- índices;
+- constraints;
+- testes existentes.
+
+Também analise a implementação REAL da API de AssetAccount criada na
+TASK-2.2.
+
+Ela deverá ser utilizada como principal referência arquitetural.
+
+---
+
+# 2. PREPARAÇÃO OBRIGATÓRIA
+
+Leia:
+
+- CLAUDE.md
+- README.md
+- docs/architecture.md
+- docs/api-guidelines.md
+- docs/security.md
+- ADRs existentes
+
+Analise também:
+
+- CurrentUser;
+- Spring Security;
+- JWT;
+- Problem Details;
+- Request ID;
+- OpenAPI;
+- validação;
+- tratamento de exceptions;
+- padrão de Application Services;
+- controllers;
+- DTOs;
+- mappers;
+- Testcontainers/MySQL;
+- testes de segurança.
+
+---
+
+# 3. RELATÓRIO ANTES DA IMPLEMENTAÇÃO
+
+Antes de modificar arquivos, apresente:
+
+## Estado encontrado
+
+Resuma:
+
+- modelo Category;
+- CategoryApplicability;
+- repository;
+- constraints;
+- normalização;
+- ownership;
+- padrão utilizado pela API AssetAccount.
+
+## Plano
+
+Informe:
+
+- casos de uso;
+- endpoints;
+- DTOs;
+- filtros;
+- validações;
+- tratamento de erros;
+- testes.
+
+Depois implemente.
+
+---
+
+# 4. ARQUITETURA
+
+Siga a arquitetura já estabelecida.
+
+Fluxo conceitual:
+
+Controller
+↓
+Application Service / Use Case
+↓
+Domain
+↓
+Repository
+↓
+MySQL
+
+Controller deve permanecer fino.
+
+Não coloque regras de negócio diretamente nele.
+
+---
+
+# 5. BASE URL
+
+Utilize:
+
+/api/categories
+
+salvo se a convenção REAL da API justificar outra rota.
+
+---
+
+# 6. ENDPOINTS
+
+Implemente conceitualmente:
+
+POST   /api/categories
+
+GET    /api/categories
+
+GET    /api/categories/{id}
+
+PUT    /api/categories/{id}
+
+PATCH  /api/categories/{id}/deactivate
+
+PATCH  /api/categories/{id}/activate
+
+Adapte somente se a API existente possuir convenção diferente.
+
+---
+
+# 7. AUTENTICAÇÃO
+
+TODOS os endpoints são privados.
+
+Sem autenticação:
+
+→ 401 Unauthorized
+
+Nenhuma categoria do usuário deve ser acessível anonimamente.
+
+---
+
+# 8. OWNERSHIP
+
+Toda operação deve utilizar:
+
+CurrentUser
+
+A identidade deverá vir de:
+
+JWT
+↓
+SecurityContext
+↓
+CurrentUser
+↓
+ownerId
+
+---
+
+# 9. REGRA CRÍTICA
+
+O frontend NUNCA escolhe o owner.
+
+Nenhum request DTO deverá possuir:
+
+- ownerId;
+- userId;
+- username;
+- email do proprietário.
+
+---
+
+# 10. CRIAÇÃO
+
+Endpoint:
+
+POST /api/categories
+
+Request conceitual:
+
+{
+  "name": "Alimentação",
+  "applicability": "EXPENSE"
+}
+
+Outro exemplo:
+
+{
+  "name": "Outros",
+  "applicability": "BOTH"
+}
+
+---
+
+# 11. CAMPOS DO POST
+
+Aceitar somente os campos de criação realmente necessários.
+
+Esperado:
+
+- name
+- applicability
+
+Não aceitar como campos controláveis:
+
+- id
+- ownerId
+- active
+- normalizedName
+- createdAt
+- updatedAt
+
+---
+
+# 12. OWNER NA CRIAÇÃO
+
+Obrigatoriamente:
+
+ownerId = CurrentUser.id()
+
+Nunca:
+
+ownerId = request.ownerId
+
+---
+
+# 13. ACTIVE
+
+Nova categoria nasce:
+
+active = true
+
+O cliente não escolhe active no POST.
+
+---
+
+# 14. NAME
+
+Valide conforme domínio da TASK-2.4:
+
+- obrigatório;
+- trim;
+- não vazio;
+- limite definido.
+
+Não replique manualmente toda normalização no Controller.
+
+O domínio deve continuar protegendo a própria consistência.
+
+---
+
+# 15. APPLICABILITY
+
+Aceite somente valores reais definidos em:
+
+CategoryApplicability
+
+Esperados conceitualmente:
+
+EXPENSE
+INCOME
+BOTH
+
+Utilize os valores REALMENTE implementados na TASK-2.4.
+
+---
+
+# 16. ENUM INVÁLIDO
+
+Exemplo:
+
+{
+  "applicability": "WHATEVER"
+}
+
+→ 400 Bad Request
+
+Não converter silenciosamente para BOTH.
+
+---
+
+# 17. APPLICABILITY OBRIGATÓRIA
+
+Null ou ausente:
+
+→ 400
+
+caso o domínio real a tenha definido como obrigatória.
+
+---
+
+# 18. DUPLICIDADE
+
+Mesmo usuário:
+
+Alimentação
+alimentação
+
+ativas simultaneamente:
+
+→ 409 Conflict
+
+---
+
+# 19. APPLICABILITY NÃO MUDA UNICIDADE
+
+Se usuário possui:
+
+Outros / EXPENSE
+
+tentar criar:
+
+Outros / INCOME
+
+→ 409 Conflict
+
+A solução para utilização nos dois contextos deverá ser alterar a
+categoria existente para:
+
+BOTH
+
+---
+
+# 20. USUÁRIOS DIFERENTES
+
+Usuário A:
+
+Alimentação
+
+Usuário B:
+
+Alimentação
+
+→ permitido.
+
+---
+
+# 21. CATEGORIA INATIVA
+
+Preserve a regra da TASK-2.4.
+
+Se houver:
+
+Alimentação / inactive
+
+nova:
+
+Alimentação / active
+
+→ permitido.
+
+---
+
+# 22. RESPONSE DE CRIAÇÃO
+
+Sucesso:
+
+201 Created
+
+Retorne DTO seguro.
+
+Exemplo conceitual:
+
+{
+  "id": "uuid",
+  "name": "Alimentação",
+  "applicability": "EXPENSE",
+  "active": true,
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+
+---
+
+# 23. LOCATION HEADER
+
+Quando consistente com o padrão já utilizado em AssetAccount:
+
+Location: /api/categories/{id}
+
+---
+
+# 24. RESPONSE DTO
+
+Não exponha entidade JPA diretamente.
+
+Crie/reutilize DTO explícito.
+
+---
+
+# 25. OWNER ID NA RESPONSE
+
+Não há necessidade de expor ownerId.
+
+Evite-o salvo necessidade arquitetural comprovada.
+
+---
+
+# 26. NORMALIZED NAME
+
+Não retornar normalizedName.
+
+É detalhe interno.
+
+---
+
+# 27. LISTAGEM
+
+GET /api/categories
+
+deve retornar exclusivamente categorias do usuário autenticado.
+
+---
+
+# 28. DEFAULT
+
+Por padrão:
+
+retorne apenas categorias ativas.
+
+---
+
+# 29. INCLUDE INACTIVE
+
+Suporte:
+
+GET /api/categories?includeInactive=true
+
+Default:
+
+false
+
+Use o mesmo padrão adotado em AssetAccount sempre que possível.
+
+---
+
+# 30. LISTAGEM VAZIA
+
+Nenhuma categoria:
+
+200 OK
+
+[]
+
+Não retornar 404.
+
+---
+
+# 31. ORDENAÇÃO
+
+Utilize ordenação previsível.
+
+Preferência:
+
+name ASC
+
+ou estratégia real já adotada pelo projeto.
+
+---
+
+# 32. PAGINAÇÃO
+
+NÃO implemente paginação nesta versão.
+
+Um usuário doméstico tende a possuir quantidade pequena de categorias.
+
+---
+
+# 33. FILTRO POR APLICABILIDADE
+
+A listagem deverá suportar filtro para os futuros formulários de
+transações.
+
+Preferência:
+
+GET /api/categories?applicability=EXPENSE
+
+GET /api/categories?applicability=INCOME
+
+---
+
+# 34. SEMÂNTICA DO FILTRO EXPENSE
+
+Quando:
+
+applicability=EXPENSE
+
+retorne categorias ativas aplicáveis a despesas:
+
+EXPENSE
++
+BOTH
+
+---
+
+# 35. SEMÂNTICA DO FILTRO INCOME
+
+Quando:
+
+applicability=INCOME
+
+retorne categorias ativas aplicáveis a receitas:
+
+INCOME
++
+BOTH
+
+---
+
+# 36. FILTRO BOTH
+
+Não é necessário utilizar:
+
+applicability=BOTH
+
+como filtro público nesta versão se não houver caso de uso real.
+
+Avalie a API.
+
+Preferência:
+
+o filtro representa o CONTEXTO DE USO, não igualdade literal do enum.
+
+Portanto:
+
+EXPENSE
+→ EXPENSE + BOTH
+
+INCOME
+→ INCOME + BOTH
+
+Documente claramente.
+
+---
+
+# 37. NOMENCLATURA ALTERNATIVA
+
+Se "applicability" como query param tornar a semântica ambígua, você pode
+usar algo mais explícito, por exemplo:
+
+usage=EXPENSE
+usage=INCOME
+
+Porém, priorize consistência e simplicidade.
+
+Não crie dois filtros equivalentes.
+
+---
+
+# 38. INCLUDE INACTIVE + FILTRO
+
+Cuidado com a semântica.
+
+Os futuros formulários de transações precisarão somente de categorias
+ATIVAS.
+
+Para evitar uma API ambígua, defina claramente o comportamento quando:
+
+includeInactive=true
++
+applicability=EXPENSE
+
+Preferência:
+
+retornar categorias EXPENSE/BOTH independentemente de active quando
+includeInactive=true.
+
+Documente e teste.
+
+---
+
+# 39. CONSULTA INDIVIDUAL
+
+GET /api/categories/{id}
+
+Busca obrigatoriamente por:
+
+id + ownerId
+
+---
+
+# 40. CATEGORIA INEXISTENTE
+
+→ 404 Not Found
+
+---
+
+# 41. CATEGORIA DE OUTRO USUÁRIO
+
+Mesmo que o UUID exista:
+
+→ 404 Not Found
+
+Nunca:
+
+403
+
+Externamente não deve ser possível distinguir:
+
+"não existe"
+
+de:
+
+"pertence a outro usuário".
+
+---
+
+# 42. IDOR/BOLA
+
+Esta é regra obrigatória.
+
+Usuário A não pode consultar categoria de B mesmo conhecendo o UUID.
+
+---
+
+# 43. UUID INVÁLIDO
+
+Path malformado:
+
+→ 400 Bad Request
+
+utilizando Problem Details existente.
+
+---
+
+# 44. ATUALIZAÇÃO
+
+PUT /api/categories/{id}
+
+Request conceitual:
+
+{
+  "name": "Supermercado",
+  "applicability": "EXPENSE"
+}
+
+---
+
+# 45. CAMPOS EDITÁVEIS
+
+Permitir:
+
+- name
+- applicability
+
+Não permitir:
+
+- ownerId
+- id
+- active
+- normalizedName
+- createdAt
+- updatedAt
+
+---
+
+# 46. UPDATE OWNERSHIP
+
+Antes de alterar:
+
+buscar por:
+
+id + CurrentUser.id()
+
+Não utilizar findById isolado seguido de autorização frágil.
+
+---
+
+# 47. ALTERAÇÃO DE APPLICABILITY
+
+Permita:
+
+EXPENSE → BOTH
+
+INCOME → BOTH
+
+BOTH → EXPENSE
+
+BOTH → INCOME
+
+etc.
+
+Nesta Sprint ainda não existem transações associadas.
+
+Portanto não há histórico para invalidar.
+
+---
+
+# 48. REGRA FUTURA
+
+Quando existirem transações, alterar applicability poderá tornar a
+categoria incompatível com lançamentos históricos.
+
+Registre pendência arquitetural para a Sprint de Transações.
+
+NÃO resolva isso agora.
+
+---
+
+# 49. CONFLITO DE NOME NO UPDATE
+
+Usuário possui:
+
+Alimentação
+Moradia
+
+Tenta renomear Moradia para:
+
+alimentação
+
+→ 409
+
+---
+
+# 50. SELF RENAME
+
+Atualizar:
+
+Alimentação
+
+para:
+
+ALIMENTAÇÃO
+
+não deve conflitar consigo mesma.
+
+---
+
+# 51. UPDATED AT
+
+PUT bem-sucedido deve atualizar updatedAt conforme infraestrutura existente.
+
+---
+
+# 52. DESATIVAÇÃO
+
+PATCH /api/categories/{id}/deactivate
+
+Regras:
+
+- ownership-aware;
+- registro permanece no banco;
+- active passa para false.
+
+---
+
+# 53. DESATIVAÇÃO IDEMPOTENTE
+
+Desativar categoria já inativa:
+
+preferencialmente não gera erro.
+
+Siga o padrão implementado para AssetAccount.
+
+---
+
+# 54. RESPONSE DA DESATIVAÇÃO
+
+Utilize exatamente o padrão consolidado pela API AssetAccount:
+
+200 com DTO
+
+ou
+
+204
+
+Não crie convenção diferente sem necessidade.
+
+---
+
+# 55. REATIVAÇÃO
+
+PATCH /api/categories/{id}/activate
+
+Reativa categoria pertencente ao usuário.
+
+---
+
+# 56. REATIVAÇÃO IDEMPOTENTE
+
+Ativar categoria já ativa:
+
+não deve falhar desnecessariamente.
+
+Siga AssetAccount.
+
+---
+
+# 57. CONFLITO DE REATIVAÇÃO
+
+Cenário:
+
+1. Alimentação antiga foi desativada.
+2. usuário cria nova Alimentação.
+3. tenta reativar a antiga.
+
+Resultado:
+
+409 Conflict
+
+---
+
+# 58. EXCLUSÃO
+
+NÃO implemente:
+
+DELETE /api/categories/{id}
+
+A política atual é desativação.
+
+---
+
+# 59. DTOS
+
+Separe claramente, seguindo padrão real:
+
+CreateCategoryRequest
+
+UpdateCategoryRequest
+
+CategoryResponse
+
+ou nomenclatura equivalente.
+
+---
+
+# 60. RECORDS
+
+Se o projeto utiliza records para DTOs, mantenha.
+
+Não introduza padrão paralelo.
+
+---
+
+# 61. BEAN VALIDATION
+
+Utilize Jakarta Validation quando apropriado.
+
+Exemplos:
+
+@NotBlank
+@Size
+@NotNull
+
+O domínio continua sendo a última defesa.
+
+---
+
+# 62. MAPPER
+
+Siga o mesmo padrão de AssetAccount.
+
+Não adicione MapStruct se o projeto não o utiliza.
+
+---
+
+# 63. APPLICATION SERVICE
+
+Implemente casos de uso claros:
+
+create
+list
+get
+update
+deactivate
+activate
+
+Não transforme Controller em Service.
+
+---
+
+# 64. TRANSAÇÕES
+
+Operações de escrita:
+
+@Transactional
+
+Leituras:
+
+@Transactional(readOnly = true)
+
+quando coerente com a arquitetura existente.
+
+---
+
+# 65. CONCORRÊNCIA
+
+Validação de duplicidade em aplicação melhora UX, mas não é proteção
+suficiente.
+
+A constraint criada na TASK-2.4 continua sendo a defesa contra corrida.
+
+---
+
+# 66. DATA INTEGRITY VIOLATION
+
+Traduza violações conhecidas de unicidade para:
+
+409 Conflict
+
+Não exponha:
+
+- SQL;
+- nome da constraint;
+- stack trace.
+
+---
+
+# 67. PROBLEM DETAILS
+
+Utilize infraestrutura existente.
+
+Erros devem seguir o padrão já adotado pela aplicação.
+
+Não crie formato especial para Category.
+
+---
+
+# 68. 400
+
+Utilize para:
+
+- body inválido;
+- nome inválido;
+- applicability inválida;
+- UUID inválido;
+- JSON malformado.
+
+---
+
+# 69. 401
+
+Sem autenticação:
+
+→ 401
+
+---
+
+# 70. 403
+
+Não utilize 403 para recursos pertencentes a outro usuário.
+
+---
+
+# 71. 404
+
+Utilize para:
+
+- categoria inexistente;
+- categoria de outro owner.
+
+---
+
+# 72. 409
+
+Utilize para:
+
+- nome duplicado;
+- conflito de reativação.
+
+---
+
+# 73. 500
+
+Erros inesperados:
+
+resposta genérica.
+
+Nunca retornar detalhes internos.
+
+---
+
+# 74. REQUEST ID
+
+Preserve infraestrutura de Request ID.
+
+Problem Details deve continuar permitindo correlação conforme padrão atual.
+
+---
+
+# 75. LOGGING
+
+Não registre:
+
+- JWT;
+- Authorization;
+- payload completo sem necessidade.
+
+Eventos de domínio podem ser registrados de maneira segura e moderada.
+
+---
+
+# 76. OPENAPI
+
+Documente:
+
+POST /api/categories
+GET /api/categories
+GET /api/categories/{id}
+PUT /api/categories/{id}
+PATCH /api/categories/{id}/deactivate
+PATCH /api/categories/{id}/activate
+
+---
+
+# 77. OPENAPI SECURITY
+
+Todos devem indicar Bearer authentication.
+
+---
+
+# 78. OPENAPI ENUM
+
+CategoryApplicability deve aparecer corretamente.
+
+---
+
+# 79. DOCUMENTAR FILTRO
+
+OpenAPI deve explicar explicitamente:
+
+EXPENSE
+→ inclui EXPENSE + BOTH
+
+INCOME
+→ inclui INCOME + BOTH
+
+Isso evitará erro de integração na TASK-2.6 e na Sprint de Transações.
+
+---
+
+# 80. TESTE POST
+
+Usuário autenticado cria:
+
+Alimentação / EXPENSE
+
+Esperado:
+
+201
+
+Confirme:
+
+- owner correto;
+- active true;
+- persistência.
+
+---
+
+# 81. POST SEM JWT
+
+→ 401
+
+---
+
+# 82. OWNER SPOOFING
+
+Tente enviar:
+
+{
+  "name": "Alimentação",
+  "applicability": "EXPENSE",
+  "ownerId": "uuid-de-outro-usuario"
+}
+
+O cliente jamais deve conseguir controlar ownership.
+
+Teste conforme política de propriedades desconhecidas adotada pelo projeto.
+
+---
+
+# 83. LISTAGEM A/B
+
+User A:
+
+Alimentação
+Moradia
+
+User B:
+
+Salário
+
+GET como A:
+
+somente Alimentação e Moradia.
+
+---
+
+# 84. INCLUDE INACTIVE
+
+A:
+
+Alimentação active
+Moradia inactive
+
+Default:
+
+somente Alimentação.
+
+includeInactive=true:
+
+ambas.
+
+---
+
+# 85. FILTRO EXPENSE
+
+Dados:
+
+Alimentação / EXPENSE
+Salário / INCOME
+Outros / BOTH
+
+GET filtro EXPENSE:
+
+Alimentação
+Outros
+
+---
+
+# 86. FILTRO INCOME
+
+Mesmos dados.
+
+GET filtro INCOME:
+
+Salário
+Outros
+
+---
+
+# 87. FILTRO + OWNERSHIP
+
+Inclua categorias de outro usuário nos testes.
+
+Nunca devem aparecer.
+
+---
+
+# 88. GET INDIVIDUAL
+
+Owner correto:
+
+→ 200
+
+---
+
+# 89. IDOR GET
+
+Usuário B tenta consultar categoria de A:
+
+→ 404
+
+---
+
+# 90. PUT
+
+Owner atualiza própria categoria:
+
+→ sucesso.
+
+Teste:
+
+- nome;
+- applicability;
+- updatedAt.
+
+---
+
+# 91. IDOR PUT
+
+B tenta alterar categoria de A:
+
+→ 404
+
+Categoria permanece inalterada.
+
+---
+
+# 92. IDOR DEACTIVATE
+
+B tenta desativar categoria de A:
+
+→ 404
+
+---
+
+# 93. IDOR ACTIVATE
+
+B tenta ativar categoria de A:
+
+→ 404
+
+---
+
+# 94. DUPLICIDADE POST
+
+Mesmo owner:
+
+Alimentação
+alimentação
+
+→ 409
+
+---
+
+# 95. DUPLICIDADE COM APPLICABILITY DIFERENTE
+
+Mesmo owner:
+
+Outros / EXPENSE
+
+tenta:
+
+Outros / INCOME
+
+→ 409
+
+---
+
+# 96. DUPLICIDADE ENTRE OWNERS
+
+A:
+
+Alimentação
+
+B:
+
+Alimentação
+
+→ permitido.
+
+---
+
+# 97. UPDATE CONFLICT
+
+A possui:
+
+Alimentação
+Moradia
+
+Moradia → ALIMENTAÇÃO
+
+→ 409
+
+---
+
+# 98. SELF RENAME
+
+Alimentação → ALIMENTAÇÃO
+
+→ sucesso.
+
+---
+
+# 99. REACTIVATION CONFLICT
+
+Antiga:
+
+Alimentação inactive
+
+Nova:
+
+Alimentação active
+
+reativar antiga:
+
+→ 409
+
+---
+
+# 100. DEACTIVATE
+
+Categoria ativa:
+
+→ desativar.
+
+List default:
+
+não aparece.
+
+includeInactive:
+
+aparece.
+
+---
+
+# 101. ACTIVATE
+
+Categoria inativa sem conflito:
+
+→ ativa novamente.
+
+---
+
+# 102. IDEMPOTÊNCIA
+
+Teste:
+
+deactivate duas vezes;
+activate duas vezes.
+
+Comportamento deve seguir AssetAccount e estar documentado.
+
+---
+
+# 103. NAME VAZIO
+
+""
+
+ou espaços:
+
+→ 400
+
+---
+
+# 104. NAME LONGO
+
+Acima do limite:
+
+→ 400
+
+---
+
+# 105. APPLICABILITY INVÁLIDA
+
+→ 400
+
+---
+
+# 106. JSON MALFORMADO
+
+→ 400 Problem Details
+
+---
+
+# 107. UNICODE
+
+POST:
+
+{
+  "name": "Alimentação",
+  "applicability": "EXPENSE"
+}
+
+GET:
+
+deve preservar corretamente:
+
+Alimentação
+
+---
+
+# 108. TESTCONTAINERS
+
+Utilize MySQL/Testcontainers conforme infraestrutura real.
+
+Não substitua por H2 em testes dependentes de:
+
+- collation;
+- unique constraint;
+- FK;
+- normalização.
+
+---
+
+# 109. SECURITY TESTS
+
+Testes de IDOR/BOLA devem passar pelo Spring Security e camada HTTP quando
+apropriado.
+
+Não testar segurança somente chamando Service diretamente.
+
+---
+
+# 110. MIGRATIONS
+
+A TASK-2.5 idealmente NÃO precisa criar migration.
+
+Se descobrir necessidade de alterar schema da TASK-2.4:
+
+NÃO edite migration já aplicada.
+
+Crie migration corretiva nova e explique no relatório.
+
+---
+
+# 111. REGRESSÃO ASSET ACCOUNT
+
+Execute testes de:
+
+- domínio;
+- repository;
+- API;
+- security;
+- frontend não se aplica ao Maven, mas backend deve permanecer íntegro.
+
+---
+
+# 112. REGRESSÃO AUTENTICAÇÃO
+
+Execute testes relevantes de:
+
+- register;
+- login;
+- JWT;
+- CurrentUser;
+- /me;
+- guards backend/security;
+- Request ID;
+- Problem Details.
+
+---
+
+# 113. FRONTEND
+
+NÃO alterar frontend.
+
+A interface de Categorias será implementada na:
+
+TASK-2.6.
+
+---
+
+# 114. ASSET ACCOUNT FRONTEND
+
+NÃO alterar a tela de Contas.
+
+---
+
+# 115. DASHBOARD
+
+NÃO alterar Dashboard.
+
+---
+
+# 116. DESPESAS E RECEITAS
+
+NÃO criar endpoints de transações nesta TASK.
+
+---
+
+# 117. DOCUMENTAÇÃO
+
+Atualize documentação relevante da API.
+
+Documente especialmente:
+
+- ownership;
+- filtros;
+- semântica EXPENSE/INCOME/BOTH;
+- desativação;
+- reativação;
+- 404 para outro owner.
+
+---
+
+# 118. SECURITY DOCUMENTATION
+
+Confirme padrão:
+
+resourceId + CurrentUser.id()
+
+para recursos privados.
+
+Category deverá seguir exatamente a mesma política de AssetAccount.
+
+---
+
+# 119. CLAUDE.MD
+
+Adicione somente regras permanentes que ainda não existam.
+
+Não duplique regras já consolidadas.
+
+---
+
+# 120. MAVEN TESTS
+
+Execute a suíte completa.
+
+Esperado:
+
+PASS
+
+---
+
+# 121. MAVEN BUILD
+
+Execute build completo.
+
+Esperado:
+
+PASS
+
+---
+
+# 122. DEFINITION OF DONE
+
+TASK-2.5 estará concluída quando:
+
+- POST funcionar;
+- GET collection funcionar;
+- GET by ID funcionar;
+- PUT funcionar;
+- deactivate funcionar;
+- activate funcionar;
+- filtro EXPENSE funcionar;
+- filtro INCOME funcionar;
+- BOTH aparecer nos dois contextos;
+- includeInactive funcionar;
+- endpoints exigirem autenticação;
+- owner vier exclusivamente de CurrentUser;
+- nenhum request aceitar ownerId;
+- listagem estiver isolada por usuário;
+- consulta estiver isolada por usuário;
+- update estiver isolado por usuário;
+- activate/deactivate estiver isolado por usuário;
+- IDOR/BOLA estiver testado;
+- duplicidade retornar 409;
+- applicability diferente não contornar unicidade;
+- reativação conflitante retornar 409;
+- Problem Details estiver consistente;
+- Request ID estiver preservado;
+- OpenAPI estiver atualizado;
+- MySQL/Testcontainers passar;
+- AssetAccount não sofrer regressão;
+- autenticação não sofrer regressão;
+- Maven tests passar;
+- Maven build passar;
+- frontend permanecer inalterado.
+
+---
+
+# 123. RELATÓRIO FINAL
+
+Ao concluir apresente:
+
+# TASK-2.5
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## Endpoints
+
+Apresente tabela:
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+
+---
+
+## DTOs
+
+Liste requests e responses implementados.
+
+---
+
+## CategoryApplicability
+
+Informe valores reais encontrados/implementados.
+
+---
+
+## Filtros
+
+Explique exatamente o comportamento de:
+
+EXPENSE
+
+INCOME
+
+BOTH
+
+includeInactive
+
+e combinações relevantes.
+
+---
+
+## Ownership
+
+Explique como CurrentUser é utilizado.
+
+Confirme:
+
+ownerId NÃO é recebido do cliente.
+
+---
+
+## IDOR/BOLA
+
+### GET de outro usuário
+PASS / FAIL
+
+### PUT de outro usuário
+PASS / FAIL
+
+### Deactivate de outro usuário
+PASS / FAIL
+
+### Activate de outro usuário
+PASS / FAIL
+
+Esperado:
+
+404 em todos.
+
+---
+
+## HTTP Status
+
+Informe utilização de:
+
+200
+201
+400
+401
+404
+409
+500
+
+---
+
+## Duplicidade
+
+### Mesmo owner + mesmo nome
+PASS / FAIL
+
+### Mesmo owner + mesmo nome + applicability diferente
+PASS / FAIL
+
+### Owners diferentes + mesmo nome
+PASS / FAIL
+
+### Reativação conflitante
+PASS / FAIL
+
+---
+
+## Applicability
+
+### EXPENSE
+PASS / FAIL
+
+### INCOME
+PASS / FAIL
+
+### BOTH em despesas
+PASS / FAIL
+
+### BOTH em receitas
+PASS / FAIL
+
+---
+
+## Segurança
+
+### Endpoints privados
+PASS / FAIL
+
+### CurrentUser
+PASS / FAIL
+
+### Owner spoofing
+PASS / FAIL
+
+### Entity exposure
+PASS / FAIL
+
+### JWT regression
+PASS / FAIL
+
+---
+
+## Infraestrutura
+
+### Problem Details
+PASS / FAIL
+
+### Request ID
+PASS / FAIL
+
+### OpenAPI
+PASS / FAIL
+
+### MySQL/Testcontainers
+PASS / FAIL
+
+---
+
+## Testes
+
+Liste comandos executados.
+
+### Unit
+PASS / FAIL
+
+### Integration
+PASS / FAIL
+
+### Security
+PASS / FAIL
+
+### Category repository regression
+PASS / FAIL
+
+### AssetAccount regression
+PASS / FAIL
+
+### Authentication regression
+PASS / FAIL
+
+---
+
+## Build
+
+### Maven tests
+PASS / FAIL
+
+### Maven build
+PASS / FAIL
+
+---
+
+## Migration adicional
+
+Esperado:
+
+NENHUMA
+
+Se criada, informe arquivo e motivo.
+
+---
+
+## Frontend
+
+Esperado:
+
+NÃO ALTERADO
+
+---
+
+## Arquivos
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+---
+
+## Pendências
+
+### Bloqueantes
+
+### Não bloqueantes
+
+Inclua, quando aplicável:
+
+Reavaliar alterações de CategoryApplicability quando existirem transações
+associadas.
+
+---
+
+## Próxima tarefa
+
+Se TASK-2.5 estiver aprovada, informe prontidão para:
+
+# TASK-2.6 — Interface de Categorias
+
+NÃO implemente TASK-2.6 nesta execução.

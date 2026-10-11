@@ -1,0 +1,2500 @@
+# TASK-5.1 — Backend do Relatório Financeiro
+
+Estamos na:
+
+# SPRINT 5 — RELATÓRIOS FINANCEIROS
+
+Concluída:
+
+- TASK-5.0 — Arquitetura e Regras dos Relatórios Financeiros
+
+Agora implemente:
+
+# TASK-5.1 — BACKEND DO RELATÓRIO FINANCEIRO
+
+Objetivo:
+
+Implementar o backend completo do Relatório Financeiro definido no ADR
+da TASK-5.0.
+
+O relatório deve permitir analisar a posição e os fluxos financeiros
+dentro de:
+
+- um período;
+- uma conta;
+- várias contas;
+- todas as contas elegíveis do usuário.
+
+O relatório deve respeitar integralmente:
+
+- ledger existente;
+- ownership;
+- cancellation;
+- transfer semantics;
+- opening balance;
+- closing balance;
+- financial result;
+- balance change;
+- precisão monetária;
+- timezone;
+- isolamento multiusuário.
+
+Esta TASK é BACKEND ONLY.
+
+NÃO implementar ainda a página Angular do relatório.
+
+---
+
+# 1. FONTE DE VERDADE
+
+Antes de modificar código, leia obrigatoriamente:
+
+- CLAUDE.md;
+- ADR produzido na TASK-5.0;
+- ADR do ledger;
+- gate final da Sprint 3;
+- gate final da Sprint 4;
+- FinancialTransaction;
+- AccountMovement;
+- AssetAccount;
+- Category;
+- Tag;
+- Expense;
+- Income;
+- Transfer;
+- cancellation;
+- CurrentBalance query;
+- Dashboard query;
+- History query;
+- repositories;
+- migrations;
+- índices;
+- OpenAPI;
+- Problem Details;
+- Request ID;
+- CurrentUser;
+- Spring Security;
+- Testcontainers;
+- Golden Scenarios existentes.
+
+O ADR da TASK-5.0 é a autoridade principal desta TASK.
+
+Se este prompt divergir do ADR:
+
+SIGA O ADR.
+
+Documente a divergência no relatório final.
+
+---
+
+# 2. PRE-IMPLEMENTATION REPORT
+
+ANTES de modificar arquivos, produza:
+
+# TASK-5.1 — PRE-IMPLEMENTATION REPORT
+
+## 1. ADR 5.0
+
+Resuma as decisões relevantes para o Financial Report.
+
+## 2. Ledger
+
+Explique como os movimentos reais serão usados.
+
+## 3. Endpoint
+
+Informe contrato planejado.
+
+## 4. Filters
+
+Informe:
+
+- from;
+- to;
+- accountIds;
+- demais filtros aprovados no ADR.
+
+## 5. Opening Balance
+
+Explique query/cálculo.
+
+## 6. Income
+
+Explique cálculo.
+
+## 7. Expense
+
+Explique cálculo.
+
+## 8. Transfers
+
+Explique:
+
+- internal;
+- incoming boundary;
+- outgoing boundary.
+
+## 9. Financial Result
+
+Explique fórmula.
+
+## 10. Balance Change
+
+Explique fórmula.
+
+## 11. Closing Balance
+
+Explique fórmula.
+
+## 12. Transaction Details
+
+Explique paginação e representação.
+
+## 13. Ownership
+
+Explique validação.
+
+## 14. Query Strategy
+
+Liste queries planejadas.
+
+## 15. Performance
+
+Explique prevenção de N+1 e agregações.
+
+## 16. Index Review
+
+Liste índices relevantes.
+
+## 17. Tests
+
+Liste estratégia.
+
+## 18. Files
+
+Liste:
+
+- criar;
+- modificar;
+- reutilizar.
+
+Somente depois implemente.
+
+---
+
+# 3. PRINCÍPIO FUNDAMENTAL
+
+Reports são READ MODELS.
+
+NÃO são fonte de verdade financeira.
+
+---
+
+# 4. SOURCE OF TRUTH
+
+Continuar usando o ledger aprovado.
+
+NÃO criar:
+
+- report ledger;
+- report movements;
+- monthly balance table;
+- cached financial total;
+- mutable report balance.
+
+---
+
+# 5. NO FINANCIAL DUPLICATION
+
+Não duplicar regras de Expense/Income/Transfer em lógica incompatível
+com Dashboard/current balance.
+
+---
+
+# 6. ENDPOINT
+
+Implementar conforme ADR 5.0.
+
+Se ADR aprovou endpoint composto, usar exatamente ele.
+
+Conceitualmente pode ser:
+
+GET /api/reports/financial
+
+com parâmetros:
+
+from
+to
+accountIds
+page
+size
+
+Mas NÃO inventar contrato diferente do ADR.
+
+---
+
+# 7. AUTHENTICATION
+
+Endpoint privado.
+
+Sem JWT:
+
+401.
+
+---
+
+# 8. CURRENT USER
+
+Identidade exclusivamente:
+
+JWT
+→ SecurityContext
+→ CurrentUser.
+
+---
+
+# 9. NO OWNER PARAMETER
+
+Request nunca aceita:
+
+ownerId;
+userId;
+email.
+
+---
+
+# 10. PERIOD
+
+Usar exatamente semântica temporal do ADR.
+
+---
+
+# 11. FINANCIAL DATE
+
+Base:
+
+occurredAt.
+
+Nunca:
+
+createdAt.
+
+---
+
+# 12. FROM
+
+Obrigatório se ADR assim definiu.
+
+---
+
+# 13. TO
+
+Obrigatório se ADR assim definiu.
+
+---
+
+# 14. VALIDATION
+
+from < to.
+
+---
+
+# 15. INVALID PERIOD
+
+from == to:
+
+400 se ADR determinou.
+
+from > to:
+
+400.
+
+---
+
+# 16. INTERVAL
+
+Usar exatamente política consolidada.
+
+Se ADR aprovou:
+
+[from, to)
+
+implementar literalmente.
+
+---
+
+# 17. BOUNDARY TEST
+
+Transaction exatamente em:
+
+from
+
+deve entrar.
+
+Transaction exatamente em:
+
+to
+
+não deve entrar
+
+se intervalo for [from,to).
+
+---
+
+# 18. TIMEZONE
+
+Não introduzir conversão paralela.
+
+Reutilizar política existente.
+
+---
+
+# 19. ACCOUNT FILTER
+
+Implementar:
+
+uma;
+várias;
+todas
+
+conforme ADR.
+
+---
+
+# 20. ACCOUNT IDS
+
+Validar todos no escopo do CurrentUser.
+
+---
+
+# 21. FOREIGN ACCOUNT
+
+User A fornece accountId de User B.
+
+Resultado:
+
+política segura do ADR.
+
+Esperado normalmente:
+
+404.
+
+---
+
+# 22. NONEXISTENT ACCOUNT
+
+Mesmo tratamento seguro.
+
+---
+
+# 23. DUPLICATE ACCOUNT IDS
+
+Seguir ADR.
+
+Se ADR decidiu deduplicar:
+
+deduplicar antes do cálculo.
+
+---
+
+# 24. EMPTY ACCOUNT FILTER
+
+Seguir ADR.
+
+Se ausência significa:
+
+todas as contas
+
+implementar isso.
+
+---
+
+# 25. INACTIVE ACCOUNT
+
+Se ADR permite relatórios históricos de contas inativas:
+
+incluir na seleção.
+
+---
+
+# 26. IMPORTANT
+
+Conta inativa continua possuindo:
+
+initialBalance;
+movements;
+history.
+
+---
+
+# 27. ACCOUNT DEACTIVATION
+
+Não altera historicamente:
+
+opening balance;
+closing balance;
+transactions.
+
+---
+
+# 28. OPENING BALANCE
+
+Implementar exatamente fórmula do ADR.
+
+Conceitualmente:
+
+openingBalance =
+sum(initialBalance of selected accounts)
++
+sum(active movements before from affecting selected accounts).
+
+---
+
+# 29. DB AGGREGATION
+
+Não carregar todas transactions anteriores a `from` em Java.
+
+---
+
+# 30. INITIAL BALANCE
+
+initialBalance faz parte da posição inicial da conta.
+
+---
+
+# 31. INITIAL BALANCE IS NOT INCOME
+
+Nunca incluir initialBalance em:
+
+incomeTotal.
+
+---
+
+# 32. ACTIVE ONLY
+
+Movimentos de transactions CANCELLED:
+
+efeito 0.
+
+---
+
+# 33. INCOME TOTAL
+
+Somar ACTIVE INCOME no período e escopo definido pelo ADR.
+
+---
+
+# 34. EXPENSE TOTAL
+
+Somar ACTIVE EXPENSE no período e escopo.
+
+---
+
+# 35. POSITIVE MAGNITUDE
+
+Se amount é armazenado como magnitude positiva:
+
+preservar modelo.
+
+---
+
+# 36. FINANCIAL RESULT
+
+Usar fórmula aprovada.
+
+Esperado conceitualmente:
+
+financialResult =
+incomeTotal - expenseTotal.
+
+---
+
+# 37. TRANSFER
+
+NUNCA classificar Transfer como:
+
+Income;
+Expense.
+
+---
+
+# 38. TRANSFER INTERNAL
+
+Se:
+
+source ∈ selected accounts
+AND
+destination ∈ selected accounts
+
+classificar como:
+
+internal transfer.
+
+---
+
+# 39. INTERNAL EFFECT
+
+No saldo agregado:
+
+0.
+
+---
+
+# 40. INTERNAL TRANSFER TOTAL
+
+Se ADR expõe métrica:
+
+somar magnitude separadamente.
+
+---
+
+# 41. NÃO DOUBLE COUNT
+
+Transfer interna de 300:
+
+internalTransferTotal = 300
+
+NÃO:
+
+600.
+
+---
+
+# 42. TRANSFER OUTGOING BOUNDARY
+
+source ∈ selected
+destination ∉ selected.
+
+Classificar conforme ADR como:
+
+outgoing boundary transfer.
+
+---
+
+# 43. TRANSFER INCOMING BOUNDARY
+
+source ∉ selected
+destination ∈ selected.
+
+Classificar:
+
+incoming boundary transfer.
+
+---
+
+# 44. BOUNDARY TRANSFER IS NOT EXPENSE/INCOME
+
+Mesmo quando altera saldo do conjunto selecionado.
+
+---
+
+# 45. BALANCE CHANGE
+
+Usar fórmula do ADR.
+
+Conceitualmente:
+
+balanceChange =
+incomeTotal
+- expenseTotal
++ incomingBoundaryTransfers
+- outgoingBoundaryTransfers.
+
+---
+
+# 46. INTERNAL TRANSFERS
+
+Contribuição ao balanceChange:
+
+0.
+
+---
+
+# 47. CLOSING BALANCE
+
+Usar equação aprovada.
+
+Conceitualmente:
+
+closingBalance =
+openingBalance + balanceChange.
+
+---
+
+# 48. INVARIANT
+
+Sempre verificar:
+
+closingBalance - openingBalance
+=
+balanceChange.
+
+---
+
+# 49. SECOND INVARIANT
+
+financialResult
+=
+incomeTotal - expenseTotal.
+
+---
+
+# 50. THIRD INVARIANT
+
+Para seleção de todas as contas do usuário:
+
+incomingBoundaryTransfers
+e
+outgoingBoundaryTransfers
+
+devem normalmente ser zero para transferências internas entre contas
+próprias.
+
+---
+
+# 51. TRANSFER OWNERSHIP
+
+Transfer entre usuários continua impossível.
+
+---
+
+# 52. REPORT SUMMARY DTO
+
+Implementar DTO explícito conforme ADR.
+
+Conceitualmente:
+
+{
+  "period": {
+    "from": "...",
+    "to": "..."
+  },
+
+  "accounts": [...],
+
+  "openingBalance": 1800.00,
+  "incomeTotal": 700.00,
+  "expenseTotal": 200.00,
+  "financialResult": 500.00,
+
+  "incomingTransferTotal": 0.00,
+  "outgoingTransferTotal": 0.00,
+  "internalTransferTotal": 350.00,
+
+  "balanceChange": 500.00,
+  "closingBalance": 2300.00
+}
+
+Usar nomes exatos aprovados pelo ADR.
+
+---
+
+# 53. MONEY DTO
+
+Usar BigDecimal no backend.
+
+---
+
+# 54. NO DOUBLE
+
+Nunca usar:
+
+double;
+float
+
+para cálculo monetário.
+
+---
+
+# 55. SCALE
+
+Seguir política existente.
+
+---
+
+# 56. ZERO VALUES
+
+Sem movimentos:
+
+retornar:
+
+0.00
+
+ou representação BigDecimal consistente.
+
+Não null.
+
+---
+
+# 57. ACCOUNT SUMMARY
+
+Se ADR aprovou detalhamento por conta:
+
+implementar.
+
+---
+
+# 58. PER-ACCOUNT BALANCE
+
+Conceitualmente cada conta pode expor:
+
+accountId;
+name;
+openingBalance;
+income;
+expense;
+incomingTransfers;
+outgoingTransfers;
+closingBalance.
+
+---
+
+# 59. INTERNAL TRANSFER PER ACCOUNT
+
+Para conta individual:
+
+A → B
+
+A vê saída.
+
+B vê entrada.
+
+---
+
+# 60. AGGREGATED SELECTED SET
+
+Mas se A+B selecionadas:
+
+transfer é interna e efeito agregado zero.
+
+---
+
+# 61. CRITICAL
+
+Não tentar derivar summary agregado simplesmente somando métricas
+classificadas incorretamente por conta.
+
+A classificação de boundary depende do CONJUNTO selecionado.
+
+---
+
+# 62. DETAILS
+
+Se ADR aprovou transações detalhadas no Financial Report:
+
+implementar read model paginado.
+
+---
+
+# 63. LOGICAL TRANSACTION
+
+Detalhe trabalha com FinancialTransaction lógica.
+
+---
+
+# 64. TRANSFER ONCE
+
+Transfer aparece uma vez.
+
+---
+
+# 65. DETAIL TYPES
+
+EXPENSE;
+INCOME;
+TRANSFER.
+
+---
+
+# 66. DETAIL STATUS
+
+Se relatório financeiro mostra apenas ACTIVE:
+
+seguir ADR.
+
+---
+
+# 67. CANCELLED DETAILS
+
+Se ADR inclui cancelled no detail mas exclui dos totals:
+
+documentar claramente.
+
+Não inventar.
+
+---
+
+# 68. DETAIL FIELDS
+
+Conforme ADR.
+
+Conceitualmente:
+
+id;
+type;
+description;
+occurredAt;
+amount;
+status;
+account/source/destination;
+category;
+tags;
+attachmentCount.
+
+---
+
+# 69. REUSE HISTORY
+
+Avaliar reutilização do History read model.
+
+---
+
+# 70. DO NOT DUPLICATE HISTORY BADLY
+
+Se History já resolve:
+
+- logical transaction;
+- Tags;
+- attachment count;
+- account names;
+- category;
+- pagination;
+
+reutilizar infraestrutura segura quando apropriado.
+
+---
+
+# 71. MAS
+
+Não acoplar relatório a UI-specific History DTO se isso prejudicar
+arquitetura.
+
+---
+
+# 72. SUMMARY INDEPENDENT OF PAGE
+
+CRÍTICO.
+
+Summary considera TODO conjunto filtrado.
+
+---
+
+# 73. PAGE SIZE
+
+Nunca altera totals.
+
+---
+
+# 74. PAGE NUMBER
+
+Nunca altera totals.
+
+---
+
+# 75. DETAILS PAGINATION
+
+Server-side.
+
+---
+
+# 76. ORDER
+
+Seguir ADR.
+
+Preferência:
+
+occurredAt DESC
++ stable tie-breaker.
+
+---
+
+# 77. STABLE ORDER
+
+Duas transactions no mesmo occurredAt:
+
+ordem determinística.
+
+---
+
+# 78. FILTERS
+
+Implementar apenas filtros aprovados no ADR 5.0.
+
+---
+
+# 79. TAG FILTER
+
+Se ADR aprovou:
+
+implementar.
+
+---
+
+# 80. TAG SEMANTICS
+
+Reutilizar:
+
+ANY/ALL
+
+do History.
+
+---
+
+# 81. FOREIGN TAG
+
+Owner-scoped.
+
+---
+
+# 82. INACTIVE TAG
+
+Se histórico permite:
+
+relatório deve seguir ADR.
+
+---
+
+# 83. CATEGORY FILTER
+
+Se aprovado:
+
+owner-scoped.
+
+---
+
+# 84. TYPE FILTER
+
+Se aprovado:
+
+não quebrar summary.
+
+---
+
+# 85. IMPORTANT SUMMARY SEMANTICS
+
+Se type filter existe:
+
+ADR deve dizer se summary também respeita type filter.
+
+Implementar exatamente.
+
+---
+
+# 86. NO AMBIGUITY
+
+Não tomar decisão silenciosa nesta TASK.
+
+---
+
+# 87. READ MODEL
+
+Criar serviço dedicado.
+
+Nome conceitual:
+
+FinancialReportQueryService
+
+ou equivalente.
+
+---
+
+# 88. NO GOD REPOSITORY
+
+Não transformar FinancialTransactionRepository em coleção enorme de
+queries não relacionadas.
+
+---
+
+# 89. QUERY COMPONENTS
+
+Separar pragmaticamente:
+
+- opening balance query;
+- flow summary query;
+- transfer classification query;
+- details query;
+
+se arquitetura real justificar.
+
+---
+
+# 90. NATIVE SQL
+
+Permitido quando melhora clareza/performance.
+
+---
+
+# 91. NATIVE SQL RULE
+
+Toda query:
+
+- owner-scoped;
+- parametrizada;
+- testada no MySQL;
+- sem concatenação insegura.
+
+---
+
+# 92. SQL INJECTION
+
+Nenhum filtro textual concatenado diretamente em SQL.
+
+---
+
+# 93. ACCOUNT IDS SQL
+
+Usar binding apropriado.
+
+---
+
+# 94. PERFORMANCE
+
+Opening balance:
+
+agregação DB.
+
+---
+
+# 95. SUMMARY
+
+Agregação DB.
+
+---
+
+# 96. DETAILS
+
+Paginação DB.
+
+---
+
+# 97. TAGS
+
+Batch/projection.
+
+---
+
+# 98. ATTACHMENT COUNT
+
+Aggregate DB.
+
+---
+
+# 99. NO N+1
+
+Obrigatório.
+
+---
+
+# 100. NO IN-MEMORY PAGINATION
+
+Obrigatório.
+
+---
+
+# 101. NO LOAD-ALL
+
+Não carregar todas FinancialTransactions do período para depois somar
+em Java.
+
+---
+
+# 102. QUERY COUNT
+
+Documentar quantidade estrutural de queries por request.
+
+---
+
+# 103. INDEX REVIEW
+
+Inspecionar índices reais.
+
+---
+
+# 104. REVIEW
+
+Especialmente:
+
+owner;
+occurredAt;
+status;
+type;
+transactionId;
+account movement account;
+source/destination se aplicável.
+
+---
+
+# 105. ADD INDEX ONLY IF JUSTIFIED
+
+Se índice necessário estiver ausente:
+
+criar migration nova.
+
+---
+
+# 106. DO NOT EDIT OLD MIGRATION
+
+Nunca alterar migration já aplicada.
+
+---
+
+# 107. MIGRATION TEST
+
+Se criar índice:
+
+clean DB;
+upgrade DB;
+Testcontainers.
+
+---
+
+# 108. OPENAPI
+
+Documentar endpoint completamente.
+
+---
+
+# 109. OPENAPI PERIOD
+
+Documentar:
+
+from;
+to;
+boundary semantics.
+
+---
+
+# 110. OPENAPI ACCOUNT IDS
+
+Documentar:
+
+ausente;
+single;
+multiple.
+
+---
+
+# 111. OPENAPI TRANSFERS
+
+Documentar diferença entre:
+
+income/expense;
+internal transfer;
+incoming boundary;
+outgoing boundary.
+
+---
+
+# 112. OPENAPI MONEY
+
+Schemas coerentes.
+
+---
+
+# 113. PROBLEM DETAILS
+
+Reutilizar infraestrutura existente.
+
+---
+
+# 114. INVALID FROM/TO
+
+400 Problem Details.
+
+---
+
+# 115. MALFORMED ACCOUNT UUID
+
+400.
+
+---
+
+# 116. FOREIGN ACCOUNT
+
+404 conforme policy.
+
+---
+
+# 117. UNAUTHENTICATED
+
+401.
+
+---
+
+# 118. INTERNAL ERROR
+
+500 sanitizado.
+
+---
+
+# 119. REQUEST ID
+
+Preservar.
+
+---
+
+# 120. NO SQL LEAK
+
+Nunca expor query.
+
+---
+
+# 121. NO OWNER LEAK
+
+Nunca expor ownerId se contrato não exige.
+
+---
+
+# 122. NO STORAGE LEAK
+
+Report DTO nunca expõe:
+
+storageKey;
+filesystem path.
+
+---
+
+# 123. ATTACHMENTS
+
+Se detail possui attachmentCount:
+
+somente count.
+
+Não carregar bytes.
+
+---
+
+# 124. TAGS
+
+Metadata apenas.
+
+---
+
+# 125. SECURITY TEST
+
+User A possui:
+
+Account A1;
+Account A2.
+
+User B possui:
+
+Account B1.
+
+A pede relatório:
+
+A1+A2.
+
+PASS.
+
+---
+
+# 126. CROSS USER ACCOUNT TEST
+
+A pede:
+
+A1+B1.
+
+Esperado:
+
+falha segura.
+
+Nunca gerar relatório parcial ignorando B1 silenciosamente.
+
+---
+
+# 127. IMPORTANT
+
+Não filtrar IDs inválidos e continuar.
+
+Request precisa ser semanticamente validado.
+
+---
+
+# 128. NONEXISTENT ACCOUNT
+
+Mesmo.
+
+---
+
+# 129. EMPTY USER
+
+User sem contas.
+
+Definir comportamento conforme ADR.
+
+Provavelmente:
+
+summary zerado;
+accounts [];
+details vazios.
+
+Se filtro explícito contém UUID inexistente:
+
+404.
+
+---
+
+# 130. INACTIVE ACCOUNT TEST
+
+Criar movimentos;
+desativar conta;
+executar relatório histórico.
+
+Dados permanecem.
+
+---
+
+# 131. CANCELLED TEST
+
+Criar Expense 200.
+
+Cancelar.
+
+Totals:
+
+Expense = 0
+
+se apenas essa Expense.
+
+---
+
+# 132. CANCELLED TRANSFER
+
+Nenhum transfer total/effect.
+
+---
+
+# 133. CANCELLED INCOME
+
+Income total 0.
+
+---
+
+# 134. PERIOD BEFORE TRANSACTION
+
+Transaction fora do período:
+
+não entra em flows.
+
+---
+
+# 135. BUT OPENING BALANCE
+
+Transaction anterior ao `from`:
+
+afeta openingBalance.
+
+---
+
+# 136. TRANSACTION AFTER TO
+
+Não afeta opening nem flows nem closing no período.
+
+---
+
+# 137. FROM BOUNDARY
+
+Testar exatamente.
+
+---
+
+# 138. TO BOUNDARY
+
+Testar exatamente.
+
+---
+
+# 139. GOLDEN SCENARIO OBRIGATÓRIO
+
+Usar cenário definido na TASK-5.0.
+
+Accounts:
+
+A initial = 1000
+B initial = 500
+C initial = 200.
+
+Antes do período:
+
+Income A = 100.
+
+Opening:
+
+A = 1100
+B = 500
+C = 200.
+
+Dentro do período:
+
+Income A:
+700
+
+Expense A:
+200
+
+Transfer A → B:
+300
+
+Transfer C → A:
+50.
+
+---
+
+# 140. ALL ACCOUNTS
+
+Selected:
+
+A+B+C.
+
+Esperado:
+
+Opening:
+1800
+
+Income:
+700
+
+Expense:
+200
+
+Financial Result:
+500
+
+Internal Transfers:
+350
+
+Incoming Boundary:
+0
+
+Outgoing Boundary:
+0
+
+Balance Change:
+500
+
+Closing:
+2300.
+
+---
+
+# 141. A ONLY
+
+Selected:
+
+A.
+
+Esperado:
+
+Opening:
+1100
+
+Income:
+700
+
+Expense:
+200
+
+Internal Transfers:
+0
+
+Incoming Boundary:
+50
+
+Outgoing Boundary:
+300
+
+Financial Result:
+500
+
+Balance Change:
+250
+
+Closing:
+1350.
+
+---
+
+# 142. A+B
+
+Selected:
+
+A+B.
+
+Esperado:
+
+Opening:
+1600
+
+Income:
+700
+
+Expense:
+200
+
+Internal Transfers:
+300
+
+Incoming Boundary:
+50
+
+Outgoing Boundary:
+0
+
+Financial Result:
+500
+
+Balance Change:
+550
+
+Closing:
+2150.
+
+---
+
+# 143. B ONLY
+
+Selected:
+
+B.
+
+Expected:
+
+Opening:
+500
+
+Income:
+0
+
+Expense:
+0
+
+Incoming Boundary:
+300
+
+Outgoing Boundary:
+0
+
+Financial Result:
+0
+
+Balance Change:
+300
+
+Closing:
+800.
+
+---
+
+# 144. C ONLY
+
+Selected:
+
+C.
+
+Expected:
+
+Opening:
+200
+
+Income:
+0
+
+Expense:
+0
+
+Incoming Boundary:
+0
+
+Outgoing Boundary:
+50
+
+Financial Result:
+0
+
+Balance Change:
+-50
+
+Closing:
+150.
+
+---
+
+# 145. ACCOUNT SUM
+
+Final:
+
+A 1350
++
+B 800
++
+C 150
+=
+2300.
+
+---
+
+# 146. INTERNAL TRANSFER DOUBLE COUNT TEST
+
+A→B = 300.
+
+Selected A+B.
+
+internalTransferTotal:
+
+300.
+
+Nunca:
+
+600.
+
+---
+
+# 147. DECIMAL GOLDEN
+
+Adicionar:
+
+Income:
+0.10
+
+Income:
+0.20.
+
+Esperado:
+
+0.30.
+
+---
+
+# 148. CANCELLED NOISE
+
+Adicionar:
+
+Cancelled Expense:
+999999.99
+
+Expected:
+
+nenhum total ativo muda.
+
+---
+
+# 149. TAGS
+
+Se filtro por Tags foi aprovado:
+
+testar no Golden Scenario.
+
+---
+
+# 150. ATTACHMENTS
+
+Adicionar vários Attachments.
+
+Nenhum total muda.
+
+---
+
+# 151. USER B NOISE
+
+User B possui:
+
+Income 1,000,000
+Expense 999,999
+Transfers.
+
+Nenhum número de User A muda.
+
+---
+
+# 152. DASHBOARD CONSISTENCY TEST
+
+Para:
+
+all accounts
++
+mesmo período
+
+comparar:
+
+Report incomeTotal
+com
+Dashboard Entradas.
+
+Devem ser iguais.
+
+---
+
+# 153. EXPENSE CONSISTENCY
+
+Report expenseTotal
+=
+Dashboard Saídas.
+
+---
+
+# 154. RESULT CONSISTENCY
+
+Report financialResult
+=
+Dashboard Saldo.
+
+---
+
+# 155. IMPORTANT NET WORTH DIFFERENCE
+
+Não comparar cegamente:
+
+historical closingBalance
+
+com:
+
+current Dashboard netWorth
+
+se período termina no passado.
+
+---
+
+# 156. CURRENT PERIOD END
+
+Se `to` representa agora e mesmas contas elegíveis:
+
+closing pode ser reconciliado com posição atual conforme semântica do
+ADR.
+
+---
+
+# 157. CURRENT BALANCE CONSISTENCY
+
+Para conta individual e `to` atual:
+
+report closingBalance
+
+deve reconciliar com currentBalance.
+
+---
+
+# 158. PROPERTY/INVARIANT TESTS
+
+Além dos exemplos fixos, adicionar testes de invariantes quando
+pragmático.
+
+---
+
+# 159. INVARIANT A
+
+closing = opening + balanceChange.
+
+---
+
+# 160. INVARIANT B
+
+financialResult = income - expense.
+
+---
+
+# 161. INVARIANT C
+
+all-own-accounts internal transfers não mudam aggregate closing.
+
+---
+
+# 162. INVARIANT D
+
+adding Tag changes no totals.
+
+---
+
+# 163. INVARIANT E
+
+adding Attachment changes no totals.
+
+---
+
+# 164. INVARIANT F
+
+cancelling transaction removes its financial effect exactly once.
+
+---
+
+# 165. TRANSFER CANCELLATION
+
+Nunca inverter duas vezes.
+
+---
+
+# 166. UPDATE REGRESSION
+
+Editar descrição:
+
+totals unchanged.
+
+---
+
+# 167. AMOUNT UPDATE
+
+Se ACTIVE transaction amount é editável conforme ADR:
+
+relatório deve refletir valor final uma vez.
+
+---
+
+# 168. OCCURRED AT UPDATE
+
+Se editável:
+
+transaction muda de período corretamente.
+
+---
+
+# 169. ACCOUNT UPDATE
+
+Se permitido:
+
+report reflete ledger final consistente.
+
+---
+
+# 170. TAG UPDATE
+
+No financial effect.
+
+---
+
+# 171. ATTACHMENT DELETE
+
+No financial effect.
+
+---
+
+# 172. TESTCONTAINERS
+
+Testar queries contra MySQL real.
+
+---
+
+# 173. DO NOT RELY ONLY ON H2
+
+Se projeto não usa H2:
+
+não introduzir.
+
+---
+
+# 174. SQL MODE
+
+Usar ambiente compatível com produção.
+
+---
+
+# 175. PERFORMANCE TEST/REVIEW
+
+Não precisa benchmark sofisticado.
+
+Mas criar dataset suficiente para detectar:
+
+- N+1;
+- load-all;
+- broken pagination.
+
+---
+
+# 176. EXPLAIN
+
+Se útil, analisar EXPLAIN das queries críticas.
+
+Não otimizar sem evidência.
+
+---
+
+# 177. FRONTEND
+
+NÃO implementar página Angular nesta TASK.
+
+---
+
+# 178. ALLOWED FRONTEND CHANGE
+
+Nenhuma esperada.
+
+Se contrato compartilhado gerado exige atualização técnica automática,
+documentar.
+
+---
+
+# 179. NO EXPORT
+
+Não implementar:
+
+PDF;
+CSV;
+XLSX.
+
+---
+
+# 180. NO CATEGORY REPORT
+
+Não implementar TASK-5.3.
+
+---
+
+# 181. NO AUDIT REPORT
+
+Não implementar TASK-5.5.
+
+---
+
+# 182. NO DASHBOARD REDESIGN
+
+Não alterar.
+
+---
+
+# 183. NO HISTORY REDESIGN
+
+Não alterar.
+
+---
+
+# 184. NO REPORT CACHE
+
+Não implementar Redis/cache nesta fase.
+
+---
+
+# 185. NO SCHEDULED AGGREGATION
+
+Não implementar.
+
+---
+
+# 186. NO MATERIALIZED VIEW
+
+Não implementar sem decisão explícita do ADR.
+
+---
+
+# 187. CODE QUALITY
+
+DTOs explícitos.
+
+---
+
+# 188. NO JPA ENTITY EXPOSURE
+
+Nunca retornar entity diretamente.
+
+---
+
+# 189. NO GENERIC REPORT ENGINE
+
+Não criar:
+
+GenericReportService;
+DynamicReportQueryBuilder;
+ReportDefinitionEngine.
+
+---
+
+# 190. REUSE WHERE REAL
+
+Reutilizar:
+
+money;
+ownership;
+period semantics;
+History projections;
+Dashboard queries;
+
+somente quando realmente compatível.
+
+---
+
+# 191. DOCUMENTATION
+
+Atualizar docs com:
+
+endpoint;
+filters;
+formulas;
+transfer semantics;
+period semantics;
+ownership;
+errors;
+performance/query strategy.
+
+---
+
+# 192. DEFINITION OF DONE
+
+TASK-5.1 estará concluída quando:
+
+- ADR 5.0 tiver sido seguido;
+- endpoint financeiro existir;
+- endpoint for privado;
+- CurrentUser definir owner;
+- ownerId não vier do request;
+- período for validado;
+- occurredAt for usado;
+- boundary temporal estiver correto;
+- uma conta funcionar;
+- várias contas funcionarem;
+- todas as contas funcionarem;
+- contas inativas seguirem ADR;
+- foreign account for bloqueada;
+- openingBalance estiver correto;
+- initialBalance não contar como Income;
+- incomeTotal estiver correto;
+- expenseTotal estiver correto;
+- financialResult estiver correto;
+- internal transfer estiver correto;
+- incoming boundary transfer estiver correto;
+- outgoing boundary transfer estiver correto;
+- transfer não for Income/Expense;
+- balanceChange estiver correto;
+- closingBalance estiver correto;
+- internal transfer não for double counted;
+- cancelled tiver efeito zero;
+- BigDecimal for usado;
+- precisão decimal passar;
+- summary não depender da página;
+- details forem paginados se ADR exigir;
+- Transfer aparecer uma vez nos details;
+- Tags/Attachments não alterarem totals;
+- User B não contaminar User A;
+- queries forem owner-scoped;
+- não houver N+1 estrutural;
+- não houver paginação em memória;
+- OpenAPI estiver atualizado;
+- Problem Details estiver consistente;
+- Request ID estiver preservado;
+- Testcontainers/MySQL passar;
+- Golden Scenario passar;
+- Dashboard consistency passar;
+- backend build passar;
+- regressões das Sprints 3/4 passarem.
+
+---
+
+# 193. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-5.1 — BACKEND DO RELATÓRIO FINANCEIRO
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+## 1. ADR
+
+Arquivo:
+
+Conformidade:
+PASS / FAIL
+
+## 2. Endpoint
+
+Method:
+
+Path:
+
+Authentication:
+
+## 3. Filters
+
+From:
+
+To:
+
+Accounts:
+
+Tags:
+
+Categories:
+
+Others:
+
+## 4. Period
+
+Field:
+occurredAt
+
+Semantics:
+
+Timezone:
+
+## 5. Account Selection
+
+Single:
+PASS / FAIL
+
+Multiple:
+PASS / FAIL
+
+All:
+PASS / FAIL
+
+Inactive:
+PASS / FAIL
+
+Foreign:
+PASS / FAIL
+
+## 6. Opening Balance
+
+Formula:
+
+DB aggregation:
+PASS / FAIL
+
+Initial balance handled:
+PASS / FAIL
+
+## 7. Income
+
+Formula:
+
+Result:
+PASS / FAIL
+
+## 8. Expense
+
+Formula:
+
+Result:
+PASS / FAIL
+
+## 9. Financial Result
+
+Formula:
+
+Result:
+PASS / FAIL
+
+## 10. Transfers
+
+Internal:
+PASS / FAIL
+
+Incoming boundary:
+PASS / FAIL
+
+Outgoing boundary:
+PASS / FAIL
+
+Double count:
+YES / NO
+
+Expected:
+NO
+
+## 11. Balance Change
+
+Formula:
+
+Result:
+PASS / FAIL
+
+## 12. Closing Balance
+
+Formula:
+
+Invariant:
+PASS / FAIL
+
+## 13. Details
+
+Implemented:
+YES / NO
+
+Pagination:
+PASS / FAIL / N/A
+
+Transfer once:
+PASS / FAIL / N/A
+
+Stable ordering:
+PASS / FAIL / N/A
+
+## 14. Cancelled
+
+Income:
+PASS / FAIL
+
+Expense:
+PASS / FAIL
+
+Transfer:
+PASS / FAIL
+
+## 15. Precision
+
+BigDecimal:
+PASS / FAIL
+
+0.10 + 0.20:
+resultado
+
+>2 decimals:
+resultado
+
+## 16. Ownership
+
+CurrentUser:
+PASS / FAIL
+
+Cross-user account:
+PASS / FAIL
+
+Cross-user transaction leak:
+YES / NO
+
+Expected:
+NO
+
+## 17. Performance
+
+Opening aggregation:
+PASS / FAIL
+
+Summary aggregation:
+PASS / FAIL
+
+DB pagination:
+PASS / FAIL / N/A
+
+N+1:
+YES / NO
+
+Expected:
+NO
+
+Load-all:
+YES / NO
+
+Expected:
+NO
+
+## 18. Queries
+
+Liste as queries/read models principais.
+
+## 19. Index Review
+
+Existing indexes used:
+
+New migration:
+YES / NO
+
+Se YES:
+
+arquivo:
+motivo:
+
+## 20. OpenAPI
+
+PASS / FAIL
+
+## 21. Problem Details
+
+400:
+PASS / FAIL
+
+401:
+PASS / FAIL
+
+404:
+PASS / FAIL
+
+500 sanitized:
+PASS / FAIL
+
+## 22. Request ID
+
+PASS / FAIL
+
+## 23. Golden Scenario
+
+### All Accounts
+
+Opening:
+resultado
+
+Income:
+resultado
+
+Expense:
+resultado
+
+Financial Result:
+resultado
+
+Internal Transfer:
+resultado
+
+Incoming Boundary:
+resultado
+
+Outgoing Boundary:
+resultado
+
+Balance Change:
+resultado
+
+Closing:
+resultado
+
+PASS / FAIL
+
+### A Only
+
+Opening:
+resultado
+
+Income:
+resultado
+
+Expense:
+resultado
+
+Incoming:
+resultado
+
+Outgoing:
+resultado
+
+Balance Change:
+resultado
+
+Closing:
+resultado
+
+PASS / FAIL
+
+### A+B
+
+Opening:
+resultado
+
+Internal:
+resultado
+
+Incoming:
+resultado
+
+Outgoing:
+resultado
+
+Closing:
+resultado
+
+PASS / FAIL
+
+## 24. Dashboard Reconciliation
+
+Income:
+PASS / FAIL
+
+Expense:
+PASS / FAIL
+
+Financial Result:
+PASS / FAIL
+
+## 25. Sprint 4 Regression
+
+Tags:
+PASS / FAIL
+
+Attachments:
+PASS / FAIL
+
+History:
+PASS / FAIL
+
+Security:
+PASS / FAIL
+
+## 26. Tests
+
+Unit:
+PASS / FAIL
+
+Integration:
+PASS / FAIL
+
+Security:
+PASS / FAIL
+
+MySQL/Testcontainers:
+PASS / FAIL
+
+Golden:
+PASS / FAIL
+
+## 27. Build
+
+Backend:
+PASS / FAIL
+
+Frontend regression:
+PASS / FAIL
+
+## 28. Files
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 29. Bugs encontrados
+
+Para cada:
+
+Severity:
+Problem:
+Root cause:
+Fix:
+Regression test:
+
+## 30. Divergências do ADR
+
+Esperado:
+
+NENHUMA.
+
+## 31. Technical Debt
+
+Somente dívida real.
+
+## 32. Fora de escopo confirmado
+
+Angular Financial Report:
+NÃO IMPLEMENTADO
+
+Category Report:
+NÃO IMPLEMENTADO
+
+Audit Report:
+NÃO IMPLEMENTADO
+
+PDF:
+NÃO IMPLEMENTADO
+
+CSV:
+NÃO IMPLEMENTADO
+
+XLSX:
+NÃO IMPLEMENTADO
+
+## 33. Próxima Task
+
+Se TASK-5.1 estiver concluída:
+
+READY FOR:
+
+# TASK-5.2 — Interface do Relatório Financeiro
+
+NÃO implementar TASK-5.2 nesta execução.

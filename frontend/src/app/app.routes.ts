@@ -56,6 +56,11 @@ export const routes: Routes = [
           import('./features/asset-accounts/pages/asset-accounts.page').then((m) => m.AssetAccountsPageComponent),
       },
       {
+        path: 'credit-cards',
+        loadComponent: () =>
+          import('./features/credit-cards/pages/credit-cards.page').then((m) => m.CreditCardsPageComponent),
+      },
+      {
         path: 'categories',
         loadComponent: () =>
           import('./features/categories/pages/categories.page').then((m) => m.CategoriesPageComponent),

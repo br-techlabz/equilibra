@@ -1,0 +1,822 @@
+# TASK-5.5 — Backend do Relatório de Auditoria
+
+PROJETO: Equilibra
+SPRINT: 5 — Relatórios Financeiros
+STACK: Spring Boot 4, MySQL, Angular 19
+
+CONTEXTO
+TASK-5.0 — Arquitetura dos relatórios concluída.
+TASK-5.1 — Backend do Relatório Financeiro concluído.
+TASK-5.2 — Interface do Relatório Financeiro: verificar estado real.
+TASK-5.3 — Backend do Relatório por Categoria concluído.
+TASK-5.4 — Interface do Relatório por Categoria concluída.
+Sprints anteriores aprovadas.
+
+OBJETIVO
+
+Implementar exclusivamente o BACKEND do Relatório de Auditoria,
+com consultas seguras e paginadas das transações financeiras lógicas
+do usuário autenticado.
+
+O relatório deverá suportar os filtros aprovados no ADR 5.0,
+especialmente:
+
+- período;
+- uma, várias ou todas as contas;
+- tipo de transação;
+- status;
+- categorias e tags, se previstos no ADR/API;
+- ordenação determinística;
+- paginação no banco.
+
+A auditoria deve incluir transações canceladas conforme política
+definida no ADR.
+
+NÃO implementar a interface Angular nesta task.
+
+==================================================
+1. INSPEÇÃO OBRIGATÓRIA
+==================================================
+
+Antes de modificar código, ler:
+
+- CLAUDE.md;
+- ADR produzido na TASK-5.0;
+- ADR do ledger da Sprint 3;
+- relatório de aprovação da Sprint 4;
+- implementação real da TASK-5.1;
+- implementação real da TASK-5.3;
+- FinancialTransaction;
+- AccountMovement;
+- AssetAccount;
+- Category;
+- Tag;
+- TransactionAttachment;
+- Expense, Income e Transfer;
+- History Query Service;
+- History DTO;
+- controllers e services existentes;
+- CurrentUser;
+- Spring Security;
+- OpenAPI;
+- migrations e índices;
+- testes de ownership e Testcontainers.
+
+O ADR 5.0 e o código real são a fonte de verdade.
+
+Se houver divergência com este prompt, seguir o ADR e documentar.
+
+==================================================
+2. PRE-IMPLEMENTATION REPORT
+==================================================
+
+Antes de editar arquivos, produzir:
+
+# TASK-5.5 — PRE-IMPLEMENTATION REPORT
+
+1. Definição de auditoria aprovada no ADR.
+2. Modelo real das transações.
+3. Campos existentes para rastreabilidade.
+4. Campos inexistentes que não podem ser inventados.
+5. Endpoint planejado.
+6. Filtros suportados.
+7. Política de transações canceladas.
+8. Semântica de contas e transferências.
+9. Paginação e ordenação.
+10. Reutilização possível do History.
+11. Estratégia de consulta.
+12. Ownership e segurança.
+13. Performance e índices.
+14. Plano de testes.
+15. Arquivos previstos.
+
+Somente depois implementar.
+
+==================================================
+3. SEMÂNTICA DE AUDITORIA
+==================================================
+
+Este relatório representa transações financeiras lógicas.
+
+Tipos:
+
+EXPENSE
+INCOME
+TRANSFER
+
+Cada FinancialTransaction deve aparecer uma única vez.
+
+Não exibir uma transferência como duas transações independentes.
+
+O relatório deve ser adequado à conferência, rastreabilidade e
+investigação de lançamentos.
+
+IMPORTANTE:
+
+Não afirmar que o relatório apresenta todas as versões anteriores
+de uma transação caso o sistema não possua trilha imutável de eventos.
+
+Não criar event sourcing, histórico de revisões ou tabelas de
+auditoria imutáveis sem aprovação específica do ADR.
+
+==================================================
+4. ENDPOINT
+==================================================
+
+Implementar conforme ADR.
+
+Sugestão conceitual, somente se compatível:
+
+GET /api/reports/audit
+
+Request possível:
+
+from
+to
+accountIds
+type
+status
+categoryIds
+tagIds
+page
+size
+sort
+
+Utilizar nomes e formatos reais definidos no ADR.
+
+Não criar endpoint paralelo se o contrato já estiver definido.
+
+==================================================
+5. AUTENTICAÇÃO
+==================================================
+
+Endpoint privado.
+
+Sem autenticação:
+401.
+
+Identidade exclusivamente:
+
+JWT -> SecurityContext -> CurrentUser.
+
+Nunca aceitar ownerId no request.
+
+==================================================
+6. ISOLAMENTO MULTIUSUÁRIO
+==================================================
+
+Todas as consultas devem ser owner-scoped no banco.
+
+Nunca:
+
+buscar todas as transações
+-> filtrar usuário em memória.
+
+Validar todos os accountIds, categoryIds e tagIds explícitos
+antes da consulta, quando esses filtros forem suportados.
+
+UUID estrangeiro ou inexistente deve receber tratamento seguro,
+coerente com o ADR, normalmente 404.
+
+Não ignorar silenciosamente UUIDs inválidos.
+
+==================================================
+7. FILTRO DE PERÍODO
+==================================================
+
+Usar occurredAt conforme ADR.
+
+Não utilizar createdAt para definir o período financeiro,
+a menos que o ADR tenha previsto filtro distinto e explícito.
+
+Respeitar timezone e intervalo definidos na TASK-5.0.
+
+Se [from,to):
+
+from incluído;
+to excluído.
+
+Testar os limites exatos.
+
+Não criar uma segunda interpretação de datas.
+
+==================================================
+8. FILTRO DE CONTAS
+==================================================
+
+Suportar:
+
+- uma conta;
+- várias contas;
+- todas as contas.
+
+Ausência de accountIds deve seguir a política do ADR.
+
+Permitir contas inativas históricas quando previsto.
+
+Para Expense e Income, filtrar pela conta associada.
+
+Para Transfer:
+
+sourceAccount IN selected
+OR
+destinationAccount IN selected.
+
+Mesmo quando as duas contas estiverem selecionadas,
+a transferência aparece UMA vez.
+
+Não duplicar resultados por joins.
+
+==================================================
+9. FILTRO DE TIPO
+==================================================
+
+Suportar os tipos previstos:
+
+ALL
+EXPENSE
+INCOME
+TRANSFER.
+
+Validar enums de entrada.
+
+Valor desconhecido:
+400 Problem Details.
+
+==================================================
+10. FILTRO DE STATUS
+==================================================
+
+Suportar estados reais do modelo.
+
+Se ADR aprovou:
+
+ALL
+ACTIVE
+CANCELLED
+
+implementar.
+
+Recomendação de auditoria:
+
+status ausente = ALL.
+
+Entretanto, seguir exatamente a decisão aprovada no ADR.
+
+Não aplicar silenciosamente o filtro ACTIVE do relatório financeiro
+à auditoria.
+
+==================================================
+11. TRANSAÇÕES CANCELADAS
+==================================================
+
+Transações CANCELLED devem permanecer consultáveis
+conforme política do ADR.
+
+Exibir seu status real.
+
+Não excluí-las apenas porque não afetam mais o saldo.
+
+Não alterar o ledger.
+
+Não reativar movimentos.
+
+Não modificar saldos.
+
+Se houver cancelamento com timestamp, motivo ou responsável
+realmente persistidos, expor somente conforme contrato aprovado.
+
+Não inventar cancelledAt ou cancelledBy.
+
+==================================================
+12. CAMPOS DO RELATÓRIO
+==================================================
+
+Construir DTO explícito e tipado.
+
+Campos conceituais:
+
+transactionId;
+type;
+status;
+description;
+occurredAt;
+createdAt;
+updatedAt;
+amount;
+account;
+sourceAccount;
+destinationAccount;
+category;
+notes;
+tags;
+attachmentCount.
+
+Utilizar apenas campos existentes e previstos no ADR.
+
+Para contas/categorias, retornar IDs e nomes apropriados.
+
+Não expor entidades JPA diretamente.
+
+==================================================
+13. TRANSFERÊNCIAS
+==================================================
+
+Representar origem e destino claramente.
+
+Não converter Transfer em Expense ou Income.
+
+Não aplicar sinal monetário incorreto ao amount.
+
+O valor da transferência deve seguir a convenção
+do domínio existente.
+
+==================================================
+14. CATEGORIAS
+==================================================
+
+Se o relatório expõe categoria:
+
+- respeitar associação real;
+- preservar categorias inativas históricas;
+- não atribuir categoria artificial a transferências;
+- seguir política de nomes atuais versus snapshots.
+
+Se houver filtro por categoria:
+
+validar ownership.
+
+==================================================
+15. TAGS
+==================================================
+
+Se o ADR prevê tags:
+
+expor metadata segura:
+
+id;
+name;
+active.
+
+Se o ADR prevê filtro por múltiplas tags:
+
+reutilizar semântica ANY/ALL já aprovada no History.
+
+Uma transação com várias tags não pode aparecer duplicada.
+
+Evitar N+1.
+
+==================================================
+16. ANEXOS
+==================================================
+
+Expor somente dados seguros previstos no contrato,
+preferencialmente:
+
+attachmentCount.
+
+Nunca expor:
+
+storageKey;
+filesystem path;
+conteúdo binário;
+token;
+caminho interno do servidor.
+
+Não carregar bytes de anexos durante consultas de auditoria.
+
+==================================================
+17. PAGINAÇÃO
+==================================================
+
+Paginação obrigatoriamente server-side.
+
+Parâmetros conforme convenção do projeto:
+
+page;
+size.
+
+Definir limite máximo de size conforme padrão existente.
+
+Não buscar todas as transações e paginar em Java.
+
+Retornar totalElements e totalPages, se o contrato usar Page.
+
+A contagem deve representar transações lógicas,
+não movimentos de conta.
+
+==================================================
+18. ORDENAÇÃO
+==================================================
+
+Ordem padrão conforme ADR.
+
+Preferência:
+
+occurredAt DESC
++
+id DESC como desempate estável.
+
+Se o domínio tiver outra chave de ordenação aprovada,
+utilizá-la.
+
+Não permitir SQL dinâmico inseguro por parâmetro sort.
+
+Se ordenação customizada existir, usar allowlist
+de campos permitidos.
+
+==================================================
+19. REUTILIZAÇÃO DO HISTORY
+==================================================
+
+Avaliar reutilização da infraestrutura do Histórico Unificado.
+
+Priorizar:
+
+- queries;
+- projections;
+- DTO mappers;
+- batch loading de tags;
+- attachment count;
+- account/category names;
+- paginação lógica.
+
+Entretanto, não alterar o comportamento existente do History
+para satisfazer auditoria.
+
+Se History usa ACTIVE por padrão e Audit usa ALL,
+a diferença precisa ser explícita.
+
+Evitar duplicar SQL complexo sem necessidade.
+
+==================================================
+20. QUERY STRATEGY
+==================================================
+
+Consultas:
+
+- parametrizadas;
+- owner-scoped;
+- paginadas no MySQL;
+- sem N+1;
+- sem multiplicação por joins.
+
+Se joins com tags ou anexos multiplicarem linhas,
+usar EXISTS, subqueries ou agregação apropriada.
+
+Paginar primeiro por transações lógicas,
+depois enriquecer metadata em lote, quando adequado.
+
+A contagem deve ser correta com múltiplos filtros.
+
+==================================================
+21. PERFORMANCE
+==================================================
+
+Revisar índices reais:
+
+owner_id;
+occurred_at;
+type;
+status;
+account_id;
+category_id;
+transaction_id;
+transaction_tags;
+attachments.
+
+Criar migration somente se necessária e justificada.
+
+Não modificar migrations já aplicadas.
+
+Não introduzir cache ou infraestrutura adicional.
+
+==================================================
+22. CONSISTÊNCIA COM HISTORY
+==================================================
+
+Para filtros equivalentes:
+
+Audit e History devem retornar o mesmo conjunto de
+transações lógicas, exceto diferenças intencionais e
+documentadas, como status padrão.
+
+Os valores, contas, categorias e timestamps devem concordar.
+
+Transferência deve aparecer uma vez em ambos.
+
+==================================================
+23. CONSISTÊNCIA FINANCEIRA
+==================================================
+
+O Relatório de Auditoria é somente leitura.
+
+Executar consulta não pode alterar:
+
+- currentBalance;
+- Dashboard;
+- relatórios financeiros;
+- relatórios por categoria;
+- movimentos do ledger;
+- status de transações.
+
+Transações canceladas podem aparecer na auditoria,
+mas continuam com efeito financeiro zero.
+
+==================================================
+24. GOLDEN SCENARIO
+==================================================
+
+Criar User A com:
+
+Account A initial=1000
+Account B initial=500
+
+Dentro do período:
+
+Income A=700
+Expense A=200
+Transfer A->B=300
+
+Adicionar:
+
+Expense A=999, posteriormente cancelada.
+
+Esperado para ALL status:
+
+4 transações lógicas.
+
+Esperado para ACTIVE:
+
+3 transações lógicas.
+
+Esperado para CANCELLED:
+
+1 transação lógica.
+
+Transfer A->B:
+
+1 linha.
+
+Filtro apenas Account A:
+
+as quatro transações correspondem.
+
+Filtro apenas Account B:
+
+somente a transferência corresponde.
+
+Filtro Account A+B:
+
+4 transações, sem duplicação da transferência.
+
+==================================================
+25. TAGS E ATTACHMENTS GOLDEN
+==================================================
+
+Associar duas tags a uma Expense.
+
+Associar dois anexos à mesma Expense.
+
+Auditoria deve mostrar:
+
+Expense uma vez;
+tags corretas;
+attachmentCount=2.
+
+Nenhum total financeiro muda.
+
+==================================================
+26. MULTIUSER GOLDEN
+==================================================
+
+Criar User B com transações semelhantes.
+
+User A não pode ver:
+
+- transações de B;
+- tags privadas de B;
+- anexos privados de B;
+- contas privadas de B;
+- categorias privadas de B.
+
+Filtro explícito com UUID privado de B:
+falha segura.
+
+==================================================
+27. TESTES OBRIGATÓRIOS
+==================================================
+
+Implementar testes de:
+
+- autenticação;
+- ownership;
+- usuário sem transações;
+- período;
+- limites from/to;
+- timezone;
+- filtro de conta única;
+- múltiplas contas;
+- todas as contas;
+- contas inativas;
+- transferência origem;
+- transferência destino;
+- transferência com ambas selecionadas;
+- transferência sem duplicação;
+- EXPENSE;
+- INCOME;
+- TRANSFER;
+- ACTIVE;
+- CANCELLED;
+- ALL;
+- status default;
+- category filter se suportado;
+- tag filter se suportado;
+- múltiplas tags;
+- attachment count;
+- paginação;
+- ordenação estável;
+- totalElements correto;
+- ausência de N+1;
+- UUID inexistente;
+- UUID estrangeiro;
+- Problem Details;
+- Request ID;
+- consistência com History;
+- regressão financeira;
+- Testcontainers/MySQL.
+
+==================================================
+28. TESTES DE PAGINAÇÃO
+==================================================
+
+Criar múltiplas transações com mesmo occurredAt.
+
+Verificar:
+
+- nenhuma duplicação;
+- nenhuma perda entre páginas;
+- desempate estável;
+- totalElements correto.
+
+Criar Transfer com source e destination selecionadas.
+
+Verificar que continua sendo uma transação.
+
+==================================================
+29. TESTES DE SEGURANÇA
+==================================================
+
+Testar:
+
+Sem JWT -> 401.
+
+User A consulta transação de B:
+não aparece.
+
+User A envia accountId de B:
+falha segura.
+
+User A envia categoryId de B:
+falha segura, se filtro suportado.
+
+User A envia tagId de B:
+falha segura, se filtro suportado.
+
+Nenhum campo privado interno exposto.
+
+==================================================
+30. OPENAPI
+==================================================
+
+Documentar:
+
+endpoint;
+parâmetros;
+defaults;
+semântica de período;
+semântica de contas;
+status;
+tipo;
+paginação;
+ordenação;
+DTO;
+respostas 400/401/404;
+exemplos.
+
+Manter consistência com documentação real do projeto.
+
+==================================================
+31. PROBLEM DETAILS
+==================================================
+
+Reutilizar handler existente.
+
+400:
+parâmetro inválido.
+
+401:
+não autenticado.
+
+404:
+recurso privado inexistente/estrangeiro conforme política.
+
+500:
+erro sanitizado.
+
+Preservar Request ID.
+
+==================================================
+32. RESTRIÇÕES
+==================================================
+
+Não implementar:
+
+- Angular Audit Report;
+- exportação PDF;
+- exportação CSV;
+- XLSX;
+- event sourcing;
+- trilha imutável de alterações;
+- histórico de versões;
+- sistema de logs de auditoria de segurança;
+- novos estados financeiros;
+- alterações no ledger;
+- cache;
+- agendamentos;
+- compartilhamento de relatórios;
+- contas de despesas.
+
+Não transformar esta task em uma reescrita do History.
+
+==================================================
+33. DEFINITION OF DONE
+==================================================
+
+A TASK-5.5 estará concluída quando:
+
+- endpoint privado estiver funcional;
+- filtros do ADR estiverem implementados;
+- status ACTIVE/CANCELLED/ALL funcionar;
+- período usar occurredAt;
+- contas únicas/múltiplas/todas funcionarem;
+- contas inativas históricas forem respeitadas;
+- Transfer aparecer uma vez;
+- filtros combinados funcionarem;
+- paginação ocorrer no banco;
+- ordenação for estável;
+- totalElements estiver correto;
+- tags não duplicarem linhas;
+- anexos não provocarem N+1;
+- ownership estiver garantido;
+- User B não contaminar User A;
+- canceladas permanecerem consultáveis;
+- nenhum saldo for alterado;
+- DTOs forem seguros;
+- OpenAPI estiver atualizado;
+- Testcontainers/MySQL passar;
+- Golden Scenario passar;
+- testes de segurança passarem;
+- backend build passar;
+- regressões essenciais passarem.
+
+==================================================
+34. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-5.5 — BACKEND DO RELATÓRIO DE AUDITORIA
+
+Status:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+1. ADR e decisões utilizadas.
+2. Endpoint real.
+3. Parâmetros e defaults.
+4. DTO e campos expostos.
+5. Política de ACTIVE/CANCELLED/ALL.
+6. Semântica de período.
+7. Semântica de contas e transferências.
+8. Paginação e ordenação.
+9. Reutilização do History.
+10. Tags e attachmentCount.
+11. Segurança e ownership.
+12. Queries e índices.
+13. Golden Scenario.
+14. Testes executados e resultados reais.
+15. Testcontainers/MySQL.
+16. Consistência com History.
+17. Regressões financeiras.
+18. OpenAPI e Problem Details.
+19. Arquivos criados/modificados.
+20. Bugs encontrados/corrigidos.
+21. Divergências do ADR.
+22. Dívidas técnicas reais.
+23. Fora do escopo confirmado.
+
+Se concluída:
+
+READY FOR TASK-5.6 — Interface do Relatório de Auditoria.
+
+NÃO implementar TASK-5.6 nesta execução.

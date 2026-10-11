@@ -1,0 +1,2012 @@
+# TASK-3.6 — Casos de Uso e API REST de Transferências
+
+Estamos na:
+
+# Sprint 3 — Transações Financeiras
+
+Concluídas:
+
+- TASK-3.0 — Arquitetura do Ledger e Regras Financeiras
+- TASK-3.1 — Domínio e Persistência de Transações Financeiras
+- TASK-3.2 — Casos de Uso e API REST de Despesas
+- TASK-3.3 — Interface de Despesas
+- TASK-3.4 — Casos de Uso e API REST de Receitas
+- TASK-3.5 — Interface de Receitas
+
+Agora implemente:
+
+# TASK-3.6 — Casos de Uso e API REST de Transferências
+
+Esta TASK deverá implementar a API completa de transferências entre
+AssetAccounts do mesmo usuário.
+
+O usuário autenticado deverá conseguir:
+
+- criar uma transferência;
+- listar transferências;
+- consultar uma transferência;
+- editar uma transferência;
+- cancelar uma transferência.
+
+Uma transferência representa UMA operação financeira que:
+
+- debita uma conta de origem;
+- credita uma conta de destino;
+- deve ocorrer atomicamente;
+- não é Receita;
+- não é Despesa;
+- não altera o patrimônio líquido total do usuário.
+
+NÃO implementar nesta TASK:
+
+- frontend de Transferências;
+- Dashboard financeiro real;
+- Tags;
+- Attachments;
+- upload;
+- relatórios;
+- saldo persistido;
+- DELETE físico;
+- API genérica de Transactions;
+- full double-entry bookkeeping;
+- abstrações genéricas prematuras.
+
+---
+
+# 1. FONTE DE VERDADE
+
+Antes de escrever código, leia:
+
+- CLAUDE.md;
+- ADR da TASK-3.0;
+- implementação da TASK-3.1;
+- API de Expenses da TASK-3.2;
+- API de Incomes da TASK-3.4;
+- relatórios finais dessas tasks;
+- docs/architecture.md;
+- docs/security.md;
+- docs/api-guidelines.md;
+- OpenAPI atual.
+
+Inspecione o código REAL de:
+
+- FinancialTransaction ou agregado equivalente;
+- AccountMovement, se existir;
+- TransactionType;
+- TransactionStatus;
+- FinancialTransactionRepository;
+- AssetAccount;
+- Category;
+- CurrentUser;
+- Expense use cases;
+- Income use cases;
+- paginação;
+- filtros;
+- cancelamento;
+- Problem Details;
+- Request ID;
+- optimistic locking;
+- Testcontainers/MySQL.
+
+O ADR e o código real são a fonte de verdade.
+
+Não substitua silenciosamente a arquitetura aprovada.
+
+---
+
+# 2. RELATÓRIO PRÉ-IMPLEMENTAÇÃO
+
+Antes de modificar arquivos, produza:
+
+# TASK-3.6 — PRE-IMPLEMENTATION REPORT
+
+## 1. Modelo do ledger encontrado
+
+Explique como:
+
+- Expense afeta conta;
+- Income afeta conta;
+- Transfer deve afetar duas contas.
+
+## 2. Representação da Transfer
+
+Informe exatamente como o domínio da TASK-3.1 representa:
+
+- source;
+- destination;
+- amount;
+- category;
+- status;
+- movements, se existirem.
+
+## 3. Categoria de Transfer
+
+Informe a decisão REAL tomada na TASK-3.0.
+
+Este ponto é obrigatório.
+
+Não invente comportamento.
+
+## 4. API proposta
+
+Liste endpoints.
+
+## 5. Invariantes
+
+Liste todas as invariantes específicas de Transfer.
+
+## 6. Atomicidade
+
+Explique boundary transacional.
+
+## 7. Reutilização
+
+Classifique:
+
+A — infraestrutura compartilhada com Expense/Income;
+B — comportamento específico de Transfer;
+C — duplicação que pode ser removida sem criar abstração prematura.
+
+## 8. Arquivos previstos
+
+Depois implemente.
+
+---
+
+# 3. PRINCÍPIO FUNDAMENTAL
+
+Transferência:
+
+Conta A
+→ Conta B
+
+Valor:
+
+X
+
+Efeito:
+
+A -= X
+B += X
+
+Portanto:
+
+Δ patrimônio = -X + X = 0
+
+Essa propriedade deve permanecer verdadeira.
+
+---
+
+# 4. NÃO É EXPENSE
+
+Transferência NÃO deve aumentar:
+
+Saídas.
+
+---
+
+# 5. NÃO É INCOME
+
+Transferência NÃO deve aumentar:
+
+Entradas.
+
+---
+
+# 6. TRANSACTION TYPE
+
+Toda transação criada por esta API deve possuir:
+
+TRANSFER
+
+definido pelo servidor.
+
+Cliente não controla type.
+
+---
+
+# 7. AMOUNT
+
+Amount representa magnitude positiva.
+
+Exemplo:
+
+Transferir R$ 500:
+
+amount = 500.00
+
+Nunca:
+
+source amount = -500 enviado pelo cliente.
+
+---
+
+# 8. ARQUITETURA
+
+Preserve:
+
+Controller
+→ Application Service / Use Case
+→ Domain
+→ Repository
+→ MySQL
+
+---
+
+# 9. BASE PATH
+
+Preferência:
+
+/api/transfers
+
+Ajuste somente se convenção real exigir.
+
+---
+
+# 10. ENDPOINTS
+
+Implemente conceitualmente:
+
+POST   /api/transfers
+GET    /api/transfers
+GET    /api/transfers/{id}
+PUT    /api/transfers/{id}
+PATCH  /api/transfers/{id}/cancel
+
+NÃO implementar:
+
+DELETE.
+
+---
+
+# 11. REQUEST CREATE
+
+Contrato conceitual:
+
+{
+  "description": "Transferência para carteira",
+  "occurredAt": "...",
+  "sourceAccountId": "...",
+  "destinationAccountId": "...",
+  "amount": 500.00,
+  "categoryId": "...",
+  "notes": "..."
+}
+
+IMPORTANTE:
+
+categoryId somente deve existir se a TASK-3.0 determinou categoria para
+Transfer.
+
+Siga o ADR REAL.
+
+---
+
+# 12. OWNER
+
+Nunca aceitar:
+
+ownerId
+userId
+email.
+
+Owner vem exclusivamente de:
+
+JWT
+→ SecurityContext
+→ CurrentUser
+→ ownerId.
+
+---
+
+# 13. SOURCE ACCOUNT
+
+Obrigatória.
+
+Representa a conta da qual o dinheiro sai.
+
+---
+
+# 14. DESTINATION ACCOUNT
+
+Obrigatória.
+
+Representa a conta que recebe o dinheiro.
+
+---
+
+# 15. SOURCE != DESTINATION
+
+Regra obrigatória:
+
+sourceAccountId != destinationAccountId
+
+Transferência:
+
+A → A
+
+é inválida.
+
+---
+
+# 16. SAME OWNER
+
+Source e Destination devem pertencer ao CurrentUser.
+
+---
+
+# 17. SOURCE DE OUTRO USUÁRIO
+
+User B tenta utilizar conta de A como origem:
+
+404.
+
+Não revelar existência.
+
+---
+
+# 18. DESTINATION DE OUTRO USUÁRIO
+
+Mesmo comportamento:
+
+404.
+
+---
+
+# 19. CROSS-USER TRANSFER
+
+Não existe transferência entre usuários nesta versão.
+
+A → conta de B:
+
+PROIBIDA.
+
+---
+
+# 20. SOURCE INEXISTENTE
+
+404.
+
+---
+
+# 21. DESTINATION INEXISTENTE
+
+404.
+
+---
+
+# 22. SOURCE INATIVA
+
+Siga política do ADR.
+
+Se conta inativa não aceita novos lançamentos:
+
+rejeitar.
+
+Preferência, se consistente com Expense/Income:
+
+409.
+
+---
+
+# 23. DESTINATION INATIVA
+
+Mesmo princípio.
+
+---
+
+# 24. HISTÓRICO
+
+Se uma das contas for desativada DEPOIS da Transfer:
+
+a Transfer histórica continua válida.
+
+---
+
+# 25. SALDO INSUFICIENTE
+
+NÃO bloquear Transfer por saldo insuficiente se o ADR manteve saldo
+negativo permitido.
+
+Exemplo:
+
+Conta A saldo = 100
+Transfer = 500
+
+Pode resultar:
+
+A = -400
+
+se essa é a política aprovada.
+
+Não invente overdraft validation.
+
+---
+
+# 26. AMOUNT ZERO
+
+0
+→ 400.
+
+---
+
+# 27. AMOUNT NEGATIVO
+
+-100
+→ 400.
+
+---
+
+# 28. SCALE
+
+10.999
+→ 400.
+
+Não arredondar silenciosamente.
+
+---
+
+# 29. BIGDECIMAL
+
+Java:
+
+BigDecimal.
+
+Nunca:
+
+float
+double.
+
+---
+
+# 30. PRECISÃO
+
+Preservar:
+
+0.10
+0.20
+100.10
+500.55
+
+exatamente.
+
+---
+
+# 31. DESCRIPTION
+
+Obrigatória conforme domínio.
+
+- trim;
+- não vazia;
+- limite correto.
+
+---
+
+# 32. occurredAt
+
+Obrigatório conforme domínio.
+
+Representa o momento financeiro da transferência.
+
+---
+
+# 33. TIMEZONE
+
+Use política já consolidada.
+
+Não introduza novo comportamento temporal.
+
+---
+
+# 34. NOTES
+
+Opcional conforme domínio.
+
+Multiline.
+
+Respeitar limite.
+
+---
+
+# 35. CATEGORY
+
+ESTE É UM PONTO CRÍTICO.
+
+O requisito original do Equilibra prevê Category também para Transfer.
+
+Porém CategoryApplicability originalmente possui:
+
+EXPENSE
+INCOME
+BOTH
+
+Portanto siga EXATAMENTE a decisão formal da TASK-3.0.
+
+---
+
+# 36. NÃO IMPROVISAR CATEGORY
+
+Não faça automaticamente:
+
+Transfer aceita BOTH
+
+sem que isso tenha sido decidido.
+
+Não faça:
+
+Transfer não possui Category
+
+se ADR determinou que possui.
+
+---
+
+# 37. SE ADR DEFINIU REGRA
+
+Implemente-a exatamente.
+
+---
+
+# 38. SE ADR DEIXOU CATEGORY DE TRANSFER BLOQUEADA
+
+NÃO escolha silenciosamente.
+
+Marque TASK como:
+
+BLOCKED
+
+e explique a decisão de produto necessária.
+
+Não prossiga com contrato inconsistente.
+
+---
+
+# 39. CREATE
+
+POST /api/transfers
+
+deve persistir UMA transferência lógica.
+
+---
+
+# 40. ATOMICIDADE
+
+A operação inteira deve ocorrer dentro da mesma transação de banco.
+
+---
+
+# 41. SE LEDGER USA MOVEMENTS
+
+Se arquitetura é:
+
+FinancialTransaction
++
+AccountMovement
+
+Transfer deve gerar exatamente os movimentos definidos pelo ADR.
+
+Conceitualmente:
+
+source:
+-amount
+
+destination:
++amount
+
+---
+
+# 42. MOVEMENT ZERO-SUM
+
+Para Transfer ACTIVE:
+
+SUM(movements.amount) = 0
+
+Essa propriedade deve ser testada.
+
+---
+
+# 43. MOVEMENT COUNT
+
+Se ADR define exatamente dois movimentos:
+
+Transfer ACTIVE deve possuir exatamente:
+
+2.
+
+Não:
+
+1
+3
+4.
+
+---
+
+# 44. EXPENSE/INCOME NÃO DEVEM SER CRIADAS
+
+Uma Transfer não pode ser implementada internamente criando:
+
+uma Expense
++
+uma Income
+
+como duas transações independentes.
+
+Ela é UMA operação financeira.
+
+---
+
+# 45. MOTIVO
+
+Duas transações independentes criariam riscos de:
+
+- cancelamento parcial;
+- edição parcial;
+- inconsistência;
+- duplicação em relatórios;
+- quebra de atomicidade;
+- classificação errada de Entradas/Saídas.
+
+---
+
+# 46. SE LEDGER NÃO USA MOVEMENTS
+
+Se ADR usa source/destination diretamente na FinancialTransaction:
+
+implemente exatamente esse modelo.
+
+Não introduza AccountMovement agora sem ADR.
+
+---
+
+# 47. CREATE RESPONSE
+
+201 Created.
+
+Quando consistente:
+
+Location: /api/transfers/{id}
+
+---
+
+# 48. RESPONSE
+
+Exemplo conceitual:
+
+{
+  "id": "...",
+  "description": "Transferência para carteira",
+  "occurredAt": "...",
+  "sourceAccount": {
+    "id": "...",
+    "name": "Conta corrente"
+  },
+  "destinationAccount": {
+    "id": "...",
+    "name": "Carteira"
+  },
+  "amount": 500.00,
+  "category": ...,
+  "notes": "...",
+  "status": "ACTIVE",
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+
+Ajuste ao contrato real.
+
+---
+
+# 49. OWNER RESPONSE
+
+Não retornar:
+
+ownerId
+userId
+email
+
+sem necessidade.
+
+---
+
+# 50. LIST
+
+GET /api/transfers
+
+retorna exclusivamente:
+
+TRANSFER
+
+do CurrentUser.
+
+---
+
+# 51. TYPE ISOLATION
+
+Nunca retornar:
+
+EXPENSE
+INCOME.
+
+---
+
+# 52. OWNER ISOLATION
+
+Nunca retornar Transfer de outro usuário.
+
+---
+
+# 53. PAGINAÇÃO
+
+Use exatamente o padrão já adotado em:
+
+Expense
+Income.
+
+---
+
+# 54. ORDER
+
+Mesma convenção:
+
+occurredAt DESC
+
+com desempate determinístico.
+
+---
+
+# 55. CANCELLED
+
+Use política já consolidada.
+
+Exemplo:
+
+includeCancelled=false
+
+por padrão.
+
+---
+
+# 56. PERIOD FILTER
+
+Se Expense/Income possuem:
+
+from
+to
+
+mantenha consistência.
+
+---
+
+# 57. GET BY ID
+
+GET /api/transfers/{id}
+
+deve buscar:
+
+id
++
+owner
++
+type = TRANSFER.
+
+---
+
+# 58. ID DE EXPENSE
+
+→ 404.
+
+---
+
+# 59. ID DE INCOME
+
+→ 404.
+
+---
+
+# 60. ID DE OUTRO OWNER
+
+→ 404.
+
+---
+
+# 61. INEXISTENTE
+
+→ 404.
+
+---
+
+# 62. UUID INVÁLIDO
+
+→ 400 Problem Details.
+
+---
+
+# 63. UPDATE
+
+PUT /api/transfers/{id}
+
+Permitir alterar somente campos aprovados.
+
+Esperado:
+
+description;
+occurredAt;
+sourceAccountId;
+destinationAccountId;
+amount;
+categoryId, se aplicável;
+notes.
+
+---
+
+# 64. UPDATE SOURCE
+
+Nova origem deve:
+
+- existir;
+- pertencer ao owner;
+- estar elegível.
+
+---
+
+# 65. UPDATE DESTINATION
+
+Mesmas regras.
+
+---
+
+# 66. UPDATE SOURCE == DESTINATION
+
+Rejeitar.
+
+---
+
+# 67. UPDATE CROSS OWNER
+
+404.
+
+Estado original deve permanecer inalterado.
+
+---
+
+# 68. UPDATE AMOUNT
+
+Revalidar:
+
+> 0;
+2 casas.
+
+---
+
+# 69. UPDATE CATEGORY
+
+Seguir política do ADR.
+
+---
+
+# 70. UPDATE ATOMICITY
+
+Alteração deve preservar integralmente o ledger.
+
+Nunca atualizar apenas um lado da transferência.
+
+---
+
+# 71. UPDATE MOVEMENTS
+
+Se movements existem:
+
+ao mudar:
+
+source;
+destination;
+amount;
+
+todos os movimentos afetados devem permanecer consistentes dentro da
+mesma transação.
+
+---
+
+# 72. ZERO-SUM APÓS UPDATE
+
+Após qualquer update válido:
+
+SUM(transfer movements) = 0.
+
+---
+
+# 73. CANCEL
+
+PATCH /api/transfers/{id}/cancel
+
+---
+
+# 74. CANCELAMENTO
+
+Transfer CANCELLED:
+
+permanece no histórico.
+
+---
+
+# 75. EFEITO APÓS CANCELAMENTO
+
+Transfer CANCELLED deve produzir:
+
+0
+
+de efeito financeiro.
+
+---
+
+# 76. CANCELAMENTO ATÔMICO
+
+Não pode existir estado em que:
+
+source foi revertida
+mas
+destination não.
+
+---
+
+# 77. MOVEMENTS + CANCEL
+
+Se status da transação controla inclusão dos movements nos cálculos:
+
+preserve essa arquitetura.
+
+Não delete movement individualmente.
+
+---
+
+# 78. CANCEL REPEAT
+
+Use política já definida em Expense/Income.
+
+---
+
+# 79. REACTIVATE
+
+NÃO implementar salvo decisão explícita.
+
+---
+
+# 80. DELETE
+
+NÃO implementar.
+
+---
+
+# 81. TYPE IMMUTABILITY
+
+TRANSFER nunca pode virar:
+
+EXPENSE
+INCOME.
+
+---
+
+# 82. OWNER IMMUTABILITY
+
+Nunca muda.
+
+---
+
+# 83. APPLICATION SERVICE
+
+Implemente casos de uso explícitos:
+
+CreateTransfer
+ListTransfers
+GetTransfer
+UpdateTransfer
+CancelTransfer
+
+ou padrão equivalente.
+
+---
+
+# 84. NÃO CRIAR GENERIC CRUD
+
+Não criar:
+
+GenericTransactionCrudService.
+
+---
+
+# 85. SHARED INFRASTRUCTURE
+
+Agora temos:
+
+Expense
+Income
+Transfer.
+
+Esta é a primeira oportunidade realmente boa para identificar
+infraestrutura financeira comum.
+
+Mas seja conservador.
+
+---
+
+# 86. PODE REUTILIZAR
+
+Exemplos:
+
+- pagination;
+- period parsing;
+- money validation;
+- ownership-aware transaction lookup;
+- response projections;
+- status handling;
+- common Problem Details mappings.
+
+Somente quando a abstração for semanticamente neutra.
+
+---
+
+# 87. NÃO ESCONDER REGRAS
+
+Não crie método genérico que torne invisível:
+
+Expense debita;
+Income credita;
+Transfer debita + credita.
+
+---
+
+# 88. TRANSACTIONAL BOUNDARY
+
+CreateTransfer:
+
+@Transactional
+
+ou mecanismo equivalente.
+
+---
+
+# 89. UPDATE TRANSACTION
+
+Também atômico.
+
+---
+
+# 90. CANCEL TRANSACTION
+
+Também atômico.
+
+---
+
+# 91. ROLLBACK CREATE
+
+Se destination falhar após source validada:
+
+nenhuma Transfer;
+nenhum movement parcial.
+
+---
+
+# 92. ROLLBACK UPDATE
+
+Falha:
+
+estado anterior integralmente preservado.
+
+---
+
+# 93. ROLLBACK CANCEL
+
+Falha:
+
+não pode haver cancelamento parcial.
+
+---
+
+# 94. CONCURRENCY
+
+Siga decisão da TASK-3.0/3.1.
+
+Se @Version existe:
+
+trate optimistic lock corretamente.
+
+---
+
+# 95. NÃO LOCKAR SALDO
+
+Não use pessimistic lock apenas para "atualizar saldo", pois saldo não é
+persistido.
+
+---
+
+# 96. CURRENT BALANCE
+
+NÃO adicionar coluna.
+
+---
+
+# 97. INITIAL BALANCE
+
+NÃO alterar durante Transfer.
+
+---
+
+# 98. ACCOUNT ENTITY
+
+NÃO executar:
+
+sourceAccount.setBalance(...)
+destinationAccount.setBalance(...)
+
+---
+
+# 99. MASS ASSIGNMENT
+
+DTO explícito.
+
+Não bind request em entity.
+
+---
+
+# 100. OVERPOSTING
+
+Teste:
+
+ownerId;
+userId;
+type;
+status;
+createdAt;
+updatedAt;
+cancelledAt.
+
+Não podem controlar estado protegido.
+
+---
+
+# 101. TYPE SPOOFING
+
+POST /transfers com:
+
+"type": "EXPENSE"
+
+não pode criar Expense.
+
+---
+
+# 102. PROBLEM DETAILS
+
+Reutilize infraestrutura existente.
+
+---
+
+# 103. HTTP 400
+
+Exemplos:
+
+- JSON inválido;
+- UUID inválido;
+- source == destination;
+- amount zero;
+- amount negativo;
+- >2 casas;
+- description inválida;
+- occurredAt inválido;
+- notes inválida.
+
+---
+
+# 104. HTTP 401
+
+Sem autenticação.
+
+---
+
+# 105. HTTP 404
+
+Para:
+
+- Transfer inexistente;
+- Transfer de outro owner;
+- ID de Expense/Income;
+- source inexistente/outro owner;
+- destination inexistente/outro owner;
+- category inexistente/outro owner.
+
+---
+
+# 106. HTTP 409
+
+Para conflitos de estado conforme padrão:
+
+- source própria inativa;
+- destination própria inativa;
+- category própria inválida/inativa;
+- edição de CANCELLED;
+- optimistic lock conflict.
+
+---
+
+# 107. LOGGING
+
+Não logar JWT ou dados sensíveis.
+
+---
+
+# 108. REQUEST ID
+
+Preservar.
+
+---
+
+# 109. OPENAPI
+
+Documentar todos os endpoints.
+
+---
+
+# 110. OPENAPI TRANSFER
+
+Explique claramente:
+
+"Transferência move valor entre duas contas de ativo do mesmo usuário."
+
+---
+
+# 111. OPENAPI SOURCE
+
+Conta de origem.
+
+---
+
+# 112. OPENAPI DESTINATION
+
+Conta de destino.
+
+---
+
+# 113. OPENAPI AMOUNT
+
+BRL;
+positivo;
+máximo duas casas.
+
+---
+
+# 114. OPENAPI NET WORTH
+
+Documentação pode registrar semanticamente:
+
+Transfer não representa receita nem despesa.
+
+Não precisa expor fórmula interna.
+
+---
+
+# 115. TEST — CREATE
+
+Transfer válida:
+
+201.
+
+---
+
+# 116. TEST — TYPE
+
+Persistido:
+
+TRANSFER.
+
+---
+
+# 117. TEST — OWNER
+
+CurrentUser.
+
+---
+
+# 118. TEST — SOURCE
+
+Associação correta.
+
+---
+
+# 119. TEST — DESTINATION
+
+Associação correta.
+
+---
+
+# 120. TEST — SOURCE != DESTINATION
+
+A → A:
+
+400.
+
+---
+
+# 121. TEST — CROSS OWNER SOURCE
+
+404.
+
+---
+
+# 122. TEST — CROSS OWNER DESTINATION
+
+404.
+
+---
+
+# 123. TEST — BOTH CROSS OWNER
+
+Nenhuma Transfer criada.
+
+---
+
+# 124. TEST — INACTIVE SOURCE
+
+Rejeitada.
+
+---
+
+# 125. TEST — INACTIVE DESTINATION
+
+Rejeitada.
+
+---
+
+# 126. TEST — NEGATIVE RESULTING BALANCE
+
+Se saldo negativo permitido:
+
+Transfer não deve ser bloqueada apenas porque source ficará negativa.
+
+---
+
+# 127. TEST — ZERO
+
+400.
+
+---
+
+# 128. TEST — NEGATIVE AMOUNT
+
+400.
+
+---
+
+# 129. TEST — SCALE
+
+10.999:
+
+400.
+
+---
+
+# 130. TEST — PRECISION
+
+0.10
+0.20
+100.10
+500.55
+
+persistidos exatamente.
+
+---
+
+# 131. TEST — MOVEMENTS
+
+Se arquitetura possui movements:
+
+source movement = -amount
+destination movement = +amount.
+
+---
+
+# 132. TEST — ZERO SUM
+
+Para cada Transfer ACTIVE:
+
+sum = 0.
+
+---
+
+# 133. TEST — MOVEMENT COUNT
+
+Se ADR define dois:
+
+count = 2.
+
+---
+
+# 134. TEST — ATOMIC CREATE
+
+Force falha na segunda parte.
+
+Resultado:
+
+nenhum estado parcial.
+
+---
+
+# 135. TEST — LIST OWNER
+
+A nunca vê Transfer de B.
+
+---
+
+# 136. TEST — LIST TYPE
+
+GET /transfers:
+
+não retorna Expense/Income.
+
+---
+
+# 137. TEST — PAGINATION
+
+Mesmo contrato das APIs anteriores.
+
+---
+
+# 138. TEST — CANCELLED FILTER
+
+Mesmo contrato.
+
+---
+
+# 139. TEST — GET OWN
+
+200.
+
+---
+
+# 140. TEST — GET OTHER OWNER
+
+404.
+
+---
+
+# 141. TEST — GET EXPENSE
+
+404.
+
+---
+
+# 142. TEST — GET INCOME
+
+404.
+
+---
+
+# 143. TEST — UPDATE
+
+Alterar:
+
+description;
+date;
+source;
+destination;
+amount;
+category, se aplicável;
+notes.
+
+PASS.
+
+---
+
+# 144. TEST — UPDATE SOURCE == DESTINATION
+
+Rejeitada.
+
+Estado anterior preservado.
+
+---
+
+# 145. TEST — UPDATE CROSS OWNER
+
+404.
+
+Estado anterior preservado.
+
+---
+
+# 146. TEST — UPDATE ZERO SUM
+
+Após update:
+
+Transfer continua neutra.
+
+---
+
+# 147. TEST — CANCEL
+
+ACTIVE → CANCELLED.
+
+---
+
+# 148. TEST — CANCEL OTHER OWNER
+
+404.
+
+---
+
+# 149. TEST — CANCEL EXPENSE ID
+
+404.
+
+---
+
+# 150. TEST — CANCEL INCOME ID
+
+404.
+
+---
+
+# 151. TEST — CANCEL ZERO EFFECT
+
+Transfer CANCELLED não deve participar do efeito financeiro futuro.
+
+---
+
+# 152. TEST — CANCEL ATOMICITY
+
+Nenhum estado parcial.
+
+---
+
+# 153. TEST — OVERPOST OWNER
+
+PASS.
+
+---
+
+# 154. TEST — OVERPOST TYPE
+
+PASS.
+
+---
+
+# 155. TEST — OVERPOST STATUS
+
+PASS.
+
+---
+
+# 156. TEST — MYSQL
+
+Testcontainers/MySQL real.
+
+---
+
+# 157. TEST — CONSTRAINTS
+
+Se banco possui constraints para Transfer:
+
+prove que estados inválidos são rejeitados.
+
+---
+
+# 158. NO MIGRATION EXPECTED
+
+TASK-3.1 deveria ter preparado schema.
+
+Se migration corretiva for necessária:
+
+crie NOVA migration.
+
+Nunca edite migration aplicada.
+
+Explique motivo.
+
+---
+
+# 159. EXPENSE REGRESSION
+
+PASS.
+
+---
+
+# 160. INCOME REGRESSION
+
+PASS.
+
+---
+
+# 161. LEDGER REGRESSION
+
+PASS.
+
+---
+
+# 162. ASSET ACCOUNT REGRESSION
+
+PASS.
+
+---
+
+# 163. CATEGORY REGRESSION
+
+PASS.
+
+---
+
+# 164. AUTH REGRESSION
+
+PASS.
+
+---
+
+# 165. FRONTEND REGRESSION
+
+Expenses:
+
+PASS.
+
+Incomes:
+
+PASS.
+
+Não implementar Transfer UI.
+
+---
+
+# 166. DASHBOARD
+
+NÃO atualizar ainda.
+
+---
+
+# 167. MOTIVO
+
+Após esta TASK teremos os três tipos financeiros no backend.
+
+Ainda precisamos implementar a UI de Transfer antes de conectar o
+Dashboard ao ledger completo.
+
+---
+
+# 168. BUILD
+
+Execute backend completo.
+
+---
+
+# 169. TESTS
+
+Execute suíte completa.
+
+---
+
+# 170. DEFINITION OF DONE
+
+TASK-3.6 estará concluída quando:
+
+- POST /transfers funcionar;
+- GET /transfers funcionar;
+- GET /transfers/{id} funcionar;
+- PUT /transfers/{id} funcionar;
+- cancelamento funcionar;
+- DELETE não existir;
+- type forçado como TRANSFER;
+- owner vier de CurrentUser;
+- source for obrigatória;
+- destination for obrigatória;
+- source != destination;
+- ambas pertencerem ao owner;
+- cross-user for bloqueado;
+- contas inativas seguirem política;
+- saldo insuficiente NÃO for inventado como bloqueio;
+- amount > 0;
+- escala <= 2;
+- BigDecimal preservado;
+- Category seguir exatamente ADR;
+- operação for atômica;
+- ledger permanecer consistente;
+- zero-sum estiver garantido quando aplicável;
+- Transfer não virar Expense + Income;
+- cancelamento for atômico;
+- update preservar invariantes;
+- IDOR/BOLA estiver protegido;
+- currentBalance NÃO for persistido;
+- initialBalance NÃO for alterado;
+- Account balance NÃO sofrer mutação;
+- Problem Details estiver consistente;
+- Request ID funcionar;
+- OpenAPI atualizado;
+- Testcontainers/MySQL passar;
+- regressões passarem;
+- frontend de Transfer NÃO existir ainda;
+- Dashboard permanecer inalterado;
+- build passar.
+
+---
+
+# 171. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-3.6 — API REST DE TRANSFERÊNCIAS
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+## 1. Arquitetura
+
+Explique fluxo.
+
+## 2. Representação no ledger
+
+Explique exatamente como Transfer é persistida.
+
+## 3. Endpoints
+
+Liste.
+
+## 4. CreateTransferRequest
+
+Liste campos reais.
+
+## 5. UpdateTransferRequest
+
+Liste campos reais.
+
+## 6. TransferResponse
+
+Liste campos reais.
+
+## 7. Source Account
+
+Explique regras.
+
+## 8. Destination Account
+
+Explique regras.
+
+## 9. Source != Destination
+
+PASS / FAIL
+
+## 10. Ownership
+
+Explique isolamento.
+
+## 11. Category
+
+Explique decisão da TASK-3.0 e implementação real.
+
+## 12. Money
+
+Confirme:
+
+BigDecimal;
+> 0;
+2 casas;
+sem arredondamento silencioso.
+
+## 13. Atomicidade
+
+Explique:
+
+create;
+update;
+cancel.
+
+## 14. Ledger movements
+
+Se aplicável:
+
+### Source
+efeito
+
+### Destination
+efeito
+
+### Count
+valor
+
+### Sum
+esperado 0.
+
+## 15. Neutralidade patrimonial
+
+Confirme conceitualmente:
+
+source -X
++
+destination +X
+=
+0.
+
+## 16. Saldo insuficiente
+
+Informe política.
+
+## 17. Cancelamento
+
+Explique.
+
+## 18. Edição
+
+Explique.
+
+## 19. IDOR/BOLA
+
+### Transfer
+PASS / FAIL
+
+### Source
+PASS / FAIL
+
+### Destination
+PASS / FAIL
+
+### Category
+PASS / FAIL / N/A
+
+### Other TransactionType
+PASS / FAIL
+
+## 20. Overposting
+
+### ownerId
+PASS / FAIL
+
+### type
+PASS / FAIL
+
+### status
+PASS / FAIL
+
+## 21. HTTP
+
+### 201
+PASS / FAIL
+
+### 400
+PASS / FAIL
+
+### 401
+PASS / FAIL
+
+### 404
+PASS / FAIL
+
+### 409
+PASS / FAIL
+
+## 22. Problem Details
+
+PASS / FAIL
+
+## 23. Request ID
+
+PASS / FAIL
+
+## 24. OpenAPI
+
+PASS / FAIL
+
+## 25. MySQL/Testcontainers
+
+PASS / FAIL
+
+## 26. Rollback
+
+### Create
+PASS / FAIL
+
+### Update
+PASS / FAIL
+
+### Cancel
+PASS / FAIL
+
+## 27. currentBalance
+
+Esperado:
+
+NÃO PERSISTIDO
+
+## 28. initialBalance
+
+Esperado:
+
+NÃO ALTERADO
+
+## 29. Migration
+
+Esperado:
+
+NENHUMA
+
+Se criada, explique.
+
+## 30. Regressão
+
+### Ledger
+PASS / FAIL
+
+### Expenses
+PASS / FAIL
+
+### Incomes
+PASS / FAIL
+
+### AssetAccounts
+PASS / FAIL
+
+### Categories
+PASS / FAIL
+
+### Authentication
+PASS / FAIL
+
+### Expense UI
+PASS / FAIL
+
+### Income UI
+PASS / FAIL
+
+## 31. Dashboard
+
+Esperado:
+
+AINDA NÃO INTEGRADO AO LEDGER
+
+## 32. Frontend Transfer
+
+Esperado:
+
+NÃO IMPLEMENTADO
+
+## 33. Arquivos
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 34. Reutilização
+
+### Compartilhada
+
+### Transfer-specific
+
+### Duplicação removida
+
+### Mantida propositalmente
+
+## 35. Bugs encontrados
+
+Liste:
+
+problema;
+causa;
+correção;
+teste.
+
+## 36. Divergências do ADR
+
+Esperado:
+
+NENHUMA
+
+Se houver:
+
+explique detalhadamente.
+
+## 37. Pendências
+
+### Bloqueantes
+
+### Não bloqueantes
+
+## 38. Próxima tarefa
+
+Se TASK-3.6 estiver aprovada, informe prontidão para:
+
+# TASK-3.7 — Interface de Transferências
+
+NÃO implemente TASK-3.7 nesta execução.

@@ -1,0 +1,888 @@
+# TASK-5.8 — GATE DE APROVAÇÃO DA SPRINT 5
+
+PROJETO: EQUILIBRA
+STACK: Spring Boot 4 + Angular 19 + MySQL
+SPRINT: 5 — RELATÓRIOS FINANCEIROS
+
+CONTEXTO
+
+TASK-5.0 — Arquitetura e contratos dos relatórios
+TASK-5.1 — Backend do Relatório Financeiro
+TASK-5.2 — Frontend do Relatório Financeiro
+TASK-5.3 — Backend do Relatório por Categoria
+TASK-5.4 — Frontend do Relatório por Categoria
+TASK-5.5 — Backend do Relatório de Auditoria
+TASK-5.6 — Frontend do Relatório de Auditoria
+TASK-5.7 — Exportação PDF e CSV dos três relatórios
+
+O usuário informou que a TASK-5.7 foi concluída.
+
+OBJETIVO
+
+Executar uma auditoria técnica, funcional e de segurança de
+toda a Sprint 5, comprovando a consistência dos três relatórios,
+suas interfaces e exportações.
+
+Este é um GATE DE APROVAÇÃO, não uma nova sprint.
+
+NÃO iniciar Sprint 6.
+
+==================================================
+1. REGRAS GERAIS
+==================================================
+
+Antes de alterar código:
+
+- ler CLAUDE.md;
+- ler ADR da TASK-5.0;
+- ler ADR do ledger;
+- ler relatórios finais das TASKS 5.1 a 5.7 disponíveis;
+- inspecionar implementações reais;
+- identificar decisões e divergências;
+- verificar estado real da TASK-5.2;
+- mapear riscos;
+- apresentar plano de validação.
+
+Não presumir que uma task está correta apenas porque foi
+marcada como concluída.
+
+Não alterar regras financeiras aprovadas sem necessidade.
+
+Não criar funcionalidades novas.
+
+==================================================
+2. PRE-GATE REPORT
+==================================================
+
+Produzir antes dos testes:
+
+# SPRINT 5 — PRE-GATE REPORT
+
+1. Inventário de endpoints.
+2. Inventário de páginas Angular.
+3. Inventário de exportações.
+4. ADRs e contratos.
+5. Matriz de filtros.
+6. Matriz de ownership.
+7. Matriz de consistência financeira.
+8. Estratégia de testes.
+9. Riscos conhecidos.
+10. Pendências técnicas.
+11. Critérios de aprovação.
+
+==================================================
+3. INVENTÁRIO DOS RELATÓRIOS
+==================================================
+
+Confirmar a existência e o funcionamento de:
+
+A. Relatório Financeiro
+- backend;
+- frontend;
+- filtros;
+- indicadores;
+- transferências;
+- saldos.
+
+B. Relatório por Categoria
+- backend;
+- frontend;
+- filtros;
+- categorias BOTH;
+- categorias inativas;
+- agrupamentos.
+
+C. Relatório de Auditoria
+- backend;
+- frontend;
+- filtros;
+- ACTIVE/CANCELLED;
+- paginação;
+- rastreabilidade.
+
+D. Exportações
+- Financeiro PDF;
+- Financeiro CSV;
+- Categoria PDF;
+- Categoria CSV;
+- Auditoria PDF;
+- Auditoria CSV.
+
+==================================================
+4. MATRIZ DE FILTROS
+==================================================
+
+Validar em todos os relatórios aplicáveis:
+
+- período;
+- uma conta;
+- várias contas;
+- todas as contas;
+- contas inativas históricas;
+- categoria;
+- tags;
+- tipo;
+- status;
+- paginação;
+- ordenação.
+
+Somente exigir filtros realmente aprovados pelo ADR/API.
+
+Confirmar que os filtros apresentados no Angular
+correspondem exatamente aos parâmetros backend.
+
+==================================================
+5. SEMÂNTICA TEMPORAL
+==================================================
+
+Validar:
+
+occurredAt;
+timezone;
+limites from/to;
+primeiro instante do período;
+último instante incluído;
+primeiro instante excluído;
+datas em meses diferentes;
+mudança de ano;
+datas em horário de verão, quando aplicável.
+
+Verificar se o filtro exibido ao usuário corresponde
+ao período efetivamente consultado.
+
+PDF e CSV devem usar o mesmo período da tela.
+
+==================================================
+6. OWNERSHIP E MULTIUSUÁRIO
+==================================================
+
+Criar User A e User B.
+
+Verificar isolamento em:
+
+- Financial Report;
+- Category Report;
+- Audit Report;
+- Financial PDF;
+- Financial CSV;
+- Category PDF;
+- Category CSV;
+- Audit PDF;
+- Audit CSV.
+
+Todos os endpoints devem derivar usuário de CurrentUser.
+
+Nunca confiar em ownerId do cliente.
+
+Testar UUIDs estrangeiros de:
+
+contas;
+categorias;
+tags.
+
+Verificar política de resposta segura.
+
+Não permitir IDOR/BOLA.
+
+==================================================
+7. GOLDEN SCENARIO FINANCEIRO
+==================================================
+
+User A:
+
+Conta A initial=1000
+Conta B initial=500
+Conta C initial=200
+
+ANTES do período:
+
+Income A=100
+
+NO período:
+
+Income A=700
+Expense A=200
+Transfer A->B=300
+Transfer C->A=50
+
+TODAS AS CONTAS:
+
+Opening Balance=1800
+Income=700
+Expense=200
+Financial Result=500
+Internal Transfers=350
+Incoming Boundary=0
+Outgoing Boundary=0
+Balance Change=500
+Closing Balance=2300
+
+SOMENTE A:
+
+Opening=1100
+Income=700
+Expense=200
+Financial Result=500
+Incoming Boundary=50
+Outgoing Boundary=300
+Balance Change=250
+Closing=1350
+
+A+B:
+
+Opening=1600
+Income=700
+Expense=200
+Internal Transfers=300
+Incoming Boundary=50
+Outgoing Boundary=0
+Balance Change=550
+Closing=2150
+
+SOMENTE B:
+
+Opening=500
+Closing=800
+
+SOMENTE C:
+
+Opening=200
+Closing=150
+
+==================================================
+8. INVARIANTES FINANCEIRAS
+==================================================
+
+Validar:
+
+Financial Result = Income - Expense.
+
+Balance Change =
+Income - Expense
++ Incoming Boundary Transfers
+- Outgoing Boundary Transfers.
+
+Closing Balance = Opening Balance + Balance Change.
+
+Transferências internas:
+
+não alteram saldo agregado das contas selecionadas.
+
+Transferências:
+
+não entram em Income ou Expense.
+
+Transações canceladas:
+
+não afetam totais financeiros.
+
+Não aceitar divergências de arredondamento.
+
+Usar BigDecimal.
+
+==================================================
+9. RELATÓRIO POR CATEGORIA
+==================================================
+
+No Golden Scenario:
+
+Salário:
+Income=700
+Expense=0
+Net=700
+
+Moradia:
+Income=0
+Expense=200
+Net=-200
+
+TOTAL:
+Income=700
+Expense=200
+Net=500
+
+Validar reconciliação com Financial Report
+para filtros equivalentes.
+
+==================================================
+10. CATEGORIA BOTH
+==================================================
+
+Criar categoria BOTH.
+
+Income=125.10
+Expense=25.20
+
+Esperado:
+
+Net=99.90
+
+Confirmar separação de receitas e despesas.
+
+Não duplicar valores.
+
+==================================================
+11. CATEGORIAS INATIVAS
+==================================================
+
+Desativar categoria com transações históricas.
+
+Validar:
+
+- relatório por categoria;
+- auditoria;
+- PDF;
+- CSV;
+- frontend.
+
+Histórico deve permanecer visível conforme ADR.
+
+==================================================
+12. CANCELAMENTOS
+==================================================
+
+Adicionar Expense=999.
+
+Cancelar.
+
+Verificar:
+
+Financial Report:
+não soma 999.
+
+Category Report:
+não soma 999.
+
+Audit Report com ALL:
+mostra transação.
+
+Audit Report com ACTIVE:
+não mostra transação.
+
+Audit Report com CANCELLED:
+mostra transação.
+
+PDF/CSV:
+seguem exatamente essas regras.
+
+==================================================
+13. AUDITORIA
+==================================================
+
+Validar:
+
+- cada transação lógica aparece uma vez;
+- Transfer aparece uma vez;
+- status correto;
+- createdAt;
+- updatedAt;
+- occurredAt;
+- metadados reais;
+- ausência de campos fictícios;
+- paginação;
+- ordenação estável;
+- totalElements;
+- filtros combinados.
+
+Não prometer histórico imutável de alterações
+se esse recurso não existe.
+
+==================================================
+14. TAGS E ANEXOS
+==================================================
+
+Associar duas tags a uma transação.
+
+Associar dois anexos.
+
+Validar:
+
+- nenhuma duplicação da transação;
+- tags corretas;
+- attachmentCount correto;
+- nenhum impacto nos totais;
+- nenhuma leitura de bytes durante relatórios;
+- nenhuma exposição de storageKey.
+
+==================================================
+15. EXPORTAÇÃO PDF
+==================================================
+
+Validar os três PDFs.
+
+Conferir:
+
+- Content-Type;
+- Content-Disposition;
+- Cache-Control;
+- título;
+- período;
+- contas selecionadas;
+- filtros;
+- valores;
+- tabelas;
+- paginação;
+- textos longos;
+- caracteres acentuados;
+- valores negativos;
+- categorias inativas;
+- transações canceladas;
+- nenhuma informação privada indevida.
+
+Validar conteúdo, não apenas existência de bytes.
+
+==================================================
+16. EXPORTAÇÃO CSV
+==================================================
+
+Validar os três CSVs.
+
+Conferir:
+
+- UTF-8;
+- delimitador;
+- cabeçalho;
+- escaping;
+- aspas;
+- quebras de linha;
+- acentos;
+- BigDecimal;
+- valores negativos;
+- datas;
+- todos os registros filtrados;
+- Content-Type;
+- Content-Disposition;
+- Cache-Control.
+
+==================================================
+17. CSV FORMULA INJECTION
+==================================================
+
+Testar valores textuais começando com:
+
+=
++
+-
+@
+TAB
+CR
+LF
+
+Incluindo:
+
+descrição;
+nome de conta;
+nome de categoria;
+tags;
+notas.
+
+Validar neutralização antes de abrir
+em Excel/LibreOffice.
+
+Não alterar dados persistidos.
+
+==================================================
+18. EXPORTAÇÃO E PAGINAÇÃO
+==================================================
+
+Criar mais transações que uma página.
+
+Exemplo:
+
+137 registros.
+
+UI mostra 20.
+
+Exportação da auditoria deve conter 137
+ou aplicar limite explícito e documentado.
+
+Não exportar apenas a página visível.
+
+Não duplicar registros entre lotes.
+
+==================================================
+19. FILTROS APLICADOS
+==================================================
+
+Testar:
+
+Relatório exibido: setembro.
+
+Usuário altera filtros em edição para outubro,
+mas não aplica.
+
+Exportação deve representar setembro.
+
+Depois de aplicar outubro:
+
+exportação deve representar outubro.
+
+Não misturar draftFilters e appliedFilters.
+
+==================================================
+20. FRONTEND
+==================================================
+
+Validar as três telas:
+
+- navegação;
+- filtros;
+- loading;
+- empty;
+- error;
+- retry;
+- paginação;
+- formatação BRL;
+- categorias;
+- transferências;
+- canceladas;
+- exportações;
+- downloads Blob;
+- revoke objectURL;
+- tratamento de erros Blob;
+- concorrência de requests;
+- ausência de dados falsos.
+
+==================================================
+21. RESPONSIVIDADE
+==================================================
+
+Validar:
+
+360x800
+390x844
+768x1024
+1024x768
+1280x720
+1366x768
+1920x1080
+
+Verificar:
+
+- ausência de overflow horizontal global;
+- tabelas adaptáveis;
+- cards;
+- filtros;
+- botões de exportação;
+- gráficos;
+- textos longos;
+- valores monetários grandes;
+- menu lateral.
+
+Registrar evidência real dos testes executados.
+
+==================================================
+22. ACESSIBILIDADE
+==================================================
+
+Validar:
+
+- navegação por teclado;
+- labels;
+- foco;
+- dialogs/drawers;
+- contraste;
+- estados anunciáveis;
+- cabeçalhos de tabelas;
+- paginação;
+- botões de exportação;
+- gráficos com alternativa textual;
+- estados não dependentes apenas de cor.
+
+==================================================
+23. PERFORMANCE
+==================================================
+
+Verificar:
+
+- queries agregadas no banco;
+- paginação SQL;
+- ausência de N+1;
+- ausência de joins multiplicadores;
+- índices relevantes;
+- contagem correta;
+- exportação em lotes;
+- limites de memória;
+- proteção contra arquivos excessivos.
+
+Não introduzir cache sem justificativa.
+
+==================================================
+24. TESTES DE SEGURANÇA
+==================================================
+
+Validar:
+
+- 401 sem JWT;
+- 403 sem logout indevido;
+- UUID estrangeiro;
+- CSV Injection;
+- PDF Injection;
+- SQL Injection;
+- parâmetros inválidos;
+- paginação abusiva;
+- limites de exportação;
+- headers privados;
+- filenames seguros;
+- nenhum JWT em query string;
+- nenhum storageKey;
+- nenhum path interno;
+- nenhum stack trace.
+
+==================================================
+25. TESTCONTAINERS
+==================================================
+
+Executar integração com MySQL real.
+
+Não substituir testes SQL importantes
+por banco em memória incompatível.
+
+Registrar:
+
+comando;
+quantidade de testes;
+PASS/FAIL;
+tempo;
+falhas ambientais.
+
+==================================================
+26. REGRESSÕES
+==================================================
+
+Executar regressões relevantes de:
+
+Authentication;
+Asset Accounts;
+Categories;
+Expenses;
+Income;
+Transfers;
+Dashboard;
+History;
+Tags;
+Attachments;
+Financial Report;
+Category Report;
+Audit Report;
+Exports.
+
+Nenhuma correção deve quebrar Sprint 3 ou Sprint 4.
+
+==================================================
+27. CORREÇÕES PERMITIDAS
+==================================================
+
+Durante o Gate, corrigir:
+
+- bugs;
+- falhas de segurança;
+- regressões;
+- inconsistências financeiras;
+- problemas de paginação;
+- problemas de exportação;
+- falhas de contrato;
+- problemas graves de responsividade;
+- problemas de acessibilidade bloqueantes.
+
+Não criar novas funcionalidades.
+
+Toda correção deve ter teste de regressão.
+
+==================================================
+28. SEVERIDADE
+==================================================
+
+Classificar problemas:
+
+CRITICAL
+HIGH
+MEDIUM
+LOW
+
+CRITICAL:
+vazamento de dados, corrupção financeira,
+autorização quebrada.
+
+HIGH:
+cálculo incorreto, exportação incorreta,
+falha funcional importante, CSV Injection.
+
+MEDIUM:
+UX relevante, erro recuperável,
+problema de performance moderado.
+
+LOW:
+ajuste cosmético ou documentação.
+
+==================================================
+29. CRITÉRIO DE BLOQUEIO
+==================================================
+
+Gate NÃO pode ser aprovado se existir:
+
+- CRITICAL aberto;
+- HIGH aberto;
+- inconsistência financeira;
+- vazamento entre usuários;
+- exportação de dados de outro usuário;
+- CSV Injection não mitigada;
+- testes financeiros essenciais falhando;
+- build principal falhando;
+- divergência relevante entre tela, JSON, PDF e CSV.
+
+Problemas MEDIUM/LOW devem ser documentados,
+avaliados e aceitos explicitamente quando apropriado.
+
+==================================================
+30. COMANDOS DE VALIDAÇÃO
+==================================================
+
+Executar conforme scripts reais do repositório:
+
+Backend:
+- testes unitários;
+- testes de integração;
+- Testcontainers;
+- build.
+
+Frontend:
+- lint;
+- unit tests;
+- production build;
+- E2E, se configurado.
+
+Não afirmar PASS sem execução real.
+
+Se ambiente impedir execução:
+
+registrar BLOCKED ou NOT EXECUTED,
+com causa e impacto.
+
+==================================================
+31. MATRIZ DE RECONCILIAÇÃO
+==================================================
+
+Comparar para filtros equivalentes:
+
+Financial JSON
+Financial UI
+Financial PDF
+Financial CSV
+
+Category JSON
+Category UI
+Category PDF
+Category CSV
+
+Audit JSON
+Audit UI
+Audit PDF
+Audit CSV
+
+Validar:
+
+- mesmos valores;
+- mesmos filtros;
+- mesma semântica;
+- mesmas transações;
+- ausência de duplicação;
+- mesmos status.
+
+Na auditoria, respeitar que a UI é paginada
+e a exportação representa o conjunto filtrado completo.
+
+==================================================
+32. DEFINITION OF DONE
+==================================================
+
+TASK-5.8 concluída quando:
+
+- inventário está completo;
+- ADR e contratos foram conferidos;
+- três relatórios foram validados;
+- seis exportações foram validadas;
+- filtros foram validados;
+- Golden Scenario passou;
+- reconciliação financeira passou;
+- ownership passou;
+- auditoria passou;
+- CSV Injection passou;
+- paginação passou;
+- responsividade foi validada;
+- acessibilidade foi validada;
+- Testcontainers passou;
+- backend build passou;
+- frontend lint passou;
+- frontend tests passaram;
+- frontend production build passou;
+- regressões passaram;
+- nenhum CRITICAL/HIGH permanece aberto;
+- evidências foram documentadas.
+
+==================================================
+33. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# SPRINT 5 — GATE DE APROVAÇÃO
+
+STATUS FINAL:
+
+APPROVED / REJECTED / BLOCKED
+
+1. Resumo executivo.
+2. Tasks verificadas.
+3. ADRs e contratos.
+4. Inventário de endpoints.
+5. Inventário de interfaces.
+6. Inventário de exportações.
+7. Matriz de filtros.
+8. Golden Scenario.
+9. Invariantes financeiras.
+10. Reconciliação JSON/UI/PDF/CSV.
+11. Relatório por Categoria.
+12. Relatório de Auditoria.
+13. Paginação e ordenação.
+14. CSV Injection.
+15. Segurança PDF.
+16. Ownership multiusuário.
+17. Performance e índices.
+18. Responsividade.
+19. Acessibilidade.
+20. Testcontainers/MySQL.
+21. Testes backend.
+22. Testes frontend.
+23. E2E.
+24. Builds.
+25. Regressões.
+26. Bugs encontrados.
+27. Bugs corrigidos.
+28. Bugs pendentes e severidade.
+29. Arquivos modificados.
+30. Dívidas técnicas.
+31. Evidências reais de execução.
+32. Decisão final justificada.
+
+Se aprovado:
+
+SPRINT 5 — APPROVED
+
+READY FOR SPRINT 6 PLANNING.
+
+NÃO implementar a Sprint 6 nesta execução.
+
+Se rejeitado:
+
+SPRINT 5 — REJECTED
+
+Listar bloqueadores e plano mínimo de correção.
+
+Se bloqueado por ambiente:
+
+SPRINT 5 — BLOCKED
+
+Identificar testes não executados e evidências ausentes.
+
+NÃO declarar aprovação sem evidências suficientes.

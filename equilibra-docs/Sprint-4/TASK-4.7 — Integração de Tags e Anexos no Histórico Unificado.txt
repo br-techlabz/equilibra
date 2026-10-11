@@ -1,0 +1,2547 @@
+# TASK-4.7 — Integração de Tags e Anexos no Histórico Unificado
+
+Estamos na:
+
+# Sprint 4 — Enriquecimento das Transações
+
+Concluídas:
+
+- TASK-4.0 — Arquitetura de Tags e Anexos
+- TASK-4.1 — Domínio, Persistência e API de Tags
+- TASK-4.2 — Interface de Tags
+- TASK-4.3 — Associação de Tags às Transações
+- TASK-4.4 — Infraestrutura Segura de Anexos
+- TASK-4.5 — API e Ciclo de Vida de Anexos
+- TASK-4.6 — Interface de Anexos em Despesas, Receitas e Transferências
+
+Agora implemente:
+
+# TASK-4.7 — Integração de Tags e Anexos no Histórico Unificado
+
+Objetivo:
+
+Evoluir o Histórico Unificado de Transações para incorporar os metadados
+implementados na Sprint 4.
+
+O histórico deve:
+
+1. exibir Tags associadas às transações;
+2. permitir filtro por uma ou mais Tags;
+3. indicar a existência/quantidade de anexos;
+4. permitir visualizar/listar anexos da transação;
+5. permitir download autenticado a partir do histórico;
+6. reutilizar a infraestrutura já criada;
+7. preservar paginação server-side;
+8. preservar isolamento multiusuário;
+9. preservar todas as invariantes financeiras.
+
+NÃO transformar o Histórico em um CRUD financeiro genérico.
+
+NÃO duplicar a implementação de Attachments.
+
+---
+
+# 1. FONTE DE VERDADE
+
+Antes de modificar código, leia:
+
+- CLAUDE.md;
+- ADR do ledger da TASK-3.0;
+- TASK-3.10 — Histórico Unificado;
+- TASK-4.0 — ADR de Tags e Attachments;
+- relatório da TASK-4.3;
+- relatório da TASK-4.5;
+- relatório da TASK-4.6;
+- implementação real de FinancialTransaction;
+- TransactionHistoryQueryService;
+- DTO/projection do histórico;
+- Tag;
+- associação Transaction ↔ Tag;
+- TransactionAttachment;
+- AttachmentRepository;
+- AttachmentService;
+- TransactionAttachmentsComponent;
+- OpenAPI;
+- testes do Histórico;
+- testes de segurança;
+- índices atuais do banco.
+
+Código real + ADRs são a fonte de verdade.
+
+Se este prompt divergir:
+
+seguir implementação aprovada.
+
+---
+
+# 2. PRE-IMPLEMENTATION REPORT
+
+ANTES de modificar arquivos, produza:
+
+# TASK-4.7 — PRE-IMPLEMENTATION REPORT
+
+## 1. Histórico atual
+
+Informe:
+
+endpoint;
+DTO;
+query;
+pagination;
+filters;
+ordering.
+
+## 2. Tags
+
+Informe como são associadas e carregadas.
+
+## 3. Attachments
+
+Informe como metadata é persistida e acessada.
+
+## 4. Mudanças no DTO
+
+Liste campos necessários.
+
+## 5. Estratégia de query
+
+Explique como evitar:
+
+- N+1;
+- duplicação de transações;
+- paginação incorreta;
+- count incorreto.
+
+## 6. Tag Filter
+
+Explique semântica proposta.
+
+## 7. Attachment Indicator
+
+Explique estratégia.
+
+## 8. Frontend
+
+Explique mudanças.
+
+## 9. Security
+
+Explique ownership.
+
+## 10. Performance
+
+Explique queries/índices.
+
+## 11. Tests
+
+Liste testes.
+
+## 12. Files
+
+Liste:
+
+criar;
+modificar;
+reutilizar.
+
+Depois implemente.
+
+---
+
+# 3. PRINCÍPIO FUNDAMENTAL
+
+O Histórico continua representando:
+
+FinancialTransaction lógica.
+
+NÃO:
+
+AccountMovement.
+
+---
+
+# 4. TRANSFER
+
+Uma Transfer:
+
+A → B
+
+continua sendo UMA linha no histórico.
+
+Mesmo contendo:
+
+movement A = -X
+movement B = +X.
+
+---
+
+# 5. TAGS
+
+Uma transação pode possuir:
+
+0..N Tags.
+
+---
+
+# 6. ATTACHMENTS
+
+Uma transação pode possuir:
+
+0..N Attachments.
+
+---
+
+# 7. METADATA ONLY
+
+Tags e Attachments:
+
+não alteram efeito financeiro.
+
+---
+
+# 8. HISTORY RESPONSE
+
+Evoluir DTO do histórico.
+
+Conceitualmente:
+
+{
+  "id": "...",
+  "type": "EXPENSE",
+  "description": "...",
+  "occurredAt": "...",
+  "amount": 100.00,
+  "status": "ACTIVE",
+
+  ...
+
+  "tags": [
+    {
+      "id": "...",
+      "name": "...",
+      "active": true
+    }
+  ],
+
+  "attachmentCount": 2
+}
+
+Adapte ao contrato real.
+
+---
+
+# 9. NÃO RETORNAR ATTACHMENT BYTES
+
+History endpoint nunca retorna conteúdo dos arquivos.
+
+---
+
+# 10. NÃO RETORNAR STORAGE KEY
+
+Não retornar:
+
+storageKey;
+filesystem path;
+absolute path.
+
+---
+
+# 11. ATTACHMENT COUNT
+
+Preferir:
+
+attachmentCount
+
+em vez de carregar metadata completa de todos os Attachments em cada
+linha.
+
+---
+
+# 12. MOTIVO
+
+O Histórico precisa saber:
+
+"Esta transação possui anexos?"
+
+Não precisa baixar metadata completa de todos eles na consulta principal.
+
+---
+
+# 13. ATTACHMENT METADATA
+
+Quando usuário abrir anexos de uma transação:
+
+usar API existente da TASK-4.5.
+
+---
+
+# 14. REUSE
+
+Reutilizar:
+
+TransactionAttachmentsComponent
+
+da TASK-4.6.
+
+---
+
+# 15. NÃO DUPLICAR
+
+Não criar:
+
+HistoryAttachmentsComponent
+
+se o componente existente atende.
+
+---
+
+# 16. READONLY MODE
+
+No Histórico:
+
+preferência por utilizar TransactionAttachmentsComponent em modo
+somente leitura.
+
+---
+
+# 17. HISTORY ATTACHMENT ACTION
+
+Usuário pode clicar:
+
+"2 anexos"
+
+ou ícone equivalente.
+
+---
+
+# 18. RESULTADO
+
+Abrir:
+
+drawer;
+dialog;
+expansion panel;
+
+conforme Design System.
+
+---
+
+# 19. CONTEÚDO
+
+Mostrar lista real dos Attachments.
+
+---
+
+# 20. DOWNLOAD
+
+Permitir download autenticado.
+
+---
+
+# 21. DELETE
+
+Preferência:
+
+NÃO permitir delete diretamente pelo Histórico.
+
+O Histórico é prioritariamente leitura/auditoria.
+
+---
+
+# 22. MOTIVO
+
+Alterações continuam nas telas específicas:
+
+Expense;
+Income;
+Transfer.
+
+---
+
+# 23. SE DESIGN ATUAL PERMITE EDITAR HISTÓRICO
+
+Seguir política real.
+
+Mas não introduzir mutation nova apenas nesta TASK.
+
+---
+
+# 24. TAG RESPONSE
+
+History item deve incluir resumo das Tags.
+
+---
+
+# 25. TAG SUMMARY
+
+Conceitualmente:
+
+id
+name
+active.
+
+---
+
+# 26. INACTIVE TAG
+
+Tag histórica inativa:
+
+continua aparecendo.
+
+---
+
+# 27. VISUAL
+
+Indicar estado inativo sem depender apenas de cor.
+
+---
+
+# 28. TAG ORDER
+
+Ordem previsível.
+
+Preferência:
+
+name ASC.
+
+---
+
+# 29. NO DUPLICATE TAG
+
+Mesma Tag nunca aparece duas vezes na mesma transação.
+
+---
+
+# 30. TAG FILTER
+
+Adicionar filtro por Tag ao endpoint de Histórico.
+
+---
+
+# 31. QUERY PARAMETER
+
+Seguir padrão OpenAPI existente.
+
+Conceitualmente:
+
+tagIds=uuid1,uuid2
+
+ou parâmetros repetidos:
+
+tagId=uuid1&tagId=uuid2.
+
+Escolher conforme convenção atual.
+
+---
+
+# 32. MULTIPLE TAGS
+
+Filtro deve aceitar uma ou mais Tags.
+
+---
+
+# 33. SEMÂNTICA
+
+Definir explicitamente:
+
+ANY
+ou
+ALL.
+
+---
+
+# 34. RECOMENDAÇÃO
+
+Para experiência inicial:
+
+ANY.
+
+Exemplo:
+
+Tags selecionadas:
+
+Viagem
+Trabalho
+
+resultado:
+
+transação que possui Viagem OU Trabalho.
+
+---
+
+# 35. NÃO DEIXAR AMBÍGUO
+
+Documentar semântica no OpenAPI.
+
+---
+
+# 36. SE ADR DEFINIU ALL
+
+Seguir ADR.
+
+---
+
+# 37. OWNERSHIP DO FILTRO
+
+CRÍTICO.
+
+tagIds fornecidos precisam ser interpretados no escopo do CurrentUser.
+
+---
+
+# 38. FOREIGN TAG ID
+
+User B fornece UUID de Tag de User A.
+
+Não deve:
+
+- obter dados de A;
+- inferir existência;
+- ampliar resultados.
+
+---
+
+# 39. POLICY
+
+Seguir política de private resources.
+
+Preferência:
+
+404/validation segura conforme arquitetura existente.
+
+---
+
+# 40. INACTIVE TAG FILTER
+
+Tags inativas próprias podem ser usadas para filtrar histórico.
+
+---
+
+# 41. MOTIVO
+
+Histórico precisa consultar metadata histórica.
+
+---
+
+# 42. TAG SELECTOR DO FILTRO
+
+No frontend:
+
+deve conseguir selecionar Tags ativas e inativas relevantes.
+
+---
+
+# 43. TAG API
+
+Se `/api/tags?includeInactive=true` existe:
+
+reutilizar.
+
+---
+
+# 44. NÃO CRIAR TAGS
+
+Filtro não cria Tags.
+
+---
+
+# 45. FILTER UI
+
+Adicionar ao toolbar/filtros do Histórico:
+
+Tags.
+
+---
+
+# 46. MULTISELECT
+
+Permitir seleção múltipla.
+
+---
+
+# 47. REUSE
+
+Reutilizar componentes/helpers da TASK-4.3 quando apropriado.
+
+---
+
+# 48. NÃO REUTILIZAR CEGAMENTE
+
+TagSelector de formulário pode assumir somente Tags ativas.
+
+Filtro histórico precisa permitir Tags inativas.
+
+Se necessário:
+
+tornar componente configurável de forma pequena e clara.
+
+---
+
+# 49. NÃO DUPLICAR API SERVICE
+
+Reutilizar TagService.
+
+---
+
+# 50. FILTER CHIP
+
+Tags selecionadas podem aparecer como chips.
+
+---
+
+# 51. REMOVE FILTER
+
+Usuário deve conseguir remover individualmente.
+
+---
+
+# 52. CLEAR
+
+Se Histórico já possui:
+
+"Limpar filtros"
+
+Tags devem ser incluídas.
+
+---
+
+# 53. FILTER STATE
+
+Mudança de Tags:
+
+reset page para 0.
+
+---
+
+# 54. SERVER-SIDE
+
+Filtro por Tags deve ocorrer no backend.
+
+---
+
+# 55. PROIBIDO
+
+Não:
+
+baixar página
+→ filtrar Tags localmente.
+
+---
+
+# 56. MOTIVO
+
+Isso quebraria:
+
+totalElements;
+totalPages;
+consistência da paginação.
+
+---
+
+# 57. COMBINAÇÃO DE FILTROS
+
+Tag filter deve combinar corretamente com filtros existentes:
+
+type;
+status;
+period;
+account;
+category;
+
+e q se existir.
+
+---
+
+# 58. SEMÂNTICA ENTRE FILTROS
+
+Filtros de dimensões diferentes:
+
+AND.
+
+Exemplo:
+
+type = EXPENSE
+AND
+account = A
+AND
+tag IN (Viagem, Casa).
+
+---
+
+# 59. ACCOUNT FILTER + TRANSFER
+
+Preservar regra existente:
+
+Transfer entra se conta filtrada for:
+
+source OR destination.
+
+Mas aparece uma vez.
+
+---
+
+# 60. CATEGORY FILTER
+
+Não alterar semântica atual.
+
+---
+
+# 61. STATUS FILTER
+
+Não alterar.
+
+---
+
+# 62. PERIOD
+
+Continuar usando:
+
+occurredAt.
+
+---
+
+# 63. PAGINATION
+
+CRÍTICO.
+
+Adicionar JOIN com Tags não pode multiplicar linhas.
+
+---
+
+# 64. EXEMPLO
+
+Uma Expense com:
+
+3 Tags
+
+deve continuar ocupando:
+
+1 elemento
+
+da página.
+
+---
+
+# 65. TOTAL ELEMENTS
+
+Conta FinancialTransactions.
+
+Não:
+
+transaction_tag rows.
+
+---
+
+# 66. TRANSFER
+
+Uma Transfer com:
+
+2 movements
+3 Tags
+2 Attachments
+
+continua:
+
+1 elemento.
+
+---
+
+# 67. QUERY STRATEGY
+
+Evitar collection fetch join direto em query paginada se isso causar
+paginação incorreta.
+
+---
+
+# 68. PREFERRED STRATEGY
+
+Uma estratégia aceitável:
+
+Query 1:
+paginar IDs/logical transactions.
+
+Query 2:
+buscar dados complementares/Tags em batch para IDs da página.
+
+Query 3:
+buscar attachment counts em aggregate para IDs da página.
+
+Ou projeção SQL equivalente eficiente.
+
+Escolha com base na arquitetura atual.
+
+---
+
+# 69. N+1
+
+PROIBIDO:
+
+1 history query
++
+N tag queries
++
+N attachment count queries.
+
+---
+
+# 70. ATTACHMENT COUNT QUERY
+
+Preferir aggregate:
+
+GROUP BY transaction_id
+
+para IDs da página.
+
+---
+
+# 71. ZERO ATTACHMENTS
+
+Se nenhuma linha no aggregate:
+
+attachmentCount = 0.
+
+---
+
+# 72. TAG BATCH
+
+Buscar Tags para todos IDs da página em uma consulta apropriada.
+
+---
+
+# 73. SORTING
+
+Preservar ordenação global atual.
+
+Provavelmente:
+
+occurredAt DESC
++ tie-breaker estável.
+
+---
+
+# 74. TAG JOIN NÃO MUDA ORDER
+
+Tags não podem alterar ordenação de transactions.
+
+---
+
+# 75. QUERY COUNT
+
+Documentar quantidade estrutural de queries por página.
+
+---
+
+# 76. PERFORMANCE
+
+Não precisa ser uma única query.
+
+Preferir poucas queries previsíveis e corretas.
+
+---
+
+# 77. INDEX REVIEW
+
+Revisar índices da join table de Tags.
+
+---
+
+# 78. FILTER INDEX
+
+Consulta por:
+
+tag_id → transaction_id
+
+deve possuir suporte adequado.
+
+---
+
+# 79. ATTACHMENT INDEX
+
+Attachment count por:
+
+transaction_id
+
+deve possuir índice adequado.
+
+---
+
+# 80. NÃO CRIAR ÍNDICE DUPLICADO
+
+Inspecionar schema antes.
+
+---
+
+# 81. MIGRATION
+
+Criar migration SOMENTE se índice necessário estiver realmente ausente.
+
+---
+
+# 82. NÃO ALTERAR DADOS
+
+Nenhuma migration de ledger.
+
+---
+
+# 83. SECURITY
+
+History continua owner-scoped.
+
+---
+
+# 84. CURRENT USER
+
+Identidade exclusivamente:
+
+JWT
+→ SecurityContext
+→ CurrentUser.
+
+---
+
+# 85. OWNER REQUEST
+
+Nenhum request aceita:
+
+ownerId;
+userId;
+email.
+
+---
+
+# 86. TAG OWNERSHIP
+
+Tag filter nunca ignora owner.
+
+---
+
+# 87. ATTACHMENT COUNT OWNERSHIP
+
+Contagens devem vir apenas de transactions do usuário.
+
+---
+
+# 88. ATTACHMENT LIST
+
+Ao abrir Attachments:
+
+API existente faz autorização novamente.
+
+---
+
+# 89. DEFENSE IN DEPTH
+
+Não confiar no fato de que transaction apareceu no History para liberar
+Attachment.
+
+Backend Attachment API continua validando owner.
+
+---
+
+# 90. DOWNLOAD
+
+Usar AttachmentService existente.
+
+---
+
+# 91. JWT
+
+Nunca em query string.
+
+---
+
+# 92. STORAGE KEY
+
+Nunca no frontend.
+
+---
+
+# 93. FILE PATH
+
+Nunca no frontend.
+
+---
+
+# 94. HISTORY DESKTOP
+
+Evoluir tabela existente sem torná-la ilegível.
+
+---
+
+# 95. NÃO CRIAR 15 COLUNAS
+
+Tags e Attachments devem ser integrados de forma compacta.
+
+---
+
+# 96. SUGESTÃO
+
+Manter colunas financeiras atuais.
+
+Adicionar:
+
+Tags
+
+e/ou
+
+Anexos
+
+apenas se largura permitir.
+
+---
+
+# 97. ALTERNATIVA
+
+Tags podem aparecer abaixo da descrição.
+
+Attachments podem aparecer como ícone:
+
+📎 2
+
+ou componente equivalente do Design System.
+
+---
+
+# 98. NÃO USAR EMOJI SE UI USA ICONS
+
+Usar biblioteca de ícones já existente.
+
+---
+
+# 99. RESPONSIVE DESIGN
+
+Em 1280/1366:
+
+não gerar tabela excessivamente larga.
+
+---
+
+# 100. TAG PRESENTATION
+
+Mostrar no máximo quantidade visual razoável.
+
+Exemplo:
+
+Viagem
+Casa
++2
+
+---
+
+# 101. ACCESSIBLE +N
+
+Accessible label:
+
+"Mais 2 tags"
+
+ou equivalente.
+
+---
+
+# 102. FULL TAG ACCESS
+
+Usuário deve conseguir descobrir todas as Tags sem depender somente de
+hover.
+
+---
+
+# 103. MOBILE HISTORY
+
+Nos cards mobile:
+
+mostrar Tags abaixo das informações principais.
+
+---
+
+# 104. ATTACHMENT MOBILE
+
+Mostrar:
+
+"2 anexos"
+
+como ação/touch target.
+
+---
+
+# 105. NO HORIZONTAL OVERFLOW
+
+360px:
+
+PASS obrigatório.
+
+---
+
+# 106. LONG TAG
+
+Não quebrar viewport.
+
+---
+
+# 107. LONG DESCRIPTION
+
+Continuar funcionando.
+
+---
+
+# 108. HISTORY ATTACHMENT PANEL
+
+Ao clicar em anexos:
+
+usar padrão visual consolidado.
+
+---
+
+# 109. READONLY
+
+Preferência:
+
+TransactionAttachmentsComponent
+readonly = true.
+
+---
+
+# 110. READONLY BEHAVIOR
+
+Permitido:
+
+list;
+download.
+
+Não permitido:
+
+upload;
+delete.
+
+---
+
+# 111. CANCELLED TRANSACTION
+
+Attachments históricos continuam acessíveis conforme API/ADR.
+
+---
+
+# 112. NO EDIT FROM HISTORY
+
+Não adicionar edição de Tags pelo Histórico.
+
+---
+
+# 113. NO ATTACHMENT UPLOAD FROM HISTORY
+
+Preferência:
+
+não permitir.
+
+---
+
+# 114. MOTIVO
+
+Histórico é leitura/auditoria.
+
+---
+
+# 115. HISTORY EMPTY
+
+Sem transações:
+
+empty state existente.
+
+---
+
+# 116. FILTERED EMPTY
+
+Filtros incluindo Tags sem resultado:
+
+mostrar empty state filtrado.
+
+---
+
+# 117. LOADING
+
+Mudança de Tag filter:
+
+loading coerente.
+
+---
+
+# 118. REQUEST RACE
+
+Mudanças rápidas de filtros:
+
+resposta antiga não sobrescreve nova.
+
+---
+
+# 119. SWITCHMAP
+
+Usar estratégia existente.
+
+---
+
+# 120. PAGE RESET
+
+Mudança de Tag:
+
+page = 0.
+
+---
+
+# 121. ERROR
+
+Erro na consulta:
+
+não mostrar lista vazia como se fosse sucesso.
+
+---
+
+# 122. RETRY
+
+Preservar filtros atuais.
+
+---
+
+# 123. TAG LOAD ERROR
+
+Se lista de Tags para filtro falhar:
+
+History principal não precisa necessariamente desaparecer.
+
+Tratar separadamente se arquitetura permitir.
+
+---
+
+# 124. ATTACHMENT PANEL ERROR
+
+Erro ao carregar Attachments:
+
+mostrar erro dentro do painel.
+
+Não derrubar History inteiro.
+
+---
+
+# 125. DOWNLOAD ERROR
+
+Erro localizado.
+
+---
+
+# 126. TYPESCRIPT
+
+Models tipados.
+
+---
+
+# 127. NO ANY
+
+Não introduzir `any`.
+
+---
+
+# 128. NO NGRX
+
+Não introduzir NgRx somente por causa dos novos filtros.
+
+---
+
+# 129. HISTORY SERVICE
+
+Evoluir service existente.
+
+Não criar segundo HistoryService.
+
+---
+
+# 130. QUERY PARAMS
+
+Serialização determinística.
+
+---
+
+# 131. EMPTY TAG FILTER
+
+Nenhuma Tag selecionada:
+
+não enviar filtro desnecessário.
+
+---
+
+# 132. MULTIPLE TAG PARAMS
+
+Evitar serialização ambígua.
+
+Cobrir com testes.
+
+---
+
+# 133. TAG IDS
+
+Nunca enviar Tag names como autoridade.
+
+Usar IDs.
+
+---
+
+# 134. RESPONSE TAGS
+
+Mostrar names do response.
+
+---
+
+# 135. TAG RENAME
+
+Após refresh:
+
+History mostra nome atual da Tag.
+
+---
+
+# 136. TAG DEACTIVATION
+
+History continua mostrando Tag.
+
+---
+
+# 137. TAG DELETION
+
+Não existe physical delete no fluxo normal.
+
+---
+
+# 138. ATTACHMENT DELETE
+
+Se Attachment for removido na tela específica:
+
+History attachmentCount deve refletir após nova consulta.
+
+---
+
+# 139. NO STALE PERMANENT CACHE
+
+Não criar cache eterno de attachmentCount.
+
+---
+
+# 140. DASHBOARD
+
+NÃO precisa mostrar Tags/Attachments nesta TASK.
+
+---
+
+# 141. REPORTS
+
+NÃO implementar ainda.
+
+---
+
+# 142. FINANCIAL LOGIC
+
+Não alterar.
+
+---
+
+# 143. GOLDEN SCENARIO
+
+Criar:
+
+Account A:
+initial 1000
+
+Account B:
+initial 500
+
+Income A:
+700
+Tags:
+Trabalho
+Reembolso
+Attachment:
+comprovante-renda.pdf
+
+Expense A:
+200
+Tags:
+Casa
+Mensal
+Attachments:
+nota.pdf
+recibo.jpg
+
+Transfer A → B:
+300
+Tags:
+Reserva
+Attachment:
+transferencia.pdf
+
+Esperado:
+
+A = 1200
+B = 800
+Net Worth = 2000
+
+Dashboard:
+
+Entradas = 700
+Saídas = 200
+Saldo = 500
+
+History:
+
+3 logical transactions.
+
+---
+
+# 144. GOLDEN HISTORY
+
+Income:
+
+Tags:
+Trabalho, Reembolso
+
+attachmentCount:
+1
+
+Expense:
+
+Tags:
+Casa, Mensal
+
+attachmentCount:
+2
+
+Transfer:
+
+Tags:
+Reserva
+
+attachmentCount:
+1
+
+---
+
+# 145. TAG FILTER GOLDEN
+
+Filter:
+
+Casa
+
+Resultado:
+
+Expense apenas.
+
+---
+
+# 146. TAG FILTER MULTIPLE — ANY
+
+Filter:
+
+Casa + Reserva
+
+Resultado:
+
+Expense
+Transfer.
+
+Total:
+
+2.
+
+Se ADR usa ALL:
+
+adaptar expectativa.
+
+---
+
+# 147. TAG FILTER + TYPE
+
+Type:
+TRANSFER
+
+Tag:
+Reserva
+
+Resultado:
+
+Transfer apenas.
+
+---
+
+# 148. TAG FILTER + ACCOUNT
+
+Account B
+
+Tag Reserva
+
+Transfer A → B deve aparecer uma vez.
+
+---
+
+# 149. TAG FILTER INACTIVE
+
+Desativar:
+
+Casa.
+
+Filtrar:
+
+Casa.
+
+Expense continua aparecendo.
+
+---
+
+# 150. ATTACHMENT COUNT UPDATE
+
+Remover:
+
+recibo.jpg.
+
+Após refresh:
+
+Expense attachmentCount:
+
+1.
+
+---
+
+# 151. DOWNLOAD GOLDEN
+
+Abrir attachments da Expense.
+
+List:
+
+nota.pdf.
+
+Download autenticado:
+
+PASS.
+
+---
+
+# 152. TRANSFER COUNT
+
+Mesmo com:
+
+2 movements
+1 Tag
+1 Attachment
+
+History:
+
+1 Transfer.
+
+---
+
+# 153. CANCELLED
+
+Cancelar Expense.
+
+Com filtro status apropriado:
+
+comportamento segue política existente.
+
+Tags continuam metadata histórica.
+
+Attachment count continua coerente com lifecycle aprovado.
+
+---
+
+# 154. FINANCIAL INVARIANCE
+
+Filtro, Tags e Attachments:
+
+não alteram saldos.
+
+---
+
+# 155. ACCOUNT MOVEMENTS
+
+Quantidade/valores permanecem inalterados.
+
+---
+
+# 156. TEST BACKEND — HISTORY DTO
+
+Sem Tags:
+
+tags = [].
+
+Sem Attachments:
+
+attachmentCount = 0.
+
+---
+
+# 157. TEST BACKEND — TAGS
+
+Uma/múltiplas/inativas.
+
+---
+
+# 158. TEST BACKEND — ATTACHMENT COUNT
+
+0, 1, N.
+
+---
+
+# 159. TEST BACKEND — PAGINATION
+
+Criar transactions com múltiplas Tags.
+
+Page size continua exato.
+
+---
+
+# 160. TEST BACKEND — TOTAL ELEMENTS
+
+Não multiplicado pelas Tags.
+
+---
+
+# 161. TEST BACKEND — TRANSFER
+
+Uma linha.
+
+---
+
+# 162. TEST BACKEND — FILTER TAG
+
+Uma Tag.
+
+---
+
+# 163. TEST BACKEND — MULTIPLE TAGS
+
+ANY/ALL conforme decisão.
+
+---
+
+# 164. TEST BACKEND — FOREIGN TAG
+
+User B tenta filtro com tagId de A.
+
+Sem vazamento.
+
+---
+
+# 165. TEST BACKEND — INACTIVE TAG
+
+Filtro histórico funciona.
+
+---
+
+# 166. TEST BACKEND — COMBINED FILTER
+
+period + account + type + category + tag.
+
+---
+
+# 167. TEST BACKEND — CANCELLED
+
+Preservar comportamento.
+
+---
+
+# 168. TEST BACKEND — QUERY COUNT
+
+Se infraestrutura permite:
+
+assegurar ausência de N+1.
+
+---
+
+# 169. TEST MYSQL
+
+Executar com Testcontainers.
+
+---
+
+# 170. FRONTEND TEST — TAG FILTER
+
+Selecionar Tag:
+
+request contém ID correto.
+
+---
+
+# 171. FRONTEND TEST — MULTIPLE TAGS
+
+Serialização correta.
+
+---
+
+# 172. FRONTEND TEST — PAGE RESET
+
+Filtro muda:
+
+page 0.
+
+---
+
+# 173. FRONTEND TEST — CLEAR
+
+Limpa Tags.
+
+---
+
+# 174. FRONTEND TEST — INACTIVE
+
+Tag inativa disponível no filtro histórico.
+
+---
+
+# 175. FRONTEND TEST — DISPLAY
+
+Tags aparecem na transação.
+
+---
+
+# 176. FRONTEND TEST — MANY TAGS
+
+UI compacta.
+
+---
+
+# 177. FRONTEND TEST — ATTACHMENT COUNT
+
+0:
+sem ação enganosa.
+
+2:
+ação correta.
+
+---
+
+# 178. FRONTEND TEST — ATTACHMENT PANEL
+
+Abrir.
+
+Listar.
+
+Download.
+
+Fechar.
+
+---
+
+# 179. FRONTEND TEST — READONLY
+
+Sem upload/delete.
+
+---
+
+# 180. FRONTEND TEST — ERROR
+
+Attachment list failure isolada.
+
+---
+
+# 181. FRONTEND TEST — MOBILE
+
+360 × 800.
+
+---
+
+# 182. E2E
+
+Fluxo:
+
+login
+→ criar Tags
+→ criar transactions com Tags
+→ anexar arquivos
+→ abrir History
+→ validar Tags
+→ validar attachmentCount
+→ filtrar por Tag
+→ abrir Attachments
+→ baixar.
+
+---
+
+# 183. E2E MULTIUSER
+
+User A:
+
+Tag + transaction + Attachment.
+
+User B:
+
+não vê transaction;
+não vê Tag;
+não acessa Attachment.
+
+---
+
+# 184. E2E PAGINATION
+
+Se infraestrutura permitir:
+
+transactions com múltiplas Tags não alteram quantidade da página.
+
+---
+
+# 185. ACCESSIBILITY
+
+Tag filter:
+
+label correto.
+
+---
+
+# 186. MULTISELECT KEYBOARD
+
+Operável por teclado.
+
+---
+
+# 187. TAG CHIP REMOVE
+
+Accessible name.
+
+---
+
+# 188. ATTACHMENT ACTION
+
+Accessible name:
+
+"Abrir 2 anexos de [descrição]"
+
+ou equivalente.
+
+---
+
+# 189. DOWNLOAD
+
+Accessible name inclui filename.
+
+---
+
+# 190. INACTIVE TAG
+
+Screen reader consegue identificar estado.
+
+---
+
+# 191. MOBILE TOUCH
+
+Targets adequados.
+
+---
+
+# 192. RESPONSIVE
+
+Validar:
+
+360 × 800
+390 × 844
+768 × 1024
+1024 × 768
+1280 × 720
+1366 × 768
+1920 × 1080.
+
+---
+
+# 193. PERFORMANCE REVIEW
+
+Registrar:
+
+queries por página;
+Tag query;
+attachment count query;
+tempo aproximado se suíte mede.
+
+---
+
+# 194. NO ATTACHMENT BYTES
+
+History query nunca abre storage.
+
+---
+
+# 195. STORAGE
+
+History endpoint não depende de filesystem para contar Attachments.
+
+Conta metadata no DB.
+
+---
+
+# 196. STORAGE FAILURE
+
+Storage offline:
+
+History ainda deve conseguir mostrar attachmentCount a partir da
+metadata, se arquitetura permitir.
+
+Download pode falhar isoladamente.
+
+---
+
+# 197. OPENAPI
+
+Atualizar History response.
+
+---
+
+# 198. OPENAPI FILTER
+
+Documentar tagIds.
+
+---
+
+# 199. OPENAPI SEMANTICS
+
+Documentar:
+
+ANY/ALL.
+
+---
+
+# 200. OPENAPI INACTIVE
+
+Documentar que Tag inativa própria pode ser usada para histórico, se
+essa for a política implementada.
+
+---
+
+# 201. NO BACKEND ATTACHMENT DUPLICATION
+
+Não criar novo endpoint de download.
+
+Usar API da TASK-4.5.
+
+---
+
+# 202. NO NEW STORAGE CODE
+
+Não alterar storage sem bug real.
+
+---
+
+# 203. NO FINANCIAL WRITE CHANGES
+
+Expense/Income/Transfer writes não precisam ser alterados.
+
+---
+
+# 204. NO REPORTS
+
+Deixar para Sprint 5.
+
+---
+
+# 205. NO GENERIC QUERY ENGINE
+
+Não criar framework de filtros genéricos.
+
+---
+
+# 206. NO ELASTICSEARCH
+
+Não necessário.
+
+---
+
+# 207. NO CLIENT MERGE
+
+Frontend não deve unir:
+
+Expense list
+Income list
+Transfer list
+
+para produzir History.
+
+Backend continua fornecendo histórico unificado.
+
+---
+
+# 208. SECURITY REGRESSION
+
+Executar:
+
+401;
+403;
+IDOR;
+mass assignment;
+cross-user tests.
+
+---
+
+# 209. TAG REGRESSION
+
+CRUD de Tags:
+
+PASS.
+
+Association:
+
+PASS.
+
+---
+
+# 210. ATTACHMENT REGRESSION
+
+Upload:
+
+PASS.
+
+List:
+
+PASS.
+
+Download:
+
+PASS.
+
+Delete:
+
+PASS.
+
+---
+
+# 211. LEDGER REGRESSION
+
+Expense:
+
+PASS.
+
+Income:
+
+PASS.
+
+Transfer:
+
+PASS.
+
+Current balance:
+
+PASS.
+
+Net Worth:
+
+PASS.
+
+Dashboard:
+
+PASS.
+
+---
+
+# 212. BUILD
+
+Backend:
+PASS.
+
+Frontend lint:
+PASS.
+
+Frontend tests:
+PASS.
+
+Frontend production build:
+PASS.
+
+---
+
+# 213. DEFINITION OF DONE
+
+TASK-4.7 estará concluída quando:
+
+- History continuar baseado em FinancialTransaction lógica;
+- Transfer continuar aparecendo uma vez;
+- Tags forem retornadas pelo History;
+- Tags inativas históricas forem exibidas;
+- attachmentCount for retornado;
+- History não carregar bytes;
+- storageKey não for exposto;
+- filtro por uma Tag funcionar;
+- filtro por múltiplas Tags funcionar;
+- semântica ANY/ALL estiver documentada;
+- filtro por Tag for server-side;
+- Tags inativas próprias puderem ser usadas no histórico conforme
+  política;
+- cross-user tag filter estiver protegido;
+- filtros combinados funcionarem;
+- paginação permanecer correta;
+- totalElements permanecer correto;
+- Tags não multiplicarem linhas;
+- Transfer não multiplicar por movements;
+- attachmentCount não gerar N+1;
+- Tags não gerarem N+1;
+- índices tiverem sido revisados;
+- History UI mostrar Tags;
+- History UI indicar Attachments;
+- Attachment panel reutilizar componente existente;
+- download continuar autenticado;
+- History não permitir mutation indevida;
+- mobile funcionar;
+- acessibilidade funcionar;
+- ledger permanecer intacto;
+- currentBalance permanecer correto;
+- netWorth permanecer correto;
+- Dashboard permanecer correto;
+- Tags CRUD continuar correto;
+- Attachments CRUD continuar correto;
+- multi-user isolation passar;
+- MySQL/Testcontainers passar;
+- backend build passar;
+- frontend lint passar;
+- frontend tests passar;
+- production build passar.
+
+---
+
+# 214. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-4.7 — TAGS E ANEXOS NO HISTÓRICO UNIFICADO
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+## 1. History Endpoint
+
+Path:
+
+Pagination:
+
+Ordering:
+
+## 2. History DTO
+
+Tags:
+PASS / FAIL
+
+AttachmentCount:
+PASS / FAIL
+
+StorageKey exposed:
+YES / NO
+
+Expected:
+NO
+
+## 3. Logical Transactions
+
+Expense:
+PASS / FAIL
+
+Income:
+PASS / FAIL
+
+Transfer once:
+PASS / FAIL
+
+## 4. Tags
+
+Active:
+PASS / FAIL
+
+Inactive historical:
+PASS / FAIL
+
+Ordering:
+PASS / FAIL
+
+Duplicate prevention:
+PASS / FAIL
+
+## 5. Tag Filter
+
+Single:
+PASS / FAIL
+
+Multiple:
+PASS / FAIL
+
+Semantics:
+ANY / ALL
+
+Server-side:
+PASS / FAIL
+
+Inactive:
+PASS / FAIL
+
+## 6. Combined Filters
+
+Type + Tag:
+PASS / FAIL
+
+Account + Tag:
+PASS / FAIL
+
+Category + Tag:
+PASS / FAIL
+
+Period + Tag:
+PASS / FAIL
+
+Status + Tag:
+PASS / FAIL
+
+## 7. Pagination
+
+Page size:
+PASS / FAIL
+
+Total elements:
+PASS / FAIL
+
+Tags multiply rows:
+YES / NO
+
+Expected:
+NO
+
+## 8. Attachment Count
+
+0:
+PASS / FAIL
+
+1:
+PASS / FAIL
+
+N:
+PASS / FAIL
+
+N+1:
+YES / NO
+
+Expected:
+NO
+
+## 9. Query Strategy
+
+Descreva:
+
+Queries estruturais por página:
+
+Indexes utilizados:
+
+## 10. Ownership
+
+History:
+PASS / FAIL
+
+Tag filter:
+PASS / FAIL
+
+Attachment:
+PASS / FAIL
+
+Cross-user leakage:
+YES / NO
+
+Expected:
+NO
+
+## 11. Frontend Tags
+
+Display:
+PASS / FAIL
+
+Multiple:
+PASS / FAIL
+
+Inactive:
+PASS / FAIL
+
+Mobile:
+PASS / FAIL
+
+## 12. Frontend Filter
+
+Multi-select:
+PASS / FAIL
+
+Page reset:
+PASS / FAIL
+
+Clear:
+PASS / FAIL
+
+Keyboard:
+PASS / FAIL
+
+## 13. Frontend Attachments
+
+Count:
+PASS / FAIL
+
+Open:
+PASS / FAIL
+
+List:
+PASS / FAIL
+
+Download:
+PASS / FAIL
+
+Readonly:
+PASS / FAIL
+
+Upload from History:
+YES / NO
+
+Expected:
+NO
+
+Delete from History:
+YES / NO
+
+Expected:
+NO
+
+## 14. Accessibility
+
+Tags:
+PASS / FAIL
+
+Filter:
+PASS / FAIL
+
+Attachments:
+PASS / FAIL
+
+Keyboard:
+PASS / FAIL
+
+Screen reader:
+PASS / FAIL
+
+## 15. Responsive
+
+360 × 800:
+PASS / FAIL
+
+390 × 844:
+PASS / FAIL
+
+768 × 1024:
+PASS / FAIL
+
+1024 × 768:
+PASS / FAIL
+
+1280 × 720:
+PASS / FAIL
+
+1366 × 768:
+PASS / FAIL
+
+1920 × 1080:
+PASS / FAIL
+
+## 16. Performance
+
+N+1 Tags:
+YES / NO
+
+N+1 Attachments:
+YES / NO
+
+Pagination in memory:
+YES / NO
+
+Expected:
+NO para todos.
+
+## 17. Security
+
+401:
+PASS / FAIL
+
+403:
+PASS / FAIL
+
+Foreign Tag ID:
+PASS / FAIL
+
+Foreign Attachment:
+PASS / FAIL
+
+StorageKey leak:
+PASS / FAIL
+
+Path leak:
+PASS / FAIL
+
+## 18. Financial Regression
+
+Expense:
+PASS / FAIL
+
+Income:
+PASS / FAIL
+
+Transfer:
+PASS / FAIL
+
+Balance:
+PASS / FAIL
+
+Net Worth:
+PASS / FAIL
+
+Dashboard:
+PASS / FAIL
+
+## 19. Golden Scenario
+
+A:
+
+B:
+
+Net Worth:
+
+Entradas:
+
+Saídas:
+
+Saldo:
+
+History logical count:
+
+Income attachmentCount:
+
+Expense attachmentCount:
+
+Transfer attachmentCount:
+
+Tag filters:
+
+Resultado:
+PASS / FAIL
+
+## 20. Tags Regression
+
+CRUD:
+PASS / FAIL
+
+Association:
+PASS / FAIL
+
+Inactive:
+PASS / FAIL
+
+## 21. Attachments Regression
+
+Upload:
+PASS / FAIL
+
+List:
+PASS / FAIL
+
+Download:
+PASS / FAIL
+
+Delete:
+PASS / FAIL
+
+## 22. Tests
+
+Backend:
+PASS / FAIL
+
+MySQL/Testcontainers:
+PASS / FAIL
+
+Frontend:
+PASS / FAIL
+
+E2E:
+PASS / FAIL / NÃO CONFIGURADO
+
+## 23. Builds
+
+Backend:
+PASS / FAIL
+
+Frontend lint:
+PASS / FAIL
+
+Frontend tests:
+PASS / FAIL
+
+Frontend production:
+PASS / FAIL
+
+## 24. Migration
+
+Required:
+YES / NO
+
+Se YES:
+
+Arquivo:
+
+Motivo:
+
+Clean DB:
+PASS / FAIL
+
+Upgrade:
+PASS / FAIL
+
+## 25. Files
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 26. Bugs encontrados
+
+Para cada:
+
+Severidade:
+Problema:
+Causa:
+Correção:
+Teste:
+
+## 27. Divergências
+
+Esperado:
+
+NENHUMA.
+
+## 28. Dívida técnica
+
+Liste somente itens reais.
+
+## 29. Fora de escopo confirmado
+
+Reports:
+NÃO IMPLEMENTADOS
+
+Dashboard Tags:
+NÃO IMPLEMENTADAS
+
+Dashboard Attachments:
+NÃO IMPLEMENTADOS
+
+OCR:
+NÃO IMPLEMENTADO
+
+Preview:
+NÃO IMPLEMENTADO
+
+S3:
+NÃO IMPLEMENTADO
+
+## 30. Próxima Task
+
+Se TASK-4.7 estiver concluída, declarar prontidão para:
+
+# TASK-4.8 — Gate de Qualidade, Segurança e Regressão da Sprint 4
+
+NÃO implementar TASK-4.8 nesta execução.

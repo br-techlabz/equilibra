@@ -1,0 +1,1950 @@
+# TASK-3.8 — Saldo Corrente e Patrimônio Derivados do Ledger
+
+Estamos na:
+
+# Sprint 3 — Transações Financeiras
+
+Concluídas e validadas:
+
+- TASK-3.0 — Arquitetura do Ledger e Regras Financeiras
+- TASK-3.1 — Domínio e Persistência de Transações Financeiras
+- TASK-3.2 — API REST de Despesas
+- TASK-3.3 — Interface de Despesas
+- TASK-3.4 — API REST de Receitas
+- TASK-3.5 — Interface de Receitas
+- TASK-3.6 — API REST de Transferências
+- TASK-3.7 — Interface de Transferências
+
+Agora implemente:
+
+# TASK-3.8 — Saldo Corrente e Patrimônio Derivados do Ledger
+
+Objetivo:
+
+Transformar o ledger financeiro na fonte real para cálculo de:
+
+1. saldo corrente de cada AssetAccount;
+2. patrimônio líquido atual do usuário.
+
+IMPORTANTE:
+
+NÃO persistir currentBalance.
+
+O saldo corrente deve ser DERIVADO.
+
+A fórmula conceitual é:
+
+currentBalance(account)
+=
+initialBalance
++ receitas ativas da conta
+- despesas ativas da conta
++ transferências ativas recebidas
+- transferências ativas enviadas
+
+O patrimônio líquido atual é:
+
+netWorth
+=
+Σ currentBalance(contas consideradas)
+
+A implementação REAL deve respeitar o ADR da TASK-3.0 e a estrutura
+implementada nas TASKs 3.1–3.7.
+
+---
+
+# 1. FONTE DE VERDADE
+
+Antes de modificar qualquer código, leia:
+
+- CLAUDE.md;
+- ADR da TASK-3.0;
+- TASK-3.1;
+- TASK-3.2;
+- TASK-3.4;
+- TASK-3.6;
+- relatórios finais;
+- migrations;
+- entidades reais;
+- repositories;
+- services;
+- OpenAPI;
+- testes existentes.
+
+Inspecione especialmente:
+
+- AssetAccount;
+- FinancialTransaction;
+- AccountMovement, se existir;
+- TransactionType;
+- TransactionStatus;
+- Expense;
+- Income;
+- Transfer;
+- cancelamento;
+- initialBalance;
+- queries existentes;
+- ownership;
+- optimistic locking;
+- MySQL schema;
+- Testcontainers.
+
+Não presuma que o modelo é exatamente o descrito neste prompt.
+
+O código REAL e o ADR são a fonte de verdade.
+
+---
+
+# 2. RELATÓRIO PRÉ-IMPLEMENTAÇÃO
+
+Antes de alterar arquivos, produza:
+
+# TASK-3.8 — PRE-IMPLEMENTATION REPORT
+
+## 1. Ledger encontrado
+
+Explique como estão representados:
+
+- Expense;
+- Income;
+- Transfer;
+- cancellation.
+
+## 2. Efeito financeiro atual
+
+Explique como cada tipo afeta uma conta.
+
+## 3. Fórmula proposta
+
+Mostre fórmula baseada na implementação real.
+
+## 4. Cancelled
+
+Explique como serão excluídas dos cálculos.
+
+## 5. Patrimônio
+
+Explique quais contas serão consideradas.
+
+## 6. Estratégia de query
+
+Explique:
+
+- SQL/JPQL/projection;
+- agregação;
+- número esperado de queries;
+- prevenção de N+1.
+
+## 7. Precisão monetária
+
+Explique uso de BigDecimal/DECIMAL.
+
+## 8. Performance
+
+Liste índices existentes relevantes.
+
+## 9. initialBalance
+
+Explique impacto da política atual de edição.
+
+## 10. API
+
+Informe alterações propostas.
+
+## 11. Frontend
+
+Informe alterações mínimas propostas.
+
+## 12. Arquivos
+
+Liste arquivos previstos.
+
+Depois implemente.
+
+---
+
+# 3. REGRA FUNDAMENTAL
+
+AssetAccount NÃO deve possuir currentBalance persistido como source of
+truth.
+
+---
+
+# 4. PROIBIDO
+
+Não adicionar:
+
+current_balance
+
+à tabela AssetAccount.
+
+---
+
+# 5. PROIBIDO
+
+Não adicionar:
+
+private BigDecimal currentBalance;
+
+como estado persistente da entidade.
+
+---
+
+# 6. PROIBIDO
+
+Não fazer:
+
+account.setBalance(...)
+
+ao criar:
+
+Expense;
+Income;
+Transfer.
+
+---
+
+# 7. LEDGER
+
+O ledger é a fonte das movimentações.
+
+---
+
+# 8. INITIAL BALANCE
+
+initialBalance continua sendo o ponto inicial da conta.
+
+---
+
+# 9. FÓRMULA — EXPENSE
+
+Expense ACTIVE:
+
+saldo -= amount
+
+---
+
+# 10. FÓRMULA — INCOME
+
+Income ACTIVE:
+
+saldo += amount
+
+---
+
+# 11. FÓRMULA — TRANSFER SOURCE
+
+Transfer ACTIVE:
+
+source saldo -= amount
+
+---
+
+# 12. FÓRMULA — TRANSFER DESTINATION
+
+Transfer ACTIVE:
+
+destination saldo += amount
+
+---
+
+# 13. CANCELLED EXPENSE
+
+Efeito:
+
+0
+
+---
+
+# 14. CANCELLED INCOME
+
+Efeito:
+
+0
+
+---
+
+# 15. CANCELLED TRANSFER
+
+Efeito:
+
+0 em ambas as contas.
+
+---
+
+# 16. FÓRMULA GERAL
+
+Para uma conta A:
+
+currentBalance(A)
+=
+initialBalance(A)
++ activeIncome(A)
+- activeExpense(A)
++ activeIncomingTransfers(A)
+- activeOutgoingTransfers(A)
+
+Se o ledger usa AccountMovement, adapte:
+
+currentBalance(A)
+=
+initialBalance(A)
++
+SUM(active financial movements affecting A)
+
+Preferir a fórmula natural ao modelo real.
+
+---
+
+# 17. NÃO DUPLICAR REGRA
+
+Deve existir UMA definição central da semântica de saldo.
+
+Evite:
+
+- uma fórmula no Dashboard;
+- outra em Accounts;
+- outra em Reports.
+
+---
+
+# 18. BALANCE READ MODEL
+
+Crie um serviço/read model explícito.
+
+Nome conceitual:
+
+AccountBalanceQueryService
+
+ou equivalente coerente com arquitetura.
+
+Responsabilidade:
+
+calcular saldos.
+
+---
+
+# 19. NÃO COLOCAR NO CONTROLLER
+
+Controller não deve montar fórmula financeira.
+
+---
+
+# 20. NÃO COLOCAR NO FRONTEND
+
+Angular não calcula saldo financeiro a partir do histórico.
+
+Backend é autoridade.
+
+---
+
+# 21. OWNERSHIP
+
+Toda consulta deve ser limitada ao:
+
+CurrentUser.
+
+---
+
+# 22. IDOR
+
+Consultar saldo de conta de outro usuário:
+
+404.
+
+Não:
+
+403.
+
+---
+
+# 23. ACCOUNT BALANCE DTO
+
+Crie projeção/DTO apropriado.
+
+Exemplo conceitual:
+
+{
+  "accountId": "...",
+  "name": "Conta corrente",
+  "type": "CHECKING",
+  "active": true,
+  "initialBalance": 1000.00,
+  "currentBalance": 1350.50
+}
+
+currentBalance é DERIVADO.
+
+Não persistido.
+
+---
+
+# 24. NÃO CONFUNDIR DTO COM ENTITY
+
+É perfeitamente válido response DTO possuir:
+
+currentBalance
+
+mesmo que entidade/tabela não possua.
+
+---
+
+# 25. API DE ACCOUNTS
+
+Avalie a melhor estratégia:
+
+A) enriquecer responses existentes de AssetAccount;
+
+ou
+
+B) criar endpoint/read model específico.
+
+Não escolha automaticamente.
+
+---
+
+# 26. CRITÉRIO
+
+Considere:
+
+- compatibilidade com frontend;
+- clareza semântica;
+- performance;
+- OpenAPI;
+- evolução para Dashboard;
+- evolução para Reports.
+
+---
+
+# 27. PREFERÊNCIA
+
+Se não houver impedimento arquitetural, considere enriquecer a leitura
+de AssetAccount com:
+
+currentBalance
+
+calculado.
+
+Mas NÃO altere create/update requests.
+
+---
+
+# 28. GET /asset-accounts
+
+Se enriquecido:
+
+cada item pode retornar:
+
+initialBalance
+currentBalance.
+
+---
+
+# 29. GET /asset-accounts/{id}
+
+Mesmo princípio.
+
+---
+
+# 30. WRITE DTO
+
+Create/Update não devem aceitar:
+
+currentBalance.
+
+---
+
+# 31. OVERPOSTING
+
+Teste tentativa:
+
+{
+  "currentBalance": 999999
+}
+
+Nunca deve controlar saldo.
+
+---
+
+# 32. PATRIMÔNIO LÍQUIDO
+
+Defina serviço/read model para patrimônio.
+
+---
+
+# 33. FÓRMULA
+
+netWorth =
+sum(currentBalance)
+
+das contas consideradas pela regra de produto.
+
+---
+
+# 34. CONTAS ATIVAS
+
+A política transitória do Dashboard considerava contas ativas.
+
+Preserve isso para o indicador operacional de patrimônio, salvo se ADR
+formal determinar outra coisa.
+
+---
+
+# 35. CONTA INATIVA
+
+Uma conta inativa continua existindo historicamente.
+
+Mas se Dashboard/Net Worth atual representa apenas contas ativas:
+
+ela não participa do patrimônio operacional.
+
+Documente claramente.
+
+---
+
+# 36. TRANSAÇÕES HISTÓRICAS
+
+Desativar conta NÃO cancela transações.
+
+---
+
+# 37. NEGATIVE BALANCE
+
+Saldo corrente pode ser negativo.
+
+Exemplo:
+
+initial = 100
+Expense = 250
+
+current = -150
+
+Isso é válido se política atual permite saldo negativo.
+
+---
+
+# 38. TRANSFER NEUTRALITY
+
+Este é um dos testes mais importantes.
+
+Antes:
+
+A = 1000
+B = 500
+
+Net Worth = 1500
+
+Transfer:
+
+A → B = 300
+
+Depois:
+
+A = 700
+B = 800
+
+Net Worth = 1500
+
+---
+
+# 39. TRANSFER CANCELLED
+
+Após cancelar Transfer:
+
+A = 1000
+B = 500
+
+Net Worth = 1500
+
+---
+
+# 40. EXPENSE EFFECT
+
+Antes:
+
+A = 1000
+
+Expense = 200
+
+Depois:
+
+A = 800
+
+Net Worth diminui 200.
+
+---
+
+# 41. INCOME EFFECT
+
+Antes:
+
+A = 1000
+
+Income = 500
+
+Depois:
+
+A = 1500
+
+Net Worth aumenta 500.
+
+---
+
+# 42. CANCEL EXPENSE
+
+Expense 200 cancelada:
+
+saldo volta de:
+
+800
+
+para:
+
+1000.
+
+---
+
+# 43. CANCEL INCOME
+
+Income 500 cancelada:
+
+saldo volta de:
+
+1500
+
+para:
+
+1000.
+
+---
+
+# 44. EDIT EXPENSE
+
+Expense:
+
+200 → 300
+
+saldo deve refletir:
+
+-300.
+
+Não existe "delta manual".
+
+O ledger atual determina resultado.
+
+---
+
+# 45. EDIT INCOME
+
+Mesmo princípio.
+
+---
+
+# 46. EDIT TRANSFER AMOUNT
+
+A → B
+
+100 → 250
+
+Saldos devem refletir estado atual da Transfer.
+
+---
+
+# 47. EDIT TRANSFER ACCOUNTS
+
+Transfer:
+
+A → B
+
+alterada para:
+
+A → C
+
+B deixa de sofrer efeito.
+
+C passa a receber.
+
+---
+
+# 48. PRECISÃO
+
+Todos os cálculos:
+
+BigDecimal.
+
+---
+
+# 49. NÃO USAR DOUBLE
+
+Nenhuma agregação financeira em:
+
+double
+float.
+
+---
+
+# 50. SQL DECIMAL
+
+Agregações no banco devem preservar DECIMAL.
+
+---
+
+# 51. NULL SUM
+
+SQL:
+
+SUM(...)
+
+pode retornar NULL.
+
+Tratar como:
+
+0.00.
+
+---
+
+# 52. SCALE
+
+Resultado monetário deve respeitar convenção do projeto.
+
+Não introduzir rounding silencioso.
+
+---
+
+# 53. PERFORMANCE
+
+Evitar:
+
+para cada conta:
+  query transactions
+
+Isso é N+1.
+
+---
+
+# 54. LISTAGEM DE CONTAS
+
+Se existem N contas, não executar:
+
+1 + N
+ou
+4 × N
+
+queries para calcular saldos.
+
+---
+
+# 55. ESTRATÉGIA DE AGREGAÇÃO
+
+Prefira:
+
+GROUP BY account
+
+ou projeção equivalente.
+
+---
+
+# 56. SE ACCOUNT MOVEMENT EXISTE
+
+Naturalmente preferir:
+
+SUM(movement.amount)
+GROUP BY account_id
+
+considerando somente transações ACTIVE.
+
+---
+
+# 57. SE NÃO EXISTE MOVEMENT
+
+Pode ser necessário agregar:
+
+Income
+Expense
+Transfer source
+Transfer destination.
+
+Faça isso eficientemente.
+
+---
+
+# 58. NÃO CARREGAR TODO LEDGER EM MEMÓRIA
+
+Não faça:
+
+findAllTransactions()
+stream()
+groupBy()
+
+para calcular Dashboard/contas.
+
+Agregação deve ocorrer no banco quando apropriado.
+
+---
+
+# 59. ÍNDICES
+
+Verifique índices para:
+
+owner;
+status;
+type;
+account;
+occurredAt;
+source/destination;
+
+conforme modelo real.
+
+---
+
+# 60. MIGRATION
+
+Não esperamos mudança de schema.
+
+Se índice necessário estiver ausente e ganho for justificável:
+
+crie NOVA migration.
+
+Nunca altere migration aplicada.
+
+---
+
+# 61. QUERY OWNERSHIP
+
+Mesmo agregações devem restringir owner.
+
+Nunca calcular global e filtrar depois.
+
+---
+
+# 62. CROSS-USER
+
+Movimentações de B nunca afetam saldo de A.
+
+---
+
+# 63. DEFENSE IN DEPTH
+
+Mesmo que FKs tornem associação cross-user difícil:
+
+queries continuam owner-scoped.
+
+---
+
+# 64. PATRIMÔNIO API
+
+Implemente read API adequada para consumo futuro do Dashboard.
+
+Uma opção conceitual:
+
+GET /api/financial-summary
+
+Response:
+
+{
+  "netWorth": 1350.50
+}
+
+Porém NÃO crie endpoint apenas por conveniência se arquitetura existente
+indicar solução melhor.
+
+---
+
+# 65. ESCOPO DA SUMMARY
+
+Nesta TASK, summary deve conter apenas dados que já podem ser calculados
+corretamente.
+
+Preferência:
+
+netWorth
+
+Não antecipar Dashboard inteiro.
+
+---
+
+# 66. NÃO IMPLEMENTAR AINDA
+
+Não adicionar ao summary nesta TASK:
+
+incomeForPeriod;
+expenseForPeriod;
+cashFlow;
+chartSeries;
+recentTransactions;
+
+isso pertence à integração de Dashboard.
+
+---
+
+# 67. ALTERNATIVA
+
+Se arquitetura preferir endpoint:
+
+GET /api/asset-accounts/balances
+
+isso pode ser aceitável.
+
+Justifique.
+
+---
+
+# 68. EVITAR ENDPOINT REDUNDANTE
+
+Não criar simultaneamente:
+
+/asset-accounts
+/asset-accounts/balances
+/account-balances
+/current-balances
+/financial-summary/accounts
+
+sem necessidade.
+
+---
+
+# 69. OPENAPI
+
+Documentar claramente:
+
+currentBalance é calculado a partir do ledger.
+
+---
+
+# 70. OPENAPI CURRENT BALANCE
+
+Informar que:
+
+- não é editável;
+- não é persistido;
+- pode ser negativo.
+
+---
+
+# 71. OPENAPI NET WORTH
+
+Informar política de contas ativas.
+
+---
+
+# 72. ACCOUNT UI
+
+Agora a tela de Contas pode finalmente mostrar:
+
+Saldo atual
+
+além ou no lugar adequado de:
+
+Saldo inicial.
+
+---
+
+# 73. ALTERAÇÃO FRONTEND PERMITIDA
+
+Nesta TASK é permitido alterar SOMENTE a UI de AssetAccounts necessária
+para refletir currentBalance real.
+
+---
+
+# 74. NÃO TRANSFORMAR EM DASHBOARD TASK
+
+Não atualizar ainda:
+
+Entradas;
+Saídas;
+Saldo;
+gráfico;
+recent transactions.
+
+---
+
+# 75. ACCOUNTS TABLE
+
+Desktop pode evoluir para:
+
+Conta
+Tipo
+Saldo inicial
+Saldo atual
+Status
+Atualizada em
+Ações
+
+---
+
+# 76. MOBILE ACCOUNT CARD
+
+Mostrar:
+
+Saldo atual
+
+com destaque adequado.
+
+Saldo inicial pode permanecer como informação secundária.
+
+---
+
+# 77. LABEL
+
+Nunca chamar currentBalance apenas de:
+
+Saldo inicial.
+
+---
+
+# 78. NEGATIVE UI
+
+Saldo negativo deve ser exibido corretamente:
+
+-R$ 150,00
+
+Não quebrar formatter.
+
+---
+
+# 79. NÃO USAR COR SOZINHA
+
+Se saldo negativo tiver destaque visual:
+
+texto/sinal também comunica.
+
+---
+
+# 80. ACCOUNT FORM
+
+Create/Edit continua contendo:
+
+Saldo inicial
+
+e NÃO:
+
+Saldo atual.
+
+---
+
+# 81. CURRENT BALANCE READ ONLY
+
+Não criar input desabilitado "Saldo atual" dentro do formulário se não
+for necessário.
+
+Preferir exibir na listagem/detail.
+
+---
+
+# 82. INITIAL BALANCE EDITING
+
+Este é um débito técnico registrado desde Sprint 2.
+
+Agora que existem transações, reavalie formalmente.
+
+---
+
+# 83. PROBLEMA
+
+Editar initialBalance depois de existir ledger altera retroativamente:
+
+todos os saldos históricos e atuais.
+
+---
+
+# 84. DECISÃO OBRIGATÓRIA
+
+Antes de implementar mudanças nessa regra, consulte ADR da TASK-3.0.
+
+Se já decidiu política:
+
+implemente.
+
+---
+
+# 85. SE ADR NÃO DECIDIU
+
+Não invente silenciosamente.
+
+Produza recomendação explícita.
+
+Preferência de segurança:
+
+quando a conta já possui movimentações financeiras, bloquear alteração de
+initialBalance.
+
+---
+
+# 86. MOTIVO
+
+Após o início do ledger, correções de saldo deveriam futuramente ocorrer
+por mecanismo financeiro explícito, não reescrevendo saldo inicial.
+
+---
+
+# 87. SE BLOQUEAR
+
+Backend deve ser autoridade.
+
+Frontend pode desabilitar/ocultar edição correspondente.
+
+---
+
+# 88. HTTP
+
+Se tentativa inválida:
+
+409 Conflict
+
+é candidato adequado.
+
+Siga convenções existentes.
+
+---
+
+# 89. TEST — ZERO MOVEMENTS
+
+Conta:
+
+initialBalance = 1000
+
+sem transações.
+
+currentBalance:
+
+1000.
+
+---
+
+# 90. TEST — INCOME
+
+initial = 1000
+income = 500
+
+current:
+
+1500.
+
+---
+
+# 91. TEST — EXPENSE
+
+initial = 1000
+expense = 250
+
+current:
+
+750.
+
+---
+
+# 92. TEST — BOTH
+
+initial = 1000
+income = 500
+expense = 250
+
+current:
+
+1250.
+
+---
+
+# 93. TEST — TRANSFER SOURCE
+
+A initial:
+
+1000
+
+Transfer A → B:
+
+300
+
+A current:
+
+700.
+
+---
+
+# 94. TEST — TRANSFER DESTINATION
+
+B initial:
+
+500
+
+Transfer A → B:
+
+300
+
+B current:
+
+800.
+
+---
+
+# 95. TEST — NET WORTH TRANSFER
+
+Antes:
+
+1500.
+
+Depois:
+
+1500.
+
+---
+
+# 96. TEST — CANCEL EXPENSE
+
+Efeito removido.
+
+---
+
+# 97. TEST — CANCEL INCOME
+
+Efeito removido.
+
+---
+
+# 98. TEST — CANCEL TRANSFER
+
+Efeito removido em ambas.
+
+Net worth continua neutro.
+
+---
+
+# 99. TEST — EDIT EXPENSE
+
+Saldo recalculado corretamente.
+
+---
+
+# 100. TEST — EDIT INCOME
+
+Saldo recalculado corretamente.
+
+---
+
+# 101. TEST — EDIT TRANSFER AMOUNT
+
+Ambas contas corretas.
+
+---
+
+# 102. TEST — EDIT TRANSFER ACCOUNTS
+
+Conta antiga deixa de receber/ceder efeito conforme alteração.
+
+---
+
+# 103. TEST — NEGATIVE
+
+Saldo negativo:
+
+PASS.
+
+---
+
+# 104. TEST — DECIMAL
+
+initial = 0.10
+income = 0.20
+
+current = 0.30
+
+EXATAMENTE.
+
+---
+
+# 105. TEST — DECIMAL COMPLEX
+
+initial = 100.10
+income = 0.20
+expense = 0.10
+
+current = 100.20.
+
+---
+
+# 106. TEST — CANCELLED ONLY
+
+Conta com apenas transações CANCELLED:
+
+current = initialBalance.
+
+---
+
+# 107. TEST — OWNER A/B
+
+User A:
+
+Account A1
+
+User B:
+
+Account B1
+
+Transações de B nunca entram em A.
+
+---
+
+# 108. TEST — BALANCE IDOR
+
+A solicita saldo de B por UUID:
+
+404.
+
+---
+
+# 109. TEST — NET WORTH OWNER
+
+Cada usuário possui patrimônio independente.
+
+---
+
+# 110. TEST — INACTIVE ACCOUNT
+
+Teste política escolhida.
+
+Se patrimônio considera apenas ativas:
+
+conta inativa não entra no netWorth.
+
+---
+
+# 111. TEST — TRANSACTIONS ON INACTIVE
+
+Transações históricas continuam existentes.
+
+Desativação não cancela ledger.
+
+---
+
+# 112. TEST — REACTIVATION
+
+Se conta reativada:
+
+se política de netWorth usa active:
+
+ela volta a participar com seu currentBalance derivado.
+
+---
+
+# 113. TEST — N+1
+
+Adicione teste/instrumentação quando viável para provar que listagem de
+múltiplas contas não executa query financeira por conta.
+
+---
+
+# 114. TEST — LARGE ACCOUNT SET
+
+Teste integração com múltiplas contas e transações.
+
+Não precisa benchmark sofisticado.
+
+Apenas valide agregação correta.
+
+---
+
+# 115. MYSQL
+
+Use Testcontainers/MySQL para queries de agregação críticas.
+
+---
+
+# 116. NÃO CONFIAR EM H2
+
+Funções SQL/DECIMAL/GROUP BY devem ser validadas contra MySQL real.
+
+---
+
+# 117. OVERPOST CURRENT BALANCE
+
+Create AssetAccount:
+
+currentBalance malicioso
+
+não deve controlar valor.
+
+---
+
+# 118. UPDATE OVERPOST
+
+Mesmo princípio.
+
+---
+
+# 119. JSON RESPONSE
+
+currentBalance deve possuir representação monetária consistente.
+
+---
+
+# 120. FRONTEND MODELS
+
+Atualizar types de AssetAccount quando necessário.
+
+---
+
+# 121. NO ANY
+
+Não usar `any`.
+
+---
+
+# 122. LOADING
+
+Accounts continua com loading correto.
+
+---
+
+# 123. ERROR
+
+Se cálculo de saldo falhar:
+
+não mostrar:
+
+R$ 0,00
+
+como se fosse saldo real.
+
+Mostrar estado indisponível/erro.
+
+---
+
+# 124. DASHBOARD TRANSITÓRIO
+
+O Dashboard atualmente possui patrimônio transitório baseado em
+initialBalance.
+
+Nesta TASK, remova a fórmula CLIENT-SIDE incorreta se o novo read model
+puder substituir APENAS o patrimônio com segurança.
+
+---
+
+# 125. REGRA PARA DASHBOARD NESTA TASK
+
+É permitido atualizar SOMENTE:
+
+Patrimônio líquido
+
+para consumir o novo valor derivado do ledger.
+
+---
+
+# 126. NÃO ATUALIZAR AINDA
+
+Continuam:
+
+Entradas = estado atual/transitório
+Saídas = estado atual/transitório
+Saldo = estado atual/transitório
+Gráfico = estado atual
+Transações recentes = estado atual
+
+Não implementar esses dados nesta TASK.
+
+---
+
+# 127. REMOVER TECH DEBT
+
+Se Dashboard agora usar netWorth derivado:
+
+remova documentação que diga:
+
+"Patrimônio = soma de initialBalance"
+
+e substitua pela regra real.
+
+---
+
+# 128. PERIOD FILTER
+
+Patrimônio atual NÃO deve variar com filtro de período do Dashboard.
+
+---
+
+# 129. MOTIVO
+
+Patrimônio líquido atual é posição atual.
+
+Não é fluxo do período.
+
+---
+
+# 130. NÃO REFETCH NET WORTH POR PERÍODO
+
+Se usuário altera:
+
+30 dias
+90 dias
+
+netWorth atual permanece semanticamente igual.
+
+---
+
+# 131. SEGURANÇA
+
+Todos endpoints privados.
+
+---
+
+# 132. 401
+
+Sem JWT:
+
+401.
+
+---
+
+# 133. 403
+
+Não usar para esconder ownership.
+
+---
+
+# 134. 404
+
+Conta de outro usuário:
+
+404.
+
+---
+
+# 135. REQUEST ID
+
+Preservar.
+
+---
+
+# 136. PROBLEM DETAILS
+
+Preservar.
+
+---
+
+# 137. LOGGING
+
+Não logar ledger completo desnecessariamente.
+
+---
+
+# 138. OPENAPI
+
+Atualizar.
+
+---
+
+# 139. REGRESSÃO EXPENSE API
+
+PASS.
+
+---
+
+# 140. REGRESSÃO INCOME API
+
+PASS.
+
+---
+
+# 141. REGRESSÃO TRANSFER API
+
+PASS.
+
+---
+
+# 142. REGRESSÃO EXPENSE UI
+
+PASS.
+
+---
+
+# 143. REGRESSÃO INCOME UI
+
+PASS.
+
+---
+
+# 144. REGRESSÃO TRANSFER UI
+
+PASS.
+
+---
+
+# 145. REGRESSÃO ACCOUNTS
+
+PASS.
+
+---
+
+# 146. REGRESSÃO CATEGORIES
+
+PASS.
+
+---
+
+# 147. REGRESSÃO AUTH
+
+PASS.
+
+---
+
+# 148. FRONTEND BUILD
+
+PASS.
+
+---
+
+# 149. BACKEND BUILD
+
+PASS.
+
+---
+
+# 150. TESTS
+
+PASS.
+
+---
+
+# 151. NÃO IMPLEMENTAR REPORTS
+
+Ainda não.
+
+---
+
+# 152. NÃO IMPLEMENTAR CHART
+
+Ainda não.
+
+---
+
+# 153. NÃO IMPLEMENTAR RECENT TRANSACTIONS
+
+Ainda não.
+
+---
+
+# 154. NÃO IMPLEMENTAR TAGS
+
+Ainda não.
+
+---
+
+# 155. NÃO IMPLEMENTAR ATTACHMENTS
+
+Ainda não.
+
+---
+
+# 156. DEFINITION OF DONE
+
+TASK-3.8 estará concluída quando:
+
+- currentBalance for derivado do ledger;
+- currentBalance NÃO for persistido;
+- initialBalance continuar sendo base;
+- Expense ACTIVE diminuir saldo;
+- Income ACTIVE aumentar saldo;
+- Transfer ACTIVE debitar source;
+- Transfer ACTIVE creditar destination;
+- CANCELLED não afetar saldo;
+- Transfer preservar netWorth;
+- Expense reduzir netWorth;
+- Income aumentar netWorth;
+- cancelamentos recalcularem corretamente;
+- edições recalcularem corretamente;
+- saldo negativo funcionar;
+- precisão decimal estiver correta;
+- ownership estiver protegido;
+- balance IDOR retornar 404;
+- netWorth for owner-scoped;
+- política de contas inativas estiver documentada;
+- agregação não possuir N+1;
+- banco fizer agregação quando apropriado;
+- MySQL/Testcontainers validar queries;
+- response de conta puder expor currentBalance derivado;
+- requests não aceitarem currentBalance;
+- UI de Accounts mostrar saldo atual;
+- formulário continuar editando somente saldo inicial conforme política;
+- política de edição de initialBalance após transações for resolvida ou
+  explicitamente documentada;
+- Dashboard deixar de usar initialBalance para patrimônio, se integração
+  mínima for segura;
+- filtro de período não alterar patrimônio atual;
+- OpenAPI estiver atualizado;
+- regressões passarem;
+- builds passarem.
+
+---
+
+# 157. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-3.8 — SALDO CORRENTE E PATRIMÔNIO DERIVADOS DO LEDGER
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+## 1. Fórmula implementada
+
+Mostre fórmula real.
+
+## 2. Ledger
+
+Explique fonte de verdade.
+
+## 3. currentBalance
+
+Confirme:
+
+DERIVADO
+NÃO PERSISTIDO
+
+## 4. initialBalance
+
+Explique papel atual.
+
+## 5. Expense
+
+Explique efeito.
+
+## 6. Income
+
+Explique efeito.
+
+## 7. Transfer
+
+### Source
+
+Explique.
+
+### Destination
+
+Explique.
+
+### Net Worth
+
+Confirme neutralidade.
+
+## 8. Cancelled
+
+Explique exclusão.
+
+## 9. Edição
+
+Explique como updates afetam saldo.
+
+## 10. AccountBalance Read Model
+
+Explique implementação.
+
+## 11. Queries
+
+Liste queries/agregações relevantes.
+
+## 12. N+1
+
+PASS / FAIL
+
+Explique número de queries para listar N contas.
+
+## 13. Precisão
+
+### BigDecimal
+PASS / FAIL
+
+### DECIMAL
+PASS / FAIL
+
+### 0.10 + 0.20
+Resultado:
+
+## 14. Negative Balance
+
+PASS / FAIL
+
+## 15. Net Worth
+
+Explique fórmula.
+
+## 16. Active Accounts
+
+Explique política.
+
+## 17. Inactive Accounts
+
+Explique comportamento.
+
+## 18. Ownership
+
+PASS / FAIL
+
+## 19. IDOR
+
+PASS / FAIL
+
+## 20. API
+
+Liste endpoints alterados/criados.
+
+## 21. AssetAccount Response
+
+Liste campos.
+
+## 22. currentBalance Overposting
+
+PASS / FAIL
+
+## 23. initialBalance Editing
+
+Informe decisão final.
+
+## 24. Dashboard
+
+### Patrimônio
+REAL / TRANSITÓRIO
+
+### Entradas
+AINDA NÃO INTEGRADAS
+
+### Saídas
+AINDA NÃO INTEGRADAS
+
+### Saldo
+AINDA NÃO INTEGRADO
+
+### Gráfico
+AINDA NÃO INTEGRADO
+
+### Histórico
+AINDA NÃO INTEGRADO
+
+## 25. Period Filter × Net Worth
+
+Confirme:
+
+não altera patrimônio atual.
+
+## 26. MySQL/Testcontainers
+
+PASS / FAIL
+
+## 27. Migrations
+
+Liste.
+
+Se nenhuma:
+
+NENHUMA
+
+## 28. Índices
+
+Liste os utilizados/adicionados.
+
+## 29. OpenAPI
+
+PASS / FAIL
+
+## 30. Problem Details
+
+PASS / FAIL
+
+## 31. Request ID
+
+PASS / FAIL
+
+## 32. UI Accounts
+
+Explique alteração.
+
+## 33. Responsive Accounts
+
+PASS / FAIL
+
+## 34. Regressões
+
+### Expense API
+PASS / FAIL
+
+### Income API
+PASS / FAIL
+
+### Transfer API
+PASS / FAIL
+
+### Expense UI
+PASS / FAIL
+
+### Income UI
+PASS / FAIL
+
+### Transfer UI
+PASS / FAIL
+
+### AssetAccounts
+PASS / FAIL
+
+### Categories
+PASS / FAIL
+
+### Authentication
+PASS / FAIL
+
+## 35. Backend Build
+
+PASS / FAIL
+
+## 36. Frontend Build
+
+PASS / FAIL
+
+## 37. Testes
+
+PASS / FAIL
+
+## 38. Arquivos
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 39. Bugs encontrados
+
+Liste:
+
+problema;
+causa;
+correção;
+teste.
+
+## 40. Dívida técnica removida
+
+Informe se foi removida:
+
+"Dashboard baseado em initialBalance"
+
+## 41. Dívida técnica restante
+
+Liste.
+
+## 42. Divergências do ADR
+
+Esperado:
+
+NENHUMA
+
+## 43. Pendências
+
+### Bloqueantes
+
+### Não bloqueantes
+
+## 44. Próxima tarefa
+
+Se TASK-3.8 estiver aprovada, informe prontidão para:
+
+# TASK-3.9 — Dashboard Financeiro Integrado ao Ledger
+
+NÃO implemente TASK-3.9 nesta execução.

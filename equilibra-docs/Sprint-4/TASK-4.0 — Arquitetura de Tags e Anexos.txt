@@ -1,0 +1,2792 @@
+# TASK-4.0 — Arquitetura de Tags e Anexos
+
+Estamos iniciando:
+
+# Sprint 4 — Enriquecimento das Transações
+
+A Sprint 3 foi APROVADA no Gate de Qualidade e Consistência Financeira.
+
+O núcleo financeiro do Equilibra está estabilizado:
+
+- AssetAccounts;
+- Categories;
+- Expenses;
+- Incomes;
+- Transfers;
+- Ledger;
+- currentBalance derivado;
+- netWorth derivado;
+- Dashboard financeiro;
+- Histórico Unificado de Transações;
+- autenticação JWT;
+- isolamento multiusuário;
+- Problem Details;
+- Request ID;
+- OpenAPI;
+- MySQL;
+- Testcontainers;
+- Angular Design System.
+
+Agora execute:
+
+# TASK-4.0 — Arquitetura de Tags e Anexos
+
+Esta é uma TASK ARQUITETURAL.
+
+NÃO implementar ainda o CRUD completo de Tags.
+
+NÃO implementar upload completo de arquivos.
+
+NÃO implementar interfaces finais.
+
+O objetivo é definir formalmente a arquitetura da Sprint 4 antes de
+modificar o domínio financeiro.
+
+---
+
+# 1. OBJETIVO
+
+Definir a arquitetura para:
+
+1. Tags;
+2. associação de Tags às transações;
+3. anexos de transações;
+4. armazenamento de arquivos;
+5. upload;
+6. download;
+7. visualização;
+8. exclusão;
+9. autorização;
+10. isolamento multiusuário;
+11. limites de tamanho;
+12. MIME types;
+13. nomes de arquivo;
+14. integridade entre metadata e arquivo físico;
+15. futura evolução para object storage/cloud.
+
+Ao final desta TASK deve existir uma decisão arquitetural clara,
+documentada e testável.
+
+---
+
+# 2. PRINCÍPIO FUNDAMENTAL
+
+Tags e Attachments são METADADOS/RECURSOS associados às transações.
+
+Eles NÃO fazem parte do cálculo financeiro.
+
+Adicionar/remover Tag ou Attachment:
+
+NÃO pode alterar:
+
+- amount;
+- account balance;
+- net worth;
+- Dashboard Entradas;
+- Dashboard Saídas;
+- Dashboard Saldo;
+- ledger movements.
+
+---
+
+# 3. PRESERVAR SPRINT 3
+
+As invariantes aprovadas na Sprint 3 são permanentes.
+
+Especialmente:
+
+Expense ACTIVE:
+saldo -= amount
+
+Income ACTIVE:
+saldo += amount
+
+Transfer ACTIVE:
+source -= amount
+destination += amount
+
+Transfer:
+efeito patrimonial total = 0
+
+CANCELLED:
+efeito financeiro = 0
+
+currentBalance:
+DERIVADO
+
+netWorth:
+DERIVADO
+
+owner:
+CurrentUser
+
+occurredAt:
+data financeira.
+
+Tags/Attachments NÃO podem alterar essas regras.
+
+---
+
+# 4. FONTE DE VERDADE
+
+Antes de propor arquitetura, leia:
+
+- CLAUDE.md;
+- ADRs existentes;
+- relatório final da Sprint 3;
+- FinancialTransaction;
+- AccountMovement, se existir;
+- Expense;
+- Income;
+- Transfer;
+- Category;
+- AssetAccount;
+- TransactionHistoryQueryService;
+- DashboardQueryService;
+- DTOs;
+- migrations;
+- OpenAPI;
+- configuração Spring Security;
+- configuração de arquivos/static resources, se existir;
+- Angular architecture;
+- Design System;
+- testes;
+- docker/docker-compose;
+- application properties/profiles.
+
+Não presuma estrutura.
+
+O código real é a fonte de verdade.
+
+---
+
+# 5. AUDITORIA INICIAL
+
+Antes de decidir arquitetura, informe se já existe qualquer código para:
+
+- Tag;
+- Attachment;
+- File;
+- Upload;
+- Multipart;
+- Resource;
+- Storage;
+- Blob;
+- S3;
+- MinIO;
+- filesystem;
+- download;
+- media.
+
+Se existir:
+
+classifique como:
+
+REUTILIZÁVEL
+PARCIALMENTE REUTILIZÁVEL
+OBSOLETO
+NÃO RELACIONADO.
+
+Não criar implementação paralela.
+
+---
+
+# 6. ENTREGÁVEL PRINCIPAL
+
+Produza:
+
+# ADR — TAGS E ATTACHMENTS
+
+O ADR deve registrar decisões permanentes desta Sprint.
+
+---
+
+# PARTE A — TAGS
+
+# 7. CONCEITO DE TAG
+
+Definir formalmente o conceito.
+
+Tag é um rótulo livre criado pelo usuário para organização transversal
+das transações.
+
+Exemplos:
+
+viagem
+trabalho
+família
+reembolsável
+urgente
+
+---
+
+# 8. TAG NÃO É CATEGORY
+
+Deixar explicitamente documentado:
+
+Category = classificação financeira principal.
+
+Tag = marcador organizacional adicional.
+
+Não substituir Category por Tag.
+
+---
+
+# 9. TAG NÃO ALTERA FINANÇAS
+
+Tag não possui efeito financeiro.
+
+---
+
+# 10. OWNERSHIP
+
+Toda Tag pertence a exatamente um usuário.
+
+Conceitualmente:
+
+Tag
+- id
+- ownerId
+- name
+- normalizedName
+- active
+- createdAt
+- updatedAt
+
+Avalie campos reais necessários.
+
+---
+
+# 11. ID
+
+Usar padrão UUID existente.
+
+Não introduzir outro padrão.
+
+---
+
+# 12. NAME
+
+Definir:
+
+- obrigatório;
+- trim;
+- não vazio;
+- tamanho máximo.
+
+Preferência inicial:
+
+100 caracteres
+
+se consistente com Category.
+
+---
+
+# 13. NORMALIZATION
+
+Reutilizar política de normalização já utilizada por:
+
+AssetAccount
+Category.
+
+No mínimo:
+
+trim
++
+case-insensitive uniqueness.
+
+---
+
+# 14. ACENTOS
+
+Não remover acentos automaticamente sem política global existente.
+
+Exemplo:
+
+"Viagem São Paulo"
+
+deve preservar apresentação original.
+
+---
+
+# 15. UNIQUE
+
+Mesmo owner não pode possuir duas Tags ATIVAS com mesmo nome
+normalizado.
+
+Exemplo:
+
+Viagem
+viagem
+ VIAGEM
+
+devem colidir.
+
+---
+
+# 16. CROSS USER
+
+User A pode ter:
+
+Viagem
+
+e User B também.
+
+---
+
+# 17. ACTIVE
+
+Avalie manter:
+
+active = true/false
+
+seguindo Category/AssetAccount.
+
+Preferência:
+
+sim.
+
+---
+
+# 18. MOTIVO
+
+Tag desativada:
+
+- permanece no histórico;
+- não fica disponível para novas associações;
+- pode ser reativada.
+
+---
+
+# 19. DELETE
+
+Preferência:
+
+não realizar physical delete como fluxo normal.
+
+---
+
+# 20. TAG ASSOCIATION
+
+Uma transação pode possuir:
+
+0..N Tags.
+
+Uma Tag pode estar associada a:
+
+0..N transações.
+
+Relação:
+
+many-to-many.
+
+---
+
+# 21. TRANSACTION TYPES
+
+Tags devem poder ser associadas a:
+
+EXPENSE
+INCOME
+TRANSFER.
+
+---
+
+# 22. TRANSFER
+
+Uma Transfer possui conjunto único de Tags.
+
+NÃO:
+
+Tags da source
++
+Tags da destination.
+
+Transfer é uma única transação lógica.
+
+---
+
+# 23. LEDGER MOVEMENT
+
+Tag deve pertencer à transação lógica.
+
+NÃO ao AccountMovement individual.
+
+---
+
+# 24. MODELAGEM
+
+Se existe FinancialTransaction como entidade central:
+
+avaliar associação Tag ↔ FinancialTransaction.
+
+Isso tende a ser preferível.
+
+Mas confirme modelo real.
+
+---
+
+# 25. JOIN TABLE
+
+Definir tabela de associação conceitual:
+
+financial_transaction_tags
+
+ou nomenclatura coerente.
+
+Campos esperados:
+
+transaction_id
+tag_id
+
+Avalie constraints.
+
+---
+
+# 26. UNIQUE ASSOCIATION
+
+Mesma Tag não pode ser associada duas vezes à mesma transação.
+
+---
+
+# 27. CROSS-OWNER ASSOCIATION
+
+CRÍTICO:
+
+FinancialTransaction de User A nunca pode receber Tag de User B.
+
+---
+
+# 28. DEFENSE IN DEPTH
+
+Não confiar apenas no frontend.
+
+Application/domain deve validar ownership.
+
+Avalie constraints possíveis no banco.
+
+---
+
+# 29. INACTIVE TAG
+
+Definir política.
+
+Preferência:
+
+Tag inativa:
+
+- continua aparecendo em transações históricas;
+- não pode ser adicionada a nova transação;
+- associação histórica não é removida.
+
+---
+
+# 30. REMOVE TAG FROM TRANSACTION
+
+Remover associação:
+
+não remove Tag.
+
+Apenas remove vínculo.
+
+---
+
+# 31. CANCELLED TRANSACTION
+
+Definir se Tags permanecem.
+
+Preferência:
+
+SIM.
+
+Cancelamento financeiro não apaga metadados históricos.
+
+---
+
+# 32. EDIT TAGS ON CANCELLED
+
+Decidir formalmente.
+
+Preferência arquitetural:
+
+se transação cancelada é considerada imutável após cancelamento,
+Tags também não devem ser alteradas por endpoint de edição da
+transação.
+
+Mas pode existir futura política específica de metadata.
+
+Siga semântica de imutabilidade existente.
+
+---
+
+# 33. TAG LIMIT
+
+Avalie limite de Tags por transação.
+
+Não criar limite arbitrário sem necessidade.
+
+Se necessário para proteção:
+
+documentar.
+
+---
+
+# 34. TAG COLOR
+
+NÃO adicionar nesta Sprint por padrão.
+
+Pode ser evolução futura.
+
+---
+
+# 35. TAG ICON
+
+NÃO adicionar.
+
+---
+
+# 36. TAG HIERARCHY
+
+NÃO implementar:
+
+parentTag
+subTag.
+
+---
+
+# 37. TAG DESCRIPTION
+
+Provavelmente desnecessário.
+
+Não adicionar sem requisito.
+
+---
+
+# 38. TAG SEARCH
+
+Planejar futura listagem/busca simples por nome.
+
+Não implementar full-text.
+
+---
+
+# 39. HISTORY
+
+Planejar filtro futuro:
+
+GET /transactions?tagId=...
+
+Mas NÃO implementar agora se não fizer parte desta TASK arquitetural.
+
+Apenas definir contrato futuro.
+
+---
+
+# PARTE B — ATTACHMENTS
+
+# 40. CONCEITO
+
+Attachment é um arquivo pertencente a uma transação.
+
+Exemplos:
+
+- nota fiscal;
+- recibo;
+- comprovante;
+- boleto;
+- screenshot;
+- documento PDF.
+
+---
+
+# 41. TRANSACTION TYPES
+
+Attachments devem funcionar para:
+
+EXPENSE
+INCOME
+TRANSFER.
+
+---
+
+# 42. ATTACHMENT NÃO É MOVEMENT
+
+Attachment pertence à transação lógica.
+
+Não ao movement individual.
+
+---
+
+# 43. CARDINALIDADE
+
+O requisito original mencionava "anexo".
+
+Precisamos decidir se:
+
+A) exatamente 0..1 arquivo
+
+ou
+
+B) 0..N arquivos.
+
+Escolha arquitetural recomendada:
+
+0..N Attachments por transação.
+
+Justifique.
+
+---
+
+# 44. MOTIVO PARA 0..N
+
+Um lançamento pode possuir:
+
+- nota fiscal;
+- comprovante;
+- recibo;
+- imagem complementar.
+
+Modelar 0..N evita migração estrutural futura.
+
+Mas mantenha UX inicial simples.
+
+---
+
+# 45. ATTACHMENT ENTITY
+
+Definir entidade conceitual.
+
+Exemplo:
+
+TransactionAttachment
+- id
+- ownerId
+- transactionId
+- originalFileName
+- storedFileName ou storageKey
+- contentType
+- sizeBytes
+- checksum
+- createdAt
+
+Avalie campos reais.
+
+---
+
+# 46. NÃO ARMAZENAR PATH ABSOLUTO
+
+Não persistir:
+
+/home/user/project/uploads/...
+
+Persistir identificador lógico:
+
+storageKey.
+
+---
+
+# 47. STORAGE KEY
+
+Deve ser gerado pelo servidor.
+
+Nunca confiar no nome enviado pelo cliente.
+
+Exemplo conceitual:
+
+user/{ownerUuid}/transactions/{transactionUuid}/{attachmentUuid}
+
+Não é obrigatório usar exatamente esse formato.
+
+---
+
+# 48. ORIGINAL FILE NAME
+
+Pode ser armazenado apenas como metadata de apresentação.
+
+---
+
+# 49. SEGURANÇA DO FILE NAME
+
+Nunca usar originalFileName diretamente como path físico.
+
+---
+
+# 50. PATH TRAVERSAL
+
+Bloquear ataques como:
+
+../../etc/passwd
+
+..\..\secret
+
+nomes Unicode maliciosos equivalentes.
+
+---
+
+# 51. STORAGE ABSTRACTION
+
+Criar decisão arquitetural para uma interface conceitual:
+
+FileStorage
+ou
+AttachmentStorage.
+
+Exemplos de operações:
+
+store(...)
+open(...)
+delete(...)
+exists(...)
+
+Não implementar necessariamente agora.
+
+---
+
+# 52. OBJETIVO DA ABSTRAÇÃO
+
+Permitir:
+
+DEV:
+filesystem local
+
+FUTURO:
+S3
+MinIO
+object storage.
+
+---
+
+# 53. NÃO ACOPLAR DOMÍNIO AO FILESYSTEM
+
+Domain/Application não deve conhecer:
+
+java.nio.file.Path
+
+como regra de negócio.
+
+---
+
+# 54. PRIMEIRA IMPLEMENTAÇÃO
+
+Avalie melhor opção para MVP.
+
+Preferência:
+
+filesystem local configurável em DEV/MVP,
+
+atrás de Storage abstraction.
+
+---
+
+# 55. PRODUÇÃO
+
+Documentar claramente:
+
+filesystem local em uma única instância não é arquitetura final ideal
+para ambiente distribuído/container efêmero.
+
+---
+
+# 56. FUTURE STORAGE
+
+Planejar compatibilidade com:
+
+S3-compatible object storage.
+
+Não implementar integração cloud agora.
+
+---
+
+# 57. DATABASE BLOB
+
+Avalie explicitamente:
+
+armazenar arquivo binário dentro do MySQL
+
+versus
+
+metadata no MySQL + bytes em storage.
+
+---
+
+# 58. RECOMENDAÇÃO
+
+Preferência:
+
+metadata no MySQL
++
+arquivo em storage.
+
+Evitar BLOB no banco para anexos comuns.
+
+Justifique tecnicamente.
+
+---
+
+# 59. METADATA SOURCE
+
+MySQL é fonte de verdade para metadata/autorização.
+
+Storage é fonte dos bytes.
+
+---
+
+# 60. ATOMICIDADE
+
+Problema importante:
+
+DB transaction
+e
+filesystem/object storage
+
+não possuem transação distribuída.
+
+Defina estratégia.
+
+---
+
+# 61. UPLOAD FLOW
+
+Definir fluxo seguro.
+
+Exemplo conceitual:
+
+1. validar usuário;
+2. localizar transaction por owner;
+3. validar status/política;
+4. validar arquivo;
+5. gerar attachmentId/storageKey;
+6. gravar storage;
+7. persistir metadata;
+8. se DB falhar, remover arquivo;
+9. retornar metadata.
+
+Ou estratégia equivalente.
+
+---
+
+# 62. DB FAILURE AFTER STORE
+
+Não deixar arquivo órfão silenciosamente.
+
+Definir compensação.
+
+---
+
+# 63. STORAGE FAILURE
+
+Não persistir metadata apontando para arquivo inexistente.
+
+---
+
+# 64. DELETE FLOW
+
+Definir estratégia para remoção.
+
+Cuidado com:
+
+DB commit
+vs
+storage delete.
+
+---
+
+# 65. PREFERÊNCIA
+
+Avalie estratégia consistente como:
+
+metadata state/pending deletion
+
+ou compensação simples adequada ao MVP.
+
+Não overengineer distributed transactions.
+
+---
+
+# 66. ORPHAN CLEANUP
+
+Planejar possibilidade futura de job de limpeza de arquivos órfãos.
+
+Não implementar scheduler nesta TASK.
+
+---
+
+# 67. CHECKSUM
+
+Avalie armazenar SHA-256.
+
+Recomendado para:
+
+- integridade;
+- troubleshooting;
+- futura deduplicação;
+- validação.
+
+---
+
+# 68. CHECKSUM NÃO É SEGURANÇA ANTIVÍRUS
+
+Documentar diferença.
+
+---
+
+# 69. FILE SIZE
+
+Definir limite.
+
+Para MVP, escolha razoável.
+
+Sugestão:
+
+10 MB por arquivo.
+
+Avalie requisitos e infraestrutura.
+
+---
+
+# 70. REQUEST SIZE
+
+Configuração Spring multipart deve refletir limite.
+
+Não deixar limite do servidor contradizer regra de negócio.
+
+---
+
+# 71. NUMBER OF ATTACHMENTS
+
+Avalie limite por transação.
+
+Exemplo:
+
+até 10 anexos.
+
+Não escolher cegamente.
+
+Documente razão.
+
+---
+
+# 72. TOTAL SIZE
+
+Avalie se precisamos limite total por transação.
+
+Pode ficar como evolução se desnecessário no MVP.
+
+---
+
+# 73. ALLOWED TYPES
+
+Requisito original:
+
+PDF
+imagem.
+
+Definir whitelist.
+
+Preferência inicial:
+
+application/pdf
+image/jpeg
+image/png
+image/webp
+
+Avalie necessidade real de:
+
+image/gif.
+
+Preferência:
+
+não permitir inicialmente.
+
+---
+
+# 74. NÃO CONFIAR EM EXTENSÃO
+
+`.pdf` não prova que arquivo é PDF.
+
+---
+
+# 75. NÃO CONFIAR APENAS NO CONTENT-TYPE DO CLIENTE
+
+Multipart contentType pode ser falsificado.
+
+---
+
+# 76. FILE SIGNATURE
+
+Planejar validação mínima de conteúdo/magic bytes.
+
+Avalie biblioteca segura e pequena se necessária.
+
+Não adicionar dependência pesada sem justificativa.
+
+---
+
+# 77. POLYGLOT / MALICIOUS FILES
+
+Não prometer detecção completa.
+
+Magic-byte validation não substitui malware scanning.
+
+---
+
+# 78. MALWARE SCANNING
+
+Para MVP:
+
+documentar como risco/feature futura.
+
+Se infraestrutura não possui scanner:
+
+não fingir que possui.
+
+---
+
+# 79. EXECUTABLES
+
+Não aceitar:
+
+.exe
+.sh
+.bat
+.jar
+.js
+.html
+.svg
+
+como attachments nesta fase.
+
+---
+
+# 80. SVG
+
+Apesar de ser imagem, SVG pode carregar conteúdo ativo.
+
+Preferência:
+
+não aceitar SVG.
+
+---
+
+# 81. HTML
+
+Nunca servir attachment HTML inline.
+
+---
+
+# 82. CONTENT DISPOSITION
+
+Definir política de download.
+
+Preferência segura:
+
+Content-Disposition: attachment
+
+especialmente para tipos não explicitamente seguros.
+
+---
+
+# 83. IMAGE PREVIEW
+
+Se futuramente preview inline for necessário:
+
+somente tipos permitidos e tratados com headers seguros.
+
+Não implementar preview complexo agora.
+
+---
+
+# 84. PDF PREVIEW
+
+Não obrigatório.
+
+Download seguro é suficiente para MVP.
+
+---
+
+# 85. CONTENT TYPE RESPONSE
+
+Servidor deve controlar Content-Type a partir de metadata validada.
+
+Não refletir cegamente header do upload.
+
+---
+
+# 86. NOSNIFF
+
+Planejar:
+
+X-Content-Type-Options: nosniff
+
+para download quando apropriado.
+
+---
+
+# 87. AUTHORIZATION
+
+CRÍTICO:
+
+Attachment nunca deve ser público por URL previsível.
+
+---
+
+# 88. NÃO SERVIR /uploads PUBLICAMENTE
+
+Não mapear pasta de uploads como static resource público.
+
+---
+
+# 89. DOWNLOAD
+
+Download deve passar por endpoint autenticado/autorizado.
+
+---
+
+# 90. OWNER CHECK
+
+Fluxo:
+
+JWT
+→ CurrentUser
+→ Attachment metadata
+→ Transaction
+→ owner validation
+→ storage.
+
+---
+
+# 91. IDOR ATTACHMENT
+
+User A conhece UUID do attachment de User B.
+
+Resultado:
+
+404.
+
+---
+
+# 92. NÃO 403
+
+Preservar política de private resources.
+
+---
+
+# 93. STORAGE KEY NÃO É AUTORIZAÇÃO
+
+Mesmo UUID/storageKey difícil de adivinhar:
+
+não substitui ownership check.
+
+---
+
+# 94. DIRECT FILESYSTEM ACCESS
+
+Frontend nunca recebe filesystem path.
+
+---
+
+# 95. DOWNLOAD URL
+
+Frontend recebe endpoint lógico.
+
+Exemplo futuro:
+
+GET /api/transactions/{transactionId}/attachments/{attachmentId}
+
+ou:
+
+GET /api/attachments/{attachmentId}/content
+
+Decidir arquitetura.
+
+---
+
+# 96. PREFERÊNCIA
+
+Considere endpoint baseado em attachmentId com ownership resolvido
+internamente para evitar contratos excessivamente aninhados.
+
+Mas avalie REST atual.
+
+---
+
+# 97. METADATA ENDPOINTS
+
+Planejar operações futuras:
+
+list
+upload
+download
+delete.
+
+---
+
+# 98. CONCEITUAL
+
+Exemplo:
+
+GET /api/transactions/{id}/attachments
+POST /api/transactions/{id}/attachments
+
+GET /api/attachments/{id}/content
+DELETE /api/attachments/{id}
+
+Não implementar agora.
+
+Decidir.
+
+---
+
+# 99. DELETE ATTACHMENT
+
+Remover attachment NÃO cancela transaction.
+
+---
+
+# 100. CANCEL TRANSACTION
+
+Cancelar transaction NÃO remove attachments automaticamente.
+
+---
+
+# 101. MOTIVO
+
+Attachments fazem parte do histórico/auditoria.
+
+---
+
+# 102. EDIT TRANSACTION
+
+Editar amount/account/date não deve apagar attachments.
+
+---
+
+# 103. TRANSFER UPDATE
+
+Mesmo princípio.
+
+---
+
+# 104. TRANSACTION PHYSICAL DELETE
+
+Como ledger usa cancelamento lógico:
+
+attachment lifecycle não deve depender de DELETE físico de transaction
+como fluxo normal.
+
+---
+
+# 105. OWNER DUPLICATION
+
+Avalie se TransactionAttachment precisa persistir ownerId além de
+transactionId.
+
+---
+
+# 106. OPÇÃO A
+
+owner derivado por transaction.
+
+Vantagem:
+
+menos duplicação.
+
+---
+
+# 107. OPÇÃO B
+
+ownerId explícito em attachment.
+
+Vantagem:
+
+queries/autorização/defense-in-depth.
+
+---
+
+# 108. DECISÃO
+
+Escolha com base no modelo real e padrão já utilizado.
+
+Documente.
+
+---
+
+# 109. FK
+
+Definir:
+
+attachment → transaction.
+
+---
+
+# 110. CASCADE
+
+Cuidado com cascade delete.
+
+Ledger histórico não deve perder attachment por acidente.
+
+---
+
+# 111. FILE NAME LENGTH
+
+Definir limite para originalFileName.
+
+Sugestão:
+
+255.
+
+---
+
+# 112. SANITIZATION
+
+Original filename usado para display/download deve ser sanitizado para:
+
+- control chars;
+- CR/LF;
+- header injection.
+
+---
+
+# 113. CONTENT-DISPOSITION HEADER
+
+Nunca concatenar filename cru sem encoding apropriado.
+
+---
+
+# 114. UNICODE FILE NAMES
+
+Planejar suporte seguro.
+
+Exemplo:
+
+comprovante-água.pdf
+
+deve funcionar.
+
+---
+
+# 115. DUPLICATE FILE NAMES
+
+Dois arquivos chamados:
+
+recibo.pdf
+
+podem coexistir.
+
+StorageKey é único.
+
+---
+
+# 116. CHECKSUM DUPLICATE
+
+Não deduplicar automaticamente arquivos apenas porque checksum é igual.
+
+Pode haver associações legítimas distintas.
+
+---
+
+# 117. EMPTY FILE
+
+Arquivo 0 bytes:
+
+rejeitar.
+
+---
+
+# 118. CORRUPTED FILE
+
+Se signature validation falhar:
+
+400/415 conforme contrato futuro.
+
+---
+
+# 119. HTTP STATUS
+
+Planejar:
+
+400 — metadata/request inválido
+401 — não autenticado
+404 — transaction/attachment inexistente ou de outro owner
+413 — payload muito grande, quando aplicável
+415 — media type não suportado
+409 — conflito de estado, quando aplicável
+
+Usar Problem Details.
+
+---
+
+# 120. REQUEST ID
+
+Upload/download também devem preservar Request ID.
+
+---
+
+# 121. LOGGING
+
+Não logar:
+
+bytes do arquivo.
+
+---
+
+# 122. SENSITIVE METADATA
+
+Evitar logar nomes de arquivos desnecessariamente em nível alto.
+
+---
+
+# 123. DOWNLOAD LOGGING
+
+Pode registrar:
+
+attachmentId
+ownerId técnico quando política permitir
+requestId
+
+sem conteúdo.
+
+---
+
+# 124. RATE / ABUSE
+
+Documentar risco de abuso de storage.
+
+Não implementar rate limiting completo nesta TASK.
+
+---
+
+# 125. QUOTA
+
+Não implementar quota por usuário nesta Sprint sem requisito.
+
+Registrar como possível evolução.
+
+---
+
+# 126. STORAGE CONFIG
+
+Planejar configuração:
+
+equilibra.storage.type
+equilibra.storage.local.root
+
+ou padrão coerente.
+
+---
+
+# 127. NÃO HARDCODE
+
+Não usar:
+
+C:\uploads
+/tmp/equilibra
+/home/...
+
+diretamente no código.
+
+---
+
+# 128. DEV
+
+Diretório configurável.
+
+---
+
+# 129. DOCKER
+
+Avalie persistência via volume.
+
+Documentar.
+
+---
+
+# 130. TEST
+
+Storage local de testes deve usar diretório temporário isolado.
+
+---
+
+# 131. CLEANUP TEST
+
+Testes não devem deixar arquivos residuais.
+
+---
+
+# 132. STORAGE INTERFACE TEST
+
+Planejar contract tests para qualquer implementação de Storage.
+
+---
+
+# 133. TEST — OWNER A/B
+
+User A não acessa attachment de B.
+
+---
+
+# 134. TEST — TRANSACTION A / TAG B
+
+Não permitir associação cross-owner.
+
+---
+
+# 135. TEST — INACTIVE TAG
+
+Não pode ser adicionada a nova associação.
+
+Histórico permanece.
+
+---
+
+# 136. TEST — DUPLICATE TAG ASSOCIATION
+
+Não duplicar.
+
+---
+
+# 137. TEST — CANCELLED TRANSACTION METADATA
+
+Seguir política escolhida.
+
+---
+
+# 138. TEST — FILE SIZE
+
+Acima do limite:
+
+rejeitar.
+
+---
+
+# 139. TEST — EMPTY FILE
+
+rejeitar.
+
+---
+
+# 140. TEST — PDF
+
+válido.
+
+---
+
+# 141. TEST — JPEG
+
+válido.
+
+---
+
+# 142. TEST — PNG
+
+válido.
+
+---
+
+# 143. TEST — WEBP
+
+validar conforme suporte escolhido.
+
+---
+
+# 144. TEST — EXE RENAMED PDF
+
+Rejeitar quando assinatura não corresponder.
+
+---
+
+# 145. TEST — SVG
+
+Rejeitar se política aprovada for whitelist sem SVG.
+
+---
+
+# 146. TEST — PATH TRAVERSAL
+
+Filename:
+
+../../x.pdf
+
+não pode escapar storage root.
+
+---
+
+# 147. TEST — CRLF FILENAME
+
+Não permitir header injection.
+
+---
+
+# 148. TEST — SAME FILENAME
+
+Dois:
+
+recibo.pdf
+
+devem coexistir com storage keys distintos.
+
+---
+
+# 149. TEST — DB FAILURE
+
+Após storage write + DB failure:
+
+não deixar orphan silencioso.
+
+---
+
+# 150. TEST — STORAGE FAILURE
+
+Não criar metadata inconsistente.
+
+---
+
+# 151. TEST — DOWNLOAD IDOR
+
+404.
+
+---
+
+# 152. TEST — DIRECT STATIC ACCESS
+
+Não deve existir URL pública para storage.
+
+---
+
+# 153. TEST — LEDGER INVARIANCE
+
+Adicionar Tag:
+
+saldo antes = X
+saldo depois = X.
+
+---
+
+# 154. TEST — ATTACHMENT INVARIANCE
+
+Adicionar Attachment:
+
+saldo antes = X
+saldo depois = X.
+
+---
+
+# 155. TEST — NET WORTH INVARIANCE
+
+Tags/Attachments:
+
+não alteram patrimônio.
+
+---
+
+# 156. FRONTEND ARCHITECTURE
+
+Planejar componentes futuros.
+
+Não implementar nesta TASK.
+
+---
+
+# 157. TAG UI
+
+Planejar:
+
+TagSelectorComponent
+
+ou equivalente.
+
+---
+
+# 158. TAG SELECTOR
+
+Deve futuramente permitir:
+
+- selecionar tags existentes;
+- múltiplas tags;
+- remover seleção;
+- eventualmente criar Tag sem sair do formulário, somente se aprovado
+  em task posterior.
+
+---
+
+# 159. NÃO IMPLEMENTAR CHIP LIBRARY NOVA
+
+Usar Angular Material/Design System existente.
+
+---
+
+# 160. ATTACHMENT UI
+
+Planejar componente reutilizável:
+
+TransactionAttachmentsComponent
+
+ou equivalente.
+
+---
+
+# 161. FUTURO FORM
+
+Expense
+Income
+Transfer
+
+devem poder reutilizar o mesmo componente de attachments.
+
+---
+
+# 162. NÃO DUPLICAR
+
+Não criar:
+
+ExpenseAttachmentUploader
+IncomeAttachmentUploader
+TransferAttachmentUploader
+
+se comportamento for igual.
+
+---
+
+# 163. TAG ASSOCIATION UI
+
+Mesmo princípio.
+
+---
+
+# 164. HISTORY
+
+Planejar apresentação futura de:
+
+Tags
+Attachments count/indicator.
+
+---
+
+# 165. DASHBOARD
+
+Não exibir Tags/Attachments no Dashboard nesta Sprint por padrão.
+
+---
+
+# 166. REPORTS
+
+Arquitetura deve permitir futura filtragem por Tag.
+
+---
+
+# 167. AUDIT REPORT
+
+Attachments devem permanecer acessíveis no contexto histórico conforme
+política de retenção.
+
+---
+
+# 168. DATA RETENTION
+
+Definir comportamento atual.
+
+Como não existe exclusão completa de usuário/transação implementada,
+não inventar política regulatória.
+
+Apenas garantir que cancelamento não apaga attachment automaticamente.
+
+---
+
+# 169. PRIVACY
+
+Arquivos podem conter dados sensíveis.
+
+Portanto:
+
+- private by default;
+- authenticated access;
+- owner-scoped;
+- no public static URL;
+- no predictable path exposure.
+
+---
+
+# 170. CACHE
+
+Downloads privados não devem ser cacheados publicamente.
+
+Planejar headers apropriados.
+
+---
+
+# 171. RANGE REQUESTS
+
+Não necessário no MVP.
+
+---
+
+# 172. STREAMING
+
+Download deve futuramente usar streaming.
+
+Não carregar arquivo grande inteiro em memória sem necessidade.
+
+---
+
+# 173. UPLOAD MEMORY
+
+Avalie comportamento multipart.
+
+Não projetar solução que obrigue converter todo arquivo para byte[]
+sem necessidade.
+
+---
+
+# 174. BACKPRESSURE
+
+Não precisa arquitetura reativa.
+
+Spring MVC padrão é suficiente se projeto atual usa MVC.
+
+---
+
+# 175. VIRUS SCANNING EXTENSION POINT
+
+Storage/upload architecture deve permitir futuramente inserir:
+
+AttachmentScanner
+
+entre validação e persistência final.
+
+Não implementar scanner falso.
+
+---
+
+# 176. THUMBNAILS
+
+Fora do escopo.
+
+---
+
+# 177. IMAGE PROCESSING
+
+Fora do escopo.
+
+---
+
+# 178. OCR
+
+Fora do escopo.
+
+---
+
+# 179. PDF PARSING
+
+Fora do escopo.
+
+---
+
+# 180. CLOUD STORAGE
+
+Fora do escopo da implementação atual.
+
+Somente arquitetura preparada.
+
+---
+
+# 181. SIGNED URL
+
+Não implementar agora.
+
+Pode ser futura estratégia para S3.
+
+---
+
+# 182. DATABASE SCHEMA PROPOSAL
+
+O ADR deve propor schema futuro.
+
+Exemplo conceitual:
+
+tags
+- id
+- owner_id
+- name
+- normalized_name
+- active
+- created_at
+- updated_at
+
+financial_transaction_tags
+- transaction_id
+- tag_id
+
+transaction_attachments
+- id
+- owner_id?
+- transaction_id
+- original_file_name
+- storage_key
+- content_type
+- size_bytes
+- checksum_sha256
+- created_at
+
+Adapte ao modelo real.
+
+---
+
+# 183. INDEXES
+
+Planejar:
+
+tags(owner_id, normalized_name)
+tags(owner_id, active)
+
+transaction_tags(transaction_id)
+transaction_tags(tag_id)
+
+attachments(transaction_id)
+attachments(owner_id), se owner explícito
+
+Não criar índices redundantes cegamente.
+
+---
+
+# 184. UNIQUE CONSTRAINT
+
+Planejar unicidade de Tag ativa conforme estratégia MySQL já utilizada
+para Category/AssetAccount.
+
+---
+
+# 185. FK STRATEGY
+
+Documentar.
+
+---
+
+# 186. CASCADE STRATEGY
+
+Documentar explicitamente.
+
+---
+
+# 187. MIGRATIONS
+
+NÃO criar migrations nesta TASK, salvo se projeto usa ADR acompanhado
+de protótipo estritamente necessário.
+
+Preferência:
+
+nenhuma alteração de schema na TASK-4.0.
+
+---
+
+# 188. API FUTURA — TAGS
+
+Planejar:
+
+POST /api/tags
+GET /api/tags
+GET /api/tags/{id}
+PUT /api/tags/{id}
+PATCH /api/tags/{id}/deactivate
+PATCH /api/tags/{id}/activate
+
+Não implementar agora.
+
+---
+
+# 189. API FUTURA — ASSOCIATION
+
+Decidir se tags serão atualizadas:
+
+A) junto ao PUT/POST Expense/Income/Transfer
+
+ou
+
+B) endpoints específicos de metadata.
+
+---
+
+# 190. RECOMENDAÇÃO
+
+Para criação/edição de transação, é útil permitir tagIds no command
+somente quando a integração for implementada.
+
+Mas isso aumenta responsabilidade/atomicidade.
+
+Avalie cuidadosamente.
+
+---
+
+# 191. ALTERNATIVA
+
+Endpoints específicos:
+
+PUT /api/transactions/{id}/tags
+
+podem separar ledger de metadata.
+
+---
+
+# 192. DECISÃO OBRIGATÓRIA
+
+ADR deve escolher UMA estratégia principal.
+
+Não deixar indefinido.
+
+---
+
+# 193. CONSIDERE
+
+- atomicidade;
+- UX;
+- validação ownership;
+- edição de cancelled;
+- reuse Expense/Income/Transfer;
+- histórico;
+- OpenAPI.
+
+---
+
+# 194. API FUTURA — ATTACHMENTS
+
+Definir contratos conceituais para:
+
+upload;
+list;
+download;
+delete.
+
+---
+
+# 195. MULTIPART
+
+Upload será multipart/form-data.
+
+---
+
+# 196. NÃO BASE64
+
+Não enviar arquivos como Base64 dentro de JSON.
+
+---
+
+# 197. MOTIVO
+
+Base64 aumenta:
+
+- tamanho;
+- memória;
+- complexidade.
+
+---
+
+# 198. UPLOAD TRANSACTION
+
+Attachment upload ocorre depois que transaction possui ID.
+
+---
+
+# 199. CREATE EXPENSE + ATTACHMENT
+
+Não tentar criar Expense + arquivo no mesmo JSON request.
+
+---
+
+# 200. UX FUTURA
+
+Fluxo possível:
+
+1. criar Expense;
+2. receber transactionId;
+3. enviar attachments;
+4. atualizar UI.
+
+Documentar implicação de falha parcial.
+
+---
+
+# 201. ALTERNATIVA
+
+Frontend pode manter arquivos pendentes até criação da transaction.
+
+Depois fazer uploads.
+
+---
+
+# 202. NÃO DISTRIBUTED TRANSACTION
+
+Não fingir atomicidade entre:
+
+transaction creation
+e
+attachment upload.
+
+---
+
+# 203. TAGS VS ATTACHMENTS
+
+Tags podem ser parte lógica da edição de metadata.
+
+Attachments possuem lifecycle separado devido a multipart/storage.
+
+---
+
+# 204. SECURITY THREAT MODEL
+
+ADR deve incluir seção:
+
+# Threat Model
+
+Avaliar pelo menos:
+
+- IDOR/BOLA;
+- path traversal;
+- MIME spoofing;
+- oversized upload;
+- executable upload;
+- stored XSS via filename;
+- header injection;
+- public storage exposure;
+- storage exhaustion;
+- orphan files;
+- cross-user Tag association;
+- mass assignment;
+- SQL injection via filters;
+- malicious Unicode filenames.
+
+---
+
+# 205. MITIGATIONS
+
+Para cada ameaça:
+
+descrever mitigação.
+
+---
+
+# 206. MASS ASSIGNMENT
+
+Cliente nunca controla:
+
+attachment.ownerId;
+attachment.storageKey;
+attachment.sizeBytes;
+attachment.checksum;
+attachment.createdAt.
+
+---
+
+# 207. TAG OWNER
+
+Cliente nunca controla:
+
+tag.ownerId.
+
+---
+
+# 208. STORAGE KEY
+
+Gerado pelo servidor.
+
+---
+
+# 209. CHECKSUM
+
+Calculado pelo servidor.
+
+---
+
+# 210. SIZE
+
+Calculado/validado pelo servidor.
+
+---
+
+# 211. MIME
+
+Validado pelo servidor.
+
+---
+
+# 212. OPENAPI
+
+Planejar documentação futura de multipart e binary download.
+
+---
+
+# 213. PROBLEM DETAILS
+
+Todos os erros futuros devem usar padrão existente quando aplicável.
+
+---
+
+# 214. OBSERVABILITY
+
+Planejar métricas/logs futuros:
+
+upload success/failure;
+storage failure;
+orphan cleanup.
+
+Não implementar observability stack nova.
+
+---
+
+# 215. CONFIGURATION
+
+Definir properties conceituais:
+
+storage type;
+storage root;
+max file size;
+allowed media types;
+max attachments.
+
+Não hardcode regras espalhadas.
+
+---
+
+# 216. CENTRAL POLICY
+
+Preferir objeto/configuração central:
+
+AttachmentPolicy
+
+ou equivalente.
+
+Evitar:
+
+10 MB definido em Controller
++
+outro valor em Service
++
+outro em Angular.
+
+---
+
+# 217. FRONTEND LIMITS
+
+Frontend pode informar limite.
+
+Backend continua autoridade.
+
+---
+
+# 218. TEST STRATEGY
+
+ADR deve definir:
+
+unit tests;
+integration tests;
+security tests;
+storage contract tests;
+Testcontainers;
+filesystem temp-dir tests;
+frontend tests;
+E2E.
+
+---
+
+# 219. TESTCONTAINERS
+
+Metadata/FKs/ownership:
+
+MySQL real.
+
+---
+
+# 220. FILESYSTEM TEST
+
+Usar temp directory.
+
+---
+
+# 221. E2E FUTURO
+
+Fluxo:
+
+create Expense
+→ upload PDF
+→ list attachment
+→ download
+→ compare content/checksum
+→ delete attachment
+→ transaction continua existindo.
+
+---
+
+# 222. CROSS USER E2E
+
+User A cria attachment.
+
+User B conhece UUID.
+
+B:
+
+list/download/delete
+
+não consegue.
+
+---
+
+# 223. TAG E2E FUTURO
+
+Create Tag
+→ associate Expense
+→ History shows Tag
+→ filter by Tag
+→ deactivate Tag
+→ historical association remains.
+
+---
+
+# 224. LEDGER REGRESSION
+
+Toda task da Sprint 4 deverá executar regressões financeiras mínimas.
+
+---
+
+# 225. NÃO REABRIR LEDGER
+
+Não modificar arquitetura financeira apenas para encaixar Tag/Attachment.
+
+Metadata deve se adaptar ao ledger estabilizado.
+
+---
+
+# 226. DECISÕES OBRIGATÓRIAS DO ADR
+
+Ao final, NÃO pode permanecer indefinido:
+
+1. modelo de Tag;
+2. ownership de Tag;
+3. unicidade;
+4. active/inactive;
+5. relação Tag ↔ Transaction;
+6. estratégia de associação;
+7. modelo Attachment;
+8. cardinalidade de Attachments;
+9. ownership de Attachment;
+10. storage abstraction;
+11. storage MVP;
+12. metadata vs bytes;
+13. allowed MIME types;
+14. max file size;
+15. filename policy;
+16. storage key policy;
+17. checksum;
+18. upload flow;
+19. download authorization;
+20. delete flow;
+21. cancelled transaction behavior;
+22. inactive Tag behavior;
+23. error semantics;
+24. threat model;
+25. migration plan;
+26. API plan;
+27. frontend integration plan;
+28. testing strategy.
+
+---
+
+# 227. NÃO IMPLEMENTAR
+
+Nesta TASK não implementar:
+
+- Tag CRUD;
+- Tag UI;
+- association endpoints;
+- Attachment entity final;
+- upload endpoint;
+- download endpoint;
+- delete endpoint;
+- file storage implementation final;
+- migration;
+- frontend uploader;
+- history integration;
+- filters by Tag.
+
+Esta TASK decide arquitetura.
+
+---
+
+# 228. ADR FORMAT
+
+Produza documento persistente no repositório.
+
+Use convenção de ADR existente.
+
+Exemplo:
+
+docs/adr/ADR-XXXX-tags-attachments.md
+
+Não inventar diretório se já existe padrão.
+
+---
+
+# 229. ADR — STATUS
+
+Status:
+
+ACCEPTED
+
+somente se todas as decisões obrigatórias forem resolvidas.
+
+---
+
+# 230. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-4.0 — ARQUITETURA DE TAGS E ANEXOS
+
+Status:
+
+CONCLUÍDA / BLOCKED / NÃO CONCLUÍDA
+
+## 1. ADR
+
+Arquivo:
+
+Status:
+
+## 2. Tag Model
+
+Campos:
+
+Ownership:
+
+Normalization:
+
+Uniqueness:
+
+Active:
+
+## 3. Tag Association
+
+Cardinality:
+
+Join model:
+
+Transaction types:
+
+Transfer semantics:
+
+Cross-owner protection:
+
+## 4. Inactive Tag
+
+Explique.
+
+## 5. Cancelled Transaction × Tags
+
+Explique.
+
+## 6. Tag API Strategy
+
+Explique estratégia escolhida.
+
+## 7. Attachment Model
+
+Campos:
+
+Ownership:
+
+Cardinality:
+
+## 8. Storage Architecture
+
+Interface:
+
+MVP implementation:
+
+Future implementation:
+
+## 9. Database vs Storage
+
+Metadata:
+
+Bytes:
+
+## 10. Storage Key
+
+Explique geração.
+
+## 11. Original Filename
+
+Explique política.
+
+## 12. Allowed Types
+
+Liste.
+
+## 13. Max File Size
+
+Informe.
+
+## 14. Max Attachments
+
+Informe decisão.
+
+## 15. Checksum
+
+Algoritmo:
+
+Uso:
+
+## 16. MIME Validation
+
+Explique.
+
+## 17. Upload Flow
+
+Descreva passo a passo.
+
+## 18. DB Failure Compensation
+
+Explique.
+
+## 19. Storage Failure
+
+Explique.
+
+## 20. Download Flow
+
+Descreva.
+
+## 21. Authorization
+
+Explique ownership.
+
+## 22. IDOR
+
+Mitigação:
+
+## 23. Delete Flow
+
+Explique.
+
+## 24. Cancelled Transaction × Attachments
+
+Explique.
+
+## 25. Security Headers
+
+Explique.
+
+## 26. Threat Model
+
+### IDOR
+Mitigação:
+
+### Path Traversal
+Mitigação:
+
+### MIME Spoofing
+Mitigação:
+
+### Oversized Upload
+Mitigação:
+
+### Executable Upload
+Mitigação:
+
+### Stored XSS
+Mitigação:
+
+### Header Injection
+Mitigação:
+
+### Public Storage
+Mitigação:
+
+### Storage Exhaustion
+Mitigação:
+
+### Orphan Files
+Mitigação:
+
+### Cross-user Tag
+Mitigação:
+
+## 27. Configuration
+
+Liste properties planejadas.
+
+## 28. Schema
+
+Descreva tabelas planejadas.
+
+## 29. Indexes
+
+Liste.
+
+## 30. FKs
+
+Liste.
+
+## 31. Cascade Strategy
+
+Explique.
+
+## 32. Future API
+
+### Tags
+Liste endpoints.
+
+### Tag Associations
+Explique contrato.
+
+### Attachments
+Liste endpoints.
+
+## 33. Frontend Plan
+
+### Tag Selector
+
+### Attachments Component
+
+### Expense
+
+### Income
+
+### Transfer
+
+### History
+
+## 34. Test Strategy
+
+### Unit
+
+### Integration
+
+### Security
+
+### Storage Contract
+
+### MySQL/Testcontainers
+
+### Filesystem
+
+### Frontend
+
+### E2E
+
+## 35. Ledger Invariance
+
+Confirme:
+
+Tags alteram saldo?
+
+Esperado:
+NÃO
+
+Attachments alteram saldo?
+
+Esperado:
+NÃO
+
+Tags alteram netWorth?
+
+Esperado:
+NÃO
+
+Attachments alteram netWorth?
+
+Esperado:
+NÃO
+
+## 36. Sprint 3 Regression Risk
+
+Liste riscos e mitigação.
+
+## 37. Decisions
+
+Liste decisões ACCEPTED.
+
+## 38. Rejected Alternatives
+
+Liste principais alternativas rejeitadas e motivo.
+
+Especialmente:
+
+- BLOB no MySQL;
+- public /uploads;
+- Base64 JSON;
+- attachment em AccountMovement;
+- Tag em AccountMovement;
+- storage path fornecido pelo cliente.
+
+## 39. Open Questions
+
+Esperado:
+
+NENHUMA questão bloqueante.
+
+## 40. Files
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 41. Code Changes
+
+Esperado:
+
+nenhuma mudança funcional relevante.
+
+## 42. Database Changes
+
+Esperado:
+
+NENHUMA.
+
+## 43. Próxima Task
+
+Se TASK-4.0 estiver aprovada, declarar prontidão para:
+
+# TASK-4.1 — Domínio, Persistência e API de Tags
+
+NÃO implementar TASK-4.1 nesta execução.
+
+---
+
+# DEFINITION OF DONE
+
+TASK-4.0 só estará concluída quando:
+
+- ADR estiver persistido;
+- Tag estiver formalmente definida;
+- Tag estiver separada de Category;
+- Tag ownership estiver definido;
+- Tag uniqueness estiver definida;
+- active/inactive estiver definido;
+- relação many-to-many estiver definida;
+- associação cross-user estiver proibida;
+- Transfer possuir conjunto único de Tags;
+- Attachment estiver formalmente definido;
+- cardinalidade estiver definida;
+- storage abstraction estiver definida;
+- storage MVP estiver escolhido;
+- evolução para object storage estiver prevista;
+- bytes não forem planejados como BLOB sem justificativa excepcional;
+- storage key for server-generated;
+- original filename não controlar path;
+- allowed MIME types estiverem definidos;
+- max file size estiver definido;
+- MIME spoofing estiver tratado;
+- SVG/executables tiverem política explícita;
+- upload flow estiver definido;
+- falha DB/storage tiver compensação definida;
+- download for privado;
+- authorization for owner-scoped;
+- IDOR resultar em 404;
+- cancelamento não apagar metadata;
+- ledger permanecer independente;
+- threat model estiver documentado;
+- schema futuro estiver definido;
+- API futura estiver definida;
+- frontend futuro estiver planejado;
+- estratégia de testes estiver definida;
+- nenhuma decisão bloqueante permanecer aberta.

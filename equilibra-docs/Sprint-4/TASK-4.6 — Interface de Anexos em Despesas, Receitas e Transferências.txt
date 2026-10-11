@@ -1,0 +1,2330 @@
+# TASK-4.6 — Interface de Anexos em Despesas, Receitas e Transferências
+
+Estamos na:
+
+# Sprint 4 — Enriquecimento das Transações
+
+Concluídas:
+
+- TASK-4.0 — Arquitetura de Tags e Anexos
+- TASK-4.1 — Domínio, Persistência e API de Tags
+- TASK-4.2 — Interface de Tags
+- TASK-4.3 — Associação de Tags às Transações
+- TASK-4.4 — Infraestrutura Segura de Anexos
+- TASK-4.5 — API e Ciclo de Vida de Anexos nas Transações
+
+Agora implemente:
+
+# TASK-4.6 — Interface de Anexos em Despesas, Receitas e Transferências
+
+Objetivo:
+
+Implementar no Angular a experiência completa de anexos para:
+
+- Despesas;
+- Receitas;
+- Transferências.
+
+Consumir exclusivamente a API real implementada na TASK-4.5.
+
+A solução deve fornecer:
+
+- seleção de arquivo;
+- upload;
+- progresso quando tecnicamente suportado;
+- validação antecipada no frontend;
+- listagem dos anexos;
+- download autenticado;
+- remoção;
+- estados de loading/upload/download/delete;
+- tratamento de erros;
+- acessibilidade;
+- responsividade.
+
+Criar UMA infraestrutura visual reutilizável para os três tipos de
+transação.
+
+Attachment continua sendo metadata.
+
+Nenhuma operação desta TASK pode alterar o efeito financeiro da
+transação.
+
+---
+
+# 1. FONTE DE VERDADE
+
+Antes de modificar código, leia:
+
+- CLAUDE.md;
+- ADR da TASK-4.0;
+- relatório da TASK-4.4;
+- relatório da TASK-4.5;
+- OpenAPI atual;
+- endpoints reais de Attachment;
+- DTOs reais;
+- códigos HTTP reais;
+- política real de tamanho;
+- MIME types permitidos;
+- limite de anexos;
+- comportamento para transaction CANCELLED;
+- telas de Expense;
+- telas de Income;
+- telas de Transfer;
+- TagSelector criado na TASK-4.3;
+- Design System;
+- componentes compartilhados;
+- Auth interceptor;
+- Request ID interceptor;
+- Problem Details handling;
+- padrões de drawer/dialog;
+- testes Angular existentes.
+
+O contrato real da TASK-4.5 é a autoridade.
+
+Se este prompt divergir:
+
+seguir ADR + implementação real + OpenAPI.
+
+Não modificar backend apenas para adaptar a UI, salvo bug real e
+bloqueante.
+
+---
+
+# 2. PRE-IMPLEMENTATION REPORT
+
+Antes de modificar arquivos, produza:
+
+# TASK-4.6 — PRE-IMPLEMENTATION REPORT
+
+## 1. API real
+
+Liste:
+
+- upload;
+- list;
+- download;
+- delete;
+- responses;
+- errors;
+- limits;
+- allowed media types.
+
+## 2. Transaction UI atual
+
+Descreva:
+
+Expense;
+Income;
+Transfer.
+
+## 3. Attachment UI Architecture
+
+Explique componente reutilizável proposto.
+
+## 4. Download Strategy
+
+Explique como manter Authorization header.
+
+## 5. Upload Strategy
+
+Explique multipart e progresso.
+
+## 6. State
+
+Explique estados independentes de:
+
+list;
+upload;
+download;
+delete.
+
+## 7. Security
+
+Explique cuidados frontend.
+
+## 8. Accessibility
+
+Explique abordagem.
+
+## 9. Responsive
+
+Explique desktop/mobile.
+
+## 10. Tests
+
+Liste testes.
+
+## 11. Files
+
+Liste:
+
+- criar;
+- modificar;
+- reutilizar.
+
+Depois implemente.
+
+---
+
+# 3. PRINCÍPIO
+
+Criar componente reutilizável conceitualmente chamado:
+
+TransactionAttachmentsComponent
+
+ou nome coerente com o projeto.
+
+---
+
+# 4. NÃO DUPLICAR
+
+NÃO criar:
+
+ExpenseAttachmentsComponent
+IncomeAttachmentsComponent
+TransferAttachmentsComponent
+
+se os três possuem exatamente o mesmo comportamento.
+
+---
+
+# 5. RESPONSABILIDADE
+
+TransactionAttachmentsComponent deve cuidar da experiência de:
+
+- listar;
+- selecionar;
+- enviar;
+- baixar;
+- remover;
+- apresentar estados e erros.
+
+---
+
+# 6. COMPONENT INPUT
+
+Preferencialmente receber apenas informações necessárias.
+
+Exemplo conceitual:
+
+transactionId
+transactionStatus
+readonly
+
+Adapte ao contrato real.
+
+---
+
+# 7. COMPONENT NÃO CONHECE LEDGER
+
+Não deve conhecer:
+
+amount;
+accountId;
+sourceAccountId;
+destinationAccountId;
+balance;
+netWorth;
+Category.
+
+---
+
+# 8. NÃO CONHECE TRANSACTION TYPE SEM NECESSIDADE
+
+Se API de Attachments é comum à FinancialTransaction:
+
+não precisa saber se é:
+
+EXPENSE;
+INCOME;
+TRANSFER.
+
+---
+
+# 9. SERVICE
+
+Criar serviço Angular tipado:
+
+AttachmentService
+
+ou equivalente.
+
+---
+
+# 10. SERVICE OPERATIONS
+
+Conforme API real:
+
+list(transactionId)
+upload(transactionId, file)
+download(attachmentId)
+delete(attachmentId)
+
+---
+
+# 11. NO ANY
+
+Não utilizar `any`.
+
+---
+
+# 12. DTO
+
+Criar model tipado conforme response real.
+
+Conceitualmente:
+
+interface TransactionAttachment {
+  id: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+Não inventar campos.
+
+---
+
+# 13. NÃO EXPOR STORAGE
+
+Frontend não conhece:
+
+storageKey;
+filesystem path;
+local root.
+
+---
+
+# 14. AUTH
+
+AttachmentService não manipula JWT manualmente.
+
+Authorization interceptor continua responsável.
+
+---
+
+# 15. DOWNLOAD CRÍTICO
+
+NÃO usar simplesmente:
+
+window.open(apiUrl)
+
+se isso fizer a request sem Authorization header.
+
+---
+
+# 16. DOWNLOAD STRATEGY
+
+Usar HttpClient autenticado.
+
+Conceitualmente:
+
+GET attachment content
+responseType: blob
+
+via interceptor existente.
+
+---
+
+# 17. BLOB
+
+Após receber Blob:
+
+criar Object URL temporária.
+
+---
+
+# 18. DOWNLOAD
+
+Disparar download local usando filename fornecido de forma segura pela
+metadata/response.
+
+---
+
+# 19. OBJECT URL CLEANUP
+
+Sempre executar:
+
+URL.revokeObjectURL(...)
+
+quando apropriado.
+
+---
+
+# 20. NO JWT URL
+
+Nunca construir:
+
+/content?token=...
+
+---
+
+# 21. NO PUBLIC STORAGE URL
+
+Nunca acessar:
+
+/uploads/...
+/storage/...
+
+---
+
+# 22. CONTENT DISPOSITION
+
+Se API retorna filename via Content-Disposition e o header está
+disponível ao browser:
+
+pode utilizá-lo de forma segura.
+
+Caso contrário:
+
+usar fileName da metadata já autenticada.
+
+---
+
+# 23. FILENAME
+
+Não usar `innerHTML`.
+
+Filename é texto.
+
+---
+
+# 24. DOWNLOAD STATE
+
+Enquanto arquivo baixa:
+
+indicar estado naquele Attachment.
+
+---
+
+# 25. DOWNLOAD DOUBLE CLICK
+
+Evitar downloads concorrentes acidentais do mesmo item se isso gerar
+UX ruim.
+
+---
+
+# 26. DOWNLOAD ERROR
+
+Mostrar erro amigável.
+
+Exemplo:
+
+"Não foi possível baixar o anexo."
+
+---
+
+# 27. DOWNLOAD 404
+
+Se attachment foi removido em outra sessão:
+
+mostrar:
+
+"Este anexo não está mais disponível."
+
+e atualizar lista.
+
+---
+
+# 28. DOWNLOAD 401
+
+Usar comportamento global de autenticação.
+
+---
+
+# 29. DOWNLOAD 403
+
+Não limpar sessão.
+
+---
+
+# 30. LIST
+
+Ao receber transactionId válido:
+
+carregar anexos.
+
+---
+
+# 31. LOADING
+
+Mostrar estado de carregamento.
+
+---
+
+# 32. FALSE EMPTY
+
+Não mostrar:
+
+"Nenhum anexo"
+
+antes da request terminar.
+
+---
+
+# 33. EMPTY
+
+Sem attachments:
+
+mostrar mensagem compacta:
+
+"Nenhum anexo."
+
+---
+
+# 34. LIST ITEM
+
+Cada Attachment deve mostrar prioritariamente:
+
+- nome;
+- tipo/ícone genérico;
+- tamanho;
+- data, se útil;
+- baixar;
+- remover, quando permitido.
+
+---
+
+# 35. ICON
+
+Pode usar ícones existentes para:
+
+PDF;
+imagem;
+arquivo genérico.
+
+Não adicionar biblioteca nova apenas para isso.
+
+---
+
+# 36. CONTENT TYPE
+
+Não precisa mostrar MIME técnico ao usuário.
+
+Preferir:
+
+PDF
+Imagem
+
+ou simplesmente ícone + filename.
+
+---
+
+# 37. SIZE
+
+Formatar:
+
+B
+KB
+MB
+
+de forma legível.
+
+---
+
+# 38. SIZE PRECISION
+
+Não precisa precisão excessiva.
+
+Exemplo:
+
+842 KB
+2,4 MB.
+
+---
+
+# 39. DATE
+
+Se exibida:
+
+pt-BR e consistente com aplicação.
+
+---
+
+# 40. UPLOAD CONTROL
+
+Adicionar ação clara:
+
+Adicionar anexo
+
+---
+
+# 41. INPUT
+
+Usar:
+
+<input type="file">
+
+de forma acessível, podendo ser visualmente integrado ao Design System.
+
+---
+
+# 42. ACCEPT
+
+Configurar `accept` conforme whitelist real.
+
+Exemplo somente se permitido pelo backend:
+
+application/pdf,image/jpeg,image/png,image/webp
+
+---
+
+# 43. ACCEPT NÃO É SEGURANÇA
+
+`accept` é UX.
+
+Backend continua autoridade.
+
+---
+
+# 44. MULTIPLE
+
+Se API da TASK-4.5 aceita um arquivo por request:
+
+o input pode:
+
+A) permitir apenas um arquivo;
+
+ou
+
+B) permitir seleção múltipla e fazer uploads individuais controlados.
+
+Escolha a alternativa mais simples e coerente.
+
+Não inventar multipart múltiplo se backend não suporta.
+
+---
+
+# 45. RECOMENDAÇÃO
+
+Se maxAttachments > 1:
+
+pode permitir `multiple` no input e enviar os arquivos sequencialmente
+ou com concorrência pequena e controlada.
+
+Mas somente se isso não complicar excessivamente esta TASK.
+
+Upload de um arquivo por vez é aceitável para o MVP.
+
+---
+
+# 46. CLIENT VALIDATION
+
+Antes de enviar, validar quando possível:
+
+- arquivo não vazio;
+- tamanho;
+- MIME declarado;
+- quantidade máxima.
+
+---
+
+# 47. BACKEND AUTHORITY
+
+Frontend validation é apenas feedback antecipado.
+
+Backend continua autoridade para:
+
+- magic bytes;
+- MIME real;
+- ownership;
+- limite;
+- segurança.
+
+---
+
+# 48. FILE TOO LARGE
+
+Mostrar mensagem clara.
+
+Exemplo:
+
+"O arquivo excede o limite de 10 MB."
+
+Usar limite real configurado/contrato.
+
+Não hardcode 10 MB se backend usa outro valor.
+
+---
+
+# 49. UNSUPPORTED TYPE
+
+Mensagem:
+
+"Tipo de arquivo não permitido."
+
+---
+
+# 50. ZERO BYTE
+
+Mensagem:
+
+"O arquivo está vazio."
+
+---
+
+# 51. LIMIT REACHED
+
+Ao atingir máximo de anexos:
+
+desabilitar ação de upload.
+
+Mostrar:
+
+"Limite de anexos atingido."
+
+Usar valor real.
+
+---
+
+# 52. RACE
+
+Mesmo que frontend pense haver vaga, backend pode responder conflito
+por upload concorrente.
+
+Tratar resposta.
+
+---
+
+# 53. UPLOAD MULTIPART
+
+Usar FormData.
+
+Não Base64.
+
+---
+
+# 54. FORM FIELD
+
+Usar nome exato esperado pela API.
+
+---
+
+# 55. PROGRESS
+
+Se HttpClient + backend permitem observar upload progress:
+
+implementar progresso real.
+
+---
+
+# 56. NÃO SIMULAR
+
+Não criar barra:
+
+0 → 25 → 70 → 100
+
+com timers falsos.
+
+---
+
+# 57. SE PROGRESS NÃO FOR CONFIÁVEL
+
+Mostrar:
+
+"Enviando..."
+
+com spinner/indeterminate progress.
+
+---
+
+# 58. PROGRESS PER FILE
+
+Se múltiplos uploads:
+
+cada arquivo deve ter seu estado.
+
+---
+
+# 59. UPLOAD SUCCESS
+
+Após sucesso:
+
+- atualizar lista;
+- limpar input;
+- remover progresso temporário;
+- mostrar feedback discreto.
+
+---
+
+# 60. NÃO RECARREGAR PÁGINA
+
+Não usar full reload.
+
+---
+
+# 61. UPLOAD FAILURE
+
+Arquivo que falhou:
+
+não deve aparecer como persistido.
+
+---
+
+# 62. RETRY
+
+Se apropriado:
+
+permitir selecionar/enviar novamente.
+
+Não criar sistema complexo de retry automático.
+
+---
+
+# 63. 413
+
+Mostrar mensagem específica de tamanho.
+
+---
+
+# 64. 415
+
+Mostrar:
+
+"Tipo de arquivo não permitido ou conteúdo incompatível."
+
+---
+
+# 65. 409
+
+Mapear conforme contrato real.
+
+Pode representar:
+
+- limite atingido;
+- transaction state;
+- cancelled transaction.
+
+Mostrar mensagem específica quando Problem Details permitir.
+
+---
+
+# 66. 404
+
+Transaction não disponível:
+
+mostrar erro seguro.
+
+---
+
+# 67. PROBLEM DETAILS
+
+Reutilizar parser existente.
+
+Não criar parser paralelo exclusivo de Attachments.
+
+---
+
+# 68. REQUEST ID
+
+Se padrão da aplicação mostra Request ID em erros técnicos:
+
+preservar.
+
+---
+
+# 69. DELETE
+
+Adicionar ação:
+
+Remover
+
+quando permitido.
+
+---
+
+# 70. DELETE CONFIRMATION
+
+Exigir confirmação.
+
+Texto recomendado:
+
+"Remover este anexo?"
+
+Complemento:
+
+"O arquivo será removido desta transação."
+
+---
+
+# 71. NÃO CONFUNDIR
+
+Não dizer:
+
+"Excluir transação."
+
+---
+
+# 72. DELETE ACTIONS
+
+Cancelar
+Remover
+
+---
+
+# 73. DELETE LOADING
+
+Desabilitar ação daquele item enquanto delete está em andamento.
+
+---
+
+# 74. DELETE SUCCESS
+
+Remover item da lista/refetch.
+
+---
+
+# 75. DELETE FAILURE
+
+Manter item.
+
+Mostrar erro.
+
+---
+
+# 76. DELETE 404
+
+Se já removido em outra sessão:
+
+atualizar lista.
+
+---
+
+# 77. CANCELLED TRANSACTION
+
+Seguir contrato real da TASK-4.5.
+
+---
+
+# 78. SE CANCELLED NÃO ACEITA UPLOAD
+
+Ocultar/desabilitar:
+
+Adicionar anexo.
+
+---
+
+# 79. SE CANCELLED NÃO ACEITA DELETE
+
+Ocultar/desabilitar:
+
+Remover.
+
+---
+
+# 80. DOWNLOAD
+
+Mesmo em transaction cancelled, download pode continuar se backend
+permite.
+
+---
+
+# 81. READONLY
+
+O componente deve conseguir operar em modo somente leitura se
+necessário.
+
+---
+
+# 82. CREATE TRANSACTION FLOW — CRÍTICO
+
+Expense/Income/Transfer ainda não possuem transactionId antes de serem
+criadas.
+
+Portanto NÃO tente enviar Attachment antes de a transação existir.
+
+---
+
+# 83. CREATE DRAWER
+
+No modo de criação:
+
+não faça upload real para transaction inexistente.
+
+---
+
+# 84. UX PARA CREATE
+
+Escolha uma estratégia coerente com ADR/API.
+
+Preferência segura para MVP:
+
+1. usuário cria a transação;
+2. backend retorna transaction ID;
+3. formulário permanece/abre estado pós-criação;
+4. usuário pode anexar arquivos.
+
+OU:
+
+salvar transação
+→ fechar drawer
+→ abrir edição/detalhe
+→ anexar.
+
+---
+
+# 85. NÃO CRIAR UPLOAD TEMPORÁRIO
+
+Não criar sistema de:
+
+temporary attachment;
+draft transaction;
+orphan upload token
+
+nesta TASK.
+
+---
+
+# 86. CREATE FORM
+
+Se quiser mostrar seção "Anexos" antes do primeiro save:
+
+ela deve informar claramente:
+
+"Salve a transação antes de adicionar anexos."
+
+Mas não precisa mostrar seção desabilitada se isso piorar UX.
+
+---
+
+# 87. RECOMENDAÇÃO UX
+
+Para evitar confusão:
+
+na criação, manter fluxo financeiro atual.
+
+Após criação bem-sucedida:
+
+oferecer ação:
+
+"Adicionar anexo"
+
+ou manter drawer aberto em modo edição, se arquitetura atual suportar
+isso de forma limpa.
+
+---
+
+# 88. NÃO QUEBRAR CREATE
+
+Não transformar criação de Expense/Income/Transfer em fluxo complexo
+apenas por causa de Attachment.
+
+---
+
+# 89. EDIT TRANSACTION
+
+Ao editar transação existente:
+
+mostrar seção:
+
+Anexos
+
+componente completo.
+
+---
+
+# 90. EXPENSE
+
+Integrar TransactionAttachmentsComponent.
+
+---
+
+# 91. INCOME
+
+Integrar o MESMO componente.
+
+---
+
+# 92. TRANSFER
+
+Integrar o MESMO componente.
+
+---
+
+# 93. TRANSFER SEMANTICS
+
+Transfer mostra um conjunto único de attachments.
+
+Nunca:
+
+Anexos da origem
+Anexos do destino.
+
+---
+
+# 94. POSITION
+
+No drawer/form, sugestão:
+
+Dados principais
+Tags
+Observações
+Anexos
+
+Adapte ao layout real.
+
+---
+
+# 95. VISUAL SEPARATION
+
+Anexos devem ser uma seção clara, sem dominar o formulário.
+
+---
+
+# 96. NOTES
+
+Não alterar Notes.
+
+---
+
+# 97. TAGS
+
+Não alterar TagSelector salvo necessidade de layout.
+
+---
+
+# 98. CATEGORY
+
+Não alterar.
+
+---
+
+# 99. MONEY
+
+Não alterar.
+
+---
+
+# 100. DATE
+
+Não alterar.
+
+---
+
+# 101. ACCOUNT
+
+Não alterar.
+
+---
+
+# 102. NO LEDGER REQUEST
+
+AttachmentService não chama:
+
+balance;
+dashboard;
+movement endpoints.
+
+---
+
+# 103. LIST PAGE
+
+Opcionalmente mostrar indicador de anexos na listagem da transação
+somente se API já fornece essa informação sem N+1.
+
+---
+
+# 104. NÃO CRIAR N+1
+
+Não fazer:
+
+GET expenses
++
+GET attachments para cada expense
+
+apenas para mostrar clipe na tabela.
+
+---
+
+# 105. PORTANTO
+
+Se list response não possui attachmentCount:
+
+NÃO mostrar indicador na listagem nesta TASK.
+
+A integração global fica para TASK-4.7.
+
+---
+
+# 106. HISTORY
+
+NÃO implementar integração completa nesta TASK.
+
+---
+
+# 107. DASHBOARD
+
+NÃO mostrar Attachment.
+
+---
+
+# 108. REPORTS
+
+NÃO alterar.
+
+---
+
+# 109. FILE PREVIEW
+
+Não necessário.
+
+---
+
+# 110. PDF PREVIEW
+
+Não implementar.
+
+---
+
+# 111. IMAGE PREVIEW
+
+Não implementar por padrão.
+
+---
+
+# 112. DOWNLOAD ONLY
+
+Arquivo é tratado como download autenticado.
+
+---
+
+# 113. DRAG AND DROP
+
+Não é obrigatório.
+
+---
+
+# 114. RECOMENDAÇÃO
+
+Para MVP:
+
+botão "Adicionar anexo"
+
+é suficiente.
+
+---
+
+# 115. SE IMPLEMENTAR DRAG/DROP
+
+Somente se já existir componente/design pattern.
+
+Não adicionar biblioteca.
+
+---
+
+# 116. NO THIRD PARTY UPLOAD LIB
+
+Não adicionar:
+
+Dropzone
+FilePond
+Uppy
+
+sem necessidade.
+
+---
+
+# 117. ACCESSIBILITY — FILE INPUT
+
+Input precisa ter label acessível.
+
+---
+
+# 118. BUTTON
+
+"Adicionar anexo"
+
+deve funcionar por teclado.
+
+---
+
+# 119. ATTACHMENT ITEM
+
+Nome do arquivo deve ser legível por screen reader.
+
+---
+
+# 120. DOWNLOAD BUTTON
+
+Accessible name:
+
+"Baixar comprovante.pdf"
+
+---
+
+# 121. DELETE BUTTON
+
+Accessible name:
+
+"Remover comprovante.pdf"
+
+---
+
+# 122. PROGRESS
+
+Se houver progresso:
+
+usar semantics acessíveis.
+
+---
+
+# 123. ERROR
+
+Erros de upload devem ser anunciáveis.
+
+---
+
+# 124. CONFIRMATION
+
+Dialog de remoção:
+
+focus management correto.
+
+---
+
+# 125. FOCUS AFTER DELETE
+
+Após remover:
+
+foco deve ir para posição lógica.
+
+---
+
+# 126. FOCUS AFTER UPLOAD
+
+Não mover foco de forma imprevisível.
+
+---
+
+# 127. MOBILE
+
+Componente deve funcionar em:
+
+360 × 800.
+
+---
+
+# 128. LONG FILENAME
+
+Exemplo:
+
+comprovante-de-pagamento-supermercado-outubro-2026-versao-final.pdf
+
+não pode quebrar viewport.
+
+---
+
+# 129. FILENAME DISPLAY
+
+Pode:
+
+wrap;
+ellipsis + accessible full name.
+
+Não depender somente de tooltip.
+
+---
+
+# 130. ACTIONS MOBILE
+
+Download/remover devem permanecer utilizáveis por toque.
+
+---
+
+# 131. TOUCH TARGET
+
+Respeitar tamanho mínimo coerente com Design System.
+
+---
+
+# 132. MANY ATTACHMENTS
+
+Lista deve crescer verticalmente.
+
+Não criar carrossel horizontal.
+
+---
+
+# 133. RESPONSIVE TESTS
+
+Validar:
+
+360 × 800
+390 × 844
+768 × 1024
+1024 × 768
+1280 × 720
+1366 × 768
+1920 × 1080.
+
+---
+
+# 134. TEST SERVICE — LIST
+
+Request correto.
+
+DTO correto.
+
+---
+
+# 135. TEST SERVICE — UPLOAD
+
+FormData correto.
+
+Authorization continua via interceptor.
+
+---
+
+# 136. TEST SERVICE — DOWNLOAD
+
+responseType blob.
+
+---
+
+# 137. TEST SERVICE — DELETE
+
+endpoint correto.
+
+---
+
+# 138. TEST COMPONENT — LOADING
+
+PASS.
+
+---
+
+# 139. TEST COMPONENT — EMPTY
+
+PASS.
+
+---
+
+# 140. TEST COMPONENT — ERROR
+
+PASS.
+
+---
+
+# 141. TEST COMPONENT — RETRY
+
+PASS.
+
+---
+
+# 142. TEST COMPONENT — VALID PDF
+
+Selecionar:
+
+aceito pelo client.
+
+Upload chamado.
+
+---
+
+# 143. TEST COMPONENT — OVERSIZED
+
+Bloqueado antecipadamente.
+
+Backend continua autoridade.
+
+---
+
+# 144. TEST COMPONENT — UNSUPPORTED
+
+Feedback correto.
+
+---
+
+# 145. TEST COMPONENT — ZERO BYTE
+
+Feedback correto.
+
+---
+
+# 146. TEST COMPONENT — UPLOAD SUCCESS
+
+Lista atualiza.
+
+---
+
+# 147. TEST COMPONENT — UPLOAD FAILURE
+
+Lista não ganha attachment falso.
+
+---
+
+# 148. TEST COMPONENT — 413
+
+Mensagem correta.
+
+---
+
+# 149. TEST COMPONENT — 415
+
+Mensagem correta.
+
+---
+
+# 150. TEST COMPONENT — 409
+
+Mensagem baseada no estado real.
+
+---
+
+# 151. TEST COMPONENT — DOWNLOAD
+
+Blob recebido.
+
+Object URL criado.
+
+Download acionado.
+
+Object URL revogado.
+
+---
+
+# 152. TEST COMPONENT — DOWNLOAD FAILURE
+
+Feedback.
+
+---
+
+# 153. TEST COMPONENT — DELETE
+
+Confirmação.
+
+Request.
+
+Lista atualiza.
+
+---
+
+# 154. TEST COMPONENT — CANCEL DELETE
+
+Nenhum request.
+
+---
+
+# 155. TEST COMPONENT — CANCELLED TRANSACTION
+
+Comportamento exatamente conforme API.
+
+---
+
+# 156. TEST COMPONENT — READONLY
+
+Nenhum upload/delete.
+
+Download continua quando permitido.
+
+---
+
+# 157. EXPENSE INTEGRATION TEST
+
+Transação existente:
+
+Attachment component presente.
+
+---
+
+# 158. INCOME INTEGRATION TEST
+
+Mesmo.
+
+---
+
+# 159. TRANSFER INTEGRATION TEST
+
+Mesmo.
+
+---
+
+# 160. TRANSFER SINGLE SET
+
+Nunca renderizar dois componentes de Attachment para uma Transfer.
+
+---
+
+# 161. E2E — EXPENSE
+
+Login
+→ criar Expense
+→ editar Expense
+→ adicionar PDF
+→ attachment aparece
+→ baixar
+→ remover.
+
+---
+
+# 162. E2E — INCOME
+
+Criar Income
+→ adicionar imagem
+→ baixar
+→ remover.
+
+---
+
+# 163. E2E — TRANSFER
+
+Criar Transfer
+→ adicionar PDF
+→ attachment aparece uma única vez.
+
+---
+
+# 164. E2E — MULTIPLE
+
+Se limite permite:
+
+adicionar dois attachments.
+
+---
+
+# 165. E2E — SAME NAME
+
+Dois arquivos com mesmo originalFileName devem aparecer como dois
+attachments distintos se backend permite.
+
+---
+
+# 166. E2E — INVALID TYPE
+
+Backend rejection corretamente apresentada.
+
+---
+
+# 167. E2E — OVERSIZE
+
+Mensagem correta.
+
+---
+
+# 168. E2E — MULTIUSER
+
+Se infraestrutura suporta:
+
+User A cria attachment.
+
+User B não consegue acessá-lo pela UI/API.
+
+---
+
+# 169. E2E — AUTH
+
+Sessão expirada durante download:
+
+fluxo global 401.
+
+---
+
+# 170. E2E — MOBILE
+
+Fluxo principal em:
+
+360 × 800.
+
+---
+
+# 171. FINANCIAL REGRESSION
+
+Executar testes da Sprint 3 e 4.3.
+
+---
+
+# 172. GOLDEN SCENARIO
+
+Account A initial:
+1000
+
+Account B initial:
+500
+
+Income A:
+700
+
+Expense A:
+200
+
+Transfer A → B:
+300
+
+Esperado:
+
+A = 1200
+B = 800
+Net Worth = 2000
+Entradas = 700
+Saídas = 200
+Saldo = 500
+History = 3 logical transactions.
+
+Agora:
+
+- adicionar Attachment ao Income;
+- adicionar 2 Attachments ao Expense;
+- adicionar Attachment ao Transfer;
+- baixar todos;
+- remover um Attachment.
+
+Esperado:
+
+A = 1200
+B = 800
+Net Worth = 2000
+Entradas = 700
+Saídas = 200
+Saldo = 500
+History = 3.
+
+Nenhum valor financeiro muda.
+
+---
+
+# 173. TAG REGRESSION
+
+Transações continuam mantendo Tags.
+
+Attachment upload/delete não altera:
+
+tagIds.
+
+---
+
+# 174. CANCEL REGRESSION
+
+Cancelar transaction continua seguindo regras da Sprint 3.
+
+Attachments seguem política definida no ADR.
+
+---
+
+# 175. ACCOUNT MOVEMENT
+
+Attachment operations não podem criar/update/delete AccountMovement.
+
+---
+
+# 176. HISTORY COUNT
+
+Attachment não cria FinancialTransaction.
+
+---
+
+# 177. PERFORMANCE
+
+Não fazer attachment requests para todas as transações em listagens.
+
+---
+
+# 178. DOWNLOAD MEMORY
+
+Browser obviamente receberá Blob no frontend.
+
+Isso é aceitável dentro do limite do arquivo.
+
+Backend continua streaming.
+
+---
+
+# 179. FRONTEND MEMORY
+
+Após download:
+
+liberar Object URL.
+
+---
+
+# 180. NO PERSISTED BLOB FRONTEND
+
+Não guardar Blobs no estado global.
+
+---
+
+# 181. NO NGRX
+
+Não introduzir NgRx para Attachments.
+
+---
+
+# 182. NO GLOBAL FILE CACHE
+
+Não necessário.
+
+---
+
+# 183. NO GENERIC METADATA FRAMEWORK
+
+Não transformar:
+
+Tags + Attachments
+
+em framework genérico de metadata.
+
+---
+
+# 184. NO GENERIC TRANSACTION FORM
+
+Não criar abstração excessiva.
+
+---
+
+# 185. SMALL SHARED COMPONENT
+
+TransactionAttachmentsComponent é uma abstração válida porque:
+
+- comportamento é idêntico;
+- API é comum;
+- pertence à FinancialTransaction lógica.
+
+---
+
+# 186. BACKEND CHANGES
+
+Esperado:
+
+NENHUMA.
+
+---
+
+# 187. BACKEND BUG
+
+Se encontrar bug bloqueante:
+
+1. reproduzir;
+2. criar teste backend;
+3. corrigir menor escopo;
+4. executar regressão;
+5. documentar.
+
+---
+
+# 188. OPENAPI
+
+Frontend deve respeitar contrato.
+
+Não alterar OpenAPI apenas para encaixar implementação Angular.
+
+---
+
+# 189. BUILD
+
+Executar:
+
+frontend lint;
+frontend unit tests;
+frontend production build.
+
+---
+
+# 190. BACKEND REGRESSION
+
+Executar testes backend críticos se pipeline permitir.
+
+---
+
+# 191. SECURITY REVIEW
+
+Confirmar no frontend:
+
+- nenhum JWT em URL;
+- nenhum storageKey usado;
+- nenhum filesystem path conhecido;
+- nenhum HTML renderizado a partir do filename;
+- downloads usam HttpClient autenticado;
+- Object URLs são revogadas;
+- validação client-side não substitui backend.
+
+---
+
+# 192. DEFINITION OF DONE
+
+TASK-4.6 estará concluída quando:
+
+- AttachmentService tipado existir;
+- TransactionAttachmentsComponent reutilizável existir;
+- listagem funcionar;
+- loading funcionar;
+- empty funcionar;
+- error funcionar;
+- retry funcionar;
+- upload funcionar;
+- multipart funcionar;
+- validação antecipada funcionar;
+- backend continuar autoridade;
+- progresso real ou estado indeterminado funcionar;
+- limite de attachments estiver refletido corretamente;
+- download usar HttpClient autenticado;
+- nenhum JWT estiver em query string;
+- download gerar arquivo corretamente;
+- Object URL for revogado;
+- delete possuir confirmação;
+- delete funcionar;
+- cancelled transaction seguir contrato;
+- Expense usar componente;
+- Income usar componente;
+- Transfer usar o mesmo componente;
+- Transfer possuir um único conjunto de anexos;
+- create flow não gerar orphan upload;
+- nenhuma transaction temporária for criada;
+- mobile funcionar;
+- acessibilidade funcionar;
+- long filenames não quebrarem layout;
+- Problem Details estiver integrado;
+- 401 continuar global;
+- 403 não limpar sessão;
+- 404/409/413/415 tiverem UX adequada;
+- não houver N+1 de requests nas listas;
+- ledger permanecer inalterado;
+- balances permanecerem corretos;
+- netWorth permanecer correto;
+- Tags permanecerem corretas;
+- History continuar correto;
+- frontend lint passar;
+- frontend tests passarem;
+- production build passar;
+- regressões backend passarem.
+
+---
+
+# 193. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-4.6 — INTERFACE DE ANEXOS
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+## 1. API consumida
+
+Upload:
+List:
+Download:
+Delete:
+
+## 2. AttachmentService
+
+Typed:
+PASS / FAIL
+
+No any:
+PASS / FAIL
+
+Auth via interceptor:
+PASS / FAIL
+
+## 3. Shared Component
+
+Nome:
+
+Reusable:
+PASS / FAIL
+
+Expense:
+PASS / FAIL
+
+Income:
+PASS / FAIL
+
+Transfer:
+PASS / FAIL
+
+## 4. List
+
+Loading:
+PASS / FAIL
+
+Empty:
+PASS / FAIL
+
+Error:
+PASS / FAIL
+
+Retry:
+PASS / FAIL
+
+## 5. Upload
+
+File input:
+PASS / FAIL
+
+Multipart:
+PASS / FAIL
+
+Size validation:
+PASS / FAIL
+
+Type validation:
+PASS / FAIL
+
+Empty validation:
+PASS / FAIL
+
+Max attachments:
+PASS / FAIL
+
+Progress:
+PASS / FAIL / INDETERMINATE
+
+## 6. Download
+
+Authenticated HttpClient:
+PASS / FAIL
+
+JWT in URL:
+YES / NO
+
+Expected:
+NO
+
+Blob:
+PASS / FAIL
+
+Object URL cleanup:
+PASS / FAIL
+
+Filename:
+PASS / FAIL
+
+## 7. Delete
+
+Confirmation:
+PASS / FAIL
+
+Success:
+PASS / FAIL
+
+Failure:
+PASS / FAIL
+
+## 8. Create Transaction Flow
+
+Expense:
+
+Income:
+
+Transfer:
+
+Temporary attachment:
+YES / NO
+
+Expected:
+NO
+
+Orphan upload:
+YES / NO
+
+Expected:
+NO
+
+## 9. Cancelled Transaction
+
+Upload behavior:
+
+Download behavior:
+
+Delete behavior:
+
+Conforme API:
+PASS / FAIL
+
+## 10. Errors
+
+400:
+PASS / FAIL
+
+401:
+PASS / FAIL
+
+403:
+PASS / FAIL
+
+404:
+PASS / FAIL
+
+409:
+PASS / FAIL
+
+413:
+PASS / FAIL
+
+415:
+PASS / FAIL
+
+## 11. Problem Details
+
+PASS / FAIL
+
+## 12. Accessibility
+
+Keyboard:
+PASS / FAIL
+
+File input label:
+PASS / FAIL
+
+Download accessible name:
+PASS / FAIL
+
+Delete accessible name:
+PASS / FAIL
+
+Progress:
+PASS / FAIL
+
+Focus:
+PASS / FAIL
+
+## 13. Responsive
+
+360 × 800:
+PASS / FAIL
+
+390 × 844:
+PASS / FAIL
+
+768 × 1024:
+PASS / FAIL
+
+1024 × 768:
+PASS / FAIL
+
+1280 × 720:
+PASS / FAIL
+
+1366 × 768:
+PASS / FAIL
+
+1920 × 1080:
+PASS / FAIL
+
+## 14. Expense
+
+Upload:
+PASS / FAIL
+
+List:
+PASS / FAIL
+
+Download:
+PASS / FAIL
+
+Delete:
+PASS / FAIL
+
+## 15. Income
+
+Upload:
+PASS / FAIL
+
+List:
+PASS / FAIL
+
+Download:
+PASS / FAIL
+
+Delete:
+PASS / FAIL
+
+## 16. Transfer
+
+Upload:
+PASS / FAIL
+
+List:
+PASS / FAIL
+
+Download:
+PASS / FAIL
+
+Delete:
+PASS / FAIL
+
+Single logical attachment set:
+PASS / FAIL
+
+## 17. Tags Regression
+
+PASS / FAIL
+
+## 18. Financial Regression
+
+Expense:
+PASS / FAIL
+
+Income:
+PASS / FAIL
+
+Transfer:
+PASS / FAIL
+
+Balance:
+PASS / FAIL
+
+Net Worth:
+PASS / FAIL
+
+Dashboard:
+PASS / FAIL
+
+History:
+PASS / FAIL
+
+## 19. Golden Scenario
+
+A:
+resultado
+
+B:
+resultado
+
+Net Worth:
+resultado
+
+Entradas:
+resultado
+
+Saídas:
+resultado
+
+Saldo:
+resultado
+
+History count:
+resultado
+
+Attachment financial delta:
+resultado
+
+Esperado:
+0
+
+PASS / FAIL
+
+## 20. Performance
+
+Attachment N+1 in transaction lists:
+YES / NO
+
+Expected:
+NO
+
+## 21. Security
+
+JWT query parameter:
+YES / NO
+
+StorageKey exposed:
+YES / NO
+
+Path exposed:
+YES / NO
+
+Filename rendered as HTML:
+YES / NO
+
+Object URL leak:
+YES / NO
+
+Expected:
+NO para todos.
+
+## 22. Tests
+
+Service:
+PASS / FAIL
+
+Component:
+PASS / FAIL
+
+Integration:
+PASS / FAIL
+
+E2E:
+PASS / FAIL / NÃO CONFIGURADO
+
+Mobile E2E:
+PASS / FAIL / NÃO CONFIGURADO
+
+## 23. Builds
+
+Frontend lint:
+PASS / FAIL
+
+Frontend tests:
+PASS / FAIL
+
+Frontend production:
+PASS / FAIL
+
+Backend regression:
+PASS / FAIL
+
+## 24. Backend Changes
+
+Esperado:
+
+NENHUMA.
+
+Se houve:
+
+explique.
+
+## 25. Files
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 26. Bugs encontrados
+
+Para cada:
+
+Severidade:
+Problema:
+Causa:
+Correção:
+Teste:
+
+## 27. Divergências
+
+Esperado:
+
+NENHUMA.
+
+## 28. Fora de escopo confirmado
+
+History Attachment Integration:
+NÃO IMPLEMENTADA
+
+History Tag Filter:
+NÃO IMPLEMENTADO
+
+Preview:
+NÃO IMPLEMENTADO
+
+OCR:
+NÃO IMPLEMENTADO
+
+S3:
+NÃO IMPLEMENTADO
+
+MinIO:
+NÃO IMPLEMENTADO
+
+Reports:
+NÃO ALTERADOS
+
+## 29. Próxima Task
+
+Se TASK-4.6 estiver concluída, declarar prontidão para:
+
+# TASK-4.7 — Integração de Tags e Anexos no Histórico Unificado
+
+NÃO implementar TASK-4.7 nesta execução.

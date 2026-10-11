@@ -1,0 +1,2135 @@
+# TASK-2.8 — Gate de Qualidade, Segurança e Isolamento Multiusuário da Sprint 2
+
+Estamos encerrando:
+
+# Sprint 2 — Contas e Categorias
+
+Foram concluídas:
+
+- TASK-2.1 — Domínio e persistência de Contas de Ativo
+- TASK-2.2 — Casos de Uso e API REST de Contas de Ativo
+- TASK-2.3 — Interface de Contas de Ativo
+- TASK-2.4 — Domínio e persistência de Categorias
+- TASK-2.5 — Casos de Uso e API REST de Categorias
+- TASK-2.6 — Interface de Categorias
+- TASK-2.7 — Integração inicial de Contas com o Dashboard
+
+Agora execute:
+
+# Gate de Qualidade, Segurança e Isolamento Multiusuário
+
+IMPORTANTE:
+
+Esta TASK NÃO deve adicionar novas funcionalidades.
+
+Ela deverá:
+
+1. auditar;
+2. testar;
+3. identificar inconsistências;
+4. corrigir bugs;
+5. eliminar regressões;
+6. validar segurança;
+7. validar isolamento multiusuário;
+8. validar banco/migrations;
+9. validar frontend;
+10. validar responsividade;
+11. validar documentação;
+12. declarar ou não a Sprint 2 pronta para encerramento.
+
+---
+
+# 1. REGRA PRINCIPAL
+
+Não considere a Sprint aprovada apenas porque:
+
+- compila;
+- testes atuais passam;
+- telas abrem.
+
+Procure ativamente defeitos que os testes existentes podem não estar
+detectando.
+
+Este é um quality gate.
+
+---
+
+# 2. ESCOPO CONGELADO
+
+NÃO implementar:
+
+- Despesas;
+- Receitas;
+- Transferências;
+- Tags;
+- Contas de Despesas;
+- relatórios;
+- categorias padrão;
+- subcategorias;
+- budgets;
+- refresh token;
+- novos recursos de autenticação;
+- novo Dashboard;
+- novos gráficos;
+- saldo corrente;
+- ledger financeiro.
+
+Esses itens pertencem a Sprints futuras.
+
+---
+
+# 3. CORREÇÕES PERMITIDAS
+
+É permitido corrigir:
+
+- bugs;
+- vulnerabilidades;
+- inconsistências de API;
+- falhas de validação;
+- problemas de ownership;
+- problemas de migration;
+- erros de responsividade;
+- problemas de acessibilidade;
+- testes frágeis;
+- código morto criado na Sprint;
+- duplicações claramente acidentais;
+- documentação incorreta.
+
+Não utilize este gate para expandir produto.
+
+---
+
+# 4. PREPARAÇÃO
+
+Leia integralmente:
+
+- CLAUDE.md
+- README.md
+- docs/architecture.md
+- docs/security.md
+- docs/api-guidelines.md
+- docs/frontend-architecture.md
+- docs/design-system.md
+- ADRs
+- documentação produzida durante a Sprint 2
+
+Analise também:
+
+- git diff/history da Sprint 2, quando disponível;
+- migrations;
+- backend;
+- frontend;
+- testes;
+- configuração;
+- OpenAPI.
+
+---
+
+# 5. INVENTÁRIO
+
+Antes de modificar código, apresente inventário do estado atual.
+
+Inclua:
+
+## AssetAccount
+
+- entidade;
+- repository;
+- services/use cases;
+- controller;
+- DTOs;
+- endpoints;
+- frontend;
+- testes.
+
+## Category
+
+- entidade;
+- repository;
+- services/use cases;
+- controller;
+- DTOs;
+- endpoints;
+- frontend;
+- testes.
+
+## Dashboard
+
+- integração com AssetAccount;
+- cálculo de patrimônio;
+- estados;
+- testes.
+
+## Segurança
+
+- CurrentUser;
+- JWT;
+- ownership;
+- Problem Details;
+- Request ID.
+
+Depois inicie a auditoria.
+
+---
+
+# 6. BACKEND — ARQUITETURA
+
+Audite se o fluxo continua coerente:
+
+Controller
+→ Application Service / Use Case
+→ Domain
+→ Repository
+→ MySQL
+
+Procure regras de negócio indevidamente colocadas em Controllers.
+
+---
+
+# 7. ENTITY EXPOSURE
+
+Confirme que entidades JPA NÃO são retornadas diretamente pelos
+Controllers.
+
+Esperado:
+
+DTOs explícitos.
+
+---
+
+# 8. OWNER NO CLIENTE
+
+Faça busca no projeto por:
+
+ownerId
+userId
+
+nos DTOs de request de:
+
+AssetAccount
+Category
+
+O cliente NÃO deve controlar ownership.
+
+---
+
+# 9. CURRENT USER
+
+Confirme que ownership vem exclusivamente de:
+
+JWT
+→ SecurityContext
+→ CurrentUser
+→ ownerId
+
+---
+
+# 10. TESTE MULTIUSUÁRIO
+
+Crie cenário de integração com:
+
+User A
+User B
+
+Cada usuário deverá possuir:
+
+- contas;
+- categorias.
+
+Este cenário deverá ser utilizado para tentar atravessar os limites de
+ownership.
+
+---
+
+# 11. ASSET ACCOUNT — LISTAGEM
+
+A:
+
+Conta A1
+Conta A2
+
+B:
+
+Conta B1
+
+GET como A:
+
+deve retornar exclusivamente:
+
+A1
+A2
+
+Nunca B1.
+
+---
+
+# 12. ASSET ACCOUNT — GET IDOR
+
+B conhece UUID de A1.
+
+GET /api/asset-accounts/{A1}
+
+como B:
+
+→ 404
+
+Nunca:
+
+200
+403
+
+---
+
+# 13. ASSET ACCOUNT — UPDATE IDOR
+
+B tenta alterar A1.
+
+Esperado:
+
+404
+
+Depois confirme no banco:
+
+A1 permanece inalterada.
+
+---
+
+# 14. ASSET ACCOUNT — DEACTIVATE IDOR
+
+B tenta desativar A1.
+
+Esperado:
+
+404
+
+A1 continua ativa.
+
+---
+
+# 15. ASSET ACCOUNT — ACTIVATE IDOR
+
+Repita cenário com conta inativa.
+
+B não pode ativá-la.
+
+Esperado:
+
+404
+
+---
+
+# 16. CATEGORY — LISTAGEM
+
+A:
+
+Categoria A1
+Categoria A2
+
+B:
+
+Categoria B1
+
+GET como A:
+
+somente A1/A2.
+
+---
+
+# 17. CATEGORY — GET IDOR
+
+B conhece UUID de A1.
+
+GET:
+
+→ 404
+
+---
+
+# 18. CATEGORY — UPDATE IDOR
+
+B tenta modificar categoria de A.
+
+→ 404
+
+Banco permanece inalterado.
+
+---
+
+# 19. CATEGORY — DEACTIVATE IDOR
+
+→ 404
+
+---
+
+# 20. CATEGORY — ACTIVATE IDOR
+
+→ 404
+
+---
+
+# 21. FILTROS E OWNERSHIP
+
+Teste ownership também com:
+
+includeInactive=true
+
+e filtros de Category:
+
+EXPENSE
+INCOME
+
+Filtros jamais podem causar vazamento cross-user.
+
+---
+
+# 22. OWNER SPOOFING — ASSET ACCOUNT
+
+Tente requests contendo:
+
+ownerId
+userId
+
+de outro usuário.
+
+O ownership real deve continuar sendo CurrentUser.
+
+Se a política da aplicação rejeita propriedades desconhecidas:
+
+→ 400
+
+Se ignora:
+
+o owner ainda deve ser CurrentUser.
+
+Documente comportamento.
+
+---
+
+# 23. OWNER SPOOFING — CATEGORY
+
+Repita.
+
+---
+
+# 24. AUTENTICAÇÃO
+
+Todos os endpoints privados da Sprint 2 devem retornar:
+
+401
+
+sem autenticação.
+
+---
+
+# 25. TOKEN INVÁLIDO
+
+Teste:
+
+- token malformado;
+- assinatura inválida;
+- token expirado, se infraestrutura permitir.
+
+Nunca liberar recurso.
+
+---
+
+# 26. 401 × 403 × 404
+
+Confirme semântica:
+
+401
+→ não autenticado
+
+403
+→ autenticado, mas ação globalmente proibida quando realmente aplicável
+
+404
+→ recurso privado inexistente OU pertencente a outro usuário
+
+Não revelar existência de recurso de outro owner.
+
+---
+
+# 27. DUPLICIDADE ASSET ACCOUNT
+
+Teste novamente:
+
+mesmo owner
++
+mesmo nome normalizado
++
+ativo
+
+→ 409
+
+---
+
+# 28. DUPLICIDADE CATEGORY
+
+Mesmo princípio:
+
+→ 409
+
+---
+
+# 29. OWNERS DIFERENTES
+
+A e B podem possuir:
+
+Nubank
+
+e:
+
+Alimentação
+
+simultaneamente.
+
+---
+
+# 30. REATIVAÇÃO ASSET ACCOUNT
+
+Cenário:
+
+Nubank antiga inactive
+
+Nubank nova active
+
+reativar antiga:
+
+→ 409
+
+---
+
+# 31. REATIVAÇÃO CATEGORY
+
+Mesmo cenário:
+
+Alimentação antiga inactive
+
+Alimentação nova active
+
+reativar antiga:
+
+→ 409
+
+---
+
+# 32. CONCORRÊNCIA
+
+Revise se unicidade depende apenas de:
+
+exists(...)
+
+na aplicação.
+
+Isso NÃO é suficiente.
+
+Confirme proteção no banco contra race condition.
+
+---
+
+# 33. MYSQL REAL
+
+Testes de persistência relevantes devem utilizar:
+
+MySQL/Testcontainers
+
+Não confiar em H2 para comportamento de:
+
+- collation;
+- unique;
+- FK;
+- decimal;
+- índices.
+
+---
+
+# 34. MIGRATIONS
+
+Teste banco completamente vazio.
+
+Execute todas migrations do zero.
+
+Esperado:
+
+PASS.
+
+---
+
+# 35. MIGRATION INCREMENTAL
+
+Confirme ordem correta:
+
+Users
+→ AssetAccount
+→ Category
+→ migrations corretivas, se houver.
+
+---
+
+# 36. NÃO ALTERAR MIGRATION APLICADA
+
+Se encontrar problema:
+
+crie migration corretiva nova.
+
+Nunca reescreva silenciosamente migration já publicada/aplicada.
+
+---
+
+# 37. FOREIGN KEYS
+
+Confirme:
+
+AssetAccount.owner
+→ User
+
+Category.owner
+→ User
+
+FK real no banco.
+
+---
+
+# 38. ON DELETE
+
+Revise políticas.
+
+Não deve existir CASCADE perigoso que possa apagar silenciosamente
+histórico financeiro futuro.
+
+---
+
+# 39. DECIMAL
+
+Confirme tipo real de:
+
+initialBalance
+
+Esperado:
+
+DECIMAL apropriado, por exemplo DECIMAL(19,2).
+
+Nunca FLOAT/DOUBLE.
+
+---
+
+# 40. BIGDECIMAL
+
+Backend deve utilizar:
+
+BigDecimal
+
+para dinheiro.
+
+Procure uso indevido de:
+
+double
+float
+
+no domínio financeiro.
+
+---
+
+# 41. ESCALA
+
+Confirme comportamento de:
+
+10.999
+
+Não deve haver arredondamento silencioso se a política definida é
+rejeitar >2 casas.
+
+---
+
+# 42. VALORES NEGATIVOS
+
+Confirme:
+
+initialBalance negativo permitido.
+
+---
+
+# 43. CATEGORY APPLICABILITY
+
+Confirme enum real:
+
+EXPENSE
+INCOME
+BOTH
+
+ou valores equivalentes realmente adotados.
+
+Persistência deve ser STRING.
+
+Nunca ordinal.
+
+---
+
+# 44. CATEGORY FILTER — EXPENSE
+
+Confirme:
+
+EXPENSE
+→ EXPENSE + BOTH
+
+---
+
+# 45. CATEGORY FILTER — INCOME
+
+Confirme:
+
+INCOME
+→ INCOME + BOTH
+
+---
+
+# 46. INACTIVE CATEGORY
+
+Categoria inativa não deve aparecer por padrão.
+
+---
+
+# 47. INACTIVE ACCOUNT
+
+Conta inativa não deve aparecer por padrão.
+
+---
+
+# 48. NORMALIZAÇÃO
+
+Teste:
+
+"Nubank"
+" nubank "
+"NUBANK"
+
+e:
+
+"Alimentação"
+" alimentação "
+"ALIMENTAÇÃO"
+
+de acordo com a política implementada.
+
+---
+
+# 49. UNICODE
+
+Confirme preservação correta de:
+
+ç
+ã
+é
+á
+
+Não corromper nomes.
+
+---
+
+# 50. PROBLEM DETAILS
+
+Audite respostas:
+
+400
+401
+404
+409
+500
+
+Formato deve ser consistente.
+
+---
+
+# 51. INFORMATION LEAKAGE
+
+Problem Details não pode expor:
+
+- SQL;
+- stack trace;
+- nome de tabela;
+- nome de constraint;
+- package Java;
+- filesystem;
+- segredo;
+- JWT.
+
+---
+
+# 52. REQUEST ID
+
+Confirme Request ID em:
+
+request;
+logs;
+erro;
+
+conforme arquitetura existente.
+
+---
+
+# 53. LOGGING
+
+Procure logs contendo:
+
+Authorization
+Bearer
+JWT
+password
+payload sensível.
+
+Nenhum deve ser registrado.
+
+---
+
+# 54. OPENAPI
+
+Compare OpenAPI com implementação REAL.
+
+Confirme:
+
+AssetAccount endpoints;
+Category endpoints;
+query params;
+DTOs;
+enums;
+responses;
+Bearer authentication.
+
+---
+
+# 55. DOCUMENTAÇÃO DO FILTRO CATEGORY
+
+OpenAPI deve explicar:
+
+EXPENSE → EXPENSE + BOTH
+
+INCOME → INCOME + BOTH
+
+---
+
+# 56. FRONTEND — AUTH
+
+Confirme:
+
+rotas de Contas;
+rotas de Categorias;
+Dashboard;
+
+protegidas por autenticação.
+
+---
+
+# 57. AUTHORIZATION HEADER
+
+Confirme que Authorization é enviado apenas para backend confiável
+conforme regra já estabelecida.
+
+Nunca para URL externa.
+
+---
+
+# 58. 401 FRONTEND
+
+401 deve limpar sessão e direcionar conforme comportamento de autenticação
+estabelecido.
+
+---
+
+# 59. 403 FRONTEND
+
+403 NÃO deve limpar sessão.
+
+Confirme regressão.
+
+---
+
+# 60. F5 / RELOAD
+
+O projeto atualmente utiliza JWT somente em memória e não possui refresh
+token.
+
+Portanto o comportamento esperado continua:
+
+reload/F5
+→ sessão perdida
+→ login.
+
+NÃO "corrija" isso nesta TASK com localStorage, refresh token ou cookie.
+
+É decisão arquitetural atual.
+
+---
+
+# 61. ASSET ACCOUNT UI
+
+Execute fluxo completo:
+
+- abrir;
+- loading;
+- empty;
+- criar;
+- listar;
+- editar;
+- desativar;
+- mostrar inativas;
+- reativar;
+- conflito;
+- error/retry.
+
+---
+
+# 62. CATEGORY UI
+
+Execute:
+
+- abrir;
+- loading;
+- empty;
+- criar;
+- listar;
+- filtrar;
+- editar;
+- desativar;
+- mostrar inativas;
+- reativar;
+- conflito;
+- error/retry.
+
+---
+
+# 63. CATEGORY FILTER UI
+
+Teste:
+
+Todas
+Despesas
+Receitas
+
+Confirme BOTH nos contextos corretos.
+
+---
+
+# 64. FRONTEND OWNER
+
+Faça busca por:
+
+ownerId
+
+em requests frontend.
+
+Não deve ser enviado.
+
+---
+
+# 65. FRONTEND ANY
+
+Procure uso desnecessário de:
+
+any
+
+nas features da Sprint 2.
+
+Corrija onde comprometer type safety.
+
+---
+
+# 66. DUPLICAÇÃO DE ENUM
+
+Confirme que labels de:
+
+AssetAccountType
+
+e:
+
+CategoryApplicability
+
+não estão duplicados em vários componentes.
+
+---
+
+# 67. MONEY FORMATTING
+
+Confirme padrão pt-BR.
+
+Exemplos:
+
+R$ 0,00
+R$ 1.234,56
+-R$ 350,50
+
+ou formato equivalente produzido consistentemente pelo Intl.
+
+---
+
+# 68. MONEY INPUT
+
+Conta deve aceitar corretamente:
+
+0
+100
+100,25
+-350,50
+
+e rejeitar:
+
+10,999
+
+sem arredondar silenciosamente.
+
+---
+
+# 69. DASHBOARD — PATRIMÔNIO
+
+Confirme fórmula TEMPORÁRIA:
+
+soma de initialBalance
+das contas ATIVAS.
+
+---
+
+# 70. DASHBOARD — PRECISÃO
+
+Teste:
+
+0,10
++
+0,20
+
+Resultado:
+
+0,30
+
+---
+
+# 71. DASHBOARD — NEGATIVO
+
+1000
++
+(-350,50)
+
+Resultado:
+
+649,50
+
+---
+
+# 72. DASHBOARD — CONTA INATIVA
+
+Não participa do patrimônio.
+
+---
+
+# 73. DASHBOARD — API ERROR
+
+Erro ao carregar contas:
+
+NÃO mostrar R$ 0,00 como valor financeiro confirmado.
+
+Deve mostrar estado de indisponibilidade.
+
+---
+
+# 74. DASHBOARD — ENTRADAS
+
+Permanece:
+
+R$ 0,00
+
+Não inferir de contas.
+
+---
+
+# 75. DASHBOARD — SAÍDAS
+
+Permanece:
+
+R$ 0,00
+
+---
+
+# 76. DASHBOARD — SALDO
+
+Permanece:
+
+R$ 0,00
+
+---
+
+# 77. DASHBOARD — GRÁFICO
+
+Nenhuma série financeira fictícia.
+
+---
+
+# 78. DASHBOARD — TRANSAÇÕES
+
+Nenhuma transação fictícia.
+
+Criação de conta não é transação.
+
+---
+
+# 79. DASHBOARD — CONTAS
+
+Resumo deve mostrar somente contas ativas.
+
+Saldo deve estar explicitamente identificado como:
+
+Saldo inicial
+
+e não saldo atual.
+
+---
+
+# 80. PERFORMANCE BÁSICA
+
+Audite requests ao abrir:
+
+Dashboard
+Contas
+Categorias
+
+Procure:
+
+- loops;
+- chamadas duplicadas;
+- requests desnecessários;
+- subscriptions abandonadas;
+- re-renderizações obviamente problemáticas.
+
+Não faça otimização prematura.
+
+---
+
+# 81. MEMORY LEAKS
+
+Revise subscriptions manuais.
+
+Use padrões Angular existentes:
+
+async pipe;
+takeUntilDestroyed;
+signals;
+
+quando apropriado.
+
+---
+
+# 82. BUNDLE
+
+Não deve ter sido adicionada biblioteca pesada desnecessária durante a
+Sprint.
+
+Liste dependências adicionadas pela Sprint 2 e justifique.
+
+---
+
+# 83. RESPONSIVIDADE
+
+Valide:
+
+360 × 800
+390 × 844
+768 × 1024
+1024 × 768
+1280 × 720
+1366 × 768
+1920 × 1080
+
+---
+
+# 84. DASHBOARD MOBILE
+
+Confirme:
+
+- KPIs legíveis;
+- patrimônio;
+- gráfico empty;
+- transações empty;
+- resumo de contas;
+- sem overflow.
+
+---
+
+# 85. CONTAS MOBILE
+
+Confirme:
+
+- cards;
+- formulário;
+- menu;
+- filtros;
+- valores;
+- confirmação.
+
+---
+
+# 86. CATEGORIAS MOBILE
+
+Confirme:
+
+- cards;
+- filtro;
+- formulário;
+- action menu;
+- status;
+- applicability.
+
+---
+
+# 87. OVERFLOW
+
+Nenhuma página deve possuir overflow horizontal global em 360px.
+
+---
+
+# 88. ACESSIBILIDADE — KEYBOARD
+
+Percorra funcionalidades principais sem mouse.
+
+---
+
+# 89. ACCESSIBILITY — FOCUS
+
+Confirme:
+
+- focus visible;
+- dialogs/drawers;
+- retorno de foco;
+- menus.
+
+---
+
+# 90. ACCESSIBILITY — LABELS
+
+Todos os campos possuem labels.
+
+Placeholder não é label.
+
+---
+
+# 91. ACCESSIBILITY — COLOR
+
+Status e applicability não dependem apenas de cor.
+
+---
+
+# 92. ACCESSIBILITY — HEADINGS
+
+Hierarquia coerente.
+
+Não usar headings apenas para estilo.
+
+---
+
+# 93. ACCESSIBILITY — BUTTONS
+
+Botões de ícone possuem accessible names.
+
+---
+
+# 94. ACCESSIBILITY — CONTRAST
+
+Revise:
+
+- sidebar;
+- cards;
+- chips;
+- textos secundários;
+- estados disabled;
+- focus ring.
+
+---
+
+# 95. ACCESSIBILITY — REDUCED MOTION
+
+Preserve suporte existente.
+
+---
+
+# 96. E2E MULTIUSUÁRIO
+
+Implemente ou execute cenário E2E/integration equivalente:
+
+User A:
+- cria conta A;
+- cria categoria A.
+
+User B:
+- cria conta B;
+- cria categoria B.
+
+Confirme:
+
+A não vê B;
+B não vê A.
+
+A segurança crítica deve continuar sendo validada no backend mesmo que
+também exista E2E frontend.
+
+---
+
+# 97. E2E — FLUXO COMPLETO DA SPRINT
+
+Execute cenário:
+
+1. registrar usuário;
+2. login;
+3. Dashboard vazio;
+4. criar conta;
+5. Dashboard atualiza patrimônio;
+6. criar categoria EXPENSE;
+7. criar categoria INCOME;
+8. criar categoria BOTH;
+9. filtrar categorias;
+10. editar conta;
+11. editar categoria;
+12. desativar conta;
+13. verificar Dashboard;
+14. mostrar conta inativa;
+15. reativar;
+16. desativar categoria;
+17. mostrar categoria inativa;
+18. reativar;
+19. logout.
+
+---
+
+# 98. E2E MOBILE
+
+Execute fluxo representativo em:
+
+360 × 800.
+
+---
+
+# 99. CONSOLE
+
+Durante E2E:
+
+nenhum erro inesperado no browser console.
+
+---
+
+# 100. NETWORK
+
+Nenhum:
+
+401 inesperado;
+403 inesperado;
+404 inesperado;
+500.
+
+---
+
+# 101. TESTES BACKEND
+
+Execute suíte completa.
+
+Esperado:
+
+PASS.
+
+---
+
+# 102. TESTES FRONTEND
+
+Execute suíte completa.
+
+Esperado:
+
+PASS.
+
+---
+
+# 103. LINT
+
+Execute lint.
+
+Esperado:
+
+PASS.
+
+---
+
+# 104. BACKEND BUILD
+
+Execute build de produção/backend.
+
+Esperado:
+
+PASS.
+
+---
+
+# 105. FRONTEND BUILD
+
+Execute production build.
+
+Esperado:
+
+PASS.
+
+---
+
+# 106. TESTCONTAINERS
+
+Confirme execução real dos testes dependentes de MySQL.
+
+Não marque PASS se foram skipped.
+
+---
+
+# 107. TESTES IGNORADOS
+
+Procure:
+
+@Disabled
+.skip
+xit
+xdescribe
+test.skip
+
+em testes relacionados à Sprint.
+
+Liste e justifique qualquer ocorrência.
+
+Não aceite segurança crítica desabilitada.
+
+---
+
+# 108. TODO / FIXME
+
+Faça busca por:
+
+TODO
+FIXME
+HACK
+TEMP
+
+nos arquivos tocados pela Sprint.
+
+Classifique cada ocorrência.
+
+Não precisa eliminar TODO legítimo de Sprint futura, mas documente.
+
+---
+
+# 109. CÓDIGO MORTO
+
+Procure:
+
+- componentes não usados;
+- services abandonados;
+- DTOs duplicados;
+- helpers antigos;
+- imports mortos.
+
+Remova quando seguro.
+
+---
+
+# 110. DOCUMENTAÇÃO
+
+Compare documentação com implementação.
+
+Corrija documentação desatualizada.
+
+---
+
+# 111. REGRA FINANCEIRA
+
+Documente claramente o estado ao final da Sprint 2:
+
+AssetAccount possui:
+
+initialBalance
+
+Ainda NÃO existe:
+
+currentBalance derivado de ledger.
+
+---
+
+# 112. DÍVIDA TÉCNICA — PATRIMÔNIO
+
+Preserve a pendência:
+
+"Substituir patrimônio baseado em initialBalance por currentBalance
+derivado das transações quando o ledger financeiro for implementado."
+
+---
+
+# 113. DÍVIDA TÉCNICA — CATEGORY
+
+Preserve:
+
+"Reavaliar alteração de CategoryApplicability quando existirem
+transações associadas."
+
+---
+
+# 114. DÍVIDA TÉCNICA — ASSET ACCOUNT
+
+Preserve:
+
+"Reavaliar edição de initialBalance quando existirem transações."
+
+---
+
+# 115. NÃO RESOLVER DÍVIDAS FUTURAS AGORA
+
+Essas três pendências dependem do domínio de Transações.
+
+Não implemente soluções especulativas neste gate.
+
+---
+
+# 116. REVISÃO DE ABSTRAÇÕES
+
+Agora existem dois CRUDs completos:
+
+AssetAccount
+Category
+
+Revise duplicações.
+
+Classifique:
+
+A — específicas do domínio;
+B — candidatas futuras à reutilização;
+C — duplicações acidentais que deveriam usar infraestrutura já existente.
+
+Corrija C.
+
+Não transforme automaticamente B em framework CRUD.
+
+---
+
+# 117. GENERIC CRUD
+
+NÃO criar:
+
+GenericCrudComponent
+GenericCrudService
+CrudBaseController
+GenericRepository customizado
+DynamicFormEngine
+
+O Equilibra ainda não precisa disso.
+
+---
+
+# 118. SEGURANÇA — MASS ASSIGNMENT
+
+Audite DTOs e binding.
+
+Cliente não deve conseguir modificar:
+
+ownerId;
+id;
+createdAt;
+updatedAt;
+normalizedName;
+active
+
+por endpoints que não sejam explicitamente responsáveis por isso.
+
+---
+
+# 119. SEGURANÇA — OVERPOSTING
+
+Envie propriedades extras maliciosas nos requests.
+
+Confirme que não alteram campos protegidos.
+
+---
+
+# 120. SEGURANÇA — INPUTS
+
+Teste nomes contendo caracteres comuns como:
+
+&
+'
+"
+<
+>
+
+A aplicação deve:
+
+- armazenar corretamente quando válido;
+- exibir como texto;
+- não executar HTML/script.
+
+Não crie sanitização destrutiva desnecessária.
+
+Angular escaping deve continuar ativo.
+
+---
+
+# 121. XSS
+
+Teste conceitualmente/automaticamente:
+
+<script>alert(1)</script>
+
+como nome, caso passe pelas regras de tamanho.
+
+A UI nunca deve executar.
+
+Não use innerHTML para nomes de usuário/conta/categoria.
+
+---
+
+# 122. SEGURANÇA — SQL
+
+Repository deve usar JPA/queries parametrizadas.
+
+Não concatenar input do usuário em SQL/JPQL inseguro.
+
+---
+
+# 123. SECRETS
+
+Faça busca por segredos acidentalmente commitados:
+
+- JWT secret real;
+- passwords;
+- API keys;
+- credentials;
+- connection strings de produção.
+
+Não imprima o valor de nenhum segredo encontrado no relatório.
+
+Informe apenas arquivo/tipo e corrija conforme arquitetura.
+
+---
+
+# 124. CONFIGURAÇÃO
+
+Confirme separação adequada entre:
+
+development;
+test;
+production
+
+conforme projeto.
+
+---
+
+# 125. GIT HYGIENE
+
+Se disponível, revise:
+
+- arquivos temporários;
+- screenshots de teste;
+- logs;
+- dumps;
+- build output;
+- IDE files;
+- secrets.
+
+Não remova arquivos legítimos sem verificar.
+
+---
+
+# 126. CRITÉRIOS BLOQUEANTES
+
+A Sprint 2 NÃO pode ser aprovada se existir qualquer falha em:
+
+- autenticação;
+- ownership;
+- IDOR/BOLA;
+- owner spoofing;
+- constraint de unicidade;
+- migrations;
+- MySQL/Testcontainers crítico;
+- cálculo monetário do Dashboard;
+- build;
+- testes essenciais;
+- CRUD principal de Contas;
+- CRUD principal de Categorias.
+
+---
+
+# 127. CRITÉRIOS NÃO BLOQUEANTES
+
+Podem ser documentados para Sprint futura:
+
+- pequenos refinamentos visuais;
+- micro-otimizações;
+- abstrações futuras;
+- melhorias cosméticas;
+- funcionalidades explicitamente fora do escopo.
+
+---
+
+# 128. CORREÇÕES ENCONTRADAS
+
+Para cada bug encontrado e corrigido, informe:
+
+- problema;
+- severidade;
+- causa;
+- correção;
+- teste criado/alterado para evitar regressão.
+
+---
+
+# 129. NÃO MASCARAR TESTES
+
+Não altere teste apenas para fazê-lo passar se o comportamento esperado
+estiver correto.
+
+Corrija implementação.
+
+Se o teste estiver errado, explique por que antes de ajustá-lo.
+
+---
+
+# 130. RELATÓRIO FINAL
+
+Produza relatório completo:
+
+# TASK-2.8 — SPRINT 2 QUALITY GATE
+
+## Resultado
+
+APROVADA
+ou
+REPROVADA
+
+Não use "APROVADA COM RESSALVAS" para falhas bloqueantes.
+
+---
+
+## 1. AssetAccount
+
+### Domain
+PASS / FAIL
+
+### Persistence
+PASS / FAIL
+
+### API
+PASS / FAIL
+
+### UI
+PASS / FAIL
+
+### Ownership
+PASS / FAIL
+
+### IDOR/BOLA
+PASS / FAIL
+
+### Duplicate protection
+PASS / FAIL
+
+### Activate/deactivate
+PASS / FAIL
+
+---
+
+## 2. Category
+
+### Domain
+PASS / FAIL
+
+### Persistence
+PASS / FAIL
+
+### API
+PASS / FAIL
+
+### UI
+PASS / FAIL
+
+### Applicability
+PASS / FAIL
+
+### Filters
+PASS / FAIL
+
+### Ownership
+PASS / FAIL
+
+### IDOR/BOLA
+PASS / FAIL
+
+### Duplicate protection
+PASS / FAIL
+
+### Activate/deactivate
+PASS / FAIL
+
+---
+
+## 3. Dashboard
+
+### Real AssetAccount integration
+PASS / FAIL
+
+### Active accounts only
+PASS / FAIL
+
+### Monetary precision
+PASS / FAIL
+
+### Negative values
+PASS / FAIL
+
+### API error handling
+PASS / FAIL
+
+### No fake transactions
+PASS / FAIL
+
+### No fake chart
+PASS / FAIL
+
+---
+
+## 4. Multiusuário
+
+### List isolation
+PASS / FAIL
+
+### GET isolation
+PASS / FAIL
+
+### UPDATE isolation
+PASS / FAIL
+
+### ACTIVATE isolation
+PASS / FAIL
+
+### DEACTIVATE isolation
+PASS / FAIL
+
+### Owner spoofing
+PASS / FAIL
+
+---
+
+## 5. Security
+
+### Authentication
+PASS / FAIL
+
+### JWT
+PASS / FAIL
+
+### CurrentUser
+PASS / FAIL
+
+### Mass assignment
+PASS / FAIL
+
+### Overposting
+PASS / FAIL
+
+### XSS
+PASS / FAIL
+
+### SQL safety
+PASS / FAIL
+
+### Secret scan
+PASS / FAIL
+
+### Information leakage
+PASS / FAIL
+
+---
+
+## 6. Database
+
+### Clean migrations
+PASS / FAIL
+
+### Incremental migrations
+PASS / FAIL
+
+### Foreign keys
+PASS / FAIL
+
+### Unique constraints
+PASS / FAIL
+
+### DECIMAL
+PASS / FAIL
+
+### MySQL/Testcontainers
+PASS / FAIL
+
+---
+
+## 7. API Infrastructure
+
+### Problem Details
+PASS / FAIL
+
+### Request ID
+PASS / FAIL
+
+### OpenAPI
+PASS / FAIL
+
+### Status codes
+PASS / FAIL
+
+---
+
+## 8. Frontend
+
+### Routing
+PASS / FAIL
+
+### Guards
+PASS / FAIL
+
+### 401 handling
+PASS / FAIL
+
+### 403 handling
+PASS / FAIL
+
+### Loading
+PASS / FAIL
+
+### Empty states
+PASS / FAIL
+
+### Error states
+PASS / FAIL
+
+### Retry
+PASS / FAIL
+
+### No unnecessary requests
+PASS / FAIL
+
+---
+
+## 9. Responsive
+
+### 360 × 800
+PASS / FAIL
+
+### 390 × 844
+PASS / FAIL
+
+### 768 × 1024
+PASS / FAIL
+
+### 1024 × 768
+PASS / FAIL
+
+### 1280 × 720
+PASS / FAIL
+
+### 1366 × 768
+PASS / FAIL
+
+### 1920 × 1080
+PASS / FAIL
+
+---
+
+## 10. Accessibility
+
+### Keyboard
+PASS / FAIL
+
+### Focus
+PASS / FAIL
+
+### Labels
+PASS / FAIL
+
+### Contrast
+PASS / FAIL
+
+### Icon buttons
+PASS / FAIL
+
+### Dialogs/drawers
+PASS / FAIL
+
+---
+
+## 11. Tests
+
+### Backend unit
+PASS / FAIL
+
+### Backend integration
+PASS / FAIL
+
+### Security
+PASS / FAIL
+
+### Frontend unit
+PASS / FAIL
+
+### E2E
+PASS / FAIL / NÃO CONFIGURADO
+
+### Mobile E2E
+PASS / FAIL / NÃO CONFIGURADO
+
+### Multi-user E2E/integration
+PASS / FAIL
+
+### Skipped critical tests
+Informe quantidade.
+
+Esperado:
+
+0
+
+---
+
+## 12. Build
+
+### Backend
+PASS / FAIL
+
+### Frontend
+PASS / FAIL
+
+### Lint
+PASS / FAIL
+
+### Browser console
+PASS / FAIL
+
+---
+
+## 13. Bugs encontrados
+
+Para cada bug:
+
+### BUG-X
+
+Severidade:
+CRITICAL / HIGH / MEDIUM / LOW
+
+Problema:
+
+Causa:
+
+Correção:
+
+Teste de regressão:
+
+Status:
+
+---
+
+## 14. Dependências
+
+Liste dependências adicionadas na Sprint 2.
+
+Justifique cada uma.
+
+Informe se alguma foi removida.
+
+---
+
+## 15. Código morto
+
+Informe itens removidos ou:
+
+NENHUM ENCONTRADO
+
+---
+
+## 16. TODO/FIXME
+
+Liste e classifique.
+
+---
+
+## 17. Documentação
+
+Liste documentos revisados/atualizados.
+
+---
+
+## 18. Dívidas técnicas mantidas
+
+Confirme:
+
+1. Substituir patrimônio baseado em initialBalance por currentBalance
+   derivado das transações.
+
+2. Reavaliar edição de initialBalance após introdução de transações.
+
+3. Reavaliar alteração de CategoryApplicability quando existirem
+   transações associadas.
+
+---
+
+## 19. Arquivos
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+---
+
+## 20. Bloqueadores
+
+Liste todos.
+
+Se nenhum:
+
+NENHUM
+
+---
+
+## 21. Pendências não bloqueantes
+
+Liste.
+
+---
+
+# 131. DECISÃO FINAL
+
+Somente declare:
+
+# SPRINT 2 — APROVADA
+
+se todos os critérios bloqueantes estiverem PASS.
+
+Caso contrário:
+
+# SPRINT 2 — REPROVADA
+
+Liste exatamente o que precisa ser corrigido.
+
+---
+
+# 132. PRÓXIMA ETAPA
+
+Se a Sprint 2 for aprovada, informe prontidão para planejamento da:
+
+# SPRINT 3 — TRANSAÇÕES FINANCEIRAS
+
+A Sprint 3 deverá introduzir, em tarefas separadas:
+
+- Despesas;
+- Receitas;
+- Transferências;
+- cálculo de saldo corrente;
+- impacto das transações nas contas;
+- integração real do Dashboard;
+- histórico financeiro;
+- preparação para relatórios.
+
+NÃO implemente nenhuma funcionalidade da Sprint 3 nesta execução.

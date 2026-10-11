@@ -1,0 +1,2358 @@
+# TASK-3.9 — Dashboard Financeiro Integrado ao Ledger
+
+Estamos na:
+
+# Sprint 3 — Transações Financeiras
+
+Concluídas e validadas:
+
+- TASK-3.0 — Arquitetura do Ledger e Regras Financeiras
+- TASK-3.1 — Domínio e Persistência de Transações Financeiras
+- TASK-3.2 — API REST de Despesas
+- TASK-3.3 — Interface de Despesas
+- TASK-3.4 — API REST de Receitas
+- TASK-3.5 — Interface de Receitas
+- TASK-3.6 — API REST de Transferências
+- TASK-3.7 — Interface de Transferências
+- TASK-3.8 — Saldo Corrente e Patrimônio Derivados do Ledger
+
+Agora implemente:
+
+# TASK-3.9 — Dashboard Financeiro Integrado ao Ledger
+
+Objetivo:
+
+Transformar o Dashboard existente em um Dashboard financeiro REAL,
+alimentado pelo ledger.
+
+Implementar corretamente:
+
+1. Entradas do período;
+2. Saídas do período;
+3. Saldo do período;
+4. Patrimônio líquido atual;
+5. Evolução dos saldos no período;
+6. Transações recentes;
+7. Resumo das contas com saldo corrente.
+
+O Dashboard NÃO deve calcular regras financeiras no Angular.
+
+O backend é a autoridade para:
+
+- agregações;
+- classificação financeira;
+- saldos;
+- patrimônio;
+- séries históricas.
+
+---
+
+# 1. PRINCÍPIO FUNDAMENTAL
+
+Separar claramente:
+
+FLUXO
+versus
+POSIÇÃO.
+
+Fluxo depende de período:
+
+- Entradas;
+- Saídas;
+- Saldo do período;
+- gráfico/evolução conforme definição aprovada.
+
+Posição atual:
+
+- Patrimônio líquido;
+- saldo corrente das contas.
+
+Patrimônio atual NÃO deve mudar simplesmente porque o usuário selecionou
+outro período no Dashboard.
+
+---
+
+# 2. FONTE DE VERDADE
+
+Antes de modificar código, leia:
+
+- CLAUDE.md;
+- ADR da TASK-3.0;
+- implementação e relatório da TASK-3.8;
+- AssetAccount balance read model;
+- FinancialTransaction;
+- AccountMovement, se existir;
+- Expense API;
+- Income API;
+- Transfer API;
+- Dashboard atual;
+- Design System;
+- OpenAPI;
+- migrations;
+- testes;
+- ECharts ou biblioteca real existente;
+- frontend architecture.
+
+O código real é a fonte de verdade.
+
+Não presuma contratos.
+
+---
+
+# 3. RELATÓRIO PRÉ-IMPLEMENTAÇÃO
+
+Antes de alterar arquivos, produza:
+
+# TASK-3.9 — PRE-IMPLEMENTATION REPORT
+
+## 1. Dashboard atual
+
+Explique:
+
+- componentes;
+- cards;
+- período;
+- gráfico;
+- transações recentes;
+- contas;
+- estados de loading/error/empty.
+
+## 2. Ledger
+
+Explique como estão representados:
+
+- Expense;
+- Income;
+- Transfer;
+- Cancelled.
+
+## 3. Balance read model
+
+Explique o resultado da TASK-3.8.
+
+## 4. Fórmulas
+
+Mostre fórmulas propostas para:
+
+- Entradas;
+- Saídas;
+- Saldo;
+- Patrimônio.
+
+## 5. Transfer
+
+Explique como será excluída de:
+
+- Entradas;
+- Saídas;
+- Saldo do período.
+
+## 6. Série histórica
+
+Explique exatamente o que o gráfico representará.
+
+## 7. Transações recentes
+
+Explique estratégia de consulta unificada.
+
+## 8. API proposta
+
+Liste endpoints novos/alterados.
+
+## 9. Performance
+
+Explique:
+
+- agregações;
+- GROUP BY;
+- queries;
+- índices;
+- prevenção de N+1.
+
+## 10. Frontend
+
+Liste componentes alterados/criados.
+
+## 11. Arquivos
+
+Liste:
+
+- criar;
+- modificar;
+- reutilizar.
+
+Depois implemente.
+
+---
+
+# 4. CARDS DO DASHBOARD
+
+Manter quatro cards:
+
+Entradas
+Saídas
+Saldo
+Patrimônio líquido
+
+---
+
+# 5. ENTRADAS
+
+Entradas do período:
+
+SUM(Income ACTIVE no período)
+
+---
+
+# 6. TRANSFER NÃO É ENTRADA
+
+Transfer recebida NÃO entra no card:
+
+Entradas.
+
+---
+
+# 7. MOTIVO
+
+Transfer apenas move patrimônio existente entre contas.
+
+---
+
+# 8. SAÍDAS
+
+Saídas do período:
+
+SUM(Expense ACTIVE no período)
+
+---
+
+# 9. TRANSFER NÃO É SAÍDA
+
+Transfer enviada NÃO entra no card:
+
+Saídas.
+
+---
+
+# 10. CANCELLED
+
+Income CANCELLED:
+
+0 em Entradas.
+
+Expense CANCELLED:
+
+0 em Saídas.
+
+Transfer CANCELLED:
+
+0 em qualquer cálculo financeiro.
+
+---
+
+# 11. SALDO DO PERÍODO
+
+Saldo:
+
+Entradas - Saídas
+
+---
+
+# 12. NÃO INCLUIR TRANSFER
+
+Transfer não altera Saldo do período.
+
+---
+
+# 13. EXEMPLO
+
+No período:
+
+Income = 5000
+Expense = 3200
+Transfer = 1000
+
+Resultado:
+
+Entradas = 5000
+Saídas = 3200
+Saldo = 1800
+
+NÃO:
+
+2800
+ou
+800.
+
+---
+
+# 14. PATRIMÔNIO LÍQUIDO
+
+Utilizar implementação real da TASK-3.8.
+
+Conceitualmente:
+
+Patrimônio líquido
+=
+Σ currentBalance das contas consideradas.
+
+---
+
+# 15. PATRIMÔNIO NÃO É SALDO DO PERÍODO
+
+Não confundir:
+
+Saldo = fluxo líquido do período.
+
+Patrimônio = posição financeira atual.
+
+---
+
+# 16. PERIOD FILTER × NET WORTH
+
+Alterar:
+
+30 dias
+90 dias
+ano atual
+
+não deve mudar o patrimônio atual.
+
+---
+
+# 17. CONTAS INATIVAS
+
+Seguir política formal definida na TASK-3.8.
+
+Não inventar nova regra.
+
+---
+
+# 18. SALDOS NEGATIVOS
+
+Patrimônio pode ser negativo.
+
+Exibir corretamente.
+
+---
+
+# 19. PERÍODO
+
+O Dashboard já possui seletor/filtro de período.
+
+Inspecione sua implementação real.
+
+---
+
+# 20. PRESETS
+
+Se já existem presets, preserve-os.
+
+Se o Dashboard ainda possui apenas estrutura, implemente conjunto simples
+e útil coerente com UX existente.
+
+Preferência:
+
+Este mês
+Últimos 30 dias
+Últimos 90 dias
+Este ano
+
+Não adicionar dezenas de opções.
+
+---
+
+# 21. PERÍODO PERSONALIZADO
+
+Somente implementar se infraestrutura atual já suporta ou se necessário
+ao requisito existente.
+
+Evite expandir escopo desnecessariamente.
+
+---
+
+# 22. TIMEZONE
+
+Período financeiro deve respeitar política temporal já definida.
+
+---
+
+# 23. BOUNDARIES
+
+Defina claramente:
+
+from
+to
+
+e inclusividade/exclusividade.
+
+---
+
+# 24. RECOMENDAÇÃO
+
+Preferir intervalo:
+
+[from, to)
+
+quando arquitetura permitir.
+
+Evita problemas no último milissegundo do dia.
+
+---
+
+# 25. NÃO USAR createdAt
+
+Filtro financeiro deve usar:
+
+occurredAt.
+
+---
+
+# 26. FUTURE TRANSACTIONS
+
+Se o sistema permite occurredAt futuro:
+
+defina comportamento de forma consistente com ADR/API existente.
+
+Não inclua automaticamente transação futura em "até agora" sem avaliar
+semântica.
+
+Documente decisão.
+
+---
+
+# 27. BACKEND DASHBOARD READ MODEL
+
+Criar read model/query service dedicado.
+
+Nome conceitual:
+
+DashboardQueryService
+
+ou equivalente.
+
+---
+
+# 28. RESPONSABILIDADE
+
+Backend monta dados necessários ao Dashboard.
+
+Angular apresenta.
+
+---
+
+# 29. NÃO DUPLICAR FÓRMULAS
+
+Reutilizar AccountBalanceQueryService/read model da TASK-3.8.
+
+Não implementar segunda fórmula de patrimônio.
+
+---
+
+# 30. API
+
+Avalie criar endpoint consolidado.
+
+Preferência:
+
+GET /api/dashboard
+
+com parâmetros de período.
+
+Exemplo conceitual:
+
+GET /api/dashboard?from=...&to=...
+
+---
+
+# 31. RESPONSE CONCEITUAL
+
+{
+  "period": {
+    "from": "...",
+    "to": "..."
+  },
+  "summary": {
+    "income": 5000.00,
+    "expense": 3200.00,
+    "net": 1800.00,
+    "netWorth": 12500.00
+  },
+  "balanceEvolution": [...],
+  "recentTransactions": [...],
+  "accounts": [...]
+}
+
+Isso é conceitual.
+
+Adapte à arquitetura real.
+
+---
+
+# 32. ENDPOINT CONSOLIDADO
+
+Prefira endpoint consolidado quando isso reduzir:
+
+- round trips;
+- estados parciais;
+- duplicação;
+- inconsistência temporal.
+
+---
+
+# 33. NÃO CRIAR GOD SERVICE
+
+Endpoint consolidado não significa colocar toda lógica em Controller.
+
+Utilize query/read services especializados internamente.
+
+---
+
+# 34. ALTERNATIVA
+
+Se arquitetura atual favorecer endpoints separados:
+
+documente justificativa.
+
+Evite 10 requests para renderizar um Dashboard simples.
+
+---
+
+# 35. OWNER
+
+Dashboard sempre representa:
+
+CurrentUser.
+
+---
+
+# 36. REQUEST
+
+Nunca aceitar:
+
+ownerId
+userId
+email.
+
+---
+
+# 37. QUERY OWNERSHIP
+
+Todas as agregações:
+
+WHERE owner = CurrentUser.
+
+---
+
+# 38. IDOR
+
+Dashboard não deve possuir qualquer mecanismo de consultar dados de outro
+usuário.
+
+---
+
+# 39. PRECISÃO
+
+Backend:
+
+BigDecimal.
+
+Banco:
+
+DECIMAL.
+
+---
+
+# 40. FRONTEND
+
+Não somar valores financeiros com Number quando isso puder introduzir
+erro de precisão.
+
+Valores já agregados devem vir prontos do backend.
+
+---
+
+# 41. BALANCE EVOLUTION
+
+Agora implementar gráfico real.
+
+---
+
+# 42. SEMÂNTICA DO GRÁFICO
+
+O requisito do Equilibra é mostrar:
+
+evolução dos saldos das contas de ativo ao longo do período.
+
+---
+
+# 43. SÉRIES
+
+Preferência:
+
+uma série por AssetAccount ativa/considerada.
+
+Exemplo:
+
+Conta corrente
+Carteira
+Poupança
+
+---
+
+# 44. NÃO USAR FLUXO COMO SALDO
+
+O gráfico NÃO deve simplesmente plotar:
+
+Income - Expense de cada dia
+
+como se fosse saldo da conta.
+
+---
+
+# 45. SALDO HISTÓRICO
+
+Para cada ponto temporal:
+
+balanceAt(t)
+=
+initialBalance
++
+efeito acumulado das transações ACTIVE com occurredAt <= t
+
+adaptado à semântica temporal real.
+
+---
+
+# 46. TRANSFER NO GRÁFICO
+
+Transfer A → B:
+
+A diminui;
+B aumenta.
+
+---
+
+# 47. PATRIMÔNIO NO GRÁFICO
+
+A soma das séries não deve mudar apenas por Transfer.
+
+---
+
+# 48. EXPENSE NO GRÁFICO
+
+Reduz saldo da conta correspondente.
+
+---
+
+# 49. INCOME NO GRÁFICO
+
+Aumenta saldo da conta correspondente.
+
+---
+
+# 50. CANCELLED
+
+Não afeta série.
+
+---
+
+# 51. GRANULARIDADE
+
+Escolher granularidade coerente com período.
+
+Exemplo:
+
+até ~90 dias:
+DAILY
+
+períodos maiores:
+avaliar MONTHLY
+
+Não overengineer.
+
+---
+
+# 52. CONSISTÊNCIA
+
+Todos os pontos de todas as séries devem usar os mesmos buckets temporais.
+
+---
+
+# 53. STARTING BALANCE
+
+Ponto inicial do gráfico precisa considerar movimentações anteriores ao
+período.
+
+Exemplo:
+
+Conta abriu com 1000.
+
+Antes do período:
+Income 500
+Expense 200
+
+Saldo no início do período:
+
+1300.
+
+Não:
+
+1000.
+
+---
+
+# 54. CRÍTICO
+
+Não calcular gráfico apenas com transações DENTRO do período ignorando
+histórico anterior.
+
+---
+
+# 55. CONTA CRIADA/ATIVADA
+
+Siga modelo real de AssetAccount e política definida.
+
+Não invente histórico anterior à existência da conta.
+
+---
+
+# 56. CONTA INATIVA
+
+Seguir decisão da TASK-3.8.
+
+Documentar como aparece no gráfico.
+
+---
+
+# 57. PERFORMANCE DO GRÁFICO
+
+Não executar query:
+
+por conta
+×
+por dia.
+
+---
+
+# 58. PROIBIDO N+M
+
+Evitar:
+
+365 dias
+×
+20 contas
+=
+7300 queries.
+
+---
+
+# 59. ESTRATÉGIA
+
+Use agregação eficiente:
+
+- opening balances;
+- movements agrupados por account/bucket;
+- acumulação controlada no backend;
+
+ou estratégia equivalente.
+
+---
+
+# 60. NÃO CARREGAR LEDGER INTEIRO
+
+Não buscar anos de transações desnecessariamente para cada request.
+
+---
+
+# 61. RECENT TRANSACTIONS
+
+Implementar histórico recente unificado no Dashboard.
+
+---
+
+# 62. TIPOS
+
+Pode conter:
+
+EXPENSE
+INCOME
+TRANSFER
+
+---
+
+# 63. UMA TRANSFERÊNCIA = UM ITEM
+
+Nunca mostrar Transfer como:
+
+saída + entrada.
+
+---
+
+# 64. ORDER
+
+occurredAt DESC.
+
+Desempate determinístico.
+
+---
+
+# 65. LIMIT
+
+Dashboard não precisa carregar histórico inteiro.
+
+Preferência:
+
+5 a 10 registros.
+
+Use limite coerente com layout.
+
+---
+
+# 66. RECENT RESPONSE
+
+Cada item deve fornecer informação suficiente para apresentação.
+
+Exemplo conceitual:
+
+{
+  "id": "...",
+  "type": "EXPENSE",
+  "description": "...",
+  "occurredAt": "...",
+  "amount": 100.00,
+  "account": {...},
+  "sourceAccount": null,
+  "destinationAccount": null,
+  "category": {...},
+  "status": "ACTIVE"
+}
+
+Adapte ao contrato real.
+
+---
+
+# 67. CANCELLED RECENT
+
+Preferência:
+
+não incluir CANCELLED em "Transações recentes" do Dashboard operacional.
+
+Se ADR/UI já determinou diferente, siga decisão existente.
+
+---
+
+# 68. EXPENSE PRESENTATION
+
+Mostrar semanticamente como saída.
+
+Exemplo visual:
+
+- R$ 100,00
+
+---
+
+# 69. INCOME PRESENTATION
+
+Mostrar semanticamente como entrada.
+
+Exemplo:
+
++ R$ 500,00
+
+---
+
+# 70. TRANSFER PRESENTATION
+
+Mostrar:
+
+R$ 300,00
+
+com:
+
+Conta A → Conta B
+
+Não classificar como ganho/perda.
+
+---
+
+# 71. NÃO DEPENDER APENAS DE COR
+
+Tipo deve possuir:
+
+texto;
+ícone;
+sinal;
+ou contexto semântico.
+
+---
+
+# 72. ACCOUNT GROUPING
+
+O requisito inicial mencionava histórico agrupado/associado às contas.
+
+Nesta primeira integração real, priorize clareza:
+
+- Expense → conta afetada;
+- Income → conta afetada;
+- Transfer → origem → destino.
+
+Não duplique Transfer em dois grupos.
+
+---
+
+# 73. RESUMO DAS CONTAS
+
+Dashboard deve consumir saldos reais da TASK-3.8.
+
+---
+
+# 74. ACCOUNT ITEM
+
+Mostrar:
+
+nome;
+tipo;
+saldo atual.
+
+---
+
+# 75. NÃO MOSTRAR INITIAL COMO CURRENT
+
+Nunca rotular initialBalance como saldo atual.
+
+---
+
+# 76. ACCOUNT SORT
+
+Escolha ordem previsível.
+
+Preferência:
+
+nome ASC
+
+ou padrão já estabelecido.
+
+---
+
+# 77. EMPTY ACCOUNT
+
+Se não houver conta:
+
+mostrar estado vazio com CTA:
+
+"Cadastrar conta"
+
+---
+
+# 78. EMPTY TRANSACTIONS
+
+Se houver contas mas nenhuma movimentação:
+
+cards:
+
+Entradas = R$ 0,00
+Saídas = R$ 0,00
+Saldo = R$ 0,00
+
+Patrimônio:
+
+soma real dos initialBalances das contas consideradas.
+
+---
+
+# 79. GRAPH EMPTY
+
+Sem transações no período:
+
+não necessariamente significa ausência de saldo.
+
+IMPORTANTE:
+
+se existem contas com saldo inicial/abertura, avalie se o gráfico deve
+mostrar linha constante.
+
+---
+
+# 80. RECOMENDAÇÃO
+
+Se existem contas e há saldo conhecido:
+
+mostrar série de saldo mesmo sem movimentação no período.
+
+Isso é mais correto que "sem dados".
+
+---
+
+# 81. ZERO ACCOUNTS
+
+Aí sim:
+
+gráfico empty state.
+
+Mensagem:
+
+"Cadastre uma conta para acompanhar a evolução dos seus saldos."
+
+---
+
+# 82. LOADING
+
+Dashboard não deve piscar:
+
+R$ 0,00
+
+antes de carregar valores reais.
+
+---
+
+# 83. SKELETON
+
+Utilizar padrão visual existente.
+
+---
+
+# 84. ERROR
+
+Se API falhar:
+
+não substituir valores desconhecidos por zero.
+
+---
+
+# 85. SUMMARY ERROR
+
+Mostrar estado indisponível.
+
+---
+
+# 86. RETRY
+
+Permitir tentar novamente.
+
+---
+
+# 87. PARTIAL FAILURE
+
+Se endpoint consolidado for utilizado:
+
+preferir estado consistente único.
+
+Se múltiplos endpoints forem necessários:
+
+defina comportamento para falha parcial.
+
+Não mostrar combinação enganosa de dados velhos/novos.
+
+---
+
+# 88. PERIOD CHANGE
+
+Ao trocar período:
+
+atualizar:
+
+Entradas;
+Saídas;
+Saldo;
+gráfico.
+
+---
+
+# 89. PERIOD CHANGE NÃO ALTERA
+
+Patrimônio atual.
+
+---
+
+# 90. ACCOUNTS CURRENT BALANCE
+
+Também representa posição atual.
+
+Não deve variar com filtro de período.
+
+---
+
+# 91. RECENT TRANSACTIONS
+
+Decida explicitamente:
+
+A) recentes globais;
+ou
+B) recentes dentro do período.
+
+---
+
+# 92. RECOMENDAÇÃO
+
+Para coerência visual inicial:
+
+recentTransactions dentro do período selecionado.
+
+Mas documente a decisão.
+
+---
+
+# 93. REQUEST RACE
+
+Troca rápida:
+
+30 dias
+→ 90 dias
+→ este ano
+
+não pode permitir resposta de 30 dias sobrescrever a última seleção.
+
+---
+
+# 94. CANCEL PREVIOUS
+
+Use switchMap/cancelamento equivalente quando apropriado.
+
+---
+
+# 95. CHART
+
+Reutilize biblioteca já adotada.
+
+Provavelmente ECharts se foi escolhida anteriormente.
+
+Não adicionar segunda biblioteca.
+
+---
+
+# 96. CHART COMPONENT
+
+Manter encapsulado.
+
+---
+
+# 97. CHART INPUT
+
+Componente de gráfico recebe dados já preparados.
+
+Não conhece regras de Expense/Income/Transfer.
+
+---
+
+# 98. CHART RESPONSIVE
+
+Resize corretamente.
+
+---
+
+# 99. CHART ACCESSIBILITY
+
+Fornecer:
+
+- título;
+- descrição;
+- legenda;
+- fallback textual/resumo quando necessário.
+
+---
+
+# 100. TOOLTIP
+
+Mostrar:
+
+data;
+conta;
+saldo.
+
+BRL pt-BR.
+
+---
+
+# 101. LEGEND
+
+Nome das contas.
+
+---
+
+# 102. MANY ACCOUNTS
+
+Se muitas contas tornarem gráfico ilegível:
+
+não inventar complexa UI nesta TASK.
+
+Adotar comportamento simples/documentado.
+
+---
+
+# 103. FRONTEND MODELS
+
+Criar models tipados.
+
+Exemplos conceituais:
+
+DashboardData
+DashboardSummary
+DashboardPeriod
+BalanceSeries
+BalancePoint
+RecentTransaction
+DashboardAccount
+
+Adapte à resposta real.
+
+---
+
+# 104. NO ANY
+
+Não utilizar `any`.
+
+---
+
+# 105. DASHBOARD API SERVICE
+
+Criar:
+
+DashboardApiService
+
+ou padrão equivalente.
+
+---
+
+# 106. COMPONENT STATE
+
+Usar arquitetura Angular atual.
+
+Não introduzir NgRx apenas para Dashboard.
+
+---
+
+# 107. FORMATAÇÃO MONETÁRIA
+
+Reutilizar helper/pipes existentes.
+
+---
+
+# 108. CARD ENTRADAS
+
+Label:
+
+Entradas
+
+Valor real.
+
+---
+
+# 109. CARD SAÍDAS
+
+Label:
+
+Saídas
+
+Valor real.
+
+---
+
+# 110. CARD SALDO
+
+Label:
+
+Saldo
+
+Valor:
+
+income - expense.
+
+---
+
+# 111. NEGATIVE NET
+
+Se despesas > receitas:
+
+Saldo negativo.
+
+Exemplo:
+
+-R$ 500,00.
+
+---
+
+# 112. CARD PATRIMÔNIO
+
+Label:
+
+Patrimônio líquido
+
+Valor:
+
+netWorth atual.
+
+---
+
+# 113. NÃO USAR MOCK
+
+Nenhum número financeiro hardcoded.
+
+---
+
+# 114. NÃO CALCULAR PATRIMÔNIO NO ANGULAR
+
+Consumir backend.
+
+---
+
+# 115. NÃO SOMAR CONTAS NO ANGULAR COMO AUTORIDADE
+
+Mesmo que tecnicamente seja possível.
+
+Backend é source of truth.
+
+---
+
+# 116. API TEST — SUMMARY
+
+No período:
+
+Income = 1000
+Expense = 400
+
+Esperado:
+
+income = 1000
+expense = 400
+net = 600.
+
+---
+
+# 117. API TEST — TRANSFER
+
+Adicionar Transfer = 300.
+
+Summary permanece:
+
+income = 1000
+expense = 400
+net = 600.
+
+---
+
+# 118. API TEST — CANCELLED
+
+Cancelled não entra.
+
+---
+
+# 119. API TEST — PERIOD
+
+Transação antes de from:
+
+não entra no fluxo.
+
+---
+
+# 120. API TEST — END BOUNDARY
+
+Validar limite temporal escolhido.
+
+---
+
+# 121. API TEST — OWNER
+
+A nunca recebe números de B.
+
+---
+
+# 122. API TEST — NET WORTH
+
+Validar contra AccountBalanceQueryService da TASK-3.8.
+
+---
+
+# 123. API TEST — PERIOD VS NET WORTH
+
+Mesmo usuário:
+
+request 30 dias
+request 90 dias
+
+netWorth atual:
+
+igual, se nenhum estado atual mudou entre requests.
+
+---
+
+# 124. API TEST — OPENING BALANCE
+
+Gráfico inicia com saldo correto incluindo histórico anterior ao período.
+
+---
+
+# 125. API TEST — GRAPH INCOME
+
+Income altera série da conta.
+
+---
+
+# 126. API TEST — GRAPH EXPENSE
+
+Expense altera série.
+
+---
+
+# 127. API TEST — GRAPH TRANSFER
+
+Source cai.
+
+Destination sobe.
+
+---
+
+# 128. API TEST — GRAPH TRANSFER NET WORTH
+
+Soma permanece neutra.
+
+---
+
+# 129. API TEST — GRAPH CANCELLED
+
+Não altera série.
+
+---
+
+# 130. API TEST — MULTIPLE TRANSACTIONS SAME BUCKET
+
+Agregação correta.
+
+---
+
+# 131. API TEST — DECIMAL
+
+0.10 + 0.20:
+
+0.30 exatamente.
+
+---
+
+# 132. API TEST — NEGATIVE BALANCE
+
+Gráfico e resumo suportam negativo.
+
+---
+
+# 133. API TEST — RECENT EXPENSE
+
+Retorna corretamente.
+
+---
+
+# 134. API TEST — RECENT INCOME
+
+Retorna corretamente.
+
+---
+
+# 135. API TEST — RECENT TRANSFER
+
+Retorna UMA entrada.
+
+---
+
+# 136. API TEST — RECENT ORDER
+
+occurredAt DESC.
+
+---
+
+# 137. API TEST — RECENT LIMIT
+
+Não retorna histórico inteiro.
+
+---
+
+# 138. API TEST — CANCELLED RECENT
+
+Conforme política escolhida.
+
+---
+
+# 139. MYSQL/TESTCONTAINERS
+
+Queries financeiras críticas devem ser testadas em MySQL real.
+
+---
+
+# 140. N+1
+
+Dashboard não deve executar query por conta por bucket.
+
+---
+
+# 141. QUERY COUNT
+
+Documente estratégia.
+
+Não precisa perseguir "uma única query" a qualquer custo.
+
+Poucas queries agregadas e claras são aceitáveis.
+
+---
+
+# 142. INDEX REVIEW
+
+Verifique índices para:
+
+owner;
+type;
+status;
+occurredAt;
+account/movement account;
+source/destination conforme modelo.
+
+---
+
+# 143. MIGRATION
+
+Se índice adicional realmente necessário:
+
+nova migration.
+
+Não editar migration aplicada.
+
+---
+
+# 144. OPENAPI
+
+Documentar endpoint Dashboard.
+
+---
+
+# 145. OPENAPI PERIOD
+
+Documentar:
+
+from;
+to;
+timezone/semântica;
+boundaries.
+
+---
+
+# 146. OPENAPI SUMMARY
+
+Documentar diferença:
+
+net = fluxo do período
+netWorth = posição atual.
+
+---
+
+# 147. SECURITY
+
+Endpoint privado.
+
+---
+
+# 148. 401
+
+Sem JWT:
+
+401.
+
+---
+
+# 149. 400
+
+Período inválido:
+
+400 Problem Details.
+
+Exemplos:
+
+from > to;
+formato inválido;
+range não suportado, se houver limite.
+
+---
+
+# 150. REQUEST ID
+
+Preservar.
+
+---
+
+# 151. FRONTEND TEST — INITIAL LOAD
+
+Dashboard:
+
+loading
+→ dados reais.
+
+---
+
+# 152. FRONTEND TEST — SUMMARY
+
+Cards exibem resposta correta.
+
+---
+
+# 153. FRONTEND TEST — PERIOD CHANGE
+
+Atualiza:
+
+income;
+expense;
+net;
+chart.
+
+---
+
+# 154. FRONTEND TEST — NET WORTH PERIOD
+
+Não altera por causa do filtro.
+
+---
+
+# 155. FRONTEND TEST — GRAPH
+
+Séries renderizadas corretamente.
+
+---
+
+# 156. FRONTEND TEST — TOOLTIP
+
+BRL/data corretos.
+
+---
+
+# 157. FRONTEND TEST — RECENT EXPENSE
+
+Apresentação correta.
+
+---
+
+# 158. FRONTEND TEST — RECENT INCOME
+
+Apresentação correta.
+
+---
+
+# 159. FRONTEND TEST — RECENT TRANSFER
+
+A → B.
+
+Uma única entrada.
+
+---
+
+# 160. FRONTEND TEST — ACCOUNTS
+
+Saldo atual real.
+
+---
+
+# 161. FRONTEND TEST — ERROR
+
+Não mostrar zero falso.
+
+---
+
+# 162. FRONTEND TEST — RETRY
+
+PASS.
+
+---
+
+# 163. FRONTEND TEST — REQUEST RACE
+
+Resposta antiga não sobrescreve período novo.
+
+---
+
+# 164. E2E — CENÁRIO FINANCEIRO PRINCIPAL
+
+Prepare:
+
+Conta A initial = 1000
+Conta B initial = 500
+
+Estado inicial:
+
+Patrimônio = 1500.
+
+Criar:
+
+Income em A = 700.
+
+Esperado:
+
+A = 1700
+B = 500
+Patrimônio = 2200
+Entradas += 700.
+
+Criar:
+
+Expense em A = 200.
+
+Esperado:
+
+A = 1500
+B = 500
+Patrimônio = 2000
+Saídas += 200
+Saldo do período = +500.
+
+Criar:
+
+Transfer A → B = 300.
+
+Esperado:
+
+A = 1200
+B = 800
+Patrimônio = 2000.
+
+Cards continuam:
+
+Entradas = 700
+Saídas = 200
+Saldo = 500
+Patrimônio = 2000.
+
+---
+
+# 165. E2E — CANCEL TRANSFER
+
+Cancelar Transfer 300.
+
+Esperado:
+
+A = 1500
+B = 500
+Patrimônio = 2000.
+
+Cards de fluxo:
+
+inalterados.
+
+---
+
+# 166. E2E — CANCEL EXPENSE
+
+Cancelar Expense 200.
+
+Esperado:
+
+A = 1700
+B = 500
+Patrimônio = 2200.
+
+Saídas:
+
+0
+
+Saldo:
+
+700.
+
+---
+
+# 167. E2E — CANCEL INCOME
+
+Cancelar Income 700.
+
+Esperado final:
+
+A = 1000
+B = 500
+Patrimônio = 1500.
+
+Entradas:
+
+0
+
+Saldo:
+
+0.
+
+---
+
+# 168. E2E — PERIOD
+
+Crie transações dentro e fora do período.
+
+Cards devem considerar somente as do período.
+
+Patrimônio atual considera ledger atual conforme regra da TASK-3.8,
+independentemente do filtro.
+
+---
+
+# 169. RESPONSIVIDADE
+
+Validar:
+
+360 × 800
+390 × 844
+768 × 1024
+1024 × 768
+1280 × 720
+1366 × 768
+1920 × 1080
+
+---
+
+# 170. MOBILE
+
+Em 360px:
+
+cards devem ser legíveis.
+
+---
+
+# 171. MOBILE CHART
+
+Não permitir overflow horizontal global.
+
+---
+
+# 172. MOBILE TRANSACTIONS
+
+Recentes devem continuar compreensíveis.
+
+---
+
+# 173. MOBILE ACCOUNTS
+
+Saldo atual deve ficar claro.
+
+---
+
+# 174. ACCESSIBILITY
+
+Cards:
+
+labels compreensíveis.
+
+---
+
+# 175. CHART ACCESSIBILITY
+
+Não depender exclusivamente do gráfico visual.
+
+---
+
+# 176. KEYBOARD
+
+Filtro de período navegável.
+
+---
+
+# 177. FOCUS
+
+Estados interativos adequados.
+
+---
+
+# 178. CONTRAST
+
+Manter Design System aprovado.
+
+---
+
+# 179. REDUCED MOTION
+
+Se chart possui animação:
+
+respeitar preferência quando infraestrutura suportar.
+
+---
+
+# 180. REGRESSÃO ACCOUNTS
+
+PASS.
+
+---
+
+# 181. REGRESSÃO EXPENSE API
+
+PASS.
+
+---
+
+# 182. REGRESSÃO EXPENSE UI
+
+PASS.
+
+---
+
+# 183. REGRESSÃO INCOME API
+
+PASS.
+
+---
+
+# 184. REGRESSÃO INCOME UI
+
+PASS.
+
+---
+
+# 185. REGRESSÃO TRANSFER API
+
+PASS.
+
+---
+
+# 186. REGRESSÃO TRANSFER UI
+
+PASS.
+
+---
+
+# 187. REGRESSÃO CATEGORIES
+
+PASS.
+
+---
+
+# 188. REGRESSÃO AUTH
+
+PASS.
+
+---
+
+# 189. BACKEND BUILD
+
+PASS.
+
+---
+
+# 190. FRONTEND LINT
+
+PASS.
+
+---
+
+# 191. FRONTEND BUILD
+
+PASS.
+
+---
+
+# 192. TESTS
+
+PASS.
+
+---
+
+# 193. E2E
+
+PASS quando configurado.
+
+---
+
+# 194. NÃO IMPLEMENTAR NESTA TASK
+
+Não implementar:
+
+- Reports;
+- Tags;
+- Attachments;
+- upload;
+- budgets;
+- recurring transactions;
+- notifications;
+- forecasting;
+- comparison with previous period;
+- percentage trends;
+- financial advice;
+- account reconciliation.
+
+---
+
+# 195. NÃO INVENTAR PERCENTUAIS
+
+Não mostrar:
+
++15%
+-8%
+
+sem uma comparação temporal formalmente definida.
+
+---
+
+# 196. NÃO INVENTAR "SAÚDE FINANCEIRA"
+
+Nenhum score financeiro nesta TASK.
+
+---
+
+# 197. DEFINITION OF DONE
+
+TASK-3.9 estará concluída quando:
+
+- Dashboard consumir dados reais;
+- Entradas vierem de Income ACTIVE do período;
+- Saídas vierem de Expense ACTIVE do período;
+- Transfer não entrar em Entradas;
+- Transfer não entrar em Saídas;
+- Saldo = Entradas - Saídas;
+- Cancelled não afetar resumo;
+- Patrimônio vier do balance read model da TASK-3.8;
+- Patrimônio não variar com filtro de período;
+- saldos atuais das contas forem reais;
+- gráfico usar ledger real;
+- gráfico considerar saldo anterior ao início do período;
+- Income alterar série corretamente;
+- Expense alterar série corretamente;
+- Transfer alterar source/destination;
+- Transfer preservar patrimônio;
+- Cancelled não alterar gráfico;
+- transações recentes forem reais;
+- Transfer recente aparecer uma única vez;
+- occurredAt for usado;
+- paginação/histórico completo não for carregado desnecessariamente;
+- queries forem owner-scoped;
+- não houver N+1 por conta/bucket;
+- precisão monetária estiver preservada;
+- saldo negativo funcionar;
+- loading não mostrar zero falso;
+- error não mostrar zero falso;
+- retry funcionar;
+- troca rápida de período não gerar race;
+- mobile funcionar;
+- acessibilidade estiver validada;
+- OpenAPI estiver atualizado;
+- MySQL/Testcontainers passarem;
+- regressões passarem;
+- builds passarem;
+- E2E financeiro principal passar.
+
+---
+
+# 198. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-3.9 — DASHBOARD FINANCEIRO INTEGRADO AO LEDGER
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+## 1. Arquitetura
+
+Explique fluxo:
+
+Dashboard UI
+→ API
+→ Query Services
+→ Ledger.
+
+## 2. Endpoint
+
+Informe contrato real.
+
+## 3. Período
+
+Explique:
+
+- presets;
+- from;
+- to;
+- boundaries;
+- timezone.
+
+## 4. Entradas
+
+Fórmula real.
+
+## 5. Saídas
+
+Fórmula real.
+
+## 6. Saldo
+
+Fórmula real.
+
+## 7. Transfer
+
+Confirme:
+
+não entra em Entradas/Saídas/Saldo.
+
+## 8. Patrimônio líquido
+
+Explique integração com TASK-3.8.
+
+## 9. Period × Net Worth
+
+Confirme independência.
+
+## 10. Balance Evolution
+
+Explique algoritmo.
+
+## 11. Opening Balance
+
+Explique como saldo anterior ao período é considerado.
+
+## 12. Granularidade
+
+Informe.
+
+## 13. Transfer no gráfico
+
+Explique.
+
+## 14. Cancelled no gráfico
+
+Explique.
+
+## 15. Recent Transactions
+
+Explique query e limite.
+
+## 16. Expense recente
+
+Explique apresentação.
+
+## 17. Income recente
+
+Explique apresentação.
+
+## 18. Transfer recente
+
+Confirme:
+
+UMA entrada.
+
+## 19. Accounts
+
+Explique saldo atual.
+
+## 20. Precision
+
+### BigDecimal
+PASS / FAIL
+
+### DECIMAL
+PASS / FAIL
+
+### 0.10 + 0.20
+Resultado:
+
+## 21. Negative balances
+
+PASS / FAIL
+
+## 22. Ownership
+
+PASS / FAIL
+
+## 23. Query strategy
+
+Liste queries/agregações.
+
+## 24. N+1
+
+PASS / FAIL
+
+## 25. Índices
+
+Liste utilizados/adicionados.
+
+## 26. Migration
+
+NENHUMA
+
+ou explique nova migration.
+
+## 27. Loading
+
+PASS / FAIL
+
+## 28. Error
+
+PASS / FAIL
+
+## 29. Retry
+
+PASS / FAIL
+
+## 30. Request race
+
+PASS / FAIL
+
+## 31. Chart
+
+Biblioteca:
+
+Componente:
+
+Responsividade:
+
+Acessibilidade:
+
+## 32. Responsive
+
+### 360 × 800
+PASS / FAIL
+
+### 390 × 844
+PASS / FAIL
+
+### 768 × 1024
+PASS / FAIL
+
+### 1024 × 768
+PASS / FAIL
+
+### 1280 × 720
+PASS / FAIL
+
+### 1366 × 768
+PASS / FAIL
+
+### 1920 × 1080
+PASS / FAIL
+
+## 33. E2E financeiro principal
+
+Informe resultados:
+
+### Inicial
+A:
+B:
+Patrimônio:
+
+### + Income
+A:
+B:
+Entradas:
+Patrimônio:
+
+### + Expense
+A:
+B:
+Saídas:
+Saldo:
+Patrimônio:
+
+### + Transfer
+A:
+B:
+Entradas:
+Saídas:
+Saldo:
+Patrimônio:
+
+### Cancel Transfer
+Resultado:
+
+### Cancel Expense
+Resultado:
+
+### Cancel Income
+Resultado:
+
+## 34. OpenAPI
+
+PASS / FAIL
+
+## 35. MySQL/Testcontainers
+
+PASS / FAIL
+
+## 36. Regressões
+
+### AssetAccounts
+PASS / FAIL
+
+### Expenses API
+PASS / FAIL
+
+### Expenses UI
+PASS / FAIL
+
+### Incomes API
+PASS / FAIL
+
+### Incomes UI
+PASS / FAIL
+
+### Transfers API
+PASS / FAIL
+
+### Transfers UI
+PASS / FAIL
+
+### Categories
+PASS / FAIL
+
+### Authentication
+PASS / FAIL
+
+## 37. Backend build
+
+PASS / FAIL
+
+## 38. Frontend lint
+
+PASS / FAIL
+
+## 39. Frontend build
+
+PASS / FAIL
+
+## 40. Tests
+
+PASS / FAIL
+
+## 41. E2E
+
+PASS / FAIL / NÃO CONFIGURADO
+
+## 42. Arquivos
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 43. Bugs encontrados
+
+Para cada um:
+
+problema;
+causa;
+correção;
+teste.
+
+## 44. Dívidas técnicas removidas
+
+Liste especialmente qualquer lógica transitória baseada em
+initialBalance.
+
+## 45. Dívidas técnicas restantes
+
+Liste.
+
+## 46. Divergências do ADR
+
+Esperado:
+
+NENHUMA.
+
+Se houver, explique.
+
+## 47. Pendências
+
+### Bloqueantes
+
+### Não bloqueantes
+
+## 48. Próxima tarefa
+
+Se TASK-3.9 estiver aprovada, informe prontidão para:
+
+# TASK-3.10 — Histórico Unificado de Transações
+
+NÃO implemente TASK-3.10 nesta execução.

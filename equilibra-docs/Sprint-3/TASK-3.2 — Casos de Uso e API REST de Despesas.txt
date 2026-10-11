@@ -1,0 +1,1931 @@
+# TASK-3.2 — Casos de Uso e API REST de Despesas
+
+Estamos na:
+
+# Sprint 3 — Transações Financeiras
+
+Concluídas:
+
+- TASK-3.0 — Arquitetura do Ledger e Regras Financeiras
+- TASK-3.1 — Domínio e Persistência de Transações Financeiras
+
+Agora implemente:
+
+# TASK-3.2 — Casos de Uso e API REST de Despesas
+
+Esta será a primeira API financeira do Equilibra.
+
+Ela deverá permitir ao usuário autenticado:
+
+- criar despesas;
+- listar despesas;
+- consultar uma despesa;
+- editar uma despesa;
+- cancelar uma despesa;
+
+sempre respeitando:
+
+- ledger definido na TASK-3.0;
+- domínio implementado na TASK-3.1;
+- ownership;
+- isolamento multiusuário;
+- precisão monetária;
+- regras de AssetAccount;
+- regras de Category;
+- política de cancelamento aprovada.
+
+NÃO implementar nesta TASK:
+
+- frontend de Despesas;
+- Receitas;
+- Transferências;
+- Tags;
+- Attachments;
+- Dashboard financeiro real;
+- relatórios;
+- saldo persistido;
+- exclusão física;
+- API genérica de Transactions.
+
+---
+
+# 1. FONTE DE VERDADE
+
+Antes de escrever código, leia:
+
+- ADR da TASK-3.0;
+- relatório/implementação da TASK-3.1;
+- CLAUDE.md;
+- docs/architecture.md;
+- docs/security.md;
+- docs/api-guidelines.md;
+- OpenAPI atual.
+
+Inspecione o código REAL de:
+
+- FinancialTransaction ou agregado equivalente;
+- TransactionType;
+- TransactionStatus;
+- AssetAccount;
+- Category;
+- repositories;
+- CurrentUser;
+- JWT/Spring Security;
+- Problem Details;
+- Request ID;
+- controllers existentes;
+- AssetAccount API;
+- Category API;
+- testes de integração;
+- Testcontainers/MySQL.
+
+O código é a fonte de verdade.
+
+Não presuma que a TASK-3.1 seguiu exatamente um modelo hipotético.
+
+---
+
+# 2. RELATÓRIO PRÉVIO
+
+Antes de modificar arquivos, apresente:
+
+# TASK-3.2 — PRE-IMPLEMENTATION REPORT
+
+## Ledger encontrado
+
+Informe:
+
+- entidade;
+- tabela;
+- type;
+- status;
+- accounts;
+- category;
+- amount;
+- occurredAt;
+- notes;
+- version;
+- cancelamento.
+
+## Invariantes relevantes para Expense
+
+Liste.
+
+## API proposta
+
+Liste endpoints.
+
+## DTOs
+
+Liste request/response.
+
+## Ownership
+
+Explique estratégia.
+
+## Error mapping
+
+Liste:
+
+400
+401
+404
+409
+
+e outros realmente necessários.
+
+## Arquivos previstos
+
+Depois implemente.
+
+---
+
+# 3. ARQUITETURA
+
+Preserve:
+
+Controller
+→ Application Service / Use Case
+→ Domain
+→ Repository
+→ MySQL
+
+Controller deve ser fino.
+
+---
+
+# 4. BASE PATH
+
+Preferência:
+
+/api/expenses
+
+Use outro path somente se convenção real/ADR exigir.
+
+---
+
+# 5. ENDPOINTS
+
+Implemente conceitualmente:
+
+POST   /api/expenses
+GET    /api/expenses
+GET    /api/expenses/{id}
+PUT    /api/expenses/{id}
+PATCH  /api/expenses/{id}/cancel
+
+Ajuste apenas se a arquitetura real aprovada definir outra convenção.
+
+NÃO criar DELETE físico.
+
+---
+
+# 6. SEGURANÇA
+
+Todos os endpoints são privados.
+
+Sem autenticação:
+
+401.
+
+---
+
+# 7. CURRENT USER
+
+Identidade exclusivamente:
+
+JWT
+→ SecurityContext
+→ CurrentUser
+→ ownerId
+
+Nunca confiar no cliente para ownership.
+
+---
+
+# 8. REQUEST DTO
+
+Nenhum request deve aceitar:
+
+ownerId
+userId
+email
+transactionType
+status
+createdAt
+updatedAt
+cancelledAt
+version
+
+como campos controláveis pelo cliente, salvo alguma decisão explícita do
+ADR que realmente exija um deles.
+
+Para /api/expenses:
+
+TransactionType deve ser definido pelo servidor como EXPENSE.
+
+---
+
+# 9. CREATE EXPENSE
+
+POST /api/expenses
+
+Deve criar uma transação do tipo:
+
+EXPENSE
+
+utilizando o ledger existente.
+
+---
+
+# 10. CAMPOS DE CRIAÇÃO
+
+O request deverá refletir o domínio real.
+
+Esperado conceitualmente:
+
+{
+  "description": "Supermercado",
+  "occurredAt": "...",
+  "accountId": "...",
+  "amount": 250.75,
+  "categoryId": "...",
+  "notes": "..."
+}
+
+Se o modelo do ledger utiliza sourceAccountId internamente, a API de
+Expense ainda pode expor semanticamente:
+
+accountId
+
+para tornar o contrato mais claro.
+
+Faça mapping no application layer.
+
+---
+
+# 11. NÃO EXPOR SOURCE/DESTINATION DESNECESSARIAMENTE
+
+Para Expense, o cliente não precisa compreender detalhes internos do
+ledger.
+
+Preferência:
+
+accountId
+
+em vez de:
+
+sourceAccountId.
+
+Não exponha destinationAccountId para Expense.
+
+---
+
+# 12. TAG
+
+NÃO incluir ainda.
+
+---
+
+# 13. ATTACHMENT
+
+NÃO incluir ainda.
+
+---
+
+# 14. DESCRIPTION
+
+Obrigatória.
+
+Aplicar as regras reais do domínio:
+
+- trim;
+- não vazia;
+- max length.
+
+Validação HTTP pode antecipar erro, mas domínio permanece autoridade.
+
+---
+
+# 15. AMOUNT
+
+Obrigatório.
+
+BigDecimal.
+
+Deve obedecer à política do ledger.
+
+Esperado:
+
+amount > 0.
+
+---
+
+# 16. ZERO
+
+0
+
+→ 400.
+
+---
+
+# 17. NEGATIVO
+
+-100
+
+→ 400.
+
+---
+
+# 18. ESCALA
+
+10.999
+
+→ 400.
+
+Nunca:
+
+10.999 → 11.00
+
+silenciosamente.
+
+---
+
+# 19. ACCOUNT
+
+accountId:
+
+obrigatório.
+
+Deve identificar AssetAccount:
+
+- existente;
+- pertencente ao CurrentUser;
+- elegível para nova transação conforme ADR;
+- normalmente ativa.
+
+---
+
+# 20. ACCOUNT DE OUTRO USUÁRIO
+
+User B conhece UUID da conta de User A.
+
+B tenta criar Expense usando essa conta.
+
+Resposta:
+
+404
+
+Preferência de segurança:
+
+não revelar que a conta existe.
+
+Nunca:
+
+403 com informação de ownership.
+
+---
+
+# 21. ACCOUNT INEXISTENTE
+
+→ 404.
+
+Mesma semântica externa da conta pertencente a outro usuário.
+
+---
+
+# 22. ACCOUNT INATIVA
+
+Siga ADR.
+
+Se conta inativa não pode receber nova transação:
+
+rejeite.
+
+Defina status HTTP consistente.
+
+Preferência:
+
+409 Conflict
+
+porque recurso existe e pertence ao usuário, mas estado atual impede a
+operação.
+
+Se projeto já possui convenção diferente, siga-a e documente.
+
+---
+
+# 23. CATEGORY
+
+categoryId:
+
+obrigatório se essa foi a decisão do ADR.
+
+---
+
+# 24. CATEGORY OWNERSHIP
+
+Categoria deve pertencer ao CurrentUser.
+
+Categoria de outro usuário:
+
+404.
+
+---
+
+# 25. CATEGORY INEXISTENTE
+
+404.
+
+---
+
+# 26. CATEGORY APPLICABILITY
+
+Para Expense:
+
+aceitar somente categoria compatível com:
+
+EXPENSE
+ou
+BOTH.
+
+---
+
+# 27. CATEGORY INCOME
+
+Categoria:
+
+INCOME
+
+não pode ser utilizada em Expense.
+
+Preferência:
+
+409 Conflict
+
+ou status consistente com política atual para violação de estado/regra de
+negócio.
+
+Documente.
+
+---
+
+# 28. CATEGORY INATIVA
+
+Nova Expense não pode usar categoria inativa se essa foi a política
+aprovada.
+
+Preferência:
+
+409.
+
+---
+
+# 29. occurredAt
+
+Obrigatório conforme domínio aprovado.
+
+Utilize formato temporal claramente documentado no OpenAPI.
+
+---
+
+# 30. TIMEZONE
+
+Siga política da TASK-3.0/3.1.
+
+Não introduza conversões arbitrárias.
+
+---
+
+# 31. FUTURE DATE
+
+Siga decisão do ADR.
+
+Se data futura foi proibida:
+
+400.
+
+Se permitida:
+
+não crie regra nova.
+
+---
+
+# 32. NOTES
+
+Opcional conforme domínio.
+
+Preserve multiline.
+
+Respeite max length.
+
+---
+
+# 33. CREATE RESPONSE
+
+Retorne:
+
+201 Created.
+
+Quando coerente:
+
+Location: /api/expenses/{id}
+
+---
+
+# 34. RESPONSE DTO
+
+Não retorne entidade JPA.
+
+Response conceitual:
+
+{
+  "id": "...",
+  "description": "Supermercado",
+  "occurredAt": "...",
+  "account": {
+    "id": "...",
+    "name": "Nubank"
+  },
+  "amount": 250.75,
+  "category": {
+    "id": "...",
+    "name": "Alimentação"
+  },
+  "notes": "...",
+  "status": "ACTIVE",
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+
+Ajuste ao estilo atual da API.
+
+---
+
+# 35. RESPONSE — TYPE
+
+Decida se `type: EXPENSE` precisa ser exposto.
+
+Como endpoint já é /expenses, pode ser redundante.
+
+Siga consistência do projeto.
+
+---
+
+# 36. RESPONSE — OWNER
+
+NÃO retornar:
+
+ownerId
+userId
+email
+
+sem necessidade.
+
+---
+
+# 37. RESPONSE — INTERNALS
+
+Não retornar:
+
+normalizedName;
+JPA internals;
+version;
+
+salvo version fazer parte de contrato explícito de optimistic concurrency.
+
+---
+
+# 38. LIST
+
+GET /api/expenses
+
+Retorna somente:
+
+TransactionType.EXPENSE
+
+do CurrentUser.
+
+---
+
+# 39. MULTIUSUÁRIO
+
+Nunca retornar Expense de outro owner.
+
+---
+
+# 40. CANCELLED
+
+Defina comportamento padrão conforme ADR.
+
+Recomendação:
+
+listagem padrão inclui transações financeiras relevantes conforme contrato
+definido, mas deve haver política explícita para CANCELLED.
+
+Uma opção clara:
+
+GET /api/expenses
+→ somente ACTIVE
+
+GET /api/expenses?includeCancelled=true
+→ ACTIVE + CANCELLED
+
+Se ADR ou API conventions definirem outra política, siga-as.
+
+---
+
+# 41. INCLUDE CANCELLED
+
+Se adotado:
+
+default:
+
+false.
+
+---
+
+# 42. ORDER
+
+Ordenação recomendada:
+
+occurredAt DESC
+e desempate determinístico por id/createdAt.
+
+Transações mais recentes primeiro.
+
+---
+
+# 43. PAGINAÇÃO
+
+Avalie arquitetura atual.
+
+Transações crescerão muito mais que Accounts/Categories.
+
+Portanto, diferentemente dos cadastros pequenos, paginação já é
+justificável.
+
+Se o projeto possui padrão de paginação:
+
+use-o.
+
+Se não possui:
+
+implemente paginação simples e explícita se isso puder ser feito sem
+introduzir infraestrutura excessiva.
+
+Exemplo:
+
+?page=0&size=20
+
+com limite máximo de size.
+
+---
+
+# 44. NÃO RETORNAR HISTÓRICO ILIMITADO
+
+Evite endpoint que futuramente carregará milhares de transações sem
+paginação.
+
+---
+
+# 45. SORT
+
+Não permita sort arbitrário inseguro.
+
+Use ordenação fixa ou whitelist.
+
+---
+
+# 46. FILTRO DE PERÍODO
+
+Se simples e coerente com repository da TASK-3.1, suporte:
+
+from
+to
+
+sobre:
+
+occurredAt.
+
+---
+
+# 47. SEMÂNTICA DO PERÍODO
+
+Defina claramente:
+
+from inclusive.
+
+Para `to`, prefira contrato temporal não ambíguo.
+
+Se usar instantes completos:
+
+to inclusive/exclusive deve estar documentado.
+
+---
+
+# 48. NÃO IMPLEMENTAR BUSCA COMPLEXA
+
+Não implementar agora:
+
+- full-text search;
+- filtros por múltiplas categorias;
+- filtros por múltiplas contas;
+- reports query language.
+
+---
+
+# 49. ACCOUNT FILTER
+
+Opcionalmente suporte:
+
+accountId
+
+se repository/arquitetura permitir naturalmente.
+
+Mas somente se isso não ampliar demais a TASK.
+
+Prioridade:
+
+CRUD seguro.
+
+---
+
+# 50. GET BY ID
+
+GET /api/expenses/{id}
+
+deve procurar por:
+
+id
++
+owner
++
+type = EXPENSE
+
+ou mecanismo equivalente.
+
+---
+
+# 51. OUTRO OWNER
+
+Expense de A consultada por B:
+
+404.
+
+---
+
+# 52. ID DE OUTRO TIPO
+
+Se UUID identifica uma INCOME ou TRANSFER do mesmo usuário:
+
+GET /api/expenses/{id}
+
+→ 404.
+
+Endpoint de Expense não deve expor outro tipo.
+
+---
+
+# 53. ID INEXISTENTE
+
+404.
+
+---
+
+# 54. UUID INVÁLIDO
+
+400 Problem Details.
+
+---
+
+# 55. UPDATE
+
+PUT /api/expenses/{id}
+
+Permite alterar somente campos aprovados.
+
+Esperado:
+
+description
+occurredAt
+accountId
+amount
+categoryId
+notes
+
+---
+
+# 56. UPDATE NÃO PODE ALTERAR TYPE
+
+Expense continua:
+
+EXPENSE.
+
+Cliente não envia:
+
+type.
+
+---
+
+# 57. UPDATE NÃO PODE ALTERAR OWNER
+
+Nunca.
+
+---
+
+# 58. UPDATE ACCOUNT
+
+Nova conta deve:
+
+- pertencer ao usuário;
+- existir;
+- estar elegível conforme ADR.
+
+---
+
+# 59. UPDATE CATEGORY
+
+Nova categoria deve:
+
+- pertencer ao usuário;
+- existir;
+- ser ativa/elegível;
+- ser EXPENSE ou BOTH.
+
+---
+
+# 60. UPDATE AMOUNT
+
+Reaplicar:
+
+> 0;
+2 casas;
+BigDecimal.
+
+---
+
+# 61. SALDO APÓS UPDATE
+
+NÃO atualizar AssetAccount.currentBalance.
+
+Como saldo será derivado do ledger:
+
+alterar amount/account/occurredAt muda naturalmente cálculos futuros.
+
+---
+
+# 62. CANCELLED UPDATE
+
+Siga política do ADR.
+
+Se transação CANCELLED é imutável:
+
+PUT → 409.
+
+---
+
+# 63. OPTIMISTIC LOCK
+
+Se TASK-3.1 implementou @Version e a arquitetura expõe controle de versão,
+respeite-o.
+
+Mapeie conflito concorrente para:
+
+409 Conflict
+
+quando apropriado.
+
+Não invente contrato de versionamento se @Version não foi adotado.
+
+---
+
+# 64. CANCEL
+
+PATCH /api/expenses/{id}/cancel
+
+Deve executar política de cancelamento do ledger.
+
+---
+
+# 65. CANCEL NÃO É DELETE
+
+Registro permanece no banco.
+
+---
+
+# 66. CANCEL EFFECT
+
+Expense cancelada não deverá afetar cálculos financeiros futuros.
+
+Não implemente saldo agora, mas preserve status correto para queries
+posteriores.
+
+---
+
+# 67. CANCEL IDEMPOTENCY
+
+Siga ADR.
+
+Se cancelamento é idempotente:
+
+cancelar CANCELLED novamente:
+
+sucesso consistente.
+
+Se não:
+
+409.
+
+Documente.
+
+---
+
+# 68. NÃO CRIAR REACTIVATE
+
+Não implemente:
+
+PATCH /expenses/{id}/activate
+
+a menos que TASK-3.0 tenha explicitamente aprovado reativação.
+
+---
+
+# 69. DELETE
+
+NÃO criar:
+
+DELETE /api/expenses/{id}
+
+---
+
+# 70. APPLICATION SERVICE
+
+Crie casos de uso explícitos.
+
+Exemplos conceituais:
+
+CreateExpense
+ListExpenses
+GetExpense
+UpdateExpense
+CancelExpense
+
+ou service equivalente conforme arquitetura atual.
+
+---
+
+# 71. NÃO CRIAR GENERIC TRANSACTION SERVICE
+
+Evite abstração prematura como:
+
+GenericTransactionCrudService<T>
+
+Expense é o primeiro caso de uso concreto.
+
+---
+
+# 72. ACCOUNT LOOKUP
+
+Para criação/edição:
+
+busque conta de forma ownership-aware.
+
+Preferência:
+
+findByIdAndOwnerId(accountId, ownerId)
+
+Não:
+
+findById(accountId)
++
+if owner != ...
+
+quando houver método seguro disponível.
+
+---
+
+# 73. CATEGORY LOOKUP
+
+Mesmo princípio:
+
+findByIdAndOwnerId.
+
+---
+
+# 74. TRANSACTION LOOKUP
+
+Mesmo princípio:
+
+id
++
+owner
++
+type.
+
+---
+
+# 75. BOLA / IDOR
+
+Proteção deve ocorrer no backend independentemente do frontend.
+
+---
+
+# 76. MASS ASSIGNMENT
+
+Use DTOs explícitos.
+
+Não bind request diretamente em:
+
+FinancialTransaction entity.
+
+---
+
+# 77. OVERPOSTING
+
+Teste payload contendo:
+
+ownerId
+status
+type
+createdAt
+updatedAt
+sourceAccountId
+destinationAccountId
+
+quando esses campos não pertencem ao contrato.
+
+Eles jamais podem alterar estado protegido.
+
+---
+
+# 78. UNKNOWN JSON POLICY
+
+Siga política já existente do projeto:
+
+rejeitar propriedades desconhecidas
+
+ou ignorá-las.
+
+Mas independentemente da política:
+
+overposting não pode funcionar.
+
+---
+
+# 79. PROBLEM DETAILS
+
+Todos os erros devem seguir infraestrutura existente.
+
+Content-Type:
+
+application/problem+json
+
+quando aplicável.
+
+---
+
+# 80. 400
+
+Use para:
+
+- JSON inválido;
+- UUID inválido;
+- campo obrigatório ausente;
+- description inválida;
+- amount inválido;
+- escala inválida;
+- occurredAt inválido;
+- notes acima do limite;
+- outros erros sintáticos/validação de request.
+
+---
+
+# 81. 401
+
+Sem autenticação.
+
+---
+
+# 82. 404
+
+Use para evitar vazamento quando:
+
+- Expense não existe;
+- Expense pertence a outro usuário;
+- ID pertence a outro TransactionType;
+- Account não existe/pertence a outro usuário;
+- Category não existe/pertence a outro usuário.
+
+---
+
+# 83. 409
+
+Use quando apropriado para conflito de estado/regra:
+
+- conta própria inativa;
+- categoria própria inativa;
+- applicability incompatível;
+- Expense cancelada sendo editada;
+- optimistic lock conflict;
+- outros conflitos aprovados.
+
+Siga convenção real do projeto.
+
+---
+
+# 84. 500
+
+Resposta segura.
+
+Nunca vazar:
+
+SQL;
+constraint;
+stack trace;
+package;
+filesystem.
+
+---
+
+# 85. REQUEST ID
+
+Preserve infraestrutura existente.
+
+---
+
+# 86. LOGGING
+
+Não logar:
+
+Authorization;
+JWT;
+password;
+conteúdo sensível desnecessário.
+
+---
+
+# 87. OPENAPI
+
+Documente todos os endpoints.
+
+---
+
+# 88. OPENAPI CREATE
+
+Documente:
+
+- description;
+- occurredAt;
+- accountId;
+- amount;
+- categoryId;
+- notes.
+
+---
+
+# 89. OPENAPI AMOUNT
+
+Explique:
+
+- BRL;
+- positivo;
+- máximo 2 casas decimais.
+
+---
+
+# 90. OPENAPI CATEGORY
+
+Explique:
+
+Expense aceita:
+
+EXPENSE
+ou
+BOTH.
+
+---
+
+# 91. OPENAPI ACCOUNT
+
+Explique que conta deve ser ativa/elegível para novos lançamentos conforme
+política real.
+
+---
+
+# 92. OPENAPI CANCEL
+
+Explique efeito lógico.
+
+---
+
+# 93. OPENAPI LIST
+
+Documente:
+
+- paginação;
+- includeCancelled;
+- período;
+
+somente se realmente implementados.
+
+---
+
+# 94. TESTES — CREATE
+
+POST válido:
+
+201.
+
+---
+
+# 95. CREATE PERSISTENCE
+
+Confirme no MySQL:
+
+type = EXPENSE.
+
+---
+
+# 96. CREATE OWNER
+
+Confirme:
+
+owner = CurrentUser.
+
+---
+
+# 97. CREATE ACCOUNT MAPPING
+
+Confirme mapeamento correto para source/destination conforme ledger.
+
+---
+
+# 98. CREATE CATEGORY
+
+Confirme category correta.
+
+---
+
+# 99. CREATE AMOUNT
+
+Confirme precisão exata.
+
+---
+
+# 100. CREATE NOTES
+
+Confirme persistência.
+
+---
+
+# 101. CREATE WITHOUT JWT
+
+401.
+
+---
+
+# 102. ACCOUNT IDOR
+
+User A possui conta.
+
+User B tenta criar Expense nela.
+
+404.
+
+Nenhuma transação criada.
+
+---
+
+# 103. CATEGORY IDOR
+
+Mesmo princípio.
+
+---
+
+# 104. ACCOUNT INACTIVE
+
+Conta do próprio usuário inativa:
+
+request rejeitado conforme contrato.
+
+Nenhuma transação criada.
+
+---
+
+# 105. CATEGORY INACTIVE
+
+Mesmo princípio.
+
+---
+
+# 106. WRONG CATEGORY
+
+INCOME-only em Expense:
+
+rejeitada.
+
+---
+
+# 107. CATEGORY BOTH
+
+aceita.
+
+---
+
+# 108. AMOUNT ZERO
+
+400.
+
+---
+
+# 109. AMOUNT NEGATIVE
+
+400.
+
+---
+
+# 110. AMOUNT SCALE
+
+10.999:
+
+400.
+
+---
+
+# 111. PRECISION
+
+0.10
+
+persistido como:
+
+0.10.
+
+---
+
+# 112. LIST ISOLATION
+
+A possui Expenses A1/A2.
+
+B possui B1.
+
+GET como A:
+
+nunca retorna B1.
+
+---
+
+# 113. LIST TYPE ISOLATION
+
+Se A possui:
+
+Expense
+Income
+Transfer
+
+GET /expenses:
+
+somente Expense.
+
+---
+
+# 114. LIST CANCELLED
+
+Teste política definida.
+
+---
+
+# 115. LIST ORDER
+
+Teste ordenação.
+
+---
+
+# 116. LIST PAGINATION
+
+Se implementada:
+
+- page;
+- size;
+- limites;
+- total;
+- ordenação estável.
+
+---
+
+# 117. GET OWN
+
+200.
+
+---
+
+# 118. GET OTHER OWNER
+
+404.
+
+---
+
+# 119. GET INCOME AS EXPENSE
+
+404.
+
+---
+
+# 120. GET TRANSFER AS EXPENSE
+
+404.
+
+---
+
+# 121. UPDATE OWN
+
+200.
+
+Confirme persistência.
+
+---
+
+# 122. UPDATE ACCOUNT
+
+Mover Expense:
+
+Conta A
+→ Conta B
+
+deve alterar referência corretamente.
+
+---
+
+# 123. UPDATE ACCOUNT OTHER OWNER
+
+404.
+
+Expense original permanece inalterada.
+
+---
+
+# 124. UPDATE CATEGORY
+
+Categoria A
+→ Categoria B compatível.
+
+PASS.
+
+---
+
+# 125. UPDATE WRONG CATEGORY
+
+Rejeitada.
+
+Estado original preservado.
+
+---
+
+# 126. UPDATE AMOUNT
+
+100
+→
+150
+
+persistido corretamente.
+
+---
+
+# 127. UPDATE OTHER OWNER
+
+404.
+
+Estado original preservado.
+
+---
+
+# 128. UPDATE CANCELLED
+
+Teste política do ADR.
+
+---
+
+# 129. CANCEL OWN
+
+Estado:
+
+ACTIVE
+→
+CANCELLED
+
+ou equivalente.
+
+---
+
+# 130. CANCEL OTHER OWNER
+
+404.
+
+Estado original preservado.
+
+---
+
+# 131. CANCEL WRONG TYPE
+
+Tentar endpoint Expense com ID de Income/Transfer:
+
+404.
+
+---
+
+# 132. CANCEL REPEAT
+
+Teste idempotência/política.
+
+---
+
+# 133. OVERPOSTING OWNER
+
+Payload malicioso com ownerId:
+
+jamais muda owner.
+
+---
+
+# 134. OVERPOSTING STATUS
+
+Cliente não pode criar diretamente:
+
+CANCELLED.
+
+---
+
+# 135. OVERPOSTING TYPE
+
+Cliente não pode criar:
+
+INCOME
+
+via:
+
+POST /api/expenses.
+
+---
+
+# 136. MYSQL/TESTCONTAINERS
+
+Testes críticos devem utilizar MySQL real.
+
+---
+
+# 137. TRANSACTIONALITY
+
+Create/update/cancel devem utilizar boundaries transacionais adequadas.
+
+---
+
+# 138. ROLLBACK
+
+Se validação de conta/category falhar:
+
+nenhuma alteração parcial.
+
+---
+
+# 139. NO BALANCE MUTATION
+
+Após criar Expense:
+
+AssetAccount.initialBalance permanece inalterado.
+
+Não existe currentBalance persistido.
+
+---
+
+# 140. NO DASHBOARD MUTATION
+
+Não tente atualizar cache/KPI do Dashboard manualmente.
+
+---
+
+# 141. FRONTEND
+
+NÃO alterar Angular.
+
+---
+
+# 142. MIGRATION
+
+Não esperamos nova migration nesta TASK.
+
+TASK-3.1 já criou schema do ledger.
+
+Se migration corretiva for absolutamente necessária por bug real:
+
+- não altere migration aplicada;
+- crie nova migration;
+- explique;
+- teste clean + incremental.
+
+---
+
+# 143. REGRESSÃO ASSET ACCOUNT
+
+PASS.
+
+---
+
+# 144. REGRESSÃO CATEGORY
+
+PASS.
+
+---
+
+# 145. REGRESSÃO AUTH
+
+PASS.
+
+---
+
+# 146. REGRESSÃO LEDGER DOMAIN
+
+Todos os testes da TASK-3.1:
+
+PASS.
+
+---
+
+# 147. BUILD
+
+Execute suíte completa backend.
+
+---
+
+# 148. TESTCONTAINERS
+
+Confirme testes não foram skipped.
+
+---
+
+# 149. DEFINITION OF DONE
+
+TASK-3.2 estará concluída quando:
+
+- POST /expenses funcionar;
+- GET /expenses funcionar;
+- GET /expenses/{id} funcionar;
+- PUT /expenses/{id} funcionar;
+- cancelamento funcionar;
+- DELETE não existir;
+- CurrentUser definir owner;
+- owner não puder ser enviado;
+- type forçado como EXPENSE;
+- account ownership estiver protegido;
+- category ownership estiver protegido;
+- account inativa for rejeitada conforme ADR;
+- category inativa for rejeitada conforme ADR;
+- EXPENSE category funcionar;
+- BOTH category funcionar;
+- INCOME-only category for rejeitada;
+- amount > 0;
+- escala <= 2;
+- BigDecimal preservado;
+- occurredAt funcionar;
+- notes funcionar;
+- IDOR/BOLA estiver protegido;
+- outro TransactionType retornar 404;
+- cancelamento lógico funcionar;
+- currentBalance não for persistido;
+- initialBalance não for mutado;
+- Problem Details estiver consistente;
+- Request ID continuar funcionando;
+- OpenAPI estiver atualizado;
+- testes MySQL/Testcontainers passarem;
+- regressões passarem;
+- frontend permanecer inalterado;
+- build passar.
+
+---
+
+# 150. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-3.2 — API REST DE DESPESAS
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## 1. Arquitetura
+
+Explique fluxo:
+
+Controller
+→ Use Case/Service
+→ Domain
+→ Repository
+
+## 2. Endpoints
+
+Liste método + path.
+
+## 3. CreateExpenseRequest
+
+Liste campos reais.
+
+## 4. UpdateExpenseRequest
+
+Liste campos reais.
+
+## 5. ExpenseResponse
+
+Liste campos reais.
+
+## 6. Listagem
+
+Informe:
+
+- ordenação;
+- paginação;
+- filtros;
+- política de cancelled.
+
+## 7. CurrentUser
+
+Explique ownership.
+
+## 8. Account
+
+Explique:
+
+- lookup;
+- ownership;
+- active;
+- resposta para outro owner.
+
+## 9. Category
+
+Explique:
+
+- lookup;
+- ownership;
+- active;
+- applicability.
+
+## 10. Money
+
+Confirme:
+
+BigDecimal;
+> 0;
+máximo 2 casas;
+sem arredondamento silencioso.
+
+## 11. occurredAt
+
+Informe formato/política temporal.
+
+## 12. Cancelamento
+
+Explique:
+
+- endpoint;
+- status;
+- repetição;
+- impacto futuro no ledger.
+
+## 13. Edição
+
+Liste campos editáveis.
+
+## 14. IDOR/BOLA
+
+### Expense
+PASS / FAIL
+
+### Account
+PASS / FAIL
+
+### Category
+PASS / FAIL
+
+### Other TransactionType
+PASS / FAIL
+
+## 15. Overposting
+
+### ownerId
+PASS / FAIL
+
+### type
+PASS / FAIL
+
+### status
+PASS / FAIL
+
+## 16. HTTP
+
+### 201
+PASS / FAIL
+
+### 400
+PASS / FAIL
+
+### 401
+PASS / FAIL
+
+### 404
+PASS / FAIL
+
+### 409
+PASS / FAIL
+
+## 17. Problem Details
+
+PASS / FAIL
+
+## 18. Request ID
+
+PASS / FAIL
+
+## 19. OpenAPI
+
+PASS / FAIL
+
+## 20. MySQL/Testcontainers
+
+PASS / FAIL
+
+## 21. Transactionality/Rollback
+
+PASS / FAIL
+
+## 22. Saldo
+
+Confirme:
+
+currentBalance NÃO persistido.
+
+initialBalance NÃO alterado.
+
+## 23. Regressão
+
+### Ledger
+PASS / FAIL
+
+### AssetAccount
+PASS / FAIL
+
+### Category
+PASS / FAIL
+
+### Authentication
+PASS / FAIL
+
+## 24. Build
+
+PASS / FAIL
+
+## 25. Frontend
+
+Esperado:
+
+NÃO ALTERADO
+
+## 26. Migration
+
+Esperado:
+
+NENHUMA
+
+Se criada, explique.
+
+## 27. Arquivos
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 28. Bugs encontrados
+
+Liste problema, causa, correção e teste.
+
+## 29. Divergências do ADR
+
+Esperado:
+
+NENHUMA
+
+Se houver, detalhe.
+
+## 30. Pendências
+
+### Bloqueantes
+
+### Não bloqueantes
+
+## 31. Próxima tarefa
+
+Se TASK-3.2 estiver aprovada, informe prontidão para:
+
+# TASK-3.3 — Interface de Despesas
+
+NÃO implemente TASK-3.3 nesta execução.

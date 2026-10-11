@@ -1,0 +1,929 @@
+# TASK-5.6 — Interface do Relatório de Auditoria
+
+PROJETO: Equilibra
+SPRINT: 5 — Relatórios Financeiros
+STACK: Angular 19, Spring Boot 4, MySQL
+
+CONTEXTO
+TASK-5.0 — ADR de relatórios concluído.
+TASK-5.1 — Backend do Relatório Financeiro concluído.
+TASK-5.2 — Verificar status real no repositório.
+TASK-5.3 — Backend do Relatório por Categoria concluído.
+TASK-5.4 — Interface do Relatório por Categoria concluída.
+TASK-5.5 — Backend do Relatório de Auditoria concluído.
+
+OBJETIVO
+Implementar exclusivamente a interface Angular do Relatório de Auditoria,
+consumindo o endpoint real da TASK-5.5.
+
+Permitir ao usuário:
+- consultar transações lógicas;
+- filtrar por período;
+- filtrar por uma, várias ou todas as contas;
+- filtrar por tipo e status;
+- utilizar outros filtros aprovados no ADR/API;
+- consultar lançamentos cancelados;
+- visualizar dados de rastreabilidade existentes;
+- navegar entre páginas;
+- consultar detalhes de uma transação sem alterar dados.
+
+NÃO implementar exportações nesta TASK.
+
+==================================================
+1. INSPEÇÃO OBRIGATÓRIA
+==================================================
+
+Antes de editar arquivos, ler:
+
+- CLAUDE.md;
+- ADR da TASK-5.0;
+- relatório final da TASK-5.5;
+- controller, service, DTOs e OpenAPI da auditoria;
+- implementação do History;
+- implementação das telas de relatórios anteriores;
+- Angular routing;
+- Auth Guard;
+- HTTP interceptors;
+- AssetAccountService;
+- CategoryService;
+- TagService;
+- componentes de filtro;
+- componentes de tabela;
+- componentes de paginação;
+- componentes de drawer/dialog;
+- Design System;
+- padrões de loading, empty e error;
+- testes existentes.
+
+ADR + API real prevalecem sobre exemplos deste prompt.
+
+Se TASK-5.2 ainda estiver pendente, não presumir componentes que não existem.
+
+==================================================
+2. PRE-IMPLEMENTATION REPORT
+==================================================
+
+Antes de modificar código, apresentar:
+
+1. Endpoint real da auditoria.
+2. Parâmetros suportados.
+3. Defaults definidos pelo backend.
+4. DTO de resposta.
+5. Campos de rastreabilidade disponíveis.
+6. Semântica de status e cancelamento.
+7. Semântica de contas e transferências.
+8. Paginação e ordenação.
+9. Componentes existentes reutilizáveis.
+10. Estrutura de tela proposta.
+11. Estratégia de estados e concorrência.
+12. Plano de testes.
+13. Arquivos previstos.
+
+Não implementar até concluir essa inspeção.
+
+==================================================
+3. ROTA E NAVEGAÇÃO
+==================================================
+
+Criar rota privada conforme convenção real.
+
+Preferência conceitual:
+
+/reports/audit
+
+Integrar no menu:
+
+Relatórios
+  Financeiro
+  Por categoria
+  Auditoria
+
+Não quebrar rotas existentes.
+
+Não criar telas falsas para relatórios ainda pendentes.
+
+==================================================
+4. CABEÇALHO
+==================================================
+
+Título:
+
+Relatório de auditoria
+
+Subtítulo:
+
+"Consulte e confira suas movimentações financeiras,
+incluindo lançamentos cancelados."
+
+Reutilizar PageHeader e padrões visuais existentes.
+
+==================================================
+5. LAYOUT
+==================================================
+
+Estrutura:
+
+PageHeader
+Filtros
+Resumo contextual da consulta
+Lista/tabela de transações
+Paginação
+Detalhes da transação
+
+Não duplicar todo o History se seus componentes
+puderem ser reutilizados de forma limpa.
+
+==================================================
+6. FILTROS
+==================================================
+
+Implementar somente filtros suportados pelo backend.
+
+Obrigatórios conforme ADR:
+
+- período;
+- uma, várias ou todas as contas;
+- tipo;
+- status.
+
+Adicionais somente se API suportar:
+
+- categorias;
+- tags;
+- ordenação customizada.
+
+Não inventar parâmetros.
+
+==================================================
+7. PERÍODO
+==================================================
+
+Usar semântica temporal aprovada no ADR.
+
+O filtro financeiro utiliza occurredAt.
+
+Se a interface trabalha com datas inclusivas,
+converter corretamente para os limites reais da API.
+
+Evitar deslocamentos por timezone.
+
+Reutilizar helpers existentes.
+
+==================================================
+8. FILTRO DE CONTAS
+==================================================
+
+Permitir:
+
+Todas as contas;
+Uma conta;
+Várias contas.
+
+Usar nomes das contas.
+
+Incluir contas inativas históricas conforme ADR.
+
+Não enviar ownerId.
+
+Ausência de accountIds deve seguir contrato da API.
+
+==================================================
+9. FILTRO DE TIPO
+==================================================
+
+Opções conforme enums reais:
+
+Todos
+Receitas
+Despesas
+Transferências
+
+Não enviar strings incompatíveis com o backend.
+
+==================================================
+10. FILTRO DE STATUS
+==================================================
+
+Opções conforme contrato real:
+
+Todos
+Ativos
+Cancelados
+
+O padrão deve ser exatamente o definido na TASK-5.5.
+
+Se backend definiu ALL por padrão:
+
+selecionar "Todos" inicialmente.
+
+Não ocultar cancelados por conveniência.
+
+==================================================
+11. FILTROS ADICIONAIS
+==================================================
+
+Se categorias forem suportadas:
+
+- permitir categorias próprias;
+- preservar categorias inativas históricas;
+- seguir formato real do filtro.
+
+Se tags forem suportadas:
+
+- permitir seleção múltipla;
+- usar semântica ANY/ALL aprovada;
+- incluir tags inativas históricas quando previsto.
+
+Não criar filtragem financeira client-side.
+
+==================================================
+12. DRAFT VS APPLIED
+==================================================
+
+Separar:
+
+draftFilters
+appliedFilters
+
+Editar filtros não deve fazer os dados exibidos
+parecerem pertencer ao novo filtro antes da aplicação.
+
+Botões:
+
+Aplicar filtros
+Restaurar filtros
+
+Ao aplicar filtros:
+
+resetar página para a primeira.
+
+==================================================
+13. ESTADO NA URL
+==================================================
+
+Se o ADR/padrão atual prevê query params:
+
+sincronizar filtros aplicados e paginação com URL.
+
+Back/forward devem restaurar consulta corretamente.
+
+Não colocar JWT, ownerId ou informações sensíveis na URL.
+
+==================================================
+14. LISTAGEM
+==================================================
+
+Cada linha/card representa UMA FinancialTransaction lógica.
+
+Tipos:
+
+EXPENSE
+INCOME
+TRANSFER.
+
+Transferência aparece uma vez.
+
+Não renderizar AccountMovement como lançamento separado.
+
+==================================================
+15. COLUNAS DESKTOP
+==================================================
+
+Conforme DTO real, apresentar:
+
+Data da movimentação
+Descrição
+Tipo
+Conta / Origem e destino
+Categoria
+Valor
+Status
+Ações
+
+Campos não existentes não devem ser inventados.
+
+==================================================
+16. DATAS DE AUDITORIA
+==================================================
+
+Quando disponíveis, distinguir:
+
+occurredAt:
+Data da movimentação.
+
+createdAt:
+Criado em.
+
+updatedAt:
+Última atualização.
+
+Não apresentar updatedAt como histórico completo de alterações.
+
+==================================================
+17. STATUS CANCELLED
+==================================================
+
+Mostrar status textual:
+
+Cancelada
+
+com indicação visual acessível.
+
+Não esconder lançamento cancelado.
+
+Não tratar cancelamento como exclusão física.
+
+Não apresentar valor cancelado como movimentação ativa.
+
+==================================================
+18. TRANSFERÊNCIAS
+==================================================
+
+Exibir:
+
+Conta origem → Conta destino.
+
+Não classificar transferência como receita/despesa.
+
+Se origem e destino estiverem ambas no filtro:
+
+apresentar uma única linha.
+
+==================================================
+19. VALORES
+==================================================
+
+Usar formatador BRL existente.
+
+Não recalcular valores.
+
+Não aplicar sinal de despesa a uma transferência
+como se fosse uma despesa comum.
+
+Não usar float para cálculos financeiros.
+
+==================================================
+20. CATEGORIAS
+==================================================
+
+Mostrar nome real da categoria quando presente.
+
+Categorias inativas históricas continuam visíveis.
+
+Indicar "Inativa" quando necessário.
+
+Se transação não possui categoria:
+
+mostrar "Sem categoria" ou convenção aprovada.
+
+==================================================
+21. TAGS
+==================================================
+
+Se DTO inclui tags:
+
+mostrar chips compactos.
+
+Tags inativas podem ter indicação textual.
+
+Não fazer uma request por transação para buscar tags.
+
+==================================================
+22. ANEXOS
+==================================================
+
+Se DTO inclui attachmentCount:
+
+mostrar indicador de quantidade.
+
+Não buscar arquivos binários durante a listagem.
+
+Se componente read-only de anexos já existir
+e for compatível, poderá ser reutilizado nos detalhes.
+
+Downloads devem continuar autenticados via HttpClient Blob.
+
+Nunca usar JWT em query string.
+
+Nunca expor storageKey.
+
+==================================================
+23. DETALHES DA TRANSAÇÃO
+==================================================
+
+Implementar visualização read-only por drawer ou dialog,
+reutilizando padrão existente.
+
+Mostrar somente campos reais disponíveis:
+
+ID
+Tipo
+Status
+Descrição
+Valor
+Data da movimentação
+Criado em
+Última atualização
+Conta
+Origem/destino
+Categoria
+Notas
+Tags
+Quantidade de anexos
+
+Se um campo não existir:
+
+não inventar valor.
+
+==================================================
+24. READ-ONLY
+==================================================
+
+Auditoria não permite:
+
+editar;
+cancelar;
+reativar;
+excluir;
+alterar tags;
+alterar anexos.
+
+Não criar botões de mutação nesta tela.
+
+Se a aplicação já possui navegação para detalhes
+em outra área, reutilizar apenas quando apropriado.
+
+==================================================
+25. SEM HISTÓRICO FICTÍCIO
+==================================================
+
+Não apresentar:
+
+"Alterado por"
+"Histórico de alterações"
+"Versões anteriores"
+"Motivo do cancelamento"
+
+se essas informações não são persistidas e retornadas pela API.
+
+Não inferir usuário responsável por edição.
+
+==================================================
+26. PAGINAÇÃO
+==================================================
+
+Paginação server-side.
+
+Usar:
+
+page;
+size;
+totalElements;
+totalPages
+
+conforme DTO real.
+
+Não buscar todas as transações e paginar no Angular.
+
+==================================================
+27. CONTAGEM
+==================================================
+
+Mostrar:
+
+"X transações encontradas"
+
+com totalElements real do backend.
+
+Não confundir quantidade de linhas da página com total.
+
+==================================================
+28. ORDENAÇÃO
+==================================================
+
+Usar ordenação estável do backend.
+
+Se a API oferece sort:
+
+permitir apenas campos suportados.
+
+Não criar ordenação client-side de uma página
+fazendo parecer que ordenou todo o relatório.
+
+==================================================
+29. CONCORRÊNCIA
+==================================================
+
+Se usuário aplicar filtros rapidamente:
+
+resposta antiga não pode sobrescrever a nova.
+
+Usar switchMap ou mecanismo equivalente.
+
+Evitar subscriptions vazando.
+
+Não duplicar requests desnecessariamente.
+
+==================================================
+30. ESTADOS
+==================================================
+
+Implementar:
+
+initial;
+loading;
+success;
+empty;
+error;
+retry.
+
+Loading não deve apresentar dados fictícios.
+
+Erro não deve parecer lista vazia legítima.
+
+Se usuário alterar filtros:
+
+identificar claramente a qual consulta
+os dados visíveis correspondem.
+
+==================================================
+31. EMPTY STATE
+==================================================
+
+Mensagem sugerida:
+
+"Nenhuma transação encontrada para os filtros selecionados."
+
+Ação:
+
+"Restaurar filtros"
+
+quando apropriado.
+
+==================================================
+32. ERROS
+==================================================
+
+400:
+filtros inválidos.
+
+401:
+seguir comportamento global de autenticação.
+
+403:
+não encerrar sessão indevidamente.
+
+404:
+recurso privado indisponível, sem vazamento de dados.
+
+500:
+mensagem segura e possibilidade de tentar novamente.
+
+Reutilizar Problem Details e Request ID.
+
+==================================================
+33. RESPONSIVIDADE
+==================================================
+
+Desktop:
+tabela com colunas essenciais.
+
+Tablet:
+tabela adaptada ou layout compacto.
+
+Mobile:
+cards/lista de transações.
+
+Validar:
+
+360x800
+390x844
+768x1024
+1024x768
+1280x720
+1366x768
+1920x1080
+
+Sem scroll horizontal global.
+
+Testar descrições longas, muitos filtros,
+tags e valores monetários elevados.
+
+==================================================
+34. ACESSIBILIDADE
+==================================================
+
+- Labels nos filtros.
+- Multiselect operável por teclado.
+- Status não dependente apenas de cor.
+- Tabela com cabeçalhos semânticos.
+- Botões com nomes acessíveis.
+- Drawer/dialog com foco correto.
+- Escape fecha detalhes quando apropriado.
+- Loading/error anunciáveis.
+- Paginação acessível.
+- Ordem de leitura adequada no mobile.
+
+==================================================
+35. SERVICE E MODELS
+==================================================
+
+Criar:
+
+AuditReportService
+
+ou nome coerente com projeto.
+
+Criar interfaces tipadas de:
+
+request;
+response;
+transaction;
+pagination;
+filters.
+
+Espelhar OpenAPI real.
+
+Não usar any.
+
+Não expor entidades JPA no frontend.
+
+==================================================
+36. REUTILIZAÇÃO
+==================================================
+
+Reutilizar componentes existentes sempre que fizer sentido:
+
+ReportFilters
+AccountMultiselect
+DateRange
+Pagination
+StatusChip
+TransactionType
+TransactionAttachments
+EmptyState
+ErrorState
+
+Não criar abstrações genéricas desnecessárias.
+
+==================================================
+37. TESTES — FILTROS
+==================================================
+
+Testar:
+
+- período padrão;
+- serialização temporal;
+- uma conta;
+- várias contas;
+- todas as contas;
+- contas inativas;
+- tipo;
+- status;
+- ALL como default se previsto;
+- filtros combinados;
+- aplicar;
+- restaurar;
+- filtros inválidos;
+- paginação resetada ao filtrar.
+
+==================================================
+38. TESTES — TRANSAÇÕES
+==================================================
+
+Testar:
+
+- Expense;
+- Income;
+- Transfer;
+- Transfer uma vez;
+- ACTIVE;
+- CANCELLED;
+- categoria inativa;
+- tags múltiplas;
+- attachmentCount;
+- descrição longa;
+- valores negativos quando permitidos;
+- datas distintas.
+
+==================================================
+39. TESTES — PAGINAÇÃO
+==================================================
+
+Testar:
+
+- page=0;
+- mudança de página;
+- alteração de size;
+- totalElements;
+- última página;
+- filtros + paginação;
+- ordenação suportada.
+
+Não implementar paginação em memória.
+
+==================================================
+40. TESTES — ESTADOS
+==================================================
+
+Testar:
+
+- loading;
+- empty;
+- error;
+- retry;
+- respostas concorrentes;
+- destruição de componente;
+- dados antigos não sobrescrevendo novos.
+
+==================================================
+41. GOLDEN SCENARIO
+==================================================
+
+User A:
+
+Account A initial=1000
+Account B initial=500
+
+No período:
+
+Income A=700
+Expense A=200
+Transfer A→B=300
+Expense A=999, posteriormente cancelada.
+
+ALL:
+4 transações.
+
+ACTIVE:
+3 transações.
+
+CANCELLED:
+1 transação.
+
+Filtro Account A:
+4 transações.
+
+Filtro Account B:
+1 transferência.
+
+Filtro Account A+B:
+4 transações, sem duplicação.
+
+==================================================
+42. TAGS E ANEXOS
+==================================================
+
+Associar duas tags e dois anexos à Expense.
+
+Resultado:
+
+uma transação;
+duas tags;
+attachmentCount=2.
+
+Sem requests por linha.
+
+==================================================
+43. MULTIUSER
+==================================================
+
+User B possui dados próprios.
+
+User A nunca visualiza transações de B.
+
+Não enviar ownerId.
+
+Não exibir dados estrangeiros em autocomplete
+ou seleção de filtros.
+
+==================================================
+44. REGRESSÕES
+==================================================
+
+Verificar:
+
+Dashboard;
+Accounts;
+Categories;
+Tags;
+Expenses;
+Income;
+Transfers;
+History;
+Attachments;
+Financial Report;
+Category Report.
+
+Não alterar essas funcionalidades sem bug comprovado.
+
+==================================================
+45. BUILD E TESTES
+==================================================
+
+Executar:
+
+frontend lint;
+frontend unit tests;
+frontend production build.
+
+Se E2E estiver configurado:
+
+executar fluxo de auditoria e Golden Scenario.
+
+Não marcar PASS para teste não executado.
+
+Se houver bloqueio ambiental:
+
+registrar comando, erro e impacto.
+
+==================================================
+46. FORA DO ESCOPO
+==================================================
+
+Não implementar:
+
+PDF;
+CSV;
+XLSX;
+exportação;
+event sourcing;
+trilha imutável de revisões;
+alteração de transações;
+novo endpoint backend sem blocker;
+novo sistema de logs;
+relatórios agendados;
+compartilhamento;
+contas de despesas;
+novo Design System.
+
+==================================================
+47. DEFINITION OF DONE
+==================================================
+
+A TASK-5.6 estará concluída quando:
+
+- rota privada funcionar;
+- menu Auditoria funcionar;
+- API 5.5 for consumida corretamente;
+- filtros reais funcionarem;
+- ALL/ACTIVE/CANCELLED funcionarem;
+- período estiver correto;
+- uma/várias/todas contas funcionarem;
+- transferências aparecerem uma vez;
+- transações canceladas forem visíveis;
+- detalhes read-only funcionarem;
+- datas de auditoria forem distinguidas;
+- paginação server-side funcionar;
+- totalElements estiver correto;
+- nenhuma request N+1 existir;
+- ownership for preservado;
+- loading/empty/error/retry funcionarem;
+- responsividade estiver validada;
+- acessibilidade estiver validada;
+- testes passarem;
+- build passar;
+- regressões essenciais passarem.
+
+==================================================
+48. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-5.6 — INTERFACE DO RELATÓRIO DE AUDITORIA
+
+Status:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+1. Rota e navegação.
+2. Endpoint e contrato consumido.
+3. Filtros implementados.
+4. Semântica de período.
+5. Contas únicas/múltiplas/todas.
+6. Status ALL/ACTIVE/CANCELLED.
+7. Tipos de transação.
+8. Transferências sem duplicação.
+9. Detalhes read-only.
+10. Datas de rastreabilidade.
+11. Tags e anexos.
+12. Paginação e ordenação.
+13. Estados da interface.
+14. Responsividade.
+15. Acessibilidade.
+16. Golden Scenario.
+17. Isolamento multiusuário.
+18. Testes executados.
+19. Lint e production build.
+20. Regressões.
+21. Arquivos criados/modificados.
+22. Bugs corrigidos.
+23. Divergências do ADR.
+24. Dívidas técnicas reais.
+25. Fora do escopo confirmado.
+
+Se concluída:
+
+READY FOR TASK-5.7 — Exportação dos Relatórios.
+
+NÃO implementar TASK-5.7 nesta execução.

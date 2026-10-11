@@ -1,0 +1,113 @@
+# TASK-7.0 — ARQUITETURA DA SPRINT 7
+
+PROJETO: EQUILIBRA
+SPRINT: 7 — PREVISIBILIDADE FINANCEIRA
+
+OBJETIVO
+
+Planejar e documentar a arquitetura de:
+
+1. Despesas recorrentes.
+2. Receitas recorrentes.
+3. Compromissos financeiros futuros.
+4. Datas de vencimento.
+5. Efetivação de pagamentos e recebimentos.
+6. Calendário financeiro.
+7. Projeção de fluxo de caixa.
+8. Indicadores de vencimentos e atrasos.
+9. Integração com dashboard e relatórios.
+
+NÃO IMPLEMENTAR CÓDIGO NESTA TASK.
+
+INSPEÇÃO OBRIGATÓRIA
+
+Ler CLAUDE.md, ADRs anteriores, relatório do Gate
+da Sprint 6, modelos de contas, despesas, receitas,
+transferências, ledger, orçamentos e relatórios.
+
+Identificar componentes e regras reutilizáveis.
+
+DECISÕES OBRIGATÓRIAS
+
+A. Definir diferença entre previsão e lançamento efetivado.
+
+B. Definir quando uma previsão passa a alterar o ledger.
+
+C. Definir se recorrências geram compromissos
+automaticamente ou sob demanda.
+
+D. Definir periodicidades:
+mensal, semanal, anual e outras realmente necessárias.
+
+E. Definir comportamento para vencimentos em dias
+inexistentes, como dia 31 em fevereiro.
+
+F. Definir estados:
+previsto, pendente, pago, recebido, atrasado,
+cancelado, conforme necessidade e semântica.
+
+G. Definir tratamento de pagamentos parciais.
+
+H. Definir edição de uma ocorrência versus
+edição de toda a série recorrente.
+
+I. Definir cancelamento de ocorrência e série.
+
+J. Definir prevenção de duplicidade e idempotência
+na geração e efetivação de lançamentos.
+
+K. Definir como as previsões afetam, ou não,
+orçamentos e relatórios de valores realizados.
+
+L. Definir modelo de projeção de fluxo de caixa,
+distinguindo saldo atual de saldo projetado.
+
+M. Definir tratamento de contas e categorias inativas.
+
+N. Definir ownership e isolamento multiusuário.
+
+O. Esclarecer o conceito de 'Contas de Despesas'
+anteriormente deixado em aberto.
+
+P. Definir limites do MVP e itens adiados.
+
+RESTRIÇÕES
+
+- Não alterar saldos reais por simples previsão.
+- Não criar dinheiro fictício.
+- Não duplicar transações financeiras.
+- Não modificar o ledger sem ADR explícito.
+- Preservar DECIMAL(19,2), BigDecimal e occurredAt.
+- Respeitar autenticação JWT e owner-scoping.
+- Preservar compatibilidade com Sprints 0–6.
+
+ENTREGÁVEIS
+
+1. Documento de arquitetura da Sprint 7.
+2. ADRs com decisões e justificativas.
+3. Modelo de domínio proposto.
+4. Diagrama de estados.
+5. Estratégia de integração com ledger.
+6. Contratos REST conceituais.
+7. Estratégia de geração de recorrências.
+8. Regras de competência e vencimento.
+9. Matriz de impacto nas funcionalidades existentes.
+10. Golden Scenarios financeiros.
+11. Riscos e decisões pendentes.
+12. Roadmap refinado TASKS 7.1–7.8.
+13. Critérios de aceite da Sprint 7.
+
+Se houver decisões essenciais sem resposta,
+marcar BLOCKED e apresentar alternativas.
+
+Ao final, produzir:
+
+# TASK-7.0 — ARCHITECTURE REPORT
+
+STATUS: COMPLETED / BLOCKED
+
+Não implementar TASK-7.1 nesta execução.
+
+Se arquitetura aprovada e sem bloqueadores:
+
+READY FOR TASK-7.1 — Backend de Recorrências.

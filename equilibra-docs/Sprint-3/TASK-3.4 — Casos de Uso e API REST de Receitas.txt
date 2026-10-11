@@ -1,0 +1,1868 @@
+# TASK-3.4 — Casos de Uso e API REST de Receitas
+
+Estamos na:
+
+# Sprint 3 — Transações Financeiras
+
+Concluídas:
+
+- TASK-3.0 — Arquitetura do Ledger e Regras Financeiras
+- TASK-3.1 — Domínio e Persistência de Transações Financeiras
+- TASK-3.2 — Casos de Uso e API REST de Despesas
+- TASK-3.3 — Interface de Despesas
+
+Agora implemente:
+
+# TASK-3.4 — Casos de Uso e API REST de Receitas
+
+O objetivo é implementar a API completa de Receitas/Rendas utilizando o
+mesmo ledger financeiro definido na TASK-3.0 e implementado na TASK-3.1.
+
+O usuário autenticado deverá conseguir:
+
+- registrar uma receita;
+- listar receitas;
+- consultar uma receita;
+- editar uma receita;
+- cancelar uma receita.
+
+A implementação deve aproveitar padrões consolidados pela API de Despesas,
+mas NÃO deve simplesmente duplicar código sem análise.
+
+NÃO implementar nesta TASK:
+
+- frontend de Receitas;
+- Transferências;
+- Tags;
+- Attachments;
+- Dashboard financeiro real;
+- relatórios;
+- saldo persistido;
+- DELETE físico;
+- API genérica de Transactions;
+- abstrações genéricas prematuras.
+
+---
+
+# 1. FONTE DE VERDADE
+
+Antes de alterar código, leia:
+
+- CLAUDE.md;
+- ADR da TASK-3.0;
+- implementação da TASK-3.1;
+- implementação e relatório da TASK-3.2;
+- implementação da TASK-3.3 apenas para contexto;
+- docs/architecture.md;
+- docs/security.md;
+- docs/api-guidelines.md;
+- OpenAPI atual.
+
+Inspecione especificamente:
+
+- FinancialTransaction ou agregado equivalente;
+- TransactionType;
+- TransactionStatus;
+- repositories;
+- Expense Controller;
+- Expense Application Service/Use Cases;
+- Expense DTOs;
+- Expense error mapping;
+- paginação;
+- filtros;
+- cancelamento;
+- AssetAccount;
+- Category;
+- CurrentUser;
+- Problem Details;
+- Request ID;
+- testes da API de Expense;
+- Testcontainers/MySQL.
+
+A implementação REAL é a fonte de verdade.
+
+---
+
+# 2. RELATÓRIO PRÉ-IMPLEMENTAÇÃO
+
+Antes de modificar arquivos, produza:
+
+# TASK-3.4 — PRE-IMPLEMENTATION REPORT
+
+## 1. Padrão encontrado em Expense
+
+Liste:
+
+- Controller;
+- use cases/service;
+- DTOs;
+- repository;
+- paginação;
+- filtros;
+- cancelamento;
+- Problem Details;
+- testes.
+
+## 2. O que pode ser reutilizado
+
+Classifique:
+
+A — infraestrutura realmente compartilhável;
+B — regra específica de Expense;
+C — regra específica de Income.
+
+## 3. API proposta
+
+Liste endpoints.
+
+## 4. DTOs
+
+Liste campos.
+
+## 5. Invariantes de Income
+
+Liste.
+
+## 6. Alterações previstas
+
+Liste arquivos.
+
+Depois implemente.
+
+---
+
+# 3. PRINCÍPIO FINANCEIRO
+
+Income representa entrada de dinheiro em uma AssetAccount.
+
+Conceitualmente:
+
+accountBalance += amount
+
+Mas:
+
+NÃO atualizar saldo persistido.
+
+O efeito será derivado posteriormente do ledger.
+
+---
+
+# 4. AMOUNT
+
+Assim como Expense:
+
+amount é sempre magnitude positiva.
+
+Exemplo:
+
+Receita de R$ 1.500,00
+
+amount:
+
+1500.00
+
+NÃO:
+
++1500.00 como mecanismo para identificar o tipo.
+
+O tipo determina o efeito.
+
+---
+
+# 5. TRANSACTION TYPE
+
+Toda transação criada por esta API deverá ser:
+
+INCOME
+
+definido pelo servidor.
+
+O cliente NÃO controla TransactionType.
+
+---
+
+# 6. ARQUITETURA
+
+Preserve:
+
+Controller
+→ Application Service / Use Case
+→ Domain
+→ Repository
+→ MySQL
+
+Controller fino.
+
+---
+
+# 7. BASE PATH
+
+Preferência:
+
+/api/incomes
+
+Use outro somente se convenção/ADR real determinar.
+
+---
+
+# 8. ENDPOINTS
+
+Implemente conceitualmente:
+
+POST   /api/incomes
+GET    /api/incomes
+GET    /api/incomes/{id}
+PUT    /api/incomes/{id}
+PATCH  /api/incomes/{id}/cancel
+
+Ajuste ao padrão efetivamente adotado em Expense.
+
+NÃO implementar:
+
+DELETE.
+
+---
+
+# 9. SIMETRIA COM EXPENSE
+
+Onde a semântica for realmente igual, mantenha contratos consistentes.
+
+Exemplos:
+
+- paginação;
+- includeCancelled;
+- período;
+- ordenação;
+- Problem Details;
+- Request ID;
+- DTO conventions;
+- cancelamento;
+- HTTP status.
+
+Não introduza diferenças arbitrárias entre:
+
+/expenses
+/incomes
+
+---
+
+# 10. NÃO DUPLICAR CEGAMENTE
+
+Expense e Income possuem semântica financeira diferente.
+
+Não faça copy/paste seguido apenas de rename.
+
+Identifique infraestrutura comum real.
+
+---
+
+# 11. REUTILIZAÇÃO
+
+Pode reutilizar/extrair pequenas peças quando a duplicação já estiver
+comprovada pelas duas APIs.
+
+Exemplos possíveis:
+
+- pagination types;
+- transaction response mapping;
+- validação monetária já centralizada;
+- helpers de período;
+- Problem Details já existente.
+
+Não criar framework genérico.
+
+---
+
+# 12. PROIBIDO
+
+Não criar:
+
+GenericTransactionController<T>
+GenericTransactionCrudService<T>
+AbstractFinancialController
+DynamicTransactionHandler
+Reflection-based transaction CRUD
+
+---
+
+# 13. CURRENT USER
+
+Identidade:
+
+JWT
+→ SecurityContext
+→ CurrentUser
+→ ownerId
+
+---
+
+# 14. REQUEST OWNER
+
+Request nunca controla:
+
+ownerId;
+userId;
+email.
+
+---
+
+# 15. CREATE
+
+POST /api/incomes
+
+Cria FinancialTransaction:
+
+type = INCOME.
+
+---
+
+# 16. CREATE REQUEST
+
+Contrato conceitual:
+
+{
+  "description": "Salário",
+  "occurredAt": "...",
+  "accountId": "...",
+  "amount": 5000.00,
+  "categoryId": "...",
+  "notes": "..."
+}
+
+Adapte ao contrato real.
+
+---
+
+# 17. ACCOUNT SEMANTICS
+
+Para Income:
+
+accountId representa a conta que RECEBE o dinheiro.
+
+Se ledger utiliza source/destination:
+
+esperado conceitualmente:
+
+sourceAccount = null
+destinationAccount = account
+
+Siga arquitetura real da TASK-3.1.
+
+---
+
+# 18. NÃO EXPOR DETALHE INTERNO
+
+Preferir API semântica:
+
+accountId
+
+em vez de:
+
+destinationAccountId
+
+se Expense já usa accountId.
+
+---
+
+# 19. DESCRIPTION
+
+Obrigatória.
+
+Mesmas regras estruturais aprovadas:
+
+- trim;
+- não vazia;
+- maxLength.
+
+---
+
+# 20. occurredAt
+
+Obrigatório conforme domínio.
+
+Representa:
+
+quando a receita ocorreu.
+
+Não confundir com createdAt.
+
+---
+
+# 21. AMOUNT VALIDATION
+
+Obrigatório.
+
+BigDecimal.
+
+Esperado:
+
+amount > 0.
+
+---
+
+# 22. ZERO
+
+0
+→ 400.
+
+---
+
+# 23. NEGATIVO
+
+-100
+→ 400.
+
+---
+
+# 24. ESCALA
+
+10.999
+→ 400.
+
+Não arredondar silenciosamente.
+
+---
+
+# 25. ACCOUNT
+
+Conta deve:
+
+- existir;
+- pertencer ao CurrentUser;
+- estar elegível para novos lançamentos conforme ADR;
+- normalmente estar ativa.
+
+---
+
+# 26. ACCOUNT DE OUTRO OWNER
+
+User B tenta criar Income usando conta de A.
+
+→ 404.
+
+Não revelar existência.
+
+---
+
+# 27. ACCOUNT INEXISTENTE
+
+→ 404.
+
+---
+
+# 28. ACCOUNT INATIVA
+
+Siga exatamente política adotada na API de Expense/ADR.
+
+Preferência, se já adotada:
+
+409 Conflict.
+
+Não crie diferença arbitrária.
+
+---
+
+# 29. CATEGORY
+
+Receita deve utilizar Category compatível.
+
+---
+
+# 30. CATEGORY APPLICABILITY
+
+Aceitar:
+
+INCOME
+BOTH
+
+Rejeitar:
+
+EXPENSE-only.
+
+---
+
+# 31. CATEGORY DE OUTRO OWNER
+
+→ 404.
+
+---
+
+# 32. CATEGORY INEXISTENTE
+
+→ 404.
+
+---
+
+# 33. CATEGORY INATIVA
+
+Rejeitar conforme política já consolidada.
+
+Preferência:
+
+409 se esse é o padrão de Expense.
+
+---
+
+# 34. EXPENSE CATEGORY
+
+Categoria exclusivamente:
+
+EXPENSE
+
+não pode ser usada em Income.
+
+---
+
+# 35. BOTH CATEGORY
+
+Deve funcionar.
+
+---
+
+# 36. NOTES
+
+Mesmo contrato estrutural de Expense.
+
+Opcional conforme domínio.
+
+Multiline.
+
+Respeitar limite.
+
+---
+
+# 37. TAG
+
+NÃO implementar.
+
+---
+
+# 38. ATTACHMENT
+
+NÃO implementar.
+
+---
+
+# 39. FUTURE DATE
+
+Siga política do ADR/API de Expense.
+
+Não invente regra diferente.
+
+---
+
+# 40. CREATE RESPONSE
+
+201 Created.
+
+Quando padrão atual utilizar:
+
+Location: /api/incomes/{id}
+
+---
+
+# 41. RESPONSE DTO
+
+Preferencialmente consistente com Expense.
+
+Exemplo conceitual:
+
+{
+  "id": "...",
+  "description": "Salário",
+  "occurredAt": "...",
+  "account": {
+    "id": "...",
+    "name": "Conta corrente"
+  },
+  "amount": 5000.00,
+  "category": {
+    "id": "...",
+    "name": "Salário"
+  },
+  "notes": "...",
+  "status": "ACTIVE",
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+
+Adapte ao código real.
+
+---
+
+# 42. OWNER NO RESPONSE
+
+Não expor:
+
+ownerId;
+userId;
+email.
+
+---
+
+# 43. LIST
+
+GET /api/incomes
+
+Retorna exclusivamente:
+
+INCOME
+
+do CurrentUser.
+
+---
+
+# 44. TYPE ISOLATION
+
+Não retornar:
+
+EXPENSE;
+TRANSFER.
+
+---
+
+# 45. OWNER ISOLATION
+
+Não retornar Income de outro usuário.
+
+---
+
+# 46. PAGINAÇÃO
+
+Use exatamente a estratégia aprovada/implementada em Expense.
+
+Se Expense possui:
+
+page
+size
+
+Income deve seguir o mesmo contrato.
+
+---
+
+# 47. PAGE SIZE LIMIT
+
+Reutilize limite existente.
+
+---
+
+# 48. ORDER
+
+Use mesma convenção.
+
+Preferência:
+
+occurredAt DESC
+
+com desempate determinístico.
+
+---
+
+# 49. CANCELLED
+
+Use a mesma política de Expense.
+
+Se Expense usa:
+
+includeCancelled=false
+
+por padrão, Income deve fazer o mesmo.
+
+---
+
+# 50. PERIOD FILTER
+
+Se Expense suporta:
+
+from
+to
+
+Income deve manter consistência.
+
+---
+
+# 51. FILTER SEMANTICS
+
+Reutilize parser/validação compartilhável já existente.
+
+Não copie lógica temporal complexa se já existe helper adequado.
+
+---
+
+# 52. GET BY ID
+
+GET /api/incomes/{id}
+
+Busca por:
+
+id
++
+owner
++
+type = INCOME
+
+ou mecanismo equivalente.
+
+---
+
+# 53. OUTRO OWNER
+
+→ 404.
+
+---
+
+# 54. ID DE EXPENSE
+
+Mesmo owner, mas UUID de Expense:
+
+→ 404.
+
+---
+
+# 55. ID DE TRANSFER
+
+→ 404.
+
+---
+
+# 56. INEXISTENTE
+
+→ 404.
+
+---
+
+# 57. UUID INVÁLIDO
+
+→ 400 Problem Details.
+
+---
+
+# 58. UPDATE
+
+PUT /api/incomes/{id}
+
+Permite alterar somente campos aprovados:
+
+description;
+occurredAt;
+accountId;
+amount;
+categoryId;
+notes.
+
+Adapte ao contrato real.
+
+---
+
+# 59. UPDATE TYPE
+
+Nunca pode alterar:
+
+INCOME → EXPENSE
+
+ou:
+
+INCOME → TRANSFER.
+
+---
+
+# 60. UPDATE OWNER
+
+Nunca.
+
+---
+
+# 61. UPDATE ACCOUNT
+
+Nova conta deve:
+
+- pertencer ao owner;
+- existir;
+- estar elegível.
+
+---
+
+# 62. UPDATE CATEGORY
+
+Nova categoria:
+
+INCOME ou BOTH.
+
+---
+
+# 63. UPDATE AMOUNT
+
+Revalidar:
+
+> 0;
+escala <= 2.
+
+---
+
+# 64. SALDO
+
+Não atualizar nenhum campo de saldo.
+
+O ledger continua source of truth.
+
+---
+
+# 65. CANCELLED UPDATE
+
+Siga política do ADR e Expense.
+
+Se CANCELLED é imutável:
+
+→ 409.
+
+---
+
+# 66. OPTIMISTIC LOCK
+
+Se ledger utiliza @Version e API de Expense possui tratamento:
+
+reutilize estratégia.
+
+---
+
+# 67. CANCEL
+
+PATCH /api/incomes/{id}/cancel
+
+---
+
+# 68. CANCELAMENTO LÓGICO
+
+Registro permanece no ledger.
+
+---
+
+# 69. EFEITO FINANCEIRO
+
+Quando saldo derivado for implementado:
+
+Income ACTIVE:
++ amount
+
+Income CANCELLED:
+0
+
+Não implemente saldo nesta TASK.
+
+---
+
+# 70. CANCEL REPEAT
+
+Use exatamente política de Expense/ADR.
+
+---
+
+# 71. NÃO IMPLEMENTAR REACTIVATE
+
+Salvo se ADR/API já aprovar explicitamente.
+
+---
+
+# 72. NÃO IMPLEMENTAR DELETE
+
+Nenhum DELETE.
+
+---
+
+# 73. APPLICATION SERVICE
+
+Implemente casos de uso explícitos conforme arquitetura atual.
+
+Exemplo:
+
+CreateIncome
+ListIncomes
+GetIncome
+UpdateIncome
+CancelIncome
+
+ou service equivalente.
+
+---
+
+# 74. REPOSITORY
+
+Não crie repository paralelo desnecessário se Expense e Income usam o
+mesmo FinancialTransactionRepository.
+
+---
+
+# 75. LOOKUP DA TRANSAÇÃO
+
+Deve ser ownership-aware e type-aware.
+
+---
+
+# 76. ACCOUNT LOOKUP
+
+Preferir:
+
+id + owner.
+
+---
+
+# 77. CATEGORY LOOKUP
+
+Preferir:
+
+id + owner.
+
+---
+
+# 78. BOLA / IDOR
+
+Backend deve proteger independentemente do frontend.
+
+---
+
+# 79. MASS ASSIGNMENT
+
+Nunca bind request diretamente em entity.
+
+---
+
+# 80. OVERPOSTING
+
+Teste campos maliciosos:
+
+ownerId
+userId
+type
+status
+sourceAccountId
+destinationAccountId
+createdAt
+updatedAt
+cancelledAt
+
+Não podem alterar campos protegidos.
+
+---
+
+# 81. TYPE SPOOFING
+
+Especialmente teste:
+
+POST /api/incomes
+
+com tentativa de:
+
+"type": "EXPENSE"
+
+ou:
+
+"type": "TRANSFER"
+
+Nunca criar outro tipo.
+
+---
+
+# 82. ACCOUNT SEMANTICS TEST
+
+Após criar Income, confirme no banco que associação está no lado correto
+do ledger.
+
+Se modelo usa:
+
+destinationAccount
+
+confirme:
+
+destination = account selecionada
+source = null.
+
+---
+
+# 83. PROBLEM DETAILS
+
+Reutilize infraestrutura existente.
+
+---
+
+# 84. REQUEST ID
+
+Preserve.
+
+---
+
+# 85. HTTP 400
+
+Para:
+
+- payload inválido;
+- UUID inválido;
+- campos obrigatórios;
+- amount inválido;
+- escala;
+- description;
+- occurredAt;
+- notes.
+
+---
+
+# 86. HTTP 401
+
+Sem autenticação.
+
+---
+
+# 87. HTTP 404
+
+Para:
+
+- Income inexistente;
+- Income de outro owner;
+- ID de outro TransactionType;
+- account inexistente/outro owner;
+- category inexistente/outro owner.
+
+---
+
+# 88. HTTP 409
+
+Para conflitos de negócio conforme padrão existente:
+
+- account própria inativa;
+- category própria inativa;
+- category incompatível;
+- edição de cancelled;
+- optimistic locking.
+
+---
+
+# 89. OPENAPI
+
+Documente API completamente.
+
+---
+
+# 90. OPENAPI CONSISTENCY
+
+Compare:
+
+/expenses
+/incomes
+
+Devem parecer parte da mesma API.
+
+---
+
+# 91. OPENAPI DESCRIPTION
+
+Explique que:
+
+Income representa entrada de dinheiro em uma AssetAccount.
+
+---
+
+# 92. OPENAPI AMOUNT
+
+BRL;
+positivo;
+máximo duas casas.
+
+---
+
+# 93. OPENAPI CATEGORY
+
+INCOME ou BOTH.
+
+---
+
+# 94. OPENAPI CANCEL
+
+Cancelada permanece no histórico e deixa de produzir efeito financeiro.
+
+---
+
+# 95. TEST — CREATE VALID
+
+POST válido:
+
+201.
+
+---
+
+# 96. TEST — TYPE
+
+Banco:
+
+type = INCOME.
+
+---
+
+# 97. TEST — OWNER
+
+owner = CurrentUser.
+
+---
+
+# 98. TEST — ACCOUNT
+
+Associação correta.
+
+---
+
+# 99. TEST — CATEGORY
+
+Categoria correta.
+
+---
+
+# 100. TEST — AMOUNT
+
+Precisão preservada.
+
+---
+
+# 101. TEST — WITHOUT JWT
+
+401.
+
+---
+
+# 102. TEST — ACCOUNT IDOR
+
+B usa conta de A:
+
+404.
+
+Nenhuma Income criada.
+
+---
+
+# 103. TEST — CATEGORY IDOR
+
+404.
+
+---
+
+# 104. TEST — ACCOUNT INACTIVE
+
+Rejeitada conforme contrato.
+
+---
+
+# 105. TEST — CATEGORY INACTIVE
+
+Rejeitada.
+
+---
+
+# 106. TEST — WRONG CATEGORY
+
+EXPENSE-only:
+
+rejeitada.
+
+---
+
+# 107. TEST — BOTH
+
+aceita.
+
+---
+
+# 108. TEST — ZERO
+
+400.
+
+---
+
+# 109. TEST — NEGATIVE
+
+400.
+
+---
+
+# 110. TEST — SCALE
+
+10.999:
+
+400.
+
+---
+
+# 111. TEST — DECIMAL PRECISION
+
+Persistir exatamente:
+
+0.10
+0.20
+100.10
+1234.56.
+
+---
+
+# 112. LIST ISOLATION
+
+A:
+
+Income A1
+Income A2
+
+B:
+
+Income B1
+
+GET como A:
+
+somente A1/A2.
+
+---
+
+# 113. LIST TYPE
+
+Se usuário possui:
+
+Expense;
+Income;
+Transfer;
+
+GET /incomes:
+
+somente Income.
+
+---
+
+# 114. LIST CANCELLED
+
+Teste política.
+
+---
+
+# 115. LIST ORDER
+
+Teste.
+
+---
+
+# 116. LIST PAGINATION
+
+Teste se existente.
+
+---
+
+# 117. LIST PERIOD
+
+Teste se existente.
+
+---
+
+# 118. GET OWN
+
+200.
+
+---
+
+# 119. GET OTHER OWNER
+
+404.
+
+---
+
+# 120. GET EXPENSE AS INCOME
+
+404.
+
+---
+
+# 121. GET TRANSFER AS INCOME
+
+404.
+
+---
+
+# 122. UPDATE OWN
+
+200.
+
+---
+
+# 123. UPDATE ACCOUNT
+
+Conta A
+→ Conta B.
+
+Persistência correta.
+
+---
+
+# 124. UPDATE ACCOUNT IDOR
+
+Conta de outro usuário:
+
+404.
+
+Estado original preservado.
+
+---
+
+# 125. UPDATE CATEGORY
+
+INCOME/BOTH válida:
+
+PASS.
+
+---
+
+# 126. UPDATE WRONG CATEGORY
+
+EXPENSE-only:
+
+rejeitada.
+
+Estado original preservado.
+
+---
+
+# 127. UPDATE AMOUNT
+
+100
+→
+150.
+
+Persistência correta.
+
+---
+
+# 128. UPDATE OTHER OWNER
+
+404.
+
+---
+
+# 129. UPDATE CANCELLED
+
+Teste política.
+
+---
+
+# 130. CANCEL OWN
+
+ACTIVE
+→
+CANCELLED.
+
+---
+
+# 131. CANCEL OTHER OWNER
+
+404.
+
+---
+
+# 132. CANCEL EXPENSE ID
+
+404.
+
+---
+
+# 133. CANCEL TRANSFER ID
+
+404.
+
+---
+
+# 134. CANCEL REPEAT
+
+Teste política.
+
+---
+
+# 135. OVERPOST OWNER
+
+Não altera ownership.
+
+---
+
+# 136. OVERPOST STATUS
+
+Não cria diretamente CANCELLED.
+
+---
+
+# 137. OVERPOST TYPE
+
+Não cria Expense/Transfer via Income API.
+
+---
+
+# 138. TRANSACTIONALITY
+
+Create/update/cancel com boundaries transacionais corretas.
+
+---
+
+# 139. ROLLBACK
+
+Falha em account/category:
+
+nenhuma alteração parcial.
+
+---
+
+# 140. NO BALANCE MUTATION
+
+Depois de criar Income:
+
+AssetAccount.initialBalance permanece exatamente igual.
+
+---
+
+# 141. CURRENT BALANCE
+
+Continua NÃO persistido.
+
+---
+
+# 142. DASHBOARD
+
+NÃO atualizar.
+
+Mesmo que Income já exista.
+
+---
+
+# 143. FRONTEND
+
+NÃO implementar tela de Receitas.
+
+---
+
+# 144. FRONTEND REGRESSION
+
+A interface de Expense deve continuar funcionando.
+
+---
+
+# 145. MIGRATION
+
+Não esperamos migration.
+
+Se bug estrutural real exigir:
+
+crie migration corretiva nova;
+não altere migration aplicada;
+documente.
+
+---
+
+# 146. TESTCONTAINERS
+
+Testes críticos com MySQL real.
+
+---
+
+# 147. REGRESSÃO LEDGER
+
+PASS.
+
+---
+
+# 148. REGRESSÃO EXPENSE API
+
+Todos os testes:
+
+PASS.
+
+---
+
+# 149. REGRESSÃO EXPENSE UI
+
+Frontend tests/build relevantes:
+
+PASS.
+
+---
+
+# 150. REGRESSÃO ASSET ACCOUNT
+
+PASS.
+
+---
+
+# 151. REGRESSÃO CATEGORY
+
+PASS.
+
+---
+
+# 152. REGRESSÃO AUTH
+
+PASS.
+
+---
+
+# 153. REVISÃO DE DUPLICAÇÃO
+
+Agora existem APIs para:
+
+Expense
+Income.
+
+Compare as duas.
+
+Classifique duplicações:
+
+A — regras específicas;
+B — infraestrutura realmente compartilhável;
+C — duplicação acidental.
+
+---
+
+# 154. EXTRAÇÃO PERMITIDA
+
+Corrija C.
+
+Pode extrair B apenas quando:
+
+- responsabilidade é estável;
+- nome é claro;
+- não esconde regra financeira;
+- reduz duplicação real;
+- não exige generics complexos/reflection.
+
+---
+
+# 155. EXEMPLO DE BOA REUTILIZAÇÃO
+
+Possíveis candidatos:
+
+- Money validation;
+- transaction period parsing;
+- transaction response mapper parcial;
+- pagination support;
+- lookup helper bem definido.
+
+Somente se realmente necessário.
+
+---
+
+# 156. EXEMPLO DE MÁ REUTILIZAÇÃO
+
+Evite:
+
+FinancialCrud<TRequest,TResponse,TType>
+
+com branches por TransactionType.
+
+---
+
+# 157. MOTIVO
+
+Ainda falta Transfer, que possui:
+
+duas contas
++
+invariantes diferentes.
+
+Não force Transfer futuramente dentro de uma abstração criada apenas a
+partir de Expense/Income.
+
+---
+
+# 158. BUILD
+
+Execute backend completo.
+
+---
+
+# 159. TESTS
+
+Execute suíte completa.
+
+---
+
+# 160. OPENAPI VALIDATION
+
+Confirme que documentação inicia sem erros.
+
+---
+
+# 161. DEFINITION OF DONE
+
+TASK-3.4 estará concluída quando:
+
+- POST /incomes funcionar;
+- GET /incomes funcionar;
+- GET /incomes/{id} funcionar;
+- PUT /incomes/{id} funcionar;
+- cancelamento funcionar;
+- DELETE não existir;
+- owner vier exclusivamente de CurrentUser;
+- type forçado como INCOME;
+- conta representar destino financeiro;
+- conta de outro owner retornar 404;
+- categoria de outro owner retornar 404;
+- conta inativa for rejeitada conforme política;
+- categoria inativa for rejeitada;
+- INCOME category funcionar;
+- BOTH funcionar;
+- EXPENSE-only for rejeitada;
+- amount > 0;
+- zero rejeitado;
+- negativo rejeitado;
+- >2 casas rejeitado;
+- BigDecimal preservado;
+- occurredAt funcionar;
+- notes funcionar;
+- IDOR/BOLA protegido;
+- Expense/Transfer ID em /incomes retornar 404;
+- cancelamento lógico funcionar;
+- currentBalance não existir persistido;
+- initialBalance não sofrer mutação;
+- Problem Details estiver consistente;
+- Request ID funcionar;
+- OpenAPI atualizado;
+- MySQL/Testcontainers passar;
+- Expense não sofrer regressão;
+- Auth não sofrer regressão;
+- frontend de Income NÃO existir ainda;
+- Dashboard permanecer sem integração financeira;
+- build passar.
+
+---
+
+# 162. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-3.4 — API REST DE RECEITAS
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## 1. Arquitetura
+
+Explique fluxo.
+
+## 2. Endpoints
+
+Liste.
+
+## 3. CreateIncomeRequest
+
+Liste campos reais.
+
+## 4. UpdateIncomeRequest
+
+Liste campos reais.
+
+## 5. IncomeResponse
+
+Liste campos reais.
+
+## 6. Account semantics
+
+Confirme:
+
+Income credita a conta.
+
+Explique representação no ledger.
+
+## 7. Category
+
+Confirme:
+
+INCOME
++
+BOTH.
+
+## 8. Money
+
+Confirme:
+
+BigDecimal;
+> 0;
+2 casas;
+sem rounding silencioso.
+
+## 9. CurrentUser
+
+Explique ownership.
+
+## 10. Listagem
+
+Informe:
+
+- paginação;
+- ordenação;
+- cancelled;
+- período;
+- demais filtros reais.
+
+## 11. Cancelamento
+
+Explique.
+
+## 12. Edição
+
+Explique.
+
+## 13. IDOR/BOLA
+
+### Income
+PASS / FAIL
+
+### Account
+PASS / FAIL
+
+### Category
+PASS / FAIL
+
+### Other TransactionType
+PASS / FAIL
+
+## 14. Overposting
+
+### ownerId
+PASS / FAIL
+
+### type
+PASS / FAIL
+
+### status
+PASS / FAIL
+
+## 15. HTTP
+
+### 201
+PASS / FAIL
+
+### 400
+PASS / FAIL
+
+### 401
+PASS / FAIL
+
+### 404
+PASS / FAIL
+
+### 409
+PASS / FAIL
+
+## 16. Problem Details
+
+PASS / FAIL
+
+## 17. Request ID
+
+PASS / FAIL
+
+## 18. OpenAPI
+
+PASS / FAIL
+
+## 19. MySQL/Testcontainers
+
+PASS / FAIL
+
+## 20. Transactionality
+
+PASS / FAIL
+
+## 21. Saldo
+
+Confirme:
+
+initialBalance NÃO alterado.
+
+currentBalance NÃO persistido.
+
+## 22. Expense regression
+
+PASS / FAIL
+
+## 23. Ledger regression
+
+PASS / FAIL
+
+## 24. AssetAccount regression
+
+PASS / FAIL
+
+## 25. Category regression
+
+PASS / FAIL
+
+## 26. Authentication regression
+
+PASS / FAIL
+
+## 27. Frontend
+
+Esperado:
+
+NENHUMA TELA DE INCOME IMPLEMENTADA
+
+## 28. Dashboard
+
+Esperado:
+
+NÃO ALTERADO PARA LEDGER
+
+## 29. Migration
+
+Esperado:
+
+NENHUMA
+
+Se criada, explique.
+
+## 30. Reutilização Expense × Income
+
+### A — específica
+
+Liste.
+
+### B — compartilhada
+
+Liste.
+
+### C — duplicação corrigida
+
+Liste.
+
+## 31. Arquivos
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 32. Bugs encontrados
+
+Liste:
+
+problema;
+causa;
+correção;
+teste.
+
+## 33. Divergências do ADR
+
+Esperado:
+
+NENHUMA
+
+## 34. Pendências
+
+### Bloqueantes
+
+### Não bloqueantes
+
+## 35. Próxima tarefa
+
+Se TASK-3.4 estiver aprovada, informe prontidão para:
+
+# TASK-3.5 — Interface de Receitas
+
+NÃO implemente TASK-3.5 nesta execução.

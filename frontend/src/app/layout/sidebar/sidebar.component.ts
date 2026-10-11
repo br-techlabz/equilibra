@@ -86,6 +86,11 @@ export class SidebarComponent implements OnInit {
       route: '/accounts',
     },
     {
+      label: 'Cartões de Crédito',
+      icon: 'credit_card',
+      route: '/credit-cards',
+    },
+    {
       label: 'Categorias',
       icon: 'category',
       route: '/categories',

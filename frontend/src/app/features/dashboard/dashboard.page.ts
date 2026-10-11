@@ -152,6 +152,19 @@ export class DashboardPageComponent implements OnInit {
     return formatCentsAsBRL(sumMoneyInCents([value]));
   }
 
+  isCreditCardTransaction(transaction: DashboardData['recentTransactions'][number]): boolean {
+    return transaction.paymentMethod === 'CREDIT_CARD'
+      || transaction.type === 'STATEMENT_PAYMENT'
+      || transaction.description.toLowerCase().includes('pagamento de fatura');
+  }
+
+  transactionIcon(transaction: DashboardData['recentTransactions'][number]): string {
+    if (this.isCreditCardTransaction(transaction)) return 'credit_card';
+    if (transaction.type === 'INCOME') return 'trending_up';
+    if (transaction.type === 'EXPENSE') return 'trending_down';
+    return 'swap_horiz';
+  }
+
   transactionAmount(amount: number | string | null | undefined): string {
     const value = Number(amount);
     return Number.isFinite(value) ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value) : 'R$ 0,00';

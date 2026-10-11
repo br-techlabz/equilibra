@@ -1,0 +1,2952 @@
+# TASK-4.8 — Gate de Qualidade, Segurança e Regressão da Sprint 4
+
+Estamos no encerramento da:
+
+# Sprint 4 — Enriquecimento das Transações
+
+Tasks concluídas:
+
+- TASK-4.0 — Arquitetura de Tags e Anexos
+- TASK-4.1 — Domínio, Persistência e API de Tags
+- TASK-4.2 — Interface de Tags
+- TASK-4.3 — Associação de Tags às Transações
+- TASK-4.4 — Infraestrutura Segura de Anexos
+- TASK-4.5 — API e Ciclo de Vida de Anexos
+- TASK-4.6 — Interface de Anexos em Despesas, Receitas e Transferências
+- TASK-4.7 — Integração de Tags e Anexos no Histórico Unificado
+
+Agora execute:
+
+# TASK-4.8 — GATE DE QUALIDADE, SEGURANÇA E REGRESSÃO DA SPRINT 4
+
+Objetivo:
+
+Executar uma auditoria final e agressiva da Sprint 4 antes de considerá-la
+aprovada.
+
+Esta TASK NÃO é uma task de novas funcionalidades.
+
+O objetivo é:
+
+- revisar;
+- testar;
+- tentar quebrar;
+- identificar regressões;
+- corrigir bugs comprovados;
+- eliminar vulnerabilidades;
+- verificar consistência arquitetural;
+- validar isolamento multiusuário;
+- validar segurança de arquivos;
+- validar Tags;
+- validar Attachments;
+- validar Histórico;
+- validar ledger;
+- validar saldos;
+- validar Dashboard;
+- validar frontend;
+- validar migrations;
+- validar performance;
+- validar documentação.
+
+Ao final, emitir uma decisão objetiva:
+
+SPRINT 4 APROVADA
+
+ou
+
+SPRINT 4 REPROVADA
+
+Não aprovar com bug CRITICAL ou HIGH aberto.
+
+---
+
+# 1. REGRA PRINCIPAL
+
+NÃO implementar funcionalidades novas.
+
+Permitido:
+
+- corrigir bugs;
+- corrigir vulnerabilidades;
+- corrigir inconsistências;
+- corrigir testes;
+- corrigir documentação incorreta;
+- corrigir índices necessários;
+- corrigir regressões;
+- pequenos refactors diretamente necessários para uma correção.
+
+Proibido:
+
+- novas features;
+- preview;
+- OCR;
+- S3;
+- MinIO;
+- novos relatórios;
+- novos módulos;
+- novas abstrações especulativas;
+- redesign visual;
+- mudanças financeiras sem bug comprovado.
+
+---
+
+# 2. FONTE DE VERDADE
+
+Antes de testar, leia:
+
+- CLAUDE.md;
+- ADR do ledger;
+- ADR da TASK-4.0;
+- relatórios das TASKs 4.1 a 4.7;
+- migrations;
+- OpenAPI;
+- FinancialTransaction;
+- AccountMovement;
+- Expense;
+- Income;
+- Transfer;
+- Tag;
+- TransactionAttachment;
+- History;
+- Dashboard;
+- Current Balance;
+- Net Worth;
+- Spring Security;
+- CurrentUser;
+- AttachmentStorage;
+- AttachmentPolicy;
+- Angular Tag UI;
+- Angular Attachment UI;
+- History UI;
+- testes backend;
+- testes frontend;
+- E2E, se existente.
+
+Código real + ADRs são a fonte de verdade.
+
+---
+
+# 3. GATE REPORT INICIAL
+
+Antes de corrigir qualquer coisa, produza:
+
+# TASK-4.8 — INITIAL AUDIT
+
+## Arquitetura
+Status:
+
+## Ledger
+Status:
+
+## Tags
+Status:
+
+## Attachments
+Status:
+
+## History
+Status:
+
+## Security
+Status:
+
+## Multi-user
+Status:
+
+## Storage
+Status:
+
+## API
+Status:
+
+## Frontend
+Status:
+
+## Database
+Status:
+
+## Performance
+Status:
+
+## Tests
+Status:
+
+## Suspected Issues
+
+Liste cada possível problema com:
+
+ID:
+Severidade:
+Área:
+Descrição:
+Evidência:
+Teste necessário:
+
+Depois inicie a auditoria.
+
+---
+
+# 4. CLASSIFICAÇÃO DE SEVERIDADE
+
+Use:
+
+CRITICAL
+HIGH
+MEDIUM
+LOW
+
+CRITICAL:
+
+- cross-user data access;
+- arquivo privado acessível publicamente;
+- corrupção financeira;
+- ledger inconsistente;
+- transferência aplicada duas vezes;
+- path traversal explorável;
+- upload executável perigoso;
+- perda grave de dados.
+
+HIGH:
+
+- autorização incorreta;
+- saldo incorreto;
+- net worth incorreto;
+- Dashboard financeiro incorreto;
+- paginação que omite/duplica transações;
+- attachment ownership quebrado;
+- Tag ownership quebrado;
+- storage inconsistente de forma recorrente.
+
+MEDIUM:
+
+- UX funcional quebrada;
+- tratamento incorreto de erro;
+- race condition limitada;
+- problema de acessibilidade relevante;
+- query excessiva.
+
+LOW:
+
+- inconsistência visual;
+- documentação;
+- naming;
+- pequenos problemas não funcionais.
+
+---
+
+# 5. ARCHITECTURE GATE
+
+Confirmar arquitetura:
+
+Controller
+→ Application
+→ Domain
+→ Repository/Infrastructure.
+
+Não exigir arquitetura perfeita.
+
+Procurar regressões claras.
+
+---
+
+# 6. FINANCIAL SOURCE OF TRUTH
+
+Confirmar:
+
+ledger continua sendo fonte de verdade.
+
+---
+
+# 7. CURRENT BALANCE
+
+Confirmar:
+
+currentBalance NÃO virou coluna mutável persistida.
+
+---
+
+# 8. FORMULA
+
+Validar conceitualmente:
+
+currentBalance =
+initialBalance
++ active incomes
+- active expenses
++ active incoming transfers
+- active outgoing transfers.
+
+---
+
+# 9. CANCELLED
+
+Cancelled transaction:
+
+efeito financeiro = 0.
+
+---
+
+# 10. TRANSFER
+
+Transfer:
+
+source -= amount
+destination += amount.
+
+Net Worth delta:
+
+0.
+
+---
+
+# 11. TAG FINANCIAL EFFECT
+
+Adicionar Tag:
+
+delta balance = 0.
+
+Remover Tag:
+
+delta balance = 0.
+
+Desativar Tag:
+
+delta balance = 0.
+
+Renomear Tag:
+
+delta balance = 0.
+
+---
+
+# 12. ATTACHMENT FINANCIAL EFFECT
+
+Upload:
+
+delta balance = 0.
+
+Download:
+
+delta balance = 0.
+
+Delete:
+
+delta balance = 0.
+
+---
+
+# 13. GOLDEN FINANCIAL SCENARIO
+
+Criar:
+
+User A.
+
+Account A:
+initialBalance = 1000.00
+
+Account B:
+initialBalance = 500.00
+
+Income:
++700.00
+Account A
+
+Expense:
+200.00
+Account A
+
+Transfer:
+300.00
+A → B
+
+Esperado:
+
+Account A:
+1200.00
+
+Account B:
+800.00
+
+Net Worth:
+2000.00
+
+Dashboard:
+
+Entradas:
+700.00
+
+Saídas:
+200.00
+
+Saldo:
+500.00
+
+History:
+3 logical transactions.
+
+---
+
+# 14. ENRICH GOLDEN SCENARIO
+
+Adicionar ao Income:
+
+Tags:
+Trabalho
+Reembolso
+
+Attachment:
+renda.pdf
+
+Adicionar ao Expense:
+
+Tags:
+Casa
+Mensal
+
+Attachments:
+nota.pdf
+recibo.png
+
+Adicionar à Transfer:
+
+Tag:
+Reserva
+
+Attachment:
+transferencia.pdf
+
+Recalcular tudo.
+
+Esperado:
+
+A = 1200.00
+B = 800.00
+Net Worth = 2000.00
+Entradas = 700.00
+Saídas = 200.00
+Saldo = 500.00
+History = 3.
+
+---
+
+# 15. TAG MUTATION GOLDEN
+
+Renomear:
+
+Casa → Moradia.
+
+Esperado:
+
+nenhum valor financeiro muda.
+
+---
+
+# 16. TAG DEACTIVATION GOLDEN
+
+Desativar:
+
+Mensal.
+
+Esperado:
+
+Expense mantém Tag histórica.
+
+Nenhum valor financeiro muda.
+
+---
+
+# 17. ATTACHMENT DELETE GOLDEN
+
+Remover:
+
+recibo.png.
+
+Esperado:
+
+Expense attachmentCount:
+1.
+
+Nenhum valor financeiro muda.
+
+---
+
+# 18. CANCEL EXPENSE GOLDEN
+
+Cancelar Expense de 200.
+
+Esperado:
+
+Account A:
+1400.00
+
+Account B:
+800.00
+
+Net Worth:
+2200.00
+
+Entradas:
+700.00
+
+Saídas:
+0.00
+
+Saldo:
+700.00
+
+History:
+continua contendo a Expense CANCELLED conforme filtro/política.
+
+---
+
+# 19. CANCEL TRANSFER GOLDEN
+
+A partir do cenário original ativo:
+
+cancelar Transfer 300.
+
+Esperado:
+
+Account A:
+1500.00
+
+Account B:
+500.00
+
+Net Worth:
+2000.00.
+
+---
+
+# 20. CANCEL INCOME GOLDEN
+
+A partir do cenário original:
+
+cancelar Income 700.
+
+Esperado:
+
+A:
+500.00
+
+B:
+800.00
+
+Net Worth:
+1300.00.
+
+---
+
+# 21. MONEY PRECISION
+
+Testar:
+
+0.10
++
+0.20
+
+Esperado:
+
+0.30.
+
+Nunca:
+
+0.30000000000000004.
+
+---
+
+# 22. TWO DECIMALS
+
+Testar:
+
+1.999
+
+Esperado:
+
+rejeição.
+
+Não rounding silencioso.
+
+---
+
+# 23. NEGATIVE BALANCE
+
+Se permitido pelo ADR:
+
+testar conta ficando negativa.
+
+Saldo deve ser exato.
+
+---
+
+# 24. ZERO TRANSACTION
+
+Expense/Income/Transfer amount zero:
+
+deve seguir validação aprovada.
+
+Esperado normalmente:
+
+rejeitado.
+
+---
+
+# 25. TRANSFER SAME ACCOUNT
+
+A → A:
+
+rejeitado.
+
+---
+
+# 26. MULTIUSER GATE
+
+Criar:
+
+User A
+User B.
+
+---
+
+# 27. ACCOUNTS
+
+A não acessa conta de B.
+
+B não acessa conta de A.
+
+---
+
+# 28. CATEGORIES
+
+Mesmo.
+
+---
+
+# 29. TAGS
+
+Mesmo.
+
+---
+
+# 30. EXPENSES
+
+Mesmo.
+
+---
+
+# 31. INCOMES
+
+Mesmo.
+
+---
+
+# 32. TRANSFERS
+
+Mesmo.
+
+---
+
+# 33. HISTORY
+
+A nunca vê transaction de B.
+
+---
+
+# 34. DASHBOARD
+
+A nunca recebe valor financeiro de B.
+
+---
+
+# 35. NET WORTH
+
+A nunca inclui contas de B.
+
+---
+
+# 36. TAG ASSOCIATION IDOR
+
+A cria transaction.
+
+A tenta associar Tag de B.
+
+Esperado:
+
+bloqueado sem revelar ownership.
+
+---
+
+# 37. REVERSE TAG IDOR
+
+B tenta Tag de A.
+
+Mesmo.
+
+---
+
+# 38. ATTACHMENT UPLOAD IDOR
+
+A tenta upload em transaction de B.
+
+Bloqueado.
+
+---
+
+# 39. ATTACHMENT LIST IDOR
+
+A tenta listar attachments de transaction de B.
+
+Bloqueado.
+
+---
+
+# 40. ATTACHMENT DOWNLOAD IDOR
+
+A conhece attachmentId de B.
+
+Download:
+
+bloqueado.
+
+---
+
+# 41. ATTACHMENT DELETE IDOR
+
+A tenta remover attachment de B.
+
+Bloqueado.
+
+---
+
+# 42. PRIVATE RESOURCE POLICY
+
+Esperado:
+
+404
+
+para recurso privado de outro owner, conforme convenção consolidada.
+
+---
+
+# 43. INFORMATION LEAK
+
+Comparar comportamento entre:
+
+UUID inexistente
+UUID pertencente a outro owner.
+
+Não revelar informação sensível.
+
+---
+
+# 44. MASS ASSIGNMENT
+
+Tentar enviar:
+
+ownerId;
+userId;
+email;
+status;
+type;
+createdAt;
+updatedAt;
+storageKey;
+normalizedName.
+
+Servidor não deve aceitar controle indevido.
+
+---
+
+# 45. AUTH GATE
+
+Sem JWT:
+
+private endpoints → 401.
+
+---
+
+# 46. INVALID JWT
+
+401.
+
+---
+
+# 47. EXPIRED JWT
+
+401.
+
+---
+
+# 48. FRONTEND 401
+
+Session limpa e redirect/login conforme política atual.
+
+---
+
+# 49. FRONTEND 403
+
+NÃO limpar sessão.
+
+---
+
+# 50. AUTHORIZATION HEADER
+
+Somente APIs autorizadas recebem JWT.
+
+External URLs nunca recebem Authorization.
+
+---
+
+# 51. ATTACHMENT SECURITY GATE
+
+Auditar upload agressivamente.
+
+---
+
+# 52. PATH TRAVERSAL FILENAME
+
+Testar:
+
+../../etc/passwd
+
+..\..\windows\system.ini
+
+../../../secret.pdf
+
+Esperado:
+
+nenhum escape de storage root.
+
+---
+
+# 53. PATH TRAVERSAL STORAGE KEY
+
+Se possível atingir camada interna:
+
+../
+../../
+
+Storage deve defender.
+
+---
+
+# 54. ABSOLUTE PATH
+
+Filename:
+
+/etc/passwd
+
+C:\Windows\system.ini
+
+não determina destino físico.
+
+---
+
+# 55. CRLF
+
+Filename contendo:
+
+\r
+\n
+
+não injeta headers.
+
+---
+
+# 56. NUL
+
+Filename com NUL:
+
+rejeitado.
+
+---
+
+# 57. LONG FILENAME
+
+Acima do limite:
+
+rejeitado de forma controlada.
+
+---
+
+# 58. UNICODE FILENAME
+
+Exemplo legítimo:
+
+comprovante-água-outubro.pdf
+
+deve funcionar.
+
+---
+
+# 59. MIME SPOOF — PDF
+
+Arquivo arbitrário renomeado:
+
+documento.pdf
+
+Content-Type:
+application/pdf
+
+mas sem assinatura PDF.
+
+Esperado:
+
+rejeitado.
+
+---
+
+# 60. MIME SPOOF — PNG
+
+Fake PNG:
+
+rejeitado.
+
+---
+
+# 61. MIME SPOOF — JPEG
+
+Fake JPEG:
+
+rejeitado.
+
+---
+
+# 62. MIME MISMATCH
+
+PNG real declarado como PDF:
+
+seguir policy aprovada.
+
+Preferência segura:
+
+rejeitar.
+
+---
+
+# 63. HTML
+
+Upload HTML:
+
+rejeitado.
+
+---
+
+# 64. SVG
+
+Se não permitido:
+
+rejeitado.
+
+---
+
+# 65. JAVASCRIPT
+
+Rejeitado.
+
+---
+
+# 66. EXECUTABLE
+
+Rejeitado.
+
+---
+
+# 67. EMPTY FILE
+
+Rejeitado.
+
+---
+
+# 68. MAX SIZE
+
+Arquivo exatamente no limite:
+
+testar.
+
+---
+
+# 69. LIMIT + 1
+
+Rejeitado.
+
+---
+
+# 70. MAX ATTACHMENTS
+
+Até limite:
+
+PASS.
+
+Limite + 1:
+
+rejeitado.
+
+---
+
+# 71. CONCURRENT ATTACHMENTS
+
+Tentar uploads concorrentes próximos ao limite.
+
+Não ultrapassar política por race simples.
+
+---
+
+# 72. SAME ORIGINAL NAME
+
+Dois:
+
+recibo.pdf
+
+devem coexistir se política permite.
+
+Storage keys diferentes.
+
+---
+
+# 73. STORAGE KEY
+
+Nunca controlado pelo cliente.
+
+---
+
+# 74. STORAGE KEY LEAK
+
+Não deve aparecer em:
+
+DTO;
+OpenAPI público;
+frontend;
+URL;
+logs comuns.
+
+---
+
+# 75. ABSOLUTE PATH LEAK
+
+Não deve aparecer em:
+
+response;
+Problem Details;
+frontend;
+OpenAPI;
+logs normais.
+
+---
+
+# 76. PUBLIC STORAGE
+
+Tentar acessar storage sem API autenticada.
+
+Esperado:
+
+impossível.
+
+---
+
+# 77. STATIC RESOURCES
+
+Auditar:
+
+Spring static mappings;
+Nginx;
+Docker;
+frontend public assets.
+
+Storage root não deve estar público.
+
+---
+
+# 78. JWT QUERY STRING
+
+Buscar código por:
+
+?token=
+access_token=
+jwt=
+
+em downloads.
+
+Esperado:
+
+nenhum.
+
+---
+
+# 79. DOWNLOAD HEADERS
+
+Auditar:
+
+Content-Type;
+Content-Disposition;
+X-Content-Type-Options;
+Cache-Control.
+
+---
+
+# 80. NOSNIFF
+
+Esperado:
+
+nosniff.
+
+---
+
+# 81. PRIVATE CACHE
+
+Esperado conforme ADR:
+
+private/no-store
+
+ou política segura equivalente.
+
+---
+
+# 82. DOWNLOAD STREAMING
+
+Backend não deve carregar arquivo inteiro desnecessariamente.
+
+---
+
+# 83. STORAGE FAILURE
+
+Simular store failure.
+
+Metadata não pode apontar para arquivo inexistente.
+
+---
+
+# 84. DB FAILURE AFTER STORAGE
+
+Simular.
+
+Arquivo deve ser compensado conforme estratégia.
+
+---
+
+# 85. COMPENSATION FAILURE
+
+Deve ser logado/controlado.
+
+Não mascarar silenciosamente.
+
+---
+
+# 86. MISSING FILE
+
+Metadata existe, bytes ausentes.
+
+Download:
+
+erro seguro.
+
+Não expor path.
+
+---
+
+# 87. DELETE FAILURE
+
+Testar estratégia DB/storage aprovada.
+
+---
+
+# 88. ORPHAN REVIEW
+
+Procurar possibilidade de arquivos órfãos.
+
+Classificar risco.
+
+---
+
+# 89. STORAGE ROOT
+
+Configurável.
+
+---
+
+# 90. CONTAINER
+
+Se Docker:
+
+verificar persistência/volume conforme arquitetura.
+
+---
+
+# 91. TAG GATE
+
+Testar normalização.
+
+---
+
+# 92. TAG NAME
+
+Trim.
+
+---
+
+# 93. CASE INSENSITIVE
+
+Se política:
+
+Casa
+casa
+
+não podem coexistir ativas para mesmo owner.
+
+---
+
+# 94. DIFFERENT USERS
+
+User A:
+Casa
+
+User B:
+Casa
+
+permitido.
+
+---
+
+# 95. INACTIVE REUSE
+
+Seguir regra implementada.
+
+---
+
+# 96. REACTIVATION CONFLICT
+
+Testar.
+
+---
+
+# 97. TAG ACTIVE ASSOCIATION
+
+Permitida.
+
+---
+
+# 98. TAG INACTIVE NEW ASSOCIATION
+
+Bloqueada.
+
+---
+
+# 99. TAG INACTIVE HISTORICAL
+
+Preservada.
+
+---
+
+# 100. TAG REMOVE
+
+Remover associação:
+
+não altera ledger.
+
+---
+
+# 101. TAG READD INACTIVE
+
+Bloqueado conforme policy.
+
+---
+
+# 102. DUPLICATE TAG IDS
+
+Testar contrato.
+
+Não criar duplicate join rows.
+
+---
+
+# 103. CROSS-USER TAG
+
+Bloqueado.
+
+---
+
+# 104. TRANSACTION UPDATE
+
+Editar descrição sem tocar Tags:
+
+não pode apagar Tags acidentalmente.
+
+---
+
+# 105. TAG-ONLY UPDATE
+
+Não pode recriar movements nem aplicar valor duas vezes.
+
+---
+
+# 106. TRANSFER TAG UPDATE
+
+CRÍTICO:
+
+não pode duplicar source/destination movement.
+
+---
+
+# 107. HISTORY GATE
+
+Validar histórico unificado.
+
+---
+
+# 108. EXPENSE
+
+Uma linha.
+
+---
+
+# 109. INCOME
+
+Uma linha.
+
+---
+
+# 110. TRANSFER
+
+Uma linha.
+
+---
+
+# 111. TAG MULTIPLICATION
+
+Transaction com 5 Tags:
+
+continua uma linha.
+
+---
+
+# 112. ATTACHMENTS
+
+Transaction com 5 Attachments:
+
+continua uma linha.
+
+---
+
+# 113. TRANSFER COMPLEX
+
+Transfer:
+
+2 movements
+5 Tags
+5 Attachments
+
+continua uma linha.
+
+---
+
+# 114. ATTACHMENT COUNT
+
+Correto.
+
+---
+
+# 115. TAG DISPLAY
+
+Correto.
+
+---
+
+# 116. INACTIVE TAG
+
+Continua no histórico.
+
+---
+
+# 117. TAG FILTER SINGLE
+
+PASS.
+
+---
+
+# 118. TAG FILTER MULTIPLE
+
+PASS conforme ANY/ALL documentado.
+
+---
+
+# 119. TAG FILTER FOREIGN
+
+Sem vazamento.
+
+---
+
+# 120. TAG FILTER INACTIVE
+
+Funciona conforme policy.
+
+---
+
+# 121. COMBINED FILTER
+
+Testar:
+
+period
++
+type
++
+status
++
+account
++
+category
++
+tag.
+
+---
+
+# 122. ACCOUNT TRANSFER FILTER
+
+Source OR destination.
+
+Transfer aparece uma vez.
+
+---
+
+# 123. PAGINATION
+
+Criar volume suficiente.
+
+Testar:
+
+page 0
+page 1
+última página.
+
+---
+
+# 124. PAGE SIZE
+
+Exato.
+
+---
+
+# 125. TOTAL ELEMENTS
+
+Exato.
+
+---
+
+# 126. DUPLICATE BETWEEN PAGES
+
+Nenhuma transaction aparece duplicada devido a JOIN.
+
+---
+
+# 127. MISSING BETWEEN PAGES
+
+Nenhuma transaction desaparece devido a JOIN.
+
+---
+
+# 128. STABLE ORDER
+
+Mesmo occurredAt:
+
+tie-breaker determinístico.
+
+---
+
+# 129. N+1
+
+Auditar:
+
+History Tags;
+Attachment count;
+Asset Account names;
+Category names.
+
+---
+
+# 130. PAGINATION IN MEMORY
+
+Não aceitar Hibernate collection fetch pagination problemática.
+
+---
+
+# 131. QUERY COUNT
+
+Registrar estratégia real.
+
+---
+
+# 132. DASHBOARD GATE
+
+Revalidar Dashboard completo.
+
+---
+
+# 133. PERIOD
+
+Entradas/Saídas/Saldo respeitam período.
+
+---
+
+# 134. NET WORTH
+
+Não muda com período.
+
+---
+
+# 135. TRANSFER
+
+Não entra em Entradas.
+
+Não entra em Saídas.
+
+Não altera Saldo do período.
+
+---
+
+# 136. TRANSFER ACCOUNT CHART
+
+Deve afetar contas individualmente.
+
+---
+
+# 137. CANCELLED
+
+Não entra nos valores.
+
+---
+
+# 138. CHART OPENING BALANCE
+
+Movimentos anteriores ao período precisam refletir saldo de abertura.
+
+---
+
+# 139. ATTACHMENTS
+
+Não alteram Dashboard.
+
+---
+
+# 140. TAGS
+
+Não alteram Dashboard.
+
+---
+
+# 141. TIME GATE
+
+Auditar occurredAt.
+
+---
+
+# 142. CREATED AT
+
+Não usar createdAt como período financeiro.
+
+---
+
+# 143. TIMEZONE
+
+Verificar conversão Angular ↔ backend.
+
+---
+
+# 144. MIDNIGHT
+
+Testar boundary.
+
+---
+
+# 145. PERIOD END
+
+Preferir semântica consolidada:
+
+[from, to)
+
+se essa foi a decisão.
+
+---
+
+# 146. DST/TIMEZONE
+
+Não inventar solução nova.
+
+Validar política atual.
+
+---
+
+# 147. DATABASE GATE
+
+Executar migrations do zero.
+
+---
+
+# 148. CLEAN DB
+
+PASS obrigatório.
+
+---
+
+# 149. UPGRADE
+
+Validar upgrade da sequência real de migrations.
+
+---
+
+# 150. NO EDITED MIGRATION
+
+Confirmar migrations aplicadas anteriormente não foram alteradas.
+
+---
+
+# 151. FK
+
+Auditar:
+
+users;
+asset accounts;
+categories;
+transactions;
+movements;
+tags;
+transaction-tags;
+attachments.
+
+---
+
+# 152. UNIQUE
+
+Auditar:
+
+normalized active names;
+join Tag;
+storageKey;
+demais constraints.
+
+---
+
+# 153. ENUM
+
+Persistência STRING.
+
+Nunca ordinal.
+
+---
+
+# 154. MONEY DB
+
+DECIMAL apropriado.
+
+Nunca float/double.
+
+---
+
+# 155. INDEX REVIEW
+
+Auditar queries críticas:
+
+History;
+Tag filter;
+Attachment count;
+balance;
+Dashboard.
+
+---
+
+# 156. DO NOT OVERINDEX
+
+Somente corrigir índice ausente se query real justificar.
+
+---
+
+# 157. API GATE
+
+OpenAPI deve corresponder ao código.
+
+---
+
+# 158. EXPENSE
+
+Contrato real.
+
+---
+
+# 159. INCOME
+
+Contrato real.
+
+---
+
+# 160. TRANSFER
+
+Contrato real.
+
+---
+
+# 161. TAG
+
+Contrato real.
+
+---
+
+# 162. ATTACHMENT
+
+Contrato real.
+
+---
+
+# 163. HISTORY
+
+Contrato real.
+
+---
+
+# 164. ERRORS
+
+Problem Details consistente.
+
+---
+
+# 165. 400
+
+Validação.
+
+---
+
+# 166. 401
+
+Authentication.
+
+---
+
+# 167. 403
+
+Authorization somente quando semanticamente apropriado.
+
+---
+
+# 168. 404
+
+Private resource/not found.
+
+---
+
+# 169. 409
+
+State/conflict.
+
+---
+
+# 170. 413
+
+Oversized upload.
+
+---
+
+# 171. 415
+
+Unsupported media type.
+
+---
+
+# 172. REQUEST ID
+
+Presente/coerente nos erros.
+
+---
+
+# 173. NO INTERNAL LEAK
+
+Problem Details não expõe:
+
+SQL;
+stack;
+filesystem;
+storageKey;
+internal class names desnecessários.
+
+---
+
+# 174. FRONTEND GATE
+
+Executar lint.
+
+---
+
+# 175. UNIT TESTS
+
+Executar.
+
+---
+
+# 176. PRODUCTION BUILD
+
+Executar.
+
+---
+
+# 177. AUTH UI
+
+F5 continua seguindo política atual de access token in-memory.
+
+Não "corrigir" isso nesta Sprint.
+
+---
+
+# 178. 401
+
+Global behavior correto.
+
+---
+
+# 179. 403
+
+Não logout.
+
+---
+
+# 180. RESPONSIVE GATE
+
+Testar principais telas em:
+
+360 × 800
+390 × 844
+768 × 1024
+1024 × 768
+1280 × 720
+1366 × 768
+1920 × 1080.
+
+---
+
+# 181. SCREENS
+
+Testar:
+
+Dashboard;
+Accounts;
+Categories;
+Tags;
+Expenses;
+Income;
+Transfers;
+History.
+
+---
+
+# 182. DRAWERS
+
+Não podem ficar inutilizáveis em mobile.
+
+---
+
+# 183. TAG SELECTOR
+
+Mobile + keyboard.
+
+---
+
+# 184. ATTACHMENTS
+
+Mobile + keyboard.
+
+---
+
+# 185. LONG FILENAME
+
+Sem overflow global.
+
+---
+
+# 186. MANY TAGS
+
+Sem overflow global.
+
+---
+
+# 187. HISTORY
+
+Sem tabela impossível de usar em telas menores.
+
+---
+
+# 188. ACCESSIBILITY GATE
+
+Keyboard navigation.
+
+---
+
+# 189. FOCUS
+
+Drawers/dialogs.
+
+---
+
+# 190. LABELS
+
+Inputs.
+
+---
+
+# 191. ERROR ASSOCIATION
+
+Form errors.
+
+---
+
+# 192. STATUS
+
+Não depender apenas de cor.
+
+---
+
+# 193. TAG INACTIVE
+
+Não depender apenas de cor.
+
+---
+
+# 194. CANCELLED
+
+Não depender apenas de cor.
+
+---
+
+# 195. FILE ACTIONS
+
+Accessible names.
+
+---
+
+# 196. REDUCED MOTION
+
+Preservar design-system policy.
+
+---
+
+# 197. PERFORMANCE GATE
+
+Não buscar perfeição prematura.
+
+Procurar regressões claras.
+
+---
+
+# 198. HISTORY
+
+Sem N+1 estrutural.
+
+---
+
+# 199. DASHBOARD
+
+Sem account × day query.
+
+---
+
+# 200. TRANSACTION LISTS
+
+Tags não causam N+1.
+
+---
+
+# 201. ATTACHMENTS
+
+Transaction list não faz request por transaction apenas para mostrar
+attachment.
+
+---
+
+# 202. STORAGE
+
+History não abre arquivo para calcular count.
+
+---
+
+# 203. FRONTEND REQUESTS
+
+Auditar requests duplicadas desnecessárias.
+
+---
+
+# 204. RACE
+
+Filtros rápidos não devem mostrar resposta antiga.
+
+---
+
+# 205. DOUBLE SUBMIT
+
+Forms protegidos.
+
+---
+
+# 206. ATTACHMENT DOUBLE UPLOAD
+
+Evitar clique acidental duplicado.
+
+---
+
+# 207. TEST SUITE
+
+Executar conjunto completo disponível.
+
+---
+
+# 208. BACKEND UNIT
+
+PASS.
+
+---
+
+# 209. BACKEND INTEGRATION
+
+PASS.
+
+---
+
+# 210. TESTCONTAINERS
+
+PASS.
+
+---
+
+# 211. SECURITY TESTS
+
+PASS.
+
+---
+
+# 212. FRONTEND UNIT
+
+PASS.
+
+---
+
+# 213. E2E
+
+Se configurado:
+
+PASS.
+
+Se não configurado:
+
+NÃO CONFIGURADO.
+
+Não inventar resultado.
+
+---
+
+# 214. TEST FAILURE
+
+Não ignorar teste vermelho.
+
+---
+
+# 215. FLAKY TEST
+
+Investigar.
+
+Não simplesmente desabilitar.
+
+---
+
+# 216. NO TEST DELETION
+
+Não apagar teste para obter build verde, salvo teste comprovadamente
+obsoleto por contrato alterado e documentado.
+
+---
+
+# 217. BUG FIX PROTOCOL
+
+Para cada bug real:
+
+1. reproduzir;
+2. classificar severidade;
+3. identificar causa;
+4. criar/ajustar teste de regressão;
+5. corrigir menor escopo possível;
+6. executar teste específico;
+7. executar regressão relacionada;
+8. documentar.
+
+---
+
+# 218. SECURITY BUG
+
+CRITICAL/HIGH:
+
+corrigir antes da aprovação.
+
+---
+
+# 219. FINANCIAL BUG
+
+CRITICAL/HIGH:
+
+corrigir antes da aprovação.
+
+---
+
+# 220. MULTIUSER BUG
+
+CRITICAL.
+
+Não aprovar até corrigir.
+
+---
+
+# 221. MEDIUM
+
+Corrigir se viável e diretamente relacionado à Sprint.
+
+Se permanecer:
+
+documentar claramente e justificar.
+
+---
+
+# 222. LOW
+
+Pode virar dívida técnica.
+
+Não transformar gate em refactor infinito.
+
+---
+
+# 223. INITIAL BALANCE TECH DEBT
+
+Revisar dívida antiga:
+
+edição de initialBalance após existência de transactions.
+
+---
+
+# 224. DECISION
+
+Verificar o que ADR do ledger decidiu.
+
+Se política já foi implementada:
+
+validar.
+
+Se continua ambígua e causa risco financeiro:
+
+classificar adequadamente.
+
+Não inventar mudança silenciosa.
+
+---
+
+# 225. CATEGORY APPLICABILITY TECH DEBT
+
+Mesma revisão:
+
+alterar applicability depois de transactions pode invalidar histórico?
+
+Validar decisão atual.
+
+---
+
+# 226. EXPENSE ACCOUNTS
+
+Continua FORA DO ESCOPO.
+
+Não implementar "Contas de Despesas".
+
+---
+
+# 227. REASON
+
+Semântica do produto ainda precisa ser definida antes de modelar esse
+conceito.
+
+---
+
+# 228. FINAL GOLDEN REGRESSION
+
+Ao final de TODAS as correções, repetir do zero:
+
+User A:
+Account A = 1000
+Account B = 500
+
+Tags:
+Trabalho
+Reembolso
+Casa
+Mensal
+Reserva
+
+Income A:
+700
+Tags Trabalho/Reembolso
+Attachment renda.pdf
+
+Expense A:
+200
+Tags Casa/Mensal
+Attachments nota.pdf/recibo.png
+
+Transfer A → B:
+300
+Tag Reserva
+Attachment transferencia.pdf
+
+Esperado:
+
+A:
+1200
+
+B:
+800
+
+Net Worth:
+2000
+
+Entradas:
+700
+
+Saídas:
+200
+
+Saldo:
+500
+
+History:
+3 logical transactions.
+
+Income attachments:
+1
+
+Expense attachments:
+2
+
+Transfer attachments:
+1.
+
+---
+
+# 229. USER B
+
+Criar User B com:
+
+contas;
+categories;
+Tags;
+transactions;
+Attachments.
+
+User A:
+
+não vê absolutamente nenhum dado privado de B.
+
+User B:
+
+não vê dados privados de A.
+
+---
+
+# 230. FINAL SECURITY ATTACK SET
+
+Executar novamente:
+
+cross-user account;
+cross-user category;
+cross-user tag;
+cross-user expense;
+cross-user income;
+cross-user transfer;
+cross-user history;
+cross-user attachment upload;
+cross-user attachment list;
+cross-user attachment download;
+cross-user attachment delete;
+foreign Tag association;
+foreign Tag filter;
+path traversal;
+MIME spoof;
+oversize;
+unsupported type;
+public storage access.
+
+---
+
+# 231. FINAL BUILD SET
+
+Backend:
+clean test/build.
+
+Frontend:
+lint.
+tests.
+production build.
+
+---
+
+# 232. FINAL MIGRATION SET
+
+Fresh MySQL:
+PASS.
+
+Upgrade:
+PASS.
+
+---
+
+# 233. FINAL OPENAPI CHECK
+
+Gerado/contrato:
+
+PASS.
+
+---
+
+# 234. APPROVAL CRITERIA
+
+Sprint 4 somente pode ser:
+
+APROVADA
+
+se:
+
+- nenhum CRITICAL aberto;
+- nenhum HIGH aberto;
+- ledger consistente;
+- balances corretos;
+- netWorth correto;
+- Dashboard correto;
+- Transfer neutral;
+- cancellation correta;
+- Tags sem efeito financeiro;
+- Attachments sem efeito financeiro;
+- isolamento multiusuário correto;
+- IDOR protegido;
+- storage privado;
+- path traversal protegido;
+- MIME spoofing protegido;
+- limits aplicados;
+- History correto;
+- paginação correta;
+- Transfer aparece uma vez;
+- Tag filter correto;
+- Attachment count correto;
+- OpenAPI coerente;
+- migrations passam;
+- backend passa;
+- frontend passa.
+
+---
+
+# 235. REPROVAL CRITERIA
+
+Sprint 4 deve ser:
+
+REPROVADA
+
+se qualquer CRITICAL/HIGH permanecer.
+
+---
+
+# 236. FINAL REPORT
+
+Produza obrigatoriamente:
+
+# TASK-4.8 — GATE FINAL DA SPRINT 4
+
+## DECISÃO
+
+SPRINT 4 APROVADA
+
+ou
+
+SPRINT 4 REPROVADA
+
+---
+
+## 1. Executive Summary
+
+Resumo curto e objetivo.
+
+---
+
+## 2. Architecture
+
+Status:
+PASS / FAIL
+
+Problemas:
+
+---
+
+## 3. Ledger
+
+Expense:
+PASS / FAIL
+
+Income:
+PASS / FAIL
+
+Transfer:
+PASS / FAIL
+
+Cancellation:
+PASS / FAIL
+
+Precision:
+PASS / FAIL
+
+---
+
+## 4. Balances
+
+Current Balance:
+PASS / FAIL
+
+Negative Balance:
+PASS / FAIL / N/A
+
+Net Worth:
+PASS / FAIL
+
+---
+
+## 5. Dashboard
+
+Entradas:
+PASS / FAIL
+
+Saídas:
+PASS / FAIL
+
+Saldo:
+PASS / FAIL
+
+Patrimônio:
+PASS / FAIL
+
+Chart:
+PASS / FAIL
+
+---
+
+## 6. Tags
+
+CRUD:
+PASS / FAIL
+
+Normalization:
+PASS / FAIL
+
+Uniqueness:
+PASS / FAIL
+
+Inactive:
+PASS / FAIL
+
+Association:
+PASS / FAIL
+
+Cross-user:
+PASS / FAIL
+
+Financial neutrality:
+PASS / FAIL
+
+---
+
+## 7. Attachments
+
+Upload:
+PASS / FAIL
+
+List:
+PASS / FAIL
+
+Download:
+PASS / FAIL
+
+Delete:
+PASS / FAIL
+
+Streaming:
+PASS / FAIL
+
+Limits:
+PASS / FAIL
+
+Financial neutrality:
+PASS / FAIL
+
+---
+
+## 8. Attachment Security
+
+Path traversal:
+PASS / FAIL
+
+MIME spoof:
+PASS / FAIL
+
+Oversized:
+PASS / FAIL
+
+Unsupported types:
+PASS / FAIL
+
+CRLF:
+PASS / FAIL
+
+NUL:
+PASS / FAIL
+
+StorageKey:
+PASS / FAIL
+
+Public storage:
+PASS / FAIL
+
+Download authorization:
+PASS / FAIL
+
+---
+
+## 9. Storage Consistency
+
+Store failure:
+PASS / FAIL
+
+DB failure compensation:
+PASS / FAIL
+
+Delete failure:
+PASS / FAIL
+
+Missing physical file:
+PASS / FAIL
+
+Orphan risk:
+LOW / MEDIUM / HIGH
+
+---
+
+## 10. Multi-user Isolation
+
+Accounts:
+PASS / FAIL
+
+Categories:
+PASS / FAIL
+
+Tags:
+PASS / FAIL
+
+Expenses:
+PASS / FAIL
+
+Income:
+PASS / FAIL
+
+Transfers:
+PASS / FAIL
+
+History:
+PASS / FAIL
+
+Attachments:
+PASS / FAIL
+
+Dashboard:
+PASS / FAIL
+
+---
+
+## 11. History
+
+Logical transactions:
+PASS / FAIL
+
+Transfer once:
+PASS / FAIL
+
+Tags:
+PASS / FAIL
+
+Inactive Tags:
+PASS / FAIL
+
+Attachment count:
+PASS / FAIL
+
+Tag filter:
+PASS / FAIL
+
+Combined filters:
+PASS / FAIL
+
+Pagination:
+PASS / FAIL
+
+Stable ordering:
+PASS / FAIL
+
+---
+
+## 12. Performance
+
+History N+1:
+YES / NO
+
+Attachment N+1:
+YES / NO
+
+Tag N+1:
+YES / NO
+
+Pagination in memory:
+YES / NO
+
+Dashboard N+1:
+YES / NO
+
+Expected:
+NO para todos.
+
+---
+
+## 13. Authentication
+
+401:
+PASS / FAIL
+
+403:
+PASS / FAIL
+
+JWT in memory:
+PASS / FAIL
+
+JWT external URL leakage:
+PASS / FAIL
+
+---
+
+## 14. API
+
+Problem Details:
+PASS / FAIL
+
+Request ID:
+PASS / FAIL
+
+OpenAPI:
+PASS / FAIL
+
+Mass assignment:
+PASS / FAIL
+
+---
+
+## 15. Database
+
+Clean migrations:
+PASS / FAIL
+
+Upgrade:
+PASS / FAIL
+
+FKs:
+PASS / FAIL
+
+Constraints:
+PASS / FAIL
+
+Indexes:
+PASS / FAIL
+
+Money types:
+PASS / FAIL
+
+Enum persistence:
+PASS / FAIL
+
+---
+
+## 16. Frontend
+
+Dashboard:
+PASS / FAIL
+
+Accounts:
+PASS / FAIL
+
+Categories:
+PASS / FAIL
+
+Tags:
+PASS / FAIL
+
+Expenses:
+PASS / FAIL
+
+Income:
+PASS / FAIL
+
+Transfers:
+PASS / FAIL
+
+History:
+PASS / FAIL
+
+Attachments:
+PASS / FAIL
+
+---
+
+## 17. Accessibility
+
+Keyboard:
+PASS / FAIL
+
+Focus:
+PASS / FAIL
+
+Labels:
+PASS / FAIL
+
+Status semantics:
+PASS / FAIL
+
+File actions:
+PASS / FAIL
+
+---
+
+## 18. Responsive
+
+360 × 800:
+PASS / FAIL
+
+390 × 844:
+PASS / FAIL
+
+768 × 1024:
+PASS / FAIL
+
+1024 × 768:
+PASS / FAIL
+
+1280 × 720:
+PASS / FAIL
+
+1366 × 768:
+PASS / FAIL
+
+1920 × 1080:
+PASS / FAIL
+
+---
+
+## 19. Tests
+
+Backend unit:
+PASS / FAIL
+
+Backend integration:
+PASS / FAIL
+
+Security:
+PASS / FAIL
+
+Testcontainers:
+PASS / FAIL
+
+Frontend unit:
+PASS / FAIL
+
+E2E:
+PASS / FAIL / NÃO CONFIGURADO
+
+---
+
+## 20. Builds
+
+Backend:
+PASS / FAIL
+
+Frontend lint:
+PASS / FAIL
+
+Frontend tests:
+PASS / FAIL
+
+Frontend production:
+PASS / FAIL
+
+---
+
+## 21. Golden Scenario
+
+Account A:
+resultado
+
+Account B:
+resultado
+
+Net Worth:
+resultado
+
+Entradas:
+resultado
+
+Saídas:
+resultado
+
+Saldo:
+resultado
+
+History logical transactions:
+resultado
+
+Income attachments:
+resultado
+
+Expense attachments:
+resultado
+
+Transfer attachments:
+resultado
+
+Resultado:
+PASS / FAIL
+
+---
+
+## 22. Security Attack Set
+
+Cross-user:
+PASS / FAIL
+
+IDOR:
+PASS / FAIL
+
+Path traversal:
+PASS / FAIL
+
+MIME spoof:
+PASS / FAIL
+
+Oversize:
+PASS / FAIL
+
+Unsupported type:
+PASS / FAIL
+
+Public storage:
+PASS / FAIL
+
+---
+
+## 23. Bugs Found
+
+Para cada bug:
+
+ID:
+Severity:
+Area:
+Description:
+Root cause:
+Fix:
+Regression test:
+Status:
+
+---
+
+## 24. Open Issues
+
+### CRITICAL
+
+Esperado:
+NONE
+
+### HIGH
+
+Esperado:
+NONE
+
+### MEDIUM
+
+### LOW
+
+---
+
+## 25. Technical Debt
+
+Listar apenas dívida técnica real.
+
+Revisar explicitamente:
+
+- initialBalance editing after transactions;
+- CategoryApplicability editing after transactions;
+- local storage limitations;
+- malware scanning futuro;
+- storage orphan reconciliation;
+- qualquer dívida descoberta no gate.
+
+---
+
+## 26. Scope Confirmation
+
+Reports:
+NÃO IMPLEMENTADOS
+
+Expense Accounts:
+NÃO IMPLEMENTADOS
+
+S3:
+NÃO IMPLEMENTADO
+
+MinIO:
+NÃO IMPLEMENTADO
+
+OCR:
+NÃO IMPLEMENTADO
+
+Preview:
+NÃO IMPLEMENTADO
+
+---
+
+## 27. Files Changed During Gate
+
+Liste somente correções realizadas durante a TASK-4.8.
+
+---
+
+## 28. Final Decision
+
+Se aprovado:
+
+SPRINT 4 APROVADA.
+
+A fundação de:
+
+- Tags;
+- associação de Tags;
+- Attachments;
+- storage;
+- upload/download;
+- History enriquecido;
+
+está estável e pode ser congelada.
+
+Declarar prontidão para:
+
+# SPRINT 5 — RELATÓRIOS FINANCEIROS
+
+Se reprovado:
+
+SPRINT 4 REPROVADA.
+
+Listar exatamente os blockers restantes.
+
+NÃO iniciar Sprint 5.

@@ -1,0 +1,948 @@
+# TASK-7.7 — INTEGRAÇÃO COM DASHBOARD E RELATÓRIOS
+
+PROJETO: EQUILIBRA
+SPRINT: 7 — PREVISIBILIDADE FINANCEIRA
+
+STACK:
+Spring Boot 4
+Angular 19
+Angular Material
+ECharts
+MySQL
+Flyway
+Testcontainers
+
+CONTEXTO
+
+Sprints 0–6 aprovadas.
+TASK-7.0 — Arquitetura e ADR concluídos.
+TASK-7.1 — Backend de Recorrências concluído.
+TASK-7.2 — Frontend de Recorrências concluído.
+TASK-7.3 — Backend de Compromissos Futuros concluído.
+TASK-7.4 — Calendário Financeiro concluído.
+TASK-7.5 — Projeção de Fluxo de Caixa concluída.
+TASK-7.6 — Indicadores de Vencimentos concluídos.
+
+OBJETIVO
+
+Integrar previsibilidade financeira
+ao Dashboard e aos Relatórios do Equilibra.
+
+Reutilizar APIs e componentes existentes.
+
+Apresentar claramente:
+
+- saldos reais;
+- saldos projetados;
+- compromissos futuros;
+- valores previstos a pagar;
+- valores previstos a receber;
+- compromissos atrasados;
+- próximos vencimentos;
+- análises de compromissos por período.
+
+Não misturar previsões com lançamentos reais.
+
+Não modificar o ledger.
+
+Não implementar a TASK-7.8.
+
+==================================================
+1. INSPEÇÃO OBRIGATÓRIA
+==================================================
+
+Antes de editar, inspecionar:
+
+- CLAUDE.md;
+- ADR da TASK-7.0;
+- relatórios TASKS 7.1–7.6;
+- Dashboard backend;
+- Dashboard frontend;
+- Reports backend;
+- Reports frontend;
+- exportação CSV;
+- exportação PDF;
+- ECharts existentes;
+- endpoint de projeção;
+- endpoint de indicadores;
+- endpoints de compromissos;
+- Auth Guard;
+- CurrentUser;
+- DTOs;
+- OpenAPI;
+- testes;
+- políticas de datas e timezone.
+
+Não presumir nomes de arquivos,
+classes ou endpoints.
+
+==================================================
+2. GATE DE ARQUITETURA
+==================================================
+
+Confirmar:
+
+A. Métricas reais existentes.
+
+B. Métricas previstas disponíveis.
+
+C. Período padrão do dashboard.
+
+D. Horizonte da projeção.
+
+E. Política de atrasados.
+
+F. Separação entre pagar e receber.
+
+G. Semântica de saldo projetado.
+
+H. Integração com filtros.
+
+I. Compatibilidade com relatórios.
+
+J. Política de exportação.
+
+K. Política de dados históricos.
+
+L. Tratamento de compromissos efetivados.
+
+M. Tratamento de cancelados.
+
+N. Owner-scoping.
+
+O. Performance e paginação.
+
+P. Escopo aprovado pelo ADR.
+
+Se decisão essencial estiver ausente,
+registrar BLOCKED.
+
+Não inventar regra financeira.
+
+==================================================
+3. PRE-IMPLEMENTATION REPORT
+==================================================
+
+Produzir antes de editar:
+
+# TASK-7.7 — PRE-IMPLEMENTATION REPORT
+
+1. ADR.
+2. Dashboard atual.
+3. Relatórios atuais.
+4. Métricas reais.
+5. Métricas previstas.
+6. Endpoints reutilizáveis.
+7. DTOs.
+8. Componentes.
+9. Filtros.
+10. Exportações.
+11. Segurança.
+12. Performance.
+13. Testes.
+14. Arquivos previstos.
+15. Bloqueadores.
+
+==================================================
+4. PRINCÍPIO CENTRAL
+==================================================
+
+O Dashboard e os Relatórios
+não podem confundir:
+
+REALIZADO;
+PREVISTO;
+PENDENTE;
+EFETIVADO;
+CANCELADO.
+
+Usar rótulos explícitos.
+
+Não somar valores incompatíveis.
+
+==================================================
+5. SALDO REAL
+==================================================
+
+Preservar cálculo existente.
+
+Saldo real vem do ledger.
+
+Não substituir pelo saldo projetado.
+
+==================================================
+6. SALDO PROJETADO
+==================================================
+
+Consumir fonte autoritativa
+da TASK-7.5.
+
+Não recalcular projeção
+de forma independente no frontend.
+
+==================================================
+7. RECEITAS REAIS
+==================================================
+
+Preservar métrica existente.
+
+Não incluir recebimentos futuros
+como receitas realizadas.
+
+==================================================
+8. DESPESAS REAIS
+==================================================
+
+Preservar métrica existente.
+
+Não incluir compromissos pendentes
+como despesas realizadas.
+
+==================================================
+9. PREVISTO A RECEBER
+==================================================
+
+Usar compromissos elegíveis
+conforme ADR e TASK-7.6.
+
+Não incluir cancelados.
+
+Não duplicar efetivados.
+
+==================================================
+10. PREVISTO A PAGAR
+==================================================
+
+Usar compromissos elegíveis.
+
+Separar despesas de receitas.
+
+==================================================
+11. ATRASADOS
+==================================================
+
+Reutilizar indicadores autoritativos
+da TASK-7.6.
+
+Não criar cálculo divergente.
+
+==================================================
+12. PRÓXIMOS VENCIMENTOS
+==================================================
+
+Reutilizar janela e classificação
+aprovadas na TASK-7.6.
+
+Não inventar limiar novo.
+
+==================================================
+13. PERÍODOS
+==================================================
+
+Definir coerência entre:
+
+dashboard;
+projeção;
+agenda;
+relatórios.
+
+Mostrar período de referência
+em cada indicador.
+
+Não combinar valores de períodos
+diferentes sem informar.
+
+==================================================
+14. FILTRO POR CONTA
+==================================================
+
+Se disponível:
+
+aplicar filtro consistentemente.
+
+Todas as contas devem ser
+do usuário autenticado.
+
+==================================================
+15. DASHBOARD — NOVA SEÇÃO
+==================================================
+
+Adicionar seção:
+
+Previsibilidade Financeira.
+
+Não reconstruir Dashboard inteiro.
+
+Reutilizar layout e design system.
+
+==================================================
+16. DASHBOARD — KPIs
+==================================================
+
+Exibir conforme APIs disponíveis:
+
+saldo projetado;
+previsto a pagar;
+previsto a receber;
+atrasados;
+próximos vencimentos.
+
+Evitar indicadores redundantes.
+
+==================================================
+17. DASHBOARD — SALDO PROJETADO
+==================================================
+
+Exibir horizonte e data final.
+
+Rótulo obrigatório:
+
+Saldo projetado.
+
+Nunca apresentar como saldo disponível.
+
+==================================================
+18. DASHBOARD — GRÁFICO
+==================================================
+
+Se útil e aprovado:
+
+reutilizar gráfico ECharts
+da TASK-7.5.
+
+Preferir componente compartilhado.
+
+Não duplicar implementação.
+
+==================================================
+19. DASHBOARD — COMPROMISSOS
+==================================================
+
+Exibir lista compacta
+de compromissos prioritários.
+
+Ordenar conforme política aprovada.
+
+Priorizar:
+
+atrasados;
+vence hoje;
+próximos.
+
+==================================================
+20. DASHBOARD — NAVEGAÇÃO
+==================================================
+
+Permitir navegar para:
+
+Agenda Financeira;
+Fluxo de Caixa;
+Recorrências;
+
+quando as rotas existirem.
+
+==================================================
+21. DASHBOARD — RESPONSIVIDADE
+==================================================
+
+Garantir layout adequado em:
+
+desktop;
+tablet;
+celular.
+
+Sem overflow horizontal.
+
+==================================================
+22. DASHBOARD — LOADING
+==================================================
+
+Usar estados independentes
+para blocos independentes.
+
+Falha da projeção não deve
+apagar indicadores reais.
+
+==================================================
+23. DASHBOARD — EMPTY
+==================================================
+
+Sem compromissos futuros:
+
+mostrar estado vazio apropriado.
+
+Não apresentar erro como zero.
+
+==================================================
+24. DASHBOARD — ERROR
+==================================================
+
+Tratar falhas de APIs previstas.
+
+Preservar informações reais
+que estejam disponíveis.
+
+Oferecer retry por seção
+quando adequado.
+
+==================================================
+25. RELATÓRIOS — INTEGRAÇÃO
+==================================================
+
+Adicionar análises de compromissos
+conforme ADR.
+
+Não alterar relatórios históricos
+sem necessidade.
+
+==================================================
+26. RELATÓRIO DE COMPROMISSOS
+==================================================
+
+Se aprovado:
+
+permitir visualizar compromissos
+por período.
+
+Separar:
+
+a pagar;
+a receber;
+pendentes;
+efetivados;
+cancelados.
+
+Não misturar valores.
+
+==================================================
+27. RELATÓRIO POR STATUS
+==================================================
+
+Se aprovado:
+
+agregar por estados reais.
+
+Diferenciar estado persistido
+de classificação derivada de atraso.
+
+==================================================
+28. RELATÓRIO POR CONTA
+==================================================
+
+Se aprovado:
+
+agregar por conta.
+
+Respeitar ownership.
+
+==================================================
+29. RELATÓRIO POR CATEGORIA
+==================================================
+
+Se aprovado:
+
+agregar por categoria.
+
+Não alterar lógica dos
+orçamentos por categoria.
+
+==================================================
+30. RELATÓRIO POR PERÍODO
+==================================================
+
+Usar vencimento para análise
+de compromissos futuros.
+
+Usar occurredAt para relatórios
+financeiros reais, conforme ADR.
+
+Não confundir eixos temporais.
+
+==================================================
+31. EXPORTAÇÃO CSV
+==================================================
+
+Se escopo aprovado:
+
+reutilizar exportador existente.
+
+Exportar valores e estados
+com semântica explícita.
+
+Evitar CSV injection.
+
+==================================================
+32. EXPORTAÇÃO PDF
+==================================================
+
+Se escopo aprovado:
+
+reutilizar infraestrutura existente.
+
+Identificar:
+
+período;
+filtros;
+realizado;
+previsto;
+data de referência.
+
+==================================================
+33. EXPORTAÇÕES EXISTENTES
+==================================================
+
+Não quebrar PDFs/CSVs
+das Sprints anteriores.
+
+Não incluir compromissos previstos
+em relatórios reais indevidamente.
+
+==================================================
+34. API BACKEND
+==================================================
+
+Reutilizar endpoints existentes.
+
+Criar agregação read-only somente
+se houver necessidade comprovada
+e autorização arquitetural.
+
+Não criar fonte financeira paralela.
+
+==================================================
+35. DTOs
+==================================================
+
+Reutilizar DTOs reais.
+
+Não expor entidades JPA.
+
+Não aceitar ownerId.
+
+==================================================
+36. PRECISÃO MONETÁRIA
+==================================================
+
+Usar BigDecimal no backend.
+
+Evitar float/double.
+
+Preservar duas casas decimais
+e semântica de cada valor.
+
+==================================================
+37. OWNERSHIP
+==================================================
+
+ownerId derivado do JWT.
+
+Todas as consultas owner-scoped.
+
+Nenhum agregado pode incluir
+dados de outro usuário.
+
+==================================================
+38. SEGURANÇA
+==================================================
+
+Validar:
+
+401;
+404 para referências estrangeiras;
+filtros;
+exports;
+acesso a relatórios.
+
+Não vazar dados via agregações.
+
+==================================================
+39. OPENAPI
+==================================================
+
+Atualizar contratos somente
+se endpoints forem criados/alterados.
+
+Documentar semântica dos campos.
+
+==================================================
+40. PERFORMANCE
+==================================================
+
+Evitar N+1.
+
+Evitar chamadas redundantes.
+
+Reutilizar dados compartilhados
+sem criar estado obsoleto.
+
+Não carregar compromissos ilimitados.
+
+==================================================
+41. FRONTEND — SERVICES
+==================================================
+
+Reutilizar:
+
+DashboardService;
+ReportsService;
+ForecastService;
+CommitmentService;
+IndicatorService;
+
+conforme nomes reais.
+
+Não duplicar contratos HTTP.
+
+==================================================
+42. FRONTEND — REQUESTS
+==================================================
+
+Evitar race conditions.
+
+Usar switchMap ou equivalente
+quando filtros mudarem rapidamente.
+
+==================================================
+43. FRONTEND — FORMATAÇÃO
+==================================================
+
+Usar pt-BR.
+
+Datas civis corretas.
+
+Valores BRL.
+
+Não deslocar vencimentos por UTC.
+
+==================================================
+44. FRONTEND — ACESSIBILIDADE
+==================================================
+
+Garantir:
+
+labels;
+foco;
+teclado;
+contraste;
+status textual;
+alternativas a gráficos;
+tabelas acessíveis.
+
+==================================================
+45. FRONTEND — RESPONSIVIDADE
+==================================================
+
+Validar:
+
+360x800;
+390x844;
+768x1024;
+1024x768;
+1280x720;
+1366x768;
+1920x1080.
+
+==================================================
+46. GOLDEN — SEPARAÇÃO REAL/PREVISTO
+==================================================
+
+Saldo real:
+5000.00.
+
+Receita futura:
+3500.00.
+
+Despesas futuras:
+2300.00.
+
+Esperado:
+
+saldo real=5000.00;
+saldo projetado=6200.00;
+receitas reais não aumentam;
+despesas reais não aumentam.
+
+==================================================
+47. GOLDEN — EFETIVAÇÃO
+==================================================
+
+Saldo real:
+5000.00.
+
+Compromisso despesa:
+200.00.
+
+Antes:
+
+saldo real=5000.00;
+saldo projetado=4800.00.
+
+Depois de efetivar:
+
+saldo real=4800.00;
+saldo projetado=4800.00;
+sem dupla contagem.
+
+==================================================
+48. GOLDEN — CANCELAMENTO
+==================================================
+
+Compromisso pendente:
+300.00.
+
+Cancelar.
+
+Esperado:
+
+valor sai dos indicadores pendentes;
+projeção atualiza;
+saldo real não muda.
+
+==================================================
+49. GOLDEN — ATRASADOS
+==================================================
+
+Compromisso atrasado:
+200.00.
+
+Esperado:
+
+indicador da TASK-7.6
+e Dashboard apresentam
+mesma classificação e valor
+para o mesmo escopo.
+
+==================================================
+50. GOLDEN — PERÍODOS
+==================================================
+
+Dashboard e Relatórios
+com mesmo filtro devem
+apresentar totais reconciliáveis.
+
+Quando semânticas divergirem,
+explicar diferença.
+
+==================================================
+51. GOLDEN — MULTIUSER
+==================================================
+
+User A e User B possuem
+compromissos distintos.
+
+Dashboard A não inclui B.
+
+Relatórios A não incluem B.
+
+Exports A não incluem B.
+
+==================================================
+52. GOLDEN — REGRESSÃO
+==================================================
+
+Conta A inicial=1000.00.
+Conta B inicial=500.00.
+
+Income A=700.00.
+Expense A=200.00.
+Transfer A->B=300.00.
+
+Esperado:
+
+A=1200.00;
+B=800.00;
+patrimônio=2000.00;
+receitas=700.00;
+despesas=200.00;
+resultado=500.00;
+histórico=3 transações lógicas.
+
+==================================================
+53. TESTES BACKEND
+==================================================
+
+Cobrir:
+
+agregações;
+datas;
+filtros;
+estados;
+efetivação;
+cancelamento;
+ownership;
+exports;
+precisão.
+
+==================================================
+54. TESTCONTAINERS
+==================================================
+
+Executar MySQL real.
+
+Validar consultas e agregações.
+
+Não substituir por H2.
+
+==================================================
+55. TESTES FRONTEND
+==================================================
+
+Cobrir:
+
+Dashboard;
+Reports;
+services;
+KPIs;
+gráficos;
+filtros;
+loading;
+empty;
+error;
+retry;
+navegação;
+race conditions.
+
+==================================================
+56. TESTES DE EXPORTAÇÃO
+==================================================
+
+Se exportações forem implementadas:
+
+validar CSV;
+validar PDF;
+validar período;
+validar ownership;
+validar conteúdo;
+validar separação real/previsto.
+
+==================================================
+57. REGRESSÕES
+==================================================
+
+Executar testes relevantes:
+
+Authentication;
+Accounts;
+Categories;
+Expenses;
+Income;
+Transfers;
+History;
+Dashboard;
+Reports;
+Exports;
+Budgets;
+Alerts;
+Goals;
+Recurrences;
+Commitments;
+Calendar;
+Forecast;
+Due Indicators.
+
+==================================================
+58. QUALIDADE
+==================================================
+
+Executar:
+
+backend tests;
+Testcontainers/MySQL;
+backend build;
+Angular lint;
+Angular tests;
+Angular production build;
+E2E, se configurado.
+
+Registrar comandos e resultados reais.
+
+==================================================
+59. FORA DO ESCOPO
+==================================================
+
+Não implementar:
+
+- notificações externas;
+- pagamentos automáticos;
+- novos lançamentos;
+- alterações de ledger;
+- refatoração ampla;
+- novos módulos sem necessidade;
+- TASK-7.8.
+
+==================================================
+60. DEFINITION OF DONE
+==================================================
+
+TASK-7.7 concluída quando:
+
+- Dashboard integrado;
+- métricas reais preservadas;
+- métricas previstas identificadas;
+- saldo projetado correto;
+- compromissos futuros corretos;
+- indicadores de vencimento corretos;
+- relatórios integrados conforme ADR;
+- filtros coerentes;
+- exports preservados;
+- ownership;
+- precisão monetária;
+- loading/empty/error/retry;
+- responsividade;
+- acessibilidade;
+- testes backend;
+- Testcontainers/MySQL;
+- testes frontend;
+- lint;
+- builds;
+- regressões aprovadas.
+
+==================================================
+61. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-7.7 — DASHBOARD E RELATÓRIOS
+
+STATUS:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+1. ADR.
+2. Dashboard existente.
+3. Componentes alterados.
+4. Métricas reais.
+5. Métricas previstas.
+6. Projeção.
+7. Vencimentos.
+8. Filtros.
+9. Relatórios.
+10. Agregações.
+11. CSV.
+12. PDF.
+13. Endpoints.
+14. DTOs.
+15. Segurança.
+16. OpenAPI.
+17. Performance.
+18. Responsividade.
+19. Acessibilidade.
+20. Golden Scenarios.
+21. Testes backend.
+22. Testcontainers/MySQL.
+23. Testes frontend.
+24. E2E.
+25. Lint.
+26. Builds.
+27. Regressões.
+28. Arquivos modificados.
+29. Bugs encontrados/corrigidos.
+30. Divergências do ADR.
+31. Dívidas técnicas.
+32. Fora do escopo confirmado.
+
+Se concluída:
+
+READY FOR TASK-7.8 — Gate Final da Sprint 7.
+
+NÃO implementar TASK-7.8 nesta execução.

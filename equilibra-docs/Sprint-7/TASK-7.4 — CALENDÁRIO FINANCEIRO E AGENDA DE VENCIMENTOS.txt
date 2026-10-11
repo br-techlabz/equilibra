@@ -1,0 +1,938 @@
+# TASK-7.4 — CALENDÁRIO FINANCEIRO E AGENDA DE VENCIMENTOS
+
+PROJETO: EQUILIBRA
+SPRINT: 7 — PREVISIBILIDADE FINANCEIRA
+
+STACK:
+Angular 19
+Angular Material
+TypeScript
+RxJS
+Spring Boot 4
+MySQL
+
+CONTEXTO
+
+Sprints 0–6 aprovadas.
+TASK-7.0 — Arquitetura e ADR concluídos.
+TASK-7.1 — Backend de Recorrências concluído.
+TASK-7.2 — Frontend de Recorrências concluído.
+TASK-7.3 — Backend de Compromissos Futuros concluído.
+
+OBJETIVO
+
+Implementar a interface de calendário financeiro
+e agenda de vencimentos.
+
+Permitir visualizar, consultar e administrar
+compromissos previstos e efetivados
+conforme os contratos reais da TASK-7.3.
+
+Priorizar uma experiência responsiva,
+acessível e consistente com o Equilibra.
+
+Não implementar projeção de fluxo de caixa
+da TASK-7.5.
+
+==================================================
+1. INSPEÇÃO OBRIGATÓRIA
+==================================================
+
+Antes de alterar arquivos, ler:
+
+- CLAUDE.md;
+- ADR da TASK-7.0;
+- relatório da TASK-7.3;
+- OpenAPI;
+- DTOs reais;
+- endpoints reais;
+- estados e transições;
+- política de vencimento;
+- política de efetivação;
+- política de cancelamento;
+- política de geração de ocorrências;
+- modelo de RecurrenceRule;
+- modelo de compromissos;
+- Angular routing;
+- sidebar;
+- PageHeader;
+- componentes compartilhados;
+- Auth Guard;
+- interceptors;
+- serviços existentes;
+- testes frontend.
+
+Não presumir contratos.
+
+==================================================
+2. GATE DE CONTRATOS
+==================================================
+
+Confirmar:
+
+A. Listagem de compromissos.
+
+B. Filtro por período de vencimento.
+
+C. Detalhamento.
+
+D. Criação manual, se aprovada.
+
+E. Edição, se aprovada.
+
+F. Efetivação financeira.
+
+G. Cancelamento.
+
+H. Estados reais.
+
+I. Valores previstos e efetivados.
+
+J. Datas de vencimento e efetivação.
+
+K. Relação com recorrências.
+
+L. Paginação e ordenação.
+
+M. Política de compromissos atrasados.
+
+N. Resposta para chamadas repetidas.
+
+O. Regras de conta e categoria.
+
+P. Política de timezone.
+
+Se faltar operação essencial para
+o escopo obrigatório, registrar BLOCKED.
+
+Não criar backend nesta TASK
+sem autorização explícita.
+
+==================================================
+3. PRE-IMPLEMENTATION REPORT
+==================================================
+
+Produzir antes de editar:
+
+# TASK-7.4 — PRE-IMPLEMENTATION REPORT
+
+1. ADR.
+2. Contratos REST.
+3. DTOs.
+4. Estados.
+5. Transições.
+6. Rotas.
+7. Componentes reutilizáveis.
+8. Modelo visual.
+9. Calendário.
+10. Agenda.
+11. Efetivação.
+12. Cancelamento.
+13. Responsividade.
+14. Acessibilidade.
+15. Testes.
+16. Arquivos previstos.
+17. Bloqueadores.
+
+==================================================
+4. ROTA
+==================================================
+
+Criar rota autenticada:
+
+/financial-calendar
+
+ou rota aprovada no ADR.
+
+Não duplicar rota existente.
+
+==================================================
+5. SIDEBAR
+==================================================
+
+Adicionar item:
+
+Agenda Financeira
+
+Ícone sugerido:
+
+calendar-days.
+
+Respeitar sidebar recolhível
+e navegação mobile.
+
+==================================================
+6. PAGE HEADER
+==================================================
+
+Título:
+
+Agenda Financeira
+
+Subtítulo:
+
+"Acompanhe seus compromissos e vencimentos."
+
+Ações conforme backend.
+
+==================================================
+7. IDENTIDADE VISUAL
+==================================================
+
+Preservar design system Equilibra.
+
+Cor principal:
+#4c1d95.
+
+Usar tokens e componentes existentes.
+
+Não criar estilo visual paralelo.
+
+==================================================
+8. NAVEGAÇÃO POR PERÍODO
+==================================================
+
+Permitir:
+
+mês anterior;
+mês seguinte;
+voltar ao mês atual.
+
+Usar competência baseada
+em vencimento, conforme ADR.
+
+Não usar createdAt.
+
+==================================================
+9. MODOS DE VISUALIZAÇÃO
+==================================================
+
+Implementar:
+
+Calendário mensal;
+Lista/agenda de vencimentos.
+
+Reutilizar estado de filtros.
+
+Se o ADR definir outro conjunto
+de visualizações, segui-lo.
+
+==================================================
+10. CALENDÁRIO MENSAL
+==================================================
+
+Exibir grade de dias do mês.
+
+Mostrar indicadores de compromissos
+por data.
+
+Evitar excesso de conteúdo por célula.
+
+==================================================
+11. DETALHES POR DIA
+==================================================
+
+Ao selecionar um dia:
+
+mostrar compromissos com vencimento
+naquela data.
+
+Não carregar dados de outros usuários.
+
+==================================================
+12. AGENDA
+==================================================
+
+Exibir lista ordenada por vencimento.
+
+Mostrar:
+
+descrição;
+tipo;
+valor;
+data;
+status;
+conta/categoria, se disponíveis;
+ações permitidas.
+
+==================================================
+13. FILTROS
+==================================================
+
+Implementar somente filtros
+suportados pela API.
+
+Exemplos:
+
+tipo;
+status;
+conta;
+categoria;
+recorrência;
+intervalo.
+
+Não inventar filtros.
+
+==================================================
+14. DESPESAS E RECEITAS
+==================================================
+
+Diferenciar visualmente:
+
+EXPENSE;
+INCOME.
+
+Usar texto e ícones.
+
+Não depender somente de cor.
+
+==================================================
+15. STATUS
+==================================================
+
+Exibir estados reais do backend.
+
+Exemplos conceituais:
+
+Pendente;
+Efetivado;
+Cancelado.
+
+Atrasado somente se calculado
+segundo a política aprovada.
+
+==================================================
+16. VENCIMENTOS ATRASADOS
+==================================================
+
+Se a API fornecer estado derivado,
+utilizar fonte autorizada.
+
+Caso o ADR permita cálculo no frontend,
+usar data civil e timezone correto.
+
+Não confundir compromisso atrasado
+com despesa financeira já efetivada.
+
+==================================================
+17. VALORES MONETÁRIOS
+==================================================
+
+Formatar em pt-BR.
+
+Exemplo:
+
+R$ 129,90.
+
+Não usar float para cálculos financeiros.
+
+Usar representação monetária
+consistente com o backend.
+
+==================================================
+18. INDICADORES
+==================================================
+
+Se implementar resumos:
+
+previsto a pagar;
+previsto a receber;
+quantidade pendente;
+quantidade vencida.
+
+Calcular somente com semântica aprovada.
+
+Não incluir pagamentos já efetivados
+em totais de pendências indevidamente.
+
+==================================================
+19. SEM CONFUNDIR SALDOS
+==================================================
+
+Destacar diferença entre:
+
+previsto;
+pendente;
+efetivado.
+
+Não chamar compromisso previsto
+de saldo disponível.
+
+Não alterar ledger no frontend.
+
+==================================================
+20. DETALHAMENTO
+==================================================
+
+Abrir dialog/drawer conforme padrão.
+
+Exibir:
+
+descrição;
+tipo;
+valor;
+vencimento;
+status;
+recorrência, se houver;
+conta;
+categoria;
+dados de efetivação, se houver.
+
+Somente campos reais.
+
+==================================================
+21. CRIAÇÃO MANUAL
+==================================================
+
+Se backend suportar:
+
+permitir criar compromisso avulso.
+
+Se não suportar:
+
+não exibir botão.
+
+==================================================
+22. EDIÇÃO
+==================================================
+
+Se backend suportar:
+
+editar campos autorizados.
+
+Respeitar estado atual.
+
+Não editar indevidamente
+compromisso efetivado.
+
+==================================================
+23. EFETIVAÇÃO
+==================================================
+
+Se backend suportar:
+
+oferecer ação:
+
+Pagar ou Receber,
+conforme tipo.
+
+Abrir confirmação ou formulário
+conforme contrato real.
+
+==================================================
+24. CONFIRMAÇÃO DE EFETIVAÇÃO
+==================================================
+
+Exibir claramente:
+
+compromisso;
+tipo;
+valor;
+conta;
+data efetiva.
+
+Não executar ação antes
+da confirmação do usuário.
+
+==================================================
+25. EFETIVAÇÃO ATÔMICA
+==================================================
+
+Frontend apenas invoca endpoint.
+
+Backend é autoridade para:
+
+transação;
+ledger;
+estado;
+idempotência.
+
+Não criar Expense/Income separadamente
+e depois atualizar compromisso
+por duas chamadas independentes.
+
+==================================================
+26. DUPLO CLIQUE
+==================================================
+
+Durante efetivação:
+
+desabilitar botão;
+mostrar loading;
+impedir reenvio acidental.
+
+Backend continua responsável
+pela idempotência real.
+
+==================================================
+27. RETRY DE EFETIVAÇÃO
+==================================================
+
+Se ocorrer timeout:
+
+não afirmar que falhou
+nem repetir cegamente.
+
+Consultar estado atualizado
+conforme contrato de idempotência.
+
+Evitar pagamento duplicado.
+
+==================================================
+28. RESULTADO DA EFETIVAÇÃO
+==================================================
+
+Após sucesso:
+
+atualizar compromisso;
+atualizar status;
+atualizar indicadores;
+atualizar dados financeiros
+por mecanismos existentes.
+
+Não modificar saldo local manualmente.
+
+==================================================
+29. CANCELAMENTO
+==================================================
+
+Se endpoint existir:
+
+permitir cancelar compromisso
+nos estados autorizados.
+
+Mostrar confirmação.
+
+Não cancelar transação real
+sem fluxo específico aprovado.
+
+==================================================
+30. RECORRÊNCIAS
+==================================================
+
+Mostrar vínculo com regra recorrente
+quando disponível.
+
+Não alterar série inteira
+ao editar uma ocorrência
+sem contrato explícito.
+
+==================================================
+31. NAVEGAÇÃO PARA RECORRÊNCIAS
+==================================================
+
+Se houver relação e rota:
+
+permitir abrir regra de origem.
+
+Preservar navegação.
+
+==================================================
+32. SERVIÇO ANGULAR
+==================================================
+
+Criar ou reutilizar:
+
+FinancialCommitmentService.
+
+Usar HttpClient e DTOs reais.
+
+Não enviar ownerId.
+
+==================================================
+33. TIPAGEM
+==================================================
+
+Criar interfaces estritas.
+
+Não usar any.
+
+Usar enums reais.
+
+Tratar valores monetários
+sem perda de precisão.
+
+==================================================
+34. REQUESTS CONCORRENTES
+==================================================
+
+Mudanças rápidas de mês/filtro
+não podem exibir dados antigos.
+
+Usar switchMap ou equivalente.
+
+Evitar race conditions.
+
+==================================================
+35. PAGINAÇÃO
+==================================================
+
+Se API paginada:
+
+buscar todas as páginas necessárias
+para exibir mês completo, de forma
+controlada e eficiente.
+
+Não presumir que primeira página
+contém todos os compromissos.
+
+==================================================
+36. LOADING
+==================================================
+
+Exibir loading para:
+
+calendário;
+agenda;
+detalhes;
+efetivação;
+cancelamento.
+
+==================================================
+37. EMPTY STATE
+==================================================
+
+Sem compromissos no período:
+
+"Nenhum compromisso neste período."
+
+Exibir ação de navegação
+ou criação somente se permitida.
+
+==================================================
+38. ERROR STATE
+==================================================
+
+Mostrar erro compreensível.
+
+Oferecer retry.
+
+Não converter erro HTTP
+em mês vazio.
+
+==================================================
+39. AUTENTICAÇÃO
+==================================================
+
+Reutilizar JWT em memória.
+
+401:
+seguir fluxo global.
+
+403:
+não encerrar sessão indevidamente.
+
+==================================================
+40. MULTIUSER
+==================================================
+
+Não enviar ownerId.
+
+Não manter dados de usuário anterior.
+
+Backend controla ownership.
+
+==================================================
+41. PROBLEM DETAILS
+==================================================
+
+Tratar:
+
+400;
+401;
+403;
+404;
+409;
+422, se aplicável;
+500.
+
+Exibir mensagens seguras.
+
+==================================================
+42. RESPONSIVIDADE
+==================================================
+
+Validar:
+
+360x800;
+390x844;
+768x1024;
+1024x768;
+1280x720;
+1366x768;
+1920x1080.
+
+No mobile:
+
+preferir agenda;
+calendário compacto;
+dialogs adequados;
+botões acessíveis.
+
+Sem overflow horizontal global.
+
+==================================================
+43. ACESSIBILIDADE
+==================================================
+
+Garantir:
+
+labels;
+teclado;
+foco;
+contraste;
+status textual;
+dias acessíveis;
+navegação de calendário;
+mensagens;
+confirmações.
+
+==================================================
+44. GOLDEN — MÊS COM COMPROMISSOS
+==================================================
+
+Criar fixtures:
+
+05/10/2026 — Salário 3500.00.
+05/10/2026 — Aluguel 1500.00.
+10/10/2026 — Internet 129.90.
+15/10/2026 — Energia 300.00.
+
+Esperado:
+
+datas corretas;
+tipos corretos;
+valores corretos;
+agenda ordenada.
+
+==================================================
+45. GOLDEN — EFETIVAÇÃO
+==================================================
+
+Compromisso EXPENSE=200.00.
+
+Antes:
+saldo=1000.00.
+
+Efetivar pelo endpoint real.
+
+Esperado:
+
+compromisso efetivado;
+saldo backend=800.00;
+interface atualizada;
+sem débito duplicado.
+
+==================================================
+46. GOLDEN — RETRY
+==================================================
+
+Simular timeout de efetivação.
+
+Esperado:
+
+interface não afirma resultado
+sem confirmação.
+
+Reconsultar estado.
+
+Não enviar nova efetivação
+de forma insegura.
+
+==================================================
+47. GOLDEN — CANCELAMENTO
+==================================================
+
+Cancelar compromisso pendente.
+
+Esperado:
+
+estado atualizado;
+sem alteração de saldo.
+
+==================================================
+48. GOLDEN — MULTIUSER
+==================================================
+
+User A e B possuem compromissos.
+
+A visualiza somente A.
+
+B visualiza somente B.
+
+Frontend não envia ownerId.
+
+==================================================
+49. GOLDEN — MUDANÇA DE MÊS
+==================================================
+
+Alternar rapidamente:
+
+outubro;
+novembro;
+dezembro;
+outubro.
+
+Esperado:
+
+dados do mês selecionado;
+sem respostas obsoletas.
+
+==================================================
+50. TESTES UNITÁRIOS
+==================================================
+
+Cobrir:
+
+serviço HTTP;
+calendário;
+agenda;
+filtros;
+datas;
+valores;
+estados;
+detalhes;
+efetivação;
+cancelamento;
+loading;
+empty;
+error;
+retry;
+race conditions.
+
+==================================================
+51. TESTES E2E
+==================================================
+
+Se infraestrutura existir:
+
+navegação;
+mês;
+filtros;
+detalhes;
+efetivação;
+cancelamento;
+responsividade.
+
+Não declarar PASS sem executar.
+
+==================================================
+52. REGRESSÕES
+==================================================
+
+Executar regressões relevantes:
+
+Authentication;
+Accounts;
+Categories;
+Expenses;
+Income;
+Transfers;
+Dashboard;
+History;
+Reports;
+Budgets;
+Goals;
+Recurrences.
+
+Não alterar semântica financeira.
+
+==================================================
+53. BUILD
+==================================================
+
+Executar:
+
+Angular lint;
+Angular unit tests;
+Angular production build;
+E2E, se configurado.
+
+Registrar comandos e resultados.
+
+==================================================
+54. FORA DO ESCOPO
+==================================================
+
+Não implementar:
+
+projeção de fluxo de caixa;
+alertas avançados;
+notificações externas;
+novos endpoints;
+novas regras de ledger;
+TASK-7.5.
+
+==================================================
+55. DEFINITION OF DONE
+==================================================
+
+TASK-7.4 concluída quando:
+
+- rota funcionando;
+- sidebar integrada;
+- calendário funcionando;
+- agenda funcionando;
+- filtros corretos;
+- datas corretas;
+- estados corretos;
+- detalhes funcionando;
+- efetivação segura;
+- cancelamento conforme API;
+- loading/empty/error/retry;
+- ownership preservado;
+- responsividade validada;
+- acessibilidade validada;
+- testes unitários aprovados;
+- lint aprovado;
+- build aprovado;
+- regressões relevantes aprovadas.
+
+==================================================
+56. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-7.4 — CALENDÁRIO FINANCEIRO
+
+STATUS:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+1. ADR utilizado.
+2. Endpoints reais.
+3. Rota.
+4. Sidebar.
+5. Componentes.
+6. Calendário.
+7. Agenda.
+8. Filtros.
+9. Detalhes.
+10. Efetivação.
+11. Cancelamento.
+12. Datas.
+13. Estados.
+14. Indicadores.
+15. Serviços Angular.
+16. Models.
+17. Segurança.
+18. Concorrência.
+19. Responsividade.
+20. Acessibilidade.
+21. Golden Scenarios.
+22. Testes unitários.
+23. E2E.
+24. Lint.
+25. Production build.
+26. Regressões.
+27. Arquivos modificados.
+28. Bugs encontrados/corrigidos.
+29. Divergências do ADR.
+30. Dívidas técnicas.
+31. Fora do escopo confirmado.
+
+Se concluída:
+
+READY FOR TASK-7.5 — Projeção de Fluxo de Caixa.
+
+NÃO implementar TASK-7.5 nesta execução.

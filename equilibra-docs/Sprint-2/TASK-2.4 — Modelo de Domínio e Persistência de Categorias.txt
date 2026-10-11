@@ -1,0 +1,1331 @@
+# TASK-2.4 — Modelo de Domínio e Persistência de Categorias
+
+Estamos na:
+
+# Sprint 2 — Contas e Categorias
+
+Já foram concluídas:
+
+- TASK-2.1 — Domínio e persistência de Contas de Ativo
+- TASK-2.2 — Casos de Uso e API REST de Contas de Ativo
+- TASK-2.3 — Interface de Contas de Ativo
+
+Agora implemente:
+
+# Modelo de Domínio e Persistência de Categorias
+
+Esta TASK implementará exclusivamente a fundação de domínio e persistência
+das categorias financeiras do Equilibra.
+
+Categorias serão utilizadas futuramente para classificar:
+
+- Despesas
+- Receitas
+
+NÃO implemente ainda:
+
+- API REST de Categorias;
+- frontend de Categorias;
+- Despesas;
+- Receitas;
+- Transferências;
+- Tags;
+- relatórios;
+- integração com Dashboard.
+
+---
+
+# 1. Preparação obrigatória
+
+Antes de modificar código, leia:
+
+- CLAUDE.md
+- README.md
+- docs/architecture.md
+- docs/api-guidelines.md
+- docs/security.md
+- ADRs existentes
+
+Analise a implementação REAL de:
+
+- User
+- AssetAccount
+- AssetAccountRepository
+- migrations
+- estratégia UUID
+- ownership
+- normalização de nomes
+- auditoria
+- timestamps
+- JPA/Hibernate
+- MySQL
+- Testcontainers
+- regras de domínio existentes
+
+Não suponha que tarefas anteriores foram implementadas exatamente conforme
+o planejamento.
+
+O código atual é a fonte de verdade.
+
+Antes da implementação apresente:
+
+1. estado atual relevante;
+2. modelo proposto para Category;
+3. estratégia de ownership;
+4. estratégia de tipos de categoria;
+5. regras de unicidade;
+6. migration proposta;
+7. testes planejados.
+
+Depois implemente.
+
+---
+
+# 2. Conceito
+
+Uma Category representa uma classificação financeira utilizada para
+organizar transações.
+
+Exemplos:
+
+Despesas:
+
+- Alimentação
+- Moradia
+- Transporte
+- Saúde
+- Educação
+- Lazer
+
+Receitas:
+
+- Salário
+- Freelance
+- Investimentos
+- Reembolsos
+
+Uma categoria NÃO representa:
+
+- conta bancária;
+- conta de ativo;
+- transação;
+- tag;
+- favorecido;
+- credor.
+
+---
+
+# 3. Nome de domínio
+
+Utilize:
+
+Category
+
+ou nomenclatura equivalente já consistente com a arquitetura.
+
+Não use FinancialCategory, TransactionCategory ou outros nomes mais
+complexos sem necessidade real.
+
+---
+
+# 4. Modelo inicial
+
+Modele conceitualmente:
+
+Category
+
+- id
+- ownerId
+- name
+- normalizedName
+- applicability
+- active
+- createdAt
+- updatedAt
+
+Adapte às convenções reais do projeto.
+
+---
+
+# 5. UUID
+
+Utilize a mesma estratégia de UUID adotada por:
+
+User
+AssetAccount
+
+Não introduza Long/auto increment se isso quebrar consistência.
+
+---
+
+# 6. Ownership
+
+Toda categoria criada pelo usuário pertence exclusivamente a ele.
+
+Uma categoria de A jamais poderá ser utilizada ou acessada por B.
+
+Prepare o domínio/persistência para consultas:
+
+ownerId + resourceId
+
+seguindo o padrão de segurança estabelecido em AssetAccount.
+
+---
+
+# 7. Owner
+
+Avalie se o projeto utiliza:
+
+UUID ownerId
+
+ou:
+
+@ManyToOne User
+
+em AssetAccount.
+
+Para Category, siga a mesma decisão salvo motivo técnico forte.
+
+Não introduza padrão diferente sem justificativa.
+
+---
+
+# 8. Nome
+
+Campo:
+
+name
+
+Requisitos:
+
+- obrigatório;
+- trim;
+- não vazio;
+- limite razoável.
+
+Preferência:
+
+100 caracteres
+
+ou o mesmo limite adotado em AssetAccount quando apropriado.
+
+---
+
+# 9. Normalização
+
+Utilize estratégia coerente com AssetAccount.
+
+No mínimo:
+
+- trim;
+- comparação case-insensitive.
+
+Exemplo:
+
+"Alimentação"
+" alimentação "
+"ALIMENTAÇÃO"
+
+devem ser tratados de maneira consistente.
+
+---
+
+# 10. Unicode
+
+ATENÇÃO:
+
+NÃO remova acentos automaticamente apenas para normalizar, salvo se o
+projeto já possuir política explícita para isso.
+
+"Alimentação" deve continuar sendo exibido como:
+
+Alimentação
+
+Normalização para unicidade e valor de apresentação são conceitos
+separados.
+
+---
+
+# 11. Aplicabilidade
+
+Uma categoria poderá ser utilizada para:
+
+- despesas;
+- receitas;
+- ambos.
+
+Crie enum conceitual:
+
+CategoryApplicability
+
+com valores:
+
+EXPENSE
+INCOME
+BOTH
+
+Se houver nome melhor consistente com o projeto, pode utilizá-lo,
+documentando a decisão.
+
+---
+
+# 12. Significado
+
+EXPENSE
+
+Categoria destinada a despesas.
+
+Exemplos:
+
+Alimentação
+Moradia
+Transporte
+
+INCOME
+
+Categoria destinada a receitas.
+
+Exemplos:
+
+Salário
+Freelance
+
+BOTH
+
+Categoria que pode ser utilizada nos dois contextos.
+
+Exemplo:
+
+Outros
+
+---
+
+# 13. Por que não booleanos
+
+NÃO modele como:
+
+isExpense
+isIncome
+
+se um enum representar o domínio de forma mais clara.
+
+Evite estados inválidos como:
+
+false + false.
+
+---
+
+# 14. Persistência do enum
+
+Persistir como STRING.
+
+Exemplo:
+
+EXPENSE
+INCOME
+BOTH
+
+Nunca ordinal.
+
+---
+
+# 15. active
+
+Toda categoria nova deverá nascer:
+
+active = true
+
+---
+
+# 16. Desativação
+
+Categorias devem suportar desativação lógica.
+
+Categoria inativa:
+
+- permanece persistida;
+- mantém histórico futuro;
+- poderá continuar associada a transações antigas;
+- não deverá aparecer futuramente como opção para novos lançamentos.
+
+---
+
+# 17. Exclusão física
+
+NÃO implemente política de exclusão física como regra principal.
+
+Categorias financeiras podem possuir histórico.
+
+A estratégia principal será:
+
+desativação.
+
+---
+
+# 18. Unicidade
+
+Defina unicidade por:
+
+owner
++
+normalizedName
++
+active
+
+de forma coerente com AssetAccount.
+
+---
+
+# 19. Mesmo usuário
+
+O mesmo usuário NÃO poderá possuir simultaneamente duas categorias ativas
+com o mesmo nome normalizado.
+
+Exemplo:
+
+Alimentação
+alimentação
+
+→ conflito.
+
+---
+
+# 20. Usuários diferentes
+
+Usuário A:
+
+Alimentação
+
+Usuário B:
+
+Alimentação
+
+→ permitido.
+
+---
+
+# 21. Categoria inativa
+
+Preferência funcional:
+
+Categoria antiga:
+
+Alimentação
+inactive
+
+Nova categoria:
+
+Alimentação
+active
+
+→ permitido.
+
+Siga a estratégia robusta já adotada para AssetAccount.
+
+---
+
+# 22. Applicability e unicidade
+
+IMPORTANTE:
+
+Nesta versão, o nome deve ser único entre categorias ativas do usuário
+independentemente de applicability.
+
+Portanto NÃO permitir simultaneamente:
+
+Alimentação / EXPENSE
+Alimentação / INCOME
+
+como duas categorias diferentes.
+
+Se o usuário quiser usar Alimentação nos dois contextos:
+
+utilize:
+
+Alimentação / BOTH
+
+Isso evita duplicidade visual e ambiguidade.
+
+---
+
+# 23. Alteração futura de applicability
+
+Prepare o domínio para permitir futuramente:
+
+EXPENSE → BOTH
+INCOME → BOTH
+BOTH → EXPENSE
+etc.
+
+A API dessa alteração será criada na TASK-2.5.
+
+---
+
+# 24. Timestamps
+
+Utilize exatamente o padrão existente:
+
+createdAt
+updatedAt
+
+Se projeto utiliza Instant/UTC, mantenha.
+
+Não introduza LocalDateTime arbitrariamente.
+
+---
+
+# 25. createdAt
+
+Definido na criação.
+
+Não controlável externamente.
+
+---
+
+# 26. updatedAt
+
+Atualizado quando entidade for modificada.
+
+---
+
+# 27. Encapsulamento
+
+Não gere setters públicos indiscriminadamente.
+
+Preserve invariantes.
+
+Métodos conceituais possíveis:
+
+rename(...)
+changeApplicability(...)
+activate()
+deactivate()
+
+Adapte ao estilo real do projeto.
+
+---
+
+# 28. Construtor
+
+A criação deve impedir categoria semanticamente inválida quando possível.
+
+Exemplos:
+
+nome vazio;
+applicability null.
+
+---
+
+# 29. JPA
+
+Forneça construtor protegido sem argumentos se necessário.
+
+Não prejudique encapsulamento apenas para facilitar JPA.
+
+---
+
+# 30. Lombok
+
+Siga o padrão atual.
+
+Não introduza Lombok se não utilizado.
+
+Se utilizado, não aplique @Data indiscriminadamente em entidade JPA.
+
+---
+
+# 31. Repository
+
+Crie:
+
+CategoryRepository
+
+seguindo arquitetura existente.
+
+---
+
+# 32. Queries ownership-aware
+
+Prepare métodos equivalentes conceitualmente a:
+
+findByIdAndOwnerId(...)
+
+findAllByOwnerId(...)
+
+findAllByOwnerIdAndActiveTrue(...)
+
+existsByOwnerIdAndNormalizedNameAndActiveTrue(...)
+
+Adapte nomes à implementação real.
+
+---
+
+# 33. IDOR/BOLA
+
+Assim como AssetAccount, Category é recurso privado.
+
+A persistência deve favorecer consultas:
+
+id + ownerId
+
+em vez de:
+
+id
+
+isoladamente.
+
+---
+
+# 34. Consultas por applicability
+
+Prepare consulta útil para futuras telas de transações.
+
+Precisaremos buscar:
+
+categorias válidas para DESPESA.
+
+Resultado:
+
+EXPENSE + BOTH
+
+Precisaremos buscar:
+
+categorias válidas para RECEITA.
+
+Resultado:
+
+INCOME + BOTH
+
+---
+
+# 35. Não implementar lógica de transações
+
+Apenas prepare repository/modelo para suportar essas consultas.
+
+Não crie Expense ou Income nesta TASK.
+
+---
+
+# 36. Migration
+
+Crie nova migration versionada.
+
+NÃO edite migrations já aplicadas.
+
+---
+
+# 37. Tabela
+
+Preferência:
+
+categories
+
+Siga convenção existente.
+
+---
+
+# 38. Colunas
+
+Estrutura conceitual:
+
+id
+owner_id
+name
+normalized_name
+applicability
+active
+created_at
+updated_at
+
+Adapte ao padrão real.
+
+---
+
+# 39. Foreign key
+
+owner_id
+
+→ users.id
+
+Utilize FK real.
+
+---
+
+# 40. ON DELETE
+
+Não utilize ON DELETE CASCADE cegamente.
+
+Categorias financeiras futuras poderão estar vinculadas a histórico.
+
+Siga política segura adotada em AssetAccount.
+
+---
+
+# 41. Índices
+
+Avalie índices para:
+
+owner_id
+
+owner_id + active
+
+owner_id + applicability + active
+
+Não crie índices sem justificativa.
+
+---
+
+# 42. Constraint de unicidade
+
+Implemente proteção de banco para impedir duas categorias ativas com mesmo
+nome normalizado para o mesmo owner.
+
+Reutilize, se possível, a estratégia comprovada da TASK-2.1.
+
+A constraint deve proteger contra condições de corrida.
+
+---
+
+# 43. MySQL
+
+Considere comportamento real do MySQL:
+
+- collation;
+- índices;
+- NULL;
+- unique constraints.
+
+Não implemente solução que funcione apenas em H2.
+
+---
+
+# 44. Categorias padrão
+
+NÃO crie categorias globais automaticamente nesta TASK.
+
+Não faça seed automático de:
+
+Alimentação
+Moradia
+Salário
+etc.
+
+Inicialmente, cada usuário criará suas categorias.
+
+---
+
+# 45. Por que não seed agora
+
+Categorias padrão envolvem decisões futuras sobre:
+
+- personalização;
+- localização;
+- edição;
+- exclusão;
+- ownership;
+- onboarding.
+
+Isso merece requisito próprio.
+
+Não antecipe.
+
+---
+
+# 46. Hierarquia
+
+NÃO implemente:
+
+categoria pai;
+subcategoria;
+árvore de categorias.
+
+Nesta versão as categorias são planas.
+
+---
+
+# 47. Ícones
+
+NÃO persistir icon nesta TASK.
+
+---
+
+# 48. Cores
+
+NÃO persistir color nesta TASK.
+
+---
+
+# 49. Orçamento
+
+NÃO adicionar:
+
+budgetLimit
+monthlyBudget
+
+Categorias ainda não são orçamento.
+
+---
+
+# 50. Recorrência
+
+NÃO adicionar regras de recorrência.
+
+---
+
+# 51. Tags
+
+Tags são conceito separado.
+
+Não misturar com Category.
+
+---
+
+# 52. Conta
+
+Categoria NÃO possui AssetAccount.
+
+A associação ocorrerá na transação.
+
+---
+
+# 53. Testes de domínio
+
+Implemente testes para:
+
+- criação válida;
+- name obrigatório;
+- trim;
+- normalizedName;
+- applicability obrigatória;
+- EXPENSE;
+- INCOME;
+- BOTH;
+- active default true;
+- activate;
+- deactivate;
+- rename;
+- changeApplicability.
+
+Adapte aos métodos realmente implementados.
+
+---
+
+# 54. Teste Unicode
+
+Inclua pelo menos:
+
+Alimentação
+
+Confirme que o nome de apresentação preserva:
+
+ç
+ã
+
+Não corrompa caracteres.
+
+---
+
+# 55. Teste normalização
+
+Teste pelo menos:
+
+" Alimentação "
+
+e variações de case conforme estratégia escolhida.
+
+---
+
+# 56. Repository tests
+
+Utilize MySQL/Testcontainers conforme infraestrutura existente.
+
+---
+
+# 57. Persistência
+
+Teste:
+
+save
+→ reload
+→ campos preservados.
+
+---
+
+# 58. Ownership A/B
+
+Crie:
+
+User A
+User B
+
+Categoria pertence a A.
+
+findById + A
+→ encontrada.
+
+findById + B
+→ não encontrada.
+
+Obrigatório.
+
+---
+
+# 59. Listagem A/B
+
+A possui:
+
+Alimentação
+Moradia
+
+B possui:
+
+Salário
+
+Consulta A:
+
+retorna apenas:
+
+Alimentação
+Moradia.
+
+---
+
+# 60. Categorias ativas
+
+A possui:
+
+Alimentação active
+Moradia inactive
+
+Consulta de ativas:
+
+retorna apenas Alimentação.
+
+---
+
+# 61. Applicability EXPENSE
+
+Crie:
+
+Alimentação / EXPENSE
+Salário / INCOME
+Outros / BOTH
+
+Consulta para despesas:
+
+retorna:
+
+Alimentação
+Outros
+
+não retorna:
+
+Salário.
+
+---
+
+# 62. Applicability INCOME
+
+Mesmos dados.
+
+Consulta para receitas:
+
+retorna:
+
+Salário
+Outros
+
+não retorna:
+
+Alimentação.
+
+---
+
+# 63. Inativas + applicability
+
+Categoria BOTH inativa não deve aparecer na consulta de categorias
+disponíveis para novos lançamentos.
+
+---
+
+# 64. Duplicidade mesmo owner
+
+A:
+
+Alimentação
+
+segunda ativa:
+
+alimentação
+
+→ bloqueada.
+
+---
+
+# 65. Owners diferentes
+
+A:
+
+Alimentação
+
+B:
+
+Alimentação
+
+→ permitido.
+
+---
+
+# 66. Mesmo nome com applicability diferente
+
+A:
+
+Outros / EXPENSE
+
+A tenta criar:
+
+Outros / INCOME
+
+→ bloqueado.
+
+A solução correta para ambos é:
+
+Outros / BOTH.
+
+---
+
+# 67. Reutilização após inativação
+
+A:
+
+Alimentação inactive
+
+nova:
+
+Alimentação active
+
+→ permitido.
+
+---
+
+# 68. Constraint
+
+Teste a constraint real do banco quando possível.
+
+Não teste apenas método Java de validação.
+
+---
+
+# 69. FK
+
+Categoria não pode referenciar owner inexistente.
+
+---
+
+# 70. Migration limpa
+
+Confirme que migrations completas sobem em banco vazio.
+
+---
+
+# 71. Migration incremental
+
+Confirme aplicação sobre schema atual contendo:
+
+users
+asset_accounts
+
+Não danifique dados existentes.
+
+---
+
+# 72. Hibernate validation
+
+Se projeto utiliza schema validation:
+
+a aplicação deve iniciar sem divergências.
+
+Não use ddl-auto=update para esconder erro de migration.
+
+---
+
+# 73. Regressão AssetAccount
+
+Todos os testes de AssetAccount devem continuar passando.
+
+---
+
+# 74. Regressão autenticação
+
+Execute:
+
+register;
+login;
+JWT;
+CurrentUser;
+/me;
+security.
+
+---
+
+# 75. Frontend
+
+NÃO alterar frontend nesta TASK.
+
+A interface de Categorias será TASK-2.6.
+
+---
+
+# 76. API
+
+NÃO criar endpoints REST nesta TASK.
+
+Isso pertence à:
+
+TASK-2.5.
+
+---
+
+# 77. DTOs REST
+
+Não criar DTOs HTTP especulativos.
+
+---
+
+# 78. Dashboard
+
+NÃO alterar Dashboard.
+
+---
+
+# 79. AssetAccount
+
+NÃO modificar AssetAccount sem necessidade comprovada.
+
+Category é agregado independente.
+
+---
+
+# 80. Documentação
+
+Atualize documentação de domínio/arquitetura somente onde necessário.
+
+Registre:
+
+Category
+ownership
+applicability
+active
+normalização
+unicidade.
+
+---
+
+# 81. Security documentation
+
+Confirme que Category segue a regra geral:
+
+recurso financeiro privado
+→ ownership obrigatório.
+
+---
+
+# 82. CLAUDE.md
+
+Adicione somente regras permanentes ainda ausentes.
+
+Exemplos possíveis:
+
+- Category pertence ao usuário.
+- Categorias inativas permanecem para histórico.
+- Categorias são planas nesta versão.
+- Applicability define EXPENSE, INCOME ou BOTH.
+
+Não duplique regras já existentes.
+
+---
+
+# 83. Build
+
+Execute suíte Maven completa.
+
+---
+
+# 84. Definition of Done
+
+TASK-2.4 estará concluída quando:
+
+- Category estiver modelada;
+- UUID consistente;
+- owner obrigatório;
+- name validado;
+- normalizedName implementado;
+- CategoryApplicability implementado;
+- EXPENSE implementado;
+- INCOME implementado;
+- BOTH implementado;
+- active implementado;
+- timestamps implementados;
+- repository criado;
+- queries ownership-aware existirem;
+- consultas para despesas funcionarem;
+- consultas para receitas funcionarem;
+- migration criada;
+- FK criada;
+- índices adequados;
+- unicidade protegida no banco;
+- reutilização após inativação funcionar;
+- testes de domínio passarem;
+- repository tests passarem;
+- ownership A/B passar;
+- MySQL/Testcontainers passar;
+- regressão de AssetAccount passar;
+- regressão de autenticação passar;
+- Maven build passar;
+- frontend permanecer inalterado.
+
+---
+
+# 85. Relatório final
+
+Ao concluir apresente:
+
+# TASK-2.4
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## Modelo
+
+Liste os campos finais de Category.
+
+## CategoryApplicability
+
+Liste os valores implementados.
+
+## Ownership
+
+Explique estratégia.
+
+## Normalização
+
+Explique estratégia utilizada.
+
+## Unicidade
+
+Informe:
+
+Mesmo owner + mesmo nome ativo:
+PERMITIDO / BLOQUEADO
+
+Esperado:
+BLOQUEADO
+
+Owners diferentes + mesmo nome:
+PERMITIDO / BLOQUEADO
+
+Esperado:
+PERMITIDO
+
+Mesmo owner + mesmo nome + applicability diferente:
+PERMITIDO / BLOQUEADO
+
+Esperado:
+BLOQUEADO
+
+Categoria inativa + nova ativa de mesmo nome:
+PERMITIDO / BLOQUEADO
+
+Esperado:
+PERMITIDO
+
+## Consultas
+
+Informe consultas implementadas para:
+
+- todas do owner;
+- ativas;
+- disponíveis para despesas;
+- disponíveis para receitas.
+
+## Migration
+
+Informe:
+
+- arquivo;
+- tabela;
+- índices;
+- foreign keys;
+- constraints.
+
+## Testes
+
+### Domain
+PASS / FAIL
+
+### Repository
+PASS / FAIL
+
+### Ownership A/B
+PASS / FAIL
+
+### Applicability EXPENSE
+PASS / FAIL
+
+### Applicability INCOME
+PASS / FAIL
+
+### BOTH
+PASS / FAIL
+
+### Duplicate name
+PASS / FAIL
+
+### Inactive/reuse
+PASS / FAIL
+
+### MySQL/Testcontainers
+PASS / FAIL
+
+### AssetAccount regression
+PASS / FAIL
+
+### Authentication regression
+PASS / FAIL
+
+## Build
+
+Maven tests:
+PASS / FAIL
+
+Maven build:
+PASS / FAIL
+
+## Frontend
+
+Esperado:
+
+NÃO ALTERADO
+
+## Arquivos
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## Pendências
+
+### Bloqueantes
+
+### Não bloqueantes
+
+## Próxima tarefa
+
+Se TASK-2.4 estiver aprovada, informe prontidão para:
+
+# TASK-2.5 — Casos de Uso e API REST de Categorias
+
+NÃO implemente TASK-2.5.

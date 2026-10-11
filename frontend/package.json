@@ -16,6 +16,10 @@
     "e2e:report": "playwright show-report"
   },
   "private": true,
+  "engines": {
+    "node": ">=20.11.1 <21",
+    "npm": ">=10 <11"
+  },
   "dependencies": {
     "@angular/cdk": "^19.2.19",
     "@angular/common": "^19.2.0",

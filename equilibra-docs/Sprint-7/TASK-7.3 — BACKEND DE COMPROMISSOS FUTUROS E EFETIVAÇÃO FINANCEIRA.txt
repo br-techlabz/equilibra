@@ -1,0 +1,1042 @@
+# TASK-7.3 — BACKEND DE COMPROMISSOS FUTUROS E EFETIVAÇÃO FINANCEIRA
+
+PROJETO: EQUILIBRA
+SPRINT: 7 — PREVISIBILIDADE FINANCEIRA
+STACK: Spring Boot 4 + MySQL
+SEGURANÇA: JWT + CurrentUser
+QUALIDADE: Flyway + OpenAPI + Testcontainers/MySQL
+
+CONTEXTO
+
+Sprints 0 a 6 aprovadas.
+TASK-7.0 — Arquitetura e ADR concluídos.
+TASK-7.1 — Backend de Recorrências concluído.
+TASK-7.2 — Frontend de Recorrências concluído.
+
+OBJETIVO
+
+Implementar o backend de compromissos financeiros
+futuros e o fluxo controlado de efetivação financeira,
+conforme o ADR da TASK-7.0.
+
+Permitir administrar ocorrências previstas de
+despesas e receitas, com vencimento, estados
+e vinculação opcional a regras de recorrência,
+se o ADR assim determinar.
+
+Garantir que previsões não alterem o ledger.
+
+Somente uma efetivação válida pode criar
+a transação financeira real correspondente.
+
+NÃO implementar frontend nesta tarefa.
+
+==================================================
+1. INSPEÇÃO OBRIGATÓRIA
+==================================================
+
+Antes de alterar código, inspecionar:
+
+- CLAUDE.md;
+- ADR da TASK-7.0;
+- relatório final da TASK-7.1;
+- relatório final da TASK-7.2;
+- modelo real de RecurrenceRule;
+- eventual modelo de Occurrence existente;
+- gerador de ocorrências, se existente;
+- FinancialTransaction;
+- Expense;
+- Income;
+- AccountMovement;
+- ledger;
+- operações de cancelamento;
+- CurrentUser;
+- AssetAccount;
+- Category;
+- regras de occurredAt;
+- migrations;
+- OpenAPI;
+- testes Testcontainers/MySQL;
+- convenções de Problem Details.
+
+Não duplicar entidades ou serviços existentes.
+
+==================================================
+2. GATE ARQUITETURAL
+==================================================
+
+Confirmar no ADR:
+
+A. Modelo de compromisso previsto.
+
+B. Relação com recorrência.
+
+C. Criação manual de compromisso.
+
+D. Geração automática ou sob demanda.
+
+E. Horizonte de geração.
+
+F. Estados e transições.
+
+G. Data de vencimento.
+
+H. Data de efetivação.
+
+I. Valor previsto versus valor efetivado.
+
+J. Conta e categoria utilizadas.
+
+K. Pagamento/recebimento parcial.
+
+L. Cancelamento de compromisso.
+
+M. Estorno/cancelamento de transação real.
+
+N. Idempotência.
+
+O. Concorrência.
+
+P. Edição de ocorrência versus série.
+
+Q. Tratamento de compromissos vencidos.
+
+R. Competência financeira.
+
+S. Política para conta/categoria inativa.
+
+T. Comportamento após exclusão/pausa
+de recorrência.
+
+Se houver decisão essencial ausente,
+registrar BLOCKED.
+
+Não inventar semântica financeira.
+
+==================================================
+3. PRE-IMPLEMENTATION REPORT
+==================================================
+
+Produzir antes da implementação:
+
+# TASK-7.3 — PRE-IMPLEMENTATION REPORT
+
+1. ADR utilizado.
+2. Entidades existentes.
+3. Entidades necessárias.
+4. Estados.
+5. Transições.
+6. Geração de ocorrências.
+7. Criação manual.
+8. Efetivação.
+9. Integração com ledger.
+10. Idempotência.
+11. Concorrência.
+12. Política de datas.
+13. Pagamentos parciais.
+14. Cancelamentos.
+15. Contratos REST.
+16. Ownership.
+17. Migrations.
+18. Testes.
+19. Arquivos previstos.
+20. Bloqueadores.
+
+==================================================
+4. SEPARAÇÃO DE CONCEITOS
+==================================================
+
+Preservar três conceitos distintos:
+
+RecurrenceRule:
+regra periódica.
+
+FinancialCommitment / Occurrence:
+compromisso previsto.
+
+FinancialTransaction:
+transação efetivada.
+
+Usar nomes reais definidos no ADR.
+
+Não tratar previsão como transação efetiva.
+
+==================================================
+5. MODELO DE DOMÍNIO
+==================================================
+
+Implementar somente campos aprovados.
+
+Candidatos conceituais:
+
+id: UUID
+ownerId: UUID
+recurrenceRuleId: UUID opcional
+type: EXPENSE / INCOME
+description: String
+plannedAmount: BigDecimal
+dueDate: LocalDate
+accountId: UUID
+categoryId: UUID
+status: enum
+createdAt
+updatedAt
+settledAt, se aprovado
+financialTransactionId, se aprovado
+
+Não criar campos especulativos.
+
+==================================================
+6. COMPROMISSOS MANUAIS
+==================================================
+
+Se aprovados:
+
+permitir compromisso único sem recorrência.
+
+Não exigir recurrenceRuleId.
+
+Se não aprovados:
+
+não criar endpoint de compromisso avulso.
+
+==================================================
+7. COMPROMISSOS RECORRENTES
+==================================================
+
+Se previstos:
+
+vincular ocorrência à regra correta.
+
+Preservar identidade da ocorrência.
+
+Não gerar duas ocorrências equivalentes
+para a mesma regra e período.
+
+==================================================
+8. VALORES MONETÁRIOS
+==================================================
+
+Usar BigDecimal.
+
+DECIMAL(19,2).
+
+Rejeitar valores inválidos.
+
+Não usar float/double.
+
+Não arredondar silenciosamente.
+
+==================================================
+9. VENCIMENTO
+==================================================
+
+Usar LocalDate para dueDate.
+
+Não confundir vencimento com occurredAt.
+
+Respeitar timezone e calendário do ADR.
+
+==================================================
+10. ESTADOS
+==================================================
+
+Implementar estados aprovados.
+
+Exemplos conceituais:
+
+PENDING;
+SETTLED;
+CANCELLED.
+
+OVERDUE pode ser derivado da data,
+conforme ADR.
+
+Não persistir estado derivado sem necessidade.
+
+==================================================
+11. TRANSIÇÕES
+==================================================
+
+Centralizar transições no service.
+
+Não permitir:
+
+efetivar compromisso cancelado;
+efetivar duas vezes;
+editar indevidamente compromisso efetivado;
+cancelar sem política aprovada.
+
+==================================================
+12. GERAÇÃO DE OCORRÊNCIAS
+==================================================
+
+Se prevista na TASK-7.3:
+
+usar mecanismo definido no ADR.
+
+Não criar scheduler novo se o ADR
+determinar geração sob demanda.
+
+Não gerar ocorrências infinitas.
+
+==================================================
+13. HORIZONTE
+==================================================
+
+Respeitar limite aprovado.
+
+Evitar geração massiva.
+
+Aplicar filtros por owner e período.
+
+==================================================
+14. IDEMPOTÊNCIA DE GERAÇÃO
+==================================================
+
+Garantir unicidade por identidade
+de ocorrência definida no ADR.
+
+Executar geração repetida:
+
+não pode duplicar compromissos.
+
+Proteger também no banco.
+
+==================================================
+15. EDIÇÃO DE OCORRÊNCIA
+==================================================
+
+Se permitida:
+
+editar somente campos aprovados.
+
+Preservar relação com regra.
+
+Não alterar transações já efetivadas.
+
+==================================================
+16. EDIÇÃO DA REGRA
+==================================================
+
+Validar efeitos sobre ocorrências futuras.
+
+Não reescrever compromissos efetivados.
+
+Não apagar histórico.
+
+==================================================
+17. PAUSA DE RECORRÊNCIA
+==================================================
+
+Respeitar política do ADR para:
+
+novas ocorrências;
+ocorrências existentes;
+ocorrências vencidas;
+ocorrências efetivadas.
+
+==================================================
+18. CANCELAMENTO DA REGRA
+==================================================
+
+Não cancelar transações financeiras reais.
+
+Ocorrências futuras devem seguir
+política aprovada.
+
+==================================================
+19. EFETIVAÇÃO FINANCEIRA
+==================================================
+
+Implementar operação atômica.
+
+A efetivação deve:
+
+1. Validar owner.
+2. Validar estado do compromisso.
+3. Validar conta e categoria.
+4. Validar valor e data efetiva.
+5. Criar transação financeira real usando
+   serviços existentes.
+6. Criar movimentos de ledger corretos.
+7. Vincular compromisso à transação.
+8. Alterar estado do compromisso.
+9. Confirmar tudo em uma transação de banco.
+
+Se falhar qualquer etapa:
+
+rollback integral.
+
+Não criar lógica paralela de ledger.
+
+==================================================
+20. DESPESA EFETIVADA
+==================================================
+
+Para EXPENSE:
+
+usar fluxo real de Expense existente.
+
+Gerar movimento negativo na conta
+conforme arquitetura do ledger.
+
+Não debitar conta duas vezes.
+
+==================================================
+21. RECEITA EFETIVADA
+==================================================
+
+Para INCOME:
+
+usar fluxo real de Income existente.
+
+Gerar movimento positivo na conta.
+
+Não creditar duas vezes.
+
+==================================================
+22. DATA DE EFETIVAÇÃO
+==================================================
+
+Usar occurredAt conforme regra aprovada.
+
+Não usar automaticamente dueDate
+como occurredAt sem decisão explícita.
+
+==================================================
+23. VALOR EFETIVADO
+==================================================
+
+Se valor real puder diferir do previsto:
+
+validar e persistir conforme ADR.
+
+Não alterar plannedAmount silenciosamente.
+
+Manter rastreabilidade.
+
+==================================================
+24. PAGAMENTO PARCIAL
+==================================================
+
+Se aprovado:
+
+implementar modelo explícito.
+
+Se não aprovado ou adiado:
+
+não simular pagamento parcial
+com estados inconsistentes.
+
+Registrar fora do escopo.
+
+==================================================
+25. DUPLA EFETIVAÇÃO
+==================================================
+
+Duas chamadas para efetivar
+o mesmo compromisso não podem
+gerar duas transações reais.
+
+Aplicar:
+
+- constraint;
+- locking;
+- verificação transacional;
+- idempotência aprovada.
+
+Não depender apenas de botão desabilitado
+no frontend.
+
+==================================================
+26. RETRY
+==================================================
+
+Se cliente repetir request por timeout:
+
+não criar lançamento duplicado.
+
+Definir resposta conforme contrato
+e semântica de idempotência.
+
+==================================================
+27. CONCORRÊNCIA
+==================================================
+
+Testar duas efetivações simultâneas.
+
+Esperado:
+
+uma única transação financeira real.
+
+Nenhum movimento duplicado.
+
+==================================================
+28. CANCELAMENTO DE COMPROMISSO
+==================================================
+
+Se compromisso ainda não efetivado:
+
+cancelar conforme ADR.
+
+Não criar lançamento real.
+
+==================================================
+29. CANCELAMENTO APÓS EFETIVAÇÃO
+==================================================
+
+Não excluir fisicamente a transação real.
+
+Usar fluxo existente de cancelamento
+ou estorno somente se aprovado.
+
+Não desvincular histórico indevidamente.
+
+==================================================
+30. CONTA INATIVA
+==================================================
+
+Seguir política aprovada para efetivação.
+
+Não permitir uso indevido de conta inativa.
+
+Compromissos históricos continuam legíveis.
+
+==================================================
+31. CATEGORIA INATIVA
+==================================================
+
+Seguir política aprovada.
+
+Não apagar referência histórica.
+
+==================================================
+32. OWNERSHIP
+==================================================
+
+ownerId sempre derivado do JWT.
+
+Não aceitar ownerId no request.
+
+Conta, categoria, recorrência
+e compromisso devem pertencer
+ao mesmo usuário.
+
+==================================================
+33. REFERÊNCIAS ESTRANGEIRAS
+==================================================
+
+IDs de outro usuário devem ser
+indistinguíveis de inexistentes.
+
+Não revelar existência de dados privados.
+
+==================================================
+34. MIGRATIONS
+==================================================
+
+Criar migrations Flyway novas.
+
+Incluir:
+
+tabelas aprovadas;
+UUID;
+ownerId;
+FKs;
+DECIMAL;
+datas;
+estados;
+índices;
+unicidade de geração;
+unicidade de vínculo financeiro.
+
+Não editar migrations aplicadas.
+
+==================================================
+35. CONSTRAINTS
+==================================================
+
+Validar no banco:
+
+NOT NULL;
+FKs;
+valores;
+datas;
+unicidade;
+integridade do vínculo com transação real.
+
+==================================================
+36. REPOSITORY
+==================================================
+
+Criar consultas owner-scoped.
+
+Evitar N+1.
+
+Suportar filtros e paginação
+conforme ADR.
+
+==================================================
+37. SERVICE
+==================================================
+
+Separar responsabilidades:
+
+gestão de compromissos;
+geração de ocorrências;
+efetivação financeira;
+transições.
+
+Reutilizar serviços do ledger.
+
+==================================================
+38. API REST
+==================================================
+
+Implementar contratos reais.
+
+Exemplos conceituais:
+
+GET /api/commitments
+GET /api/commitments/{id}
+POST /api/commitments
+PUT /api/commitments/{id}
+POST /api/commitments/{id}/settle
+
+Não criar endpoints não aprovados.
+
+==================================================
+39. FILTROS
+==================================================
+
+Se previstos:
+
+tipo;
+status;
+vencimento inicial;
+vencimento final;
+conta;
+categoria;
+recorrência.
+
+Não inventar filtros.
+
+==================================================
+40. PAGINAÇÃO
+==================================================
+
+Seguir padrão do projeto.
+
+Ordenação estável.
+
+Não retornar dados ilimitados.
+
+==================================================
+41. DTOs
+==================================================
+
+Criar DTOs tipados conforme contrato.
+
+Não expor entidades JPA.
+
+Não aceitar ownerId.
+
+==================================================
+42. VALIDAÇÕES
+==================================================
+
+Cobrir:
+
+tipo;
+valor;
+data;
+conta;
+categoria;
+recorrência;
+estado;
+transição;
+idempotência;
+concorrência;
+ownership.
+
+==================================================
+43. ERROS HTTP
+==================================================
+
+Seguir padrão existente:
+
+400;
+401;
+403;
+404;
+409;
+422, se aplicável;
+500.
+
+Problem Details + Request ID.
+
+==================================================
+44. OPENAPI
+==================================================
+
+Documentar:
+
+endpoints;
+schemas;
+estados;
+transições;
+datas;
+valores;
+erros;
+autenticação;
+idempotência.
+
+==================================================
+45. GOLDEN — PREVISÃO NÃO ALTERA SALDO
+==================================================
+
+Conta A inicial=1000.00.
+
+Criar compromisso EXPENSE=200.00.
+
+Esperado:
+
+saldo A=1000.00;
+nenhum movimento real;
+nenhuma despesa efetivada.
+
+==================================================
+46. GOLDEN — EFETIVAÇÃO DE DESPESA
+==================================================
+
+Conta A inicial=1000.00.
+
+Compromisso EXPENSE=200.00.
+
+Efetivar uma vez.
+
+Esperado:
+
+saldo A=800.00;
+uma transação lógica de despesa;
+um movimento negativo;
+compromisso efetivado.
+
+==================================================
+47. GOLDEN — EFETIVAÇÃO DE RECEITA
+==================================================
+
+Conta A inicial=1000.00.
+
+Compromisso INCOME=500.00.
+
+Efetivar uma vez.
+
+Esperado:
+
+saldo A=1500.00;
+uma transação lógica de receita;
+um movimento positivo.
+
+==================================================
+48. GOLDEN — DUPLA EFETIVAÇÃO
+==================================================
+
+Compromisso EXPENSE=200.00.
+
+Efetivar duas vezes.
+
+Esperado:
+
+somente uma transação real;
+somente um débito;
+segunda chamada tratada conforme contrato.
+
+==================================================
+49. GOLDEN — CONCORRÊNCIA
+==================================================
+
+Executar duas efetivações simultâneas.
+
+Esperado:
+
+uma única transação financeira real.
+
+==================================================
+50. GOLDEN — CANCELAMENTO
+==================================================
+
+Cancelar compromisso pendente.
+
+Esperado:
+
+sem transação real;
+sem alteração de saldo.
+
+==================================================
+51. GOLDEN — RECORRÊNCIA
+==================================================
+
+Regra mensal:
+
+Internet=129.90;
+dia 10.
+
+Gerar ocorrências conforme ADR.
+
+Esperado:
+
+datas corretas;
+sem duplicação;
+sem alteração do ledger antes da efetivação.
+
+==================================================
+52. GOLDEN — MÊS CURTO
+==================================================
+
+Regra com vencimento dia 31.
+
+Validar fevereiro e abril.
+
+Aplicar política aprovada.
+
+==================================================
+53. GOLDEN — MULTIUSER
+==================================================
+
+User A possui compromisso X.
+
+User B possui compromisso Y.
+
+A não pode consultar, editar,
+cancelar ou efetivar Y.
+
+B não acessa X.
+
+==================================================
+54. GOLDEN — REGRESSÃO LEDGER
+==================================================
+
+Conta A inicial=1000.00.
+Conta B inicial=500.00.
+
+Income A=700.00.
+Expense A=200.00.
+Transfer A->B=300.00.
+
+Esperado:
+
+A=1200.00;
+B=800.00;
+Patrimônio=2000.00;
+Receitas=700.00;
+Despesas=200.00;
+Resultado=500.00;
+Histórico=3 transações lógicas.
+
+==================================================
+55. TESTES UNITÁRIOS
+==================================================
+
+Cobrir:
+
+criação;
+edição;
+listagem;
+estados;
+transições;
+geração;
+idempotência;
+efetivação;
+cancelamento;
+datas;
+valores;
+ownership;
+concorrência.
+
+==================================================
+56. TESTES DE INTEGRAÇÃO
+==================================================
+
+Usar Testcontainers/MySQL.
+
+Validar:
+
+migrations;
+constraints;
+transações;
+rollback;
+locking;
+idempotência;
+FKs;
+BigDecimal;
+datas;
+ledger;
+endpoints;
+segurança.
+
+==================================================
+57. TESTES DE ROLLBACK
+==================================================
+
+Simular falha após início
+da efetivação.
+
+Esperado:
+
+nenhum movimento parcial;
+nenhuma transação órfã;
+compromisso permanece consistente.
+
+==================================================
+58. TESTES DE SEGURANÇA
+==================================================
+
+Sem JWT:
+401.
+
+Compromisso estrangeiro:
+404.
+
+Efetivação estrangeira:
+404.
+
+Recorrência estrangeira:
+404.
+
+Listagem:
+somente próprias.
+
+==================================================
+59. REGRESSÕES
+==================================================
+
+Executar regressões relevantes:
+
+Authentication;
+Asset Accounts;
+Categories;
+Expenses;
+Income;
+Transfers;
+Dashboard;
+History;
+Tags;
+Attachments;
+Reports;
+Exports;
+Budgets;
+Budget Alerts;
+Financial Goals;
+Recurrences.
+
+Confirmar ausência de regressão financeira.
+
+==================================================
+60. PERFORMANCE
+==================================================
+
+Validar:
+
+índices;
+paginação;
+consultas owner-scoped;
+geração limitada;
+ausência de N+1;
+locking adequado;
+sem processamento desnecessário.
+
+==================================================
+61. FORA DO ESCOPO
+==================================================
+
+Não implementar:
+
+frontend de compromissos;
+calendário;
+fluxo de caixa projetado;
+alertas de vencimento;
+notificações externas;
+novas modalidades de ledger;
+refatoração ampla;
+TASK-7.4.
+
+==================================================
+62. DEFINITION OF DONE
+==================================================
+
+TASK-7.3 concluída quando:
+
+- ADR respeitado;
+- compromissos previstos implementados;
+- ocorrências conforme arquitetura;
+- vencimentos corretos;
+- estados corretos;
+- CRUD aprovado;
+- efetivação atômica;
+- idempotência comprovada;
+- concorrência protegida;
+- rollback comprovado;
+- owner-scoping garantido;
+- ledger preservado;
+- migrations aplicadas;
+- OpenAPI atualizado;
+- Golden Scenarios aprovados;
+- testes unitários aprovados;
+- Testcontainers/MySQL aprovado;
+- segurança aprovada;
+- backend build aprovado;
+- regressões relevantes aprovadas.
+
+==================================================
+63. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-7.3 — BACKEND DE COMPROMISSOS FUTUROS
+
+STATUS:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+1. ADR utilizado.
+2. Decisões confirmadas.
+3. Entidades.
+4. Migrations.
+5. Constraints.
+6. Estados.
+7. Transições.
+8. Geração de ocorrências.
+9. Idempotência.
+10. Concorrência.
+11. Efetivação.
+12. Integração com ledger.
+13. Rollback.
+14. Cancelamento.
+15. Endpoints.
+16. DTOs.
+17. Validações.
+18. Ownership.
+19. Integridade financeira.
+20. Golden Scenarios.
+21. Testes unitários.
+22. Testcontainers/MySQL.
+23. Segurança.
+24. OpenAPI.
+25. Problem Details.
+26. Performance.
+27. Regressões.
+28. Build backend.
+29. Arquivos modificados.
+30. Bugs encontrados/corrigidos.
+31. Divergências do ADR.
+32. Dívidas técnicas.
+33. Fora do escopo confirmado.
+
+Se concluída:
+
+READY FOR TASK-7.4 — Calendário Financeiro
+e Agenda de Vencimentos.
+
+NÃO implementar TASK-7.4 nesta execução.

@@ -1,0 +1,535 @@
+# TASK-5.4 — Interface do Relatório por Categoria
+
+PROJETO: Equilibra
+SPRINT: 5 — Relatórios Financeiros
+STACK: Angular 19, Spring Boot 4, MySQL
+
+STATUS INFORMADO:
+TASK-5.0 — Concluída
+TASK-5.1 — Concluída
+TASK-5.3 — Concluída
+TASK-5.2 — Confirmar status no repositório antes de iniciar.
+
+OBJETIVO
+Implementar a interface Angular do Relatório por Categoria utilizando exclusivamente o backend entregue na TASK-5.3, seguindo o ADR 5.0, o Design System existente e os padrões estabelecidos na interface do Relatório Financeiro.
+
+Esta TASK é FRONTEND ONLY, salvo correção mínima de blocker comprovado.
+
+1. PRÉ-IMPLEMENTAÇÃO
+
+Ler obrigatoriamente:
+- CLAUDE.md;
+- ADR da TASK-5.0;
+- relatório e código da TASK-5.3;
+- OpenAPI real do relatório por categoria;
+- relatório e implementação da TASK-5.2, se concluída;
+- Angular routing e menu lateral;
+- componentes de filtros e seleção de contas;
+- CategoryService e AssetAccountService;
+- design tokens, PageHeader, ContentPanel e StatCard;
+- integração ECharts existente;
+- interceptors de autenticação e erros;
+- testes frontend.
+
+Antes de modificar arquivos, apresentar:
+- endpoint e contrato real;
+- filtros suportados;
+- formato do response;
+- semântica de categorias EXPENSE/INCOME/BOTH;
+- estratégia de layout;
+- componentes reutilizáveis;
+- plano de testes;
+- arquivos a criar/modificar.
+
+Não presumir que a TASK-5.2 esteja concluída apenas porque foi planejada. Se componentes compartilhados não existirem, criar a solução mínima necessária sem duplicar arquitetura.
+
+2. ROTA E NAVEGAÇÃO
+
+Implementar rota privada conforme ADR, preferencialmente:
+
+/reports/categories
+
+Integrar no menu:
+
+Relatórios
+  Financeiro
+  Por categoria
+  Auditoria
+
+Apenas ativar rotas realmente implementadas.
+Não criar páginas fictícias.
+
+3. ESTRUTURA DA TELA
+
+Título:
+Relatório por categoria
+
+Subtítulo:
+"Entenda como suas receitas e despesas estão distribuídas entre as categorias."
+
+Estrutura:
+
+PageHeader
+Filtros
+Indicadores financeiros
+Visualização gráfica
+Tabela analítica por categoria
+
+Manter consistência com o Relatório Financeiro.
+
+4. FILTROS
+
+Implementar exatamente os filtros suportados pela API 5.3:
+
+- período;
+- uma conta;
+- várias contas;
+- todas as contas;
+- categorias, se suportadas;
+- tags, se suportadas pelo ADR/API.
+
+Não adicionar filtros que o backend não suporta.
+
+Contas inativas devem estar disponíveis para análise histórica conforme ADR.
+
+O filtro de todas as contas deve respeitar o contrato da API.
+
+5. PERÍODO
+
+Seguir semântica real do ADR.
+
+Usar occurredAt no backend.
+
+Não criar conversão de timezone diferente da usada no Relatório Financeiro.
+
+Se a UI apresenta data final inclusiva e API usa [from,to), mapear corretamente o limite superior.
+
+Padrão inicial: mês atual, se aprovado no ADR.
+
+6. APLICAR E RESTAURAR
+
+Implementar:
+
+Aplicar filtros
+Restaurar filtros
+
+Separar draftFilters e appliedFilters.
+
+Editar filtros não pode alterar silenciosamente a identificação dos dados atualmente exibidos.
+
+Ao aplicar novos filtros, reiniciar paginação, caso exista.
+
+7. INDICADORES
+
+Exibir:
+
+Total de receitas
+Total de despesas
+Resultado financeiro
+
+Todos os valores vêm do backend.
+
+Não recalcular receitas/despesas no Angular.
+
+Não confundir transferências com receitas/despesas.
+
+8. CATEGORIAS BOTH
+
+Uma categoria BOTH pode apresentar simultaneamente:
+
+incomeTotal
+expenseTotal
+netResult
+
+Não misturar os dois valores em um único total sem discriminação.
+
+Exemplo:
+
+Categoria: Outros
+Receitas: R$ 125,10
+Despesas: R$ 25,20
+Resultado: R$ 99,90
+
+9. CATEGORIAS INATIVAS
+
+Exibir categorias inativas presentes nos dados históricos.
+
+Indicar "Inativa" de forma textual, não apenas por cor.
+
+Não excluir categorias do relatório porque foram desativadas.
+
+10. SEM CATEGORIA
+
+Se o backend retornar agrupamento "Sem categoria", exibir corretamente.
+
+Não criar UUID fictício nem interpretar null como erro.
+
+11. GRÁFICOS
+
+Reutilizar ECharts já presente no Equilibra.
+
+Não instalar segunda biblioteca de gráficos.
+
+Implementar visualizações que respondam a perguntas financeiras reais.
+
+Preferência:
+
+- distribuição de despesas por categoria;
+- distribuição de receitas por categoria.
+
+Pode utilizar gráfico de barras horizontais, barras verticais ou rosca, conforme adequação ao número de categorias e ao Design System.
+
+Para muitas categorias, preferir barras horizontais ou solução que preserve legibilidade.
+
+Não misturar receitas e despesas na mesma série sem legenda clara.
+
+Não usar netResult negativo em gráfico de pizza/rosca como se fosse proporção positiva.
+
+Percentuais devem usar dados fornecidos pelo backend quando disponíveis; caso contrário, cálculos exclusivamente de apresentação são permitidos, sem substituir os totais financeiros.
+
+Se houver denominador zero, não renderizar percentual inválido.
+
+12. INTERAÇÃO DOS GRÁFICOS
+
+Permitir alternar visualização entre:
+
+Despesas
+Receitas
+
+se fizer sentido para o DTO.
+
+A alternância deve apenas apresentar os dados já retornados pela API.
+
+Não inventar dados.
+
+Não transformar gráfico em filtro backend sem contrato aprovado.
+
+Tooltips:
+- nome da categoria;
+- valor monetário;
+- percentual, se disponível.
+
+13. TABELA ANALÍTICA
+
+Exibir colunas:
+
+Categoria
+Tipo/aplicabilidade
+Receitas
+Despesas
+Resultado
+
+Adicionar participação percentual somente se prevista no contrato/arquitetura.
+
+Usar ordenação fornecida pelo backend.
+
+Não oferecer ordenação falsa que reorganize somente uma página.
+
+Se paginação existir, usar servidor.
+
+Categorias BOTH aparecem uma vez, com receitas e despesas separadas.
+
+14. RESPONSIVIDADE
+
+Desktop:
+tabela analítica e gráfico em layout equilibrado.
+
+Tablet:
+cards e gráfico adaptáveis.
+
+Mobile:
+lista/cards por categoria, com valores legíveis.
+
+Validar:
+360x800
+390x844
+768x1024
+1024x768
+1280x720
+1366x768
+1920x1080
+
+Sem scroll horizontal global.
+
+Testar nomes de categoria longos e valores grandes.
+
+15. ESTADOS DA INTERFACE
+
+Implementar:
+
+initial;
+loading;
+success;
+empty;
+error;
+retry.
+
+Não mostrar R$ 0,00 antes da primeira resposta como se fosse dado real.
+
+Distinguir:
+- nenhuma movimentação no período;
+- usuário sem contas;
+- erro de API.
+
+Em erro, não apresentar dados antigos como se correspondessem aos filtros novos.
+
+16. ACESSIBILIDADE
+
+Labels explícitos nos filtros.
+Multiselect acessível por teclado.
+Botões com nomes acessíveis.
+Feedback de erro compreensível.
+Indicadores não dependem apenas de cor.
+Gráficos com representação textual/tabular equivalente.
+Tabelas com cabeçalhos semânticos.
+Foco adequado em erros e estados relevantes.
+Tooltips não exclusivos de hover.
+
+17. SERVIÇO ANGULAR
+
+Criar ou ampliar serviço tipado:
+
+CategoryReportService
+
+conforme padrões existentes.
+
+Usar HttpClient e interceptor JWT.
+
+Models/interfaces devem refletir exatamente OpenAPI.
+
+Evitar any.
+
+Não implementar cálculos financeiros no frontend.
+
+18. REQUESTS E CONCORRÊNCIA
+
+Evitar requests duplicadas.
+
+Se o usuário aplicar filtros rapidamente, a resposta antiga não pode sobrescrever a nova.
+
+Usar switchMap ou estratégia equivalente.
+
+Gerenciar ciclo de vida de subscriptions.
+
+Carregar contas e categorias eficientemente.
+
+Não fazer request individual por categoria.
+
+19. GOLDEN SCENARIO
+
+Contas:
+A initial=1000
+B initial=500
+C initial=200
+
+Antes do período:
+Income A=100
+
+Dentro do período:
+Income A=700, categoria Salário
+Expense A=200, categoria Moradia
+Transfer A→B=300
+Transfer C→A=50
+
+Todas as contas:
+
+Salário:
+Receitas=700
+Despesas=0
+Resultado=700
+
+Moradia:
+Receitas=0
+Despesas=200
+Resultado=-200
+
+Resumo:
+Receitas=700
+Despesas=200
+Resultado=500
+
+Selecionar somente A:
+mesmos totais por categoria.
+
+Selecionar somente B:
+nenhuma receita/despesa.
+
+Transferências não aparecem como receitas/despesas.
+
+20. BOTH GOLDEN
+
+Categoria BOTH:
+Income=125.10
+Expense=25.20
+Net=99.90
+
+Renderizar:
+
+R$ 125,10
+R$ 25,20
+R$ 99,90
+
+21. CANCELLED GOLDEN
+
+Adicionar Expense cancelada de 999.
+
+Não altera os totais.
+
+22. TAGS E ATTACHMENTS
+
+Adicionar Tags e Attachments.
+
+Totais permanecem iguais.
+
+Não realizar request de anexos para montar o relatório.
+
+23. ISOLAMENTO
+
+User A nunca vê categorias ou totais privados de User B.
+
+Não enviar ownerId na request.
+
+Reutilizar auth global.
+
+401 encerra sessão conforme política atual.
+403 não encerra sessão.
+
+24. TESTES UNITÁRIOS
+
+Testar:
+- serviço tipado;
+- serialização de filtros;
+- período e timezone;
+- conta única/múltipla/todas;
+- contas inativas;
+- filtros aplicados versus rascunho;
+- reset;
+- loading;
+- empty;
+- error/retry;
+- resposta antiga versus nova;
+- renderização monetária;
+- categorias EXPENSE/INCOME/BOTH;
+- categoria inativa;
+- sem categoria;
+- resultado negativo;
+- gráfico com dados reais;
+- denominador zero;
+- tabela;
+- nenhuma transferência contada como receita/despesa;
+- nenhum cálculo financeiro paralelo.
+
+25. TESTES E2E
+
+Se infraestrutura E2E existir, executar Golden Scenario e fluxos de filtros.
+
+Se não existir:
+registrar NÃO CONFIGURADO.
+
+Não inventar PASS.
+
+26. REGRESSÃO
+
+Verificar:
+Dashboard;
+Accounts;
+Categories;
+Tags;
+Expenses;
+Income;
+Transfers;
+History;
+Attachments;
+Financial Report.
+
+Não alterar essas telas sem bug comprovado.
+
+27. BUILD
+
+Executar:
+lint;
+frontend tests;
+production build.
+
+Backend regressions quando necessário.
+
+Documentar comandos e resultados reais.
+
+28. FORA DO ESCOPO
+
+Não implementar:
+- backend de auditoria;
+- frontend de auditoria;
+- PDF;
+- CSV;
+- XLSX;
+- download de relatórios;
+- metas por categoria;
+- orçamento mensal;
+- novos tipos de transação;
+- contas de despesas;
+- cache;
+- relatórios agendados;
+- compartilhamento;
+- novo design system;
+- biblioteca gráfica adicional.
+
+29. DEFINITION OF DONE
+
+A TASK-5.4 está concluída quando:
+
+- rota privada funcional;
+- navegação integrada;
+- contrato API 5.3 respeitado;
+- filtros de período e contas funcionais;
+- filtros adicionais somente quando suportados;
+- draft/applied filters corretos;
+- resumo financeiro correto;
+- categorias BOTH corretas;
+- categorias inativas históricas visíveis;
+- transferências excluídas de receitas/despesas;
+- gráfico baseado em dados reais;
+- tabela analítica correta;
+- loading/empty/error/retry;
+- responsividade;
+- acessibilidade;
+- isolamento multiusuário;
+- testes executados;
+- lint e build aprovados;
+- regressões essenciais preservadas.
+
+30. RELATÓRIO FINAL
+
+Produzir:
+
+# TASK-5.4 — INTERFACE DO RELATÓRIO POR CATEGORIA
+
+Status:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+1. Rota e navegação
+2. Contrato API utilizado
+3. Filtros implementados
+4. Semântica temporal
+5. Indicadores financeiros
+6. Categorias EXPENSE/INCOME/BOTH
+7. Categorias inativas e sem categoria
+8. Gráficos e acessibilidade
+9. Tabela analítica
+10. Estados loading/empty/error
+11. Responsividade por viewport
+12. Golden Scenario
+13. Testes unitários/E2E
+14. Lint e production build
+15. Regressões
+16. Arquivos criados/modificados
+17. Bugs encontrados/corrigidos
+18. Divergências do ADR
+19. Dívidas técnicas reais
+20. Fora do escopo confirmado
+
+Se concluída:
+
+READY FOR TASK-5.5 — Backend do Relatório de Auditoria.
+
+NÃO implementar TASK-5.5 nesta execução.

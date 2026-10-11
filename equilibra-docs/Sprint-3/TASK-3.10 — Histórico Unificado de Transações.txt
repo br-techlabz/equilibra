@@ -1,0 +1,2678 @@
+# TASK-3.10 — Histórico Unificado de Transações
+
+Estamos na:
+
+# Sprint 3 — Transações Financeiras
+
+Concluídas e validadas:
+
+- TASK-3.0 — Arquitetura do Ledger e Regras Financeiras
+- TASK-3.1 — Domínio e Persistência de Transações Financeiras
+- TASK-3.2 — API REST de Despesas
+- TASK-3.3 — Interface de Despesas
+- TASK-3.4 — API REST de Receitas
+- TASK-3.5 — Interface de Receitas
+- TASK-3.6 — API REST de Transferências
+- TASK-3.7 — Interface de Transferências
+- TASK-3.8 — Saldo Corrente e Patrimônio Derivados do Ledger
+- TASK-3.9 — Dashboard Financeiro Integrado ao Ledger
+
+Agora implemente:
+
+# TASK-3.10 — Histórico Unificado de Transações
+
+Objetivo:
+
+Criar uma visão unificada, paginada e filtrável de TODAS as transações
+financeiras do usuário:
+
+- Despesas;
+- Receitas;
+- Transferências.
+
+Essa visão será a fonte de consulta cronológica geral do Equilibra.
+
+IMPORTANTE:
+
+Uma transferência deve aparecer como UMA única transação.
+
+NUNCA:
+
+Transferência = saída + entrada na listagem.
+
+A API e a interface devem preservar a semântica real do ledger.
+
+---
+
+# 1. FONTE DE VERDADE
+
+Antes de alterar qualquer código, leia:
+
+- CLAUDE.md;
+- ADR da TASK-3.0;
+- implementação da TASK-3.1;
+- Expense API/UI;
+- Income API/UI;
+- Transfer API/UI;
+- TASK-3.8;
+- TASK-3.9;
+- DashboardQueryService;
+- Recent Transactions do Dashboard;
+- OpenAPI;
+- migrations;
+- repositories;
+- Design System;
+- frontend architecture;
+- testes.
+
+Inspecione especialmente a consulta unificada criada ou utilizada
+na TASK-3.9 para "Recent Transactions".
+
+Reutilize conceitos corretos já implementados.
+
+Não crie uma segunda interpretação do ledger.
+
+---
+
+# 2. RELATÓRIO PRÉ-IMPLEMENTAÇÃO
+
+Antes de modificar arquivos, produza:
+
+# TASK-3.10 — PRE-IMPLEMENTATION REPORT
+
+## 1. Modelo financeiro
+
+Explique representação real de:
+
+- Expense;
+- Income;
+- Transfer;
+- Cancelled.
+
+## 2. Consulta recente do Dashboard
+
+Explique como a TASK-3.9 busca transações recentes.
+
+## 3. Reutilização
+
+Informe o que pode ser reutilizado.
+
+## 4. API proposta
+
+Liste:
+
+- endpoint;
+- parâmetros;
+- paginação;
+- ordenação;
+- filtros;
+- response.
+
+## 5. Transfer
+
+Explique como será garantido que apareça UMA vez.
+
+## 6. Account filter
+
+Explique semântica para Expense, Income e Transfer.
+
+## 7. Category filter
+
+Explique semântica e comportamento de Transfer.
+
+## 8. Period filter
+
+Explique occurredAt/from/to/boundaries.
+
+## 9. Cancelled
+
+Explique política.
+
+## 10. Performance
+
+Explique query strategy e índices.
+
+## 11. Frontend
+
+Explique estrutura proposta.
+
+## 12. Arquivos
+
+Liste:
+
+- criar;
+- modificar;
+- reutilizar.
+
+Depois implemente.
+
+---
+
+# 3. FEATURE
+
+Criar uma página central:
+
+Histórico de transações
+
+ou simplesmente:
+
+Transações
+
+Preferência:
+
+# Transações
+
+Subtítulo:
+
+"Consulte todas as suas movimentações financeiras."
+
+---
+
+# 4. ROTA
+
+Preferência:
+
+/transactions
+
+Use convenção real do projeto.
+
+Rota privada.
+
+Lazy loading quando aplicável.
+
+---
+
+# 5. SIDEBAR
+
+A seção Transações atualmente possui:
+
+Despesas
+Receitas
+Transferências
+
+Adicionar uma entrada geral.
+
+Preferência:
+
+Todas as transações
+
+Estrutura conceitual:
+
+Transações
+  ├─ Todas as transações
+  ├─ Despesas
+  ├─ Receitas
+  └─ Transferências
+
+Não quebrar rotas existentes.
+
+---
+
+# 6. BACKEND READ MODEL
+
+Criar read model/query service dedicado para histórico.
+
+Nome conceitual:
+
+TransactionHistoryQueryService
+
+ou equivalente.
+
+---
+
+# 7. READ ONLY
+
+Essa API é de consulta.
+
+NÃO implementar:
+
+POST /transactions
+PUT /transactions
+DELETE /transactions
+PATCH /transactions
+
+Writes continuam nos endpoints semânticos:
+
+/expenses
+/incomes
+/transfers.
+
+---
+
+# 8. MOTIVO
+
+Expense, Income e Transfer possuem invariantes diferentes.
+
+O endpoint unificado serve para LEITURA.
+
+---
+
+# 9. ENDPOINT
+
+Preferência:
+
+GET /api/transactions
+
+ou:
+
+GET /api/transactions/history
+
+Escolha conforme convenção existente.
+
+Evite ambos.
+
+---
+
+# 10. AUTH
+
+Endpoint privado.
+
+---
+
+# 11. OWNER
+
+Owner vem exclusivamente de:
+
+JWT
+→ SecurityContext
+→ CurrentUser.
+
+---
+
+# 12. PROIBIDO
+
+Não aceitar:
+
+ownerId
+userId
+email
+
+como filtro.
+
+---
+
+# 13. RESULTADO
+
+Retornar:
+
+EXPENSE
+INCOME
+TRANSFER
+
+do usuário autenticado.
+
+---
+
+# 14. TYPE
+
+Cada item deve possuir tipo explícito.
+
+Exemplo:
+
+EXPENSE
+INCOME
+TRANSFER
+
+---
+
+# 15. STATUS
+
+Cada item deve informar status quando modelo real possuir.
+
+Exemplo:
+
+ACTIVE
+CANCELLED
+
+---
+
+# 16. RESPONSE DTO
+
+Crie DTO/read model explícito.
+
+Exemplo conceitual:
+
+{
+  "id": "...",
+  "type": "EXPENSE",
+  "description": "...",
+  "occurredAt": "...",
+  "amount": 150.00,
+  "status": "ACTIVE",
+
+  "account": {
+    "id": "...",
+    "name": "Conta corrente"
+  },
+
+  "sourceAccount": null,
+  "destinationAccount": null,
+
+  "category": {
+    "id": "...",
+    "name": "Alimentação"
+  },
+
+  "notes": "...",
+
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+
+Adapte ao modelo real.
+
+---
+
+# 17. EXPENSE
+
+Para Expense:
+
+type = EXPENSE
+
+account = conta debitada.
+
+---
+
+# 18. INCOME
+
+Para Income:
+
+type = INCOME
+
+account = conta creditada.
+
+---
+
+# 19. TRANSFER
+
+Para Transfer:
+
+type = TRANSFER
+
+sourceAccount = origem
+destinationAccount = destino.
+
+---
+
+# 20. TRANSFER UMA VEZ
+
+Uma Transfer deve produzir:
+
+1 item
+
+no histórico.
+
+Nunca:
+
+2 items baseados em AccountMovement.
+
+---
+
+# 21. CRÍTICO
+
+Se o ledger utiliza AccountMovement:
+
+NÃO paginar diretamente movements.
+
+A entidade lógica da paginação é:
+
+FinancialTransaction
+
+ou agregado equivalente.
+
+---
+
+# 22. AMOUNT
+
+Amount continua sendo magnitude positiva.
+
+---
+
+# 23. UI SIGN — EXPENSE
+
+A UI pode apresentar:
+
+- R$ 150,00
+
+---
+
+# 24. UI SIGN — INCOME
+
+A UI pode apresentar:
+
++ R$ 500,00
+
+---
+
+# 25. UI SIGN — TRANSFER
+
+Preferir:
+
+R$ 300,00
+
+sem classificar como entrada ou saída global.
+
+---
+
+# 26. NÃO ALTERAR AMOUNT NO BACKEND
+
+Não retornar Expense como número negativo apenas para facilitar UI,
+salvo se contrato consolidado já definiu isso.
+
+Preserve magnitude financeira aprovada.
+
+---
+
+# 27. PAGINAÇÃO
+
+Histórico DEVE ser paginado no backend.
+
+---
+
+# 28. DEFAULT SIZE
+
+Use padrão já existente.
+
+Exemplo:
+
+20.
+
+Não invente tamanho se projeto já possui convenção.
+
+---
+
+# 29. MAX SIZE
+
+Aplicar limite razoável se infraestrutura atual suporta.
+
+Evitar:
+
+size=1000000.
+
+---
+
+# 30. ORDER DEFAULT
+
+occurredAt DESC.
+
+---
+
+# 31. TIE BREAKER
+
+Ordenação determinística.
+
+Exemplo:
+
+occurredAt DESC,
+createdAt DESC,
+id DESC
+
+ou estratégia compatível com IDs reais.
+
+---
+
+# 32. NÃO ORDENAR NO FRONTEND
+
+Frontend não deve reordenar apenas página atual.
+
+---
+
+# 33. FILTRO — TYPE
+
+Suportar:
+
+ALL
+EXPENSE
+INCOME
+TRANSFER
+
+No contrato HTTP, ALL pode ser ausência do parâmetro.
+
+---
+
+# 34. FILTRO — STATUS
+
+Suportar conforme modelo real.
+
+Preferência:
+
+ACTIVE
+CANCELLED
+ALL
+
+---
+
+# 35. DEFAULT STATUS
+
+Avalie UX.
+
+Para "Histórico de transações", há forte justificativa para mostrar
+ACTIVE e CANCELLED, pois é uma visão histórica/auditável.
+
+Mas siga decisões anteriores se já houver política formal.
+
+Documente a decisão.
+
+---
+
+# 36. FILTRO — PERIOD
+
+Suportar:
+
+from
+to
+
+baseado em:
+
+occurredAt.
+
+---
+
+# 37. NÃO USAR createdAt
+
+createdAt não define período financeiro.
+
+---
+
+# 38. BOUNDARIES
+
+Reutilize exatamente semântica temporal da TASK-3.9.
+
+---
+
+# 39. TIMEZONE
+
+Reutilize política consolidada.
+
+Não criar nova interpretação.
+
+---
+
+# 40. FILTRO — ACCOUNT
+
+Suportar:
+
+accountId
+
+---
+
+# 41. ACCOUNT — EXPENSE
+
+Match se:
+
+Expense.accountId = filtro.
+
+---
+
+# 42. ACCOUNT — INCOME
+
+Match se:
+
+Income.accountId = filtro.
+
+---
+
+# 43. ACCOUNT — TRANSFER
+
+Match se:
+
+sourceAccountId = filtro
+
+OU
+
+destinationAccountId = filtro.
+
+---
+
+# 44. IMPORTANTE
+
+Transfer envolvendo a conta filtrada aparece UMA vez.
+
+---
+
+# 45. ACCOUNT OWNERSHIP
+
+Se accountId não pertence ao usuário:
+
+404
+
+ou política de private-resource filter já consolidada.
+
+Não revelar conta de outro usuário.
+
+---
+
+# 46. INACTIVE ACCOUNT
+
+Conta inativa pode ser utilizada como filtro histórico se pertence ao
+usuário.
+
+---
+
+# 47. MOTIVO
+
+Desativação não apaga histórico.
+
+---
+
+# 48. FILTRO — CATEGORY
+
+Suportar:
+
+categoryId
+
+quando semanticamente compatível com modelo real.
+
+---
+
+# 49. CATEGORY — EXPENSE
+
+Match pela Category associada.
+
+---
+
+# 50. CATEGORY — INCOME
+
+Match pela Category associada.
+
+---
+
+# 51. CATEGORY — TRANSFER
+
+Seguir EXATAMENTE modelo real aprovado na TASK-3.6.
+
+Se Transfer não possui Category:
+
+ela não deve aparecer em resultado filtrado por categoryId.
+
+---
+
+# 52. INACTIVE CATEGORY
+
+Categoria inativa deve poder ser usada para consulta histórica quando
+pertence ao usuário.
+
+---
+
+# 53. CATEGORY OWNERSHIP
+
+Category de outro usuário:
+
+não revelar existência.
+
+---
+
+# 54. SEARCH TEXT
+
+Avalie adicionar:
+
+q
+
+para busca por descrição.
+
+Somente implemente se puder fazer de forma simples e eficiente.
+
+Preferência:
+
+case-insensitive substring em description.
+
+---
+
+# 55. NÃO FAZER BUSCA GLOBAL COMPLEXA
+
+Não implementar:
+
+full-text search;
+Elasticsearch;
+fuzzy matching.
+
+---
+
+# 56. NOTES SEARCH
+
+Não incluir notes na busca sem decisão explícita.
+
+Preferência:
+
+q pesquisa description apenas.
+
+---
+
+# 57. COMBINAÇÃO DE FILTROS
+
+Filtros devem ser combináveis.
+
+Exemplo:
+
+type=EXPENSE
++
+accountId=A
++
+categoryId=Food
++
+from
++
+to.
+
+---
+
+# 58. PAGINATION RESET
+
+Frontend:
+
+qualquer alteração de filtro
+
+→ page = 0.
+
+---
+
+# 59. INVALID PERIOD
+
+from > to:
+
+400 Problem Details.
+
+---
+
+# 60. INVALID ENUM
+
+type/status inválido:
+
+400.
+
+---
+
+# 61. INVALID UUID
+
+400.
+
+---
+
+# 62. EMPTY RESULT
+
+200 com página vazia.
+
+Não 404.
+
+---
+
+# 63. OWNERSHIP QUERY
+
+Toda consulta deve ser owner-scoped NO BANCO.
+
+Não:
+
+buscar global
+→ filtrar em Java.
+
+---
+
+# 64. NÃO CARREGAR TUDO
+
+Proibido:
+
+findAll()
+stream()
+filter()
+sort()
+skip()
+limit().
+
+Paginação deve acontecer no banco.
+
+---
+
+# 65. QUERY STRATEGY
+
+Use solução coerente com arquitetura:
+
+- JPQL;
+- Criteria;
+- Specification;
+- query explícita;
+- projection;
+
+sem introduzir framework desnecessário.
+
+---
+
+# 66. N+1
+
+Não executar query adicional por linha para:
+
+account;
+source;
+destination;
+category.
+
+---
+
+# 67. PROJECTION
+
+Considere projection/read DTO diretamente da query se isso reduzir
+complexidade/N+1.
+
+---
+
+# 68. COUNT QUERY
+
+Paginação requer total quando contrato atual utiliza Page.
+
+Garanta count query correta.
+
+---
+
+# 69. TRANSFER + JOIN
+
+Cuidado para joins não duplicarem Transfer.
+
+---
+
+# 70. DISTINCT
+
+Não aplicar DISTINCT cegamente para esconder modelagem/query incorreta.
+
+Entenda cardinalidade.
+
+---
+
+# 71. PERFORMANCE
+
+Revise índices para:
+
+owner;
+type;
+status;
+occurredAt;
+account;
+category;
+source/destination;
+
+conforme schema real.
+
+---
+
+# 72. MIGRATION
+
+Se índice adicional for realmente necessário:
+
+criar NOVA migration.
+
+Nunca editar migration aplicada.
+
+---
+
+# 73. RECENT TRANSACTIONS DO DASHBOARD
+
+A TASK-3.9 já possui consulta de recentes.
+
+Evite duas implementações divergentes.
+
+---
+
+# 74. REUTILIZAÇÃO PREFERIDA
+
+Se arquitetura permitir:
+
+Dashboard Recent Transactions
+
+pode consumir internamente o mesmo read/query model do histórico com:
+
+limit pequeno;
+filtros adequados.
+
+---
+
+# 75. MAS NÃO ACOPLE UI
+
+Dashboard não deve chamar página de histórico.
+
+Compartilhe backend/query infrastructure quando fizer sentido.
+
+---
+
+# 76. RECENT REGRESSION
+
+Dashboard deve continuar exibindo recentes corretamente.
+
+---
+
+# 77. FRONTEND PAGE
+
+Criar:
+
+TransactionsPage
+
+ou nomenclatura consistente.
+
+---
+
+# 78. HEADER
+
+Título:
+
+Transações
+
+Subtítulo:
+
+"Consulte todas as suas movimentações financeiras."
+
+---
+
+# 79. PRIMARY ACTION
+
+Nesta página NÃO é obrigatório possuir:
+
++ Nova transação
+
+porque não existe transação genérica.
+
+---
+
+# 80. RECOMENDAÇÃO
+
+Se desejar ação de criação, usar menu explícito:
+
+Nova movimentação
+  - Despesa
+  - Receita
+  - Transferência
+
+Somente se componente/padrão existente tornar isso simples.
+
+Não criar POST genérico.
+
+---
+
+# 81. FILTROS UI
+
+Barra de filtros clara.
+
+Possíveis controles:
+
+Período
+Tipo
+Conta
+Categoria
+Status
+Busca
+
+Somente implementar os suportados pela API real.
+
+---
+
+# 82. NÃO SOBRECARREGAR
+
+Em mobile, filtros podem ficar em:
+
+drawer;
+popover;
+painel colapsável;
+
+conforme Design System.
+
+---
+
+# 83. TYPE LABELS
+
+EXPENSE → Despesa
+INCOME → Receita
+TRANSFER → Transferência
+
+---
+
+# 84. STATUS LABELS
+
+ACTIVE → Ativa
+CANCELLED → Cancelada
+
+ou terminologia consolidada.
+
+---
+
+# 85. DESKTOP TABLE
+
+Colunas recomendadas:
+
+Data
+Descrição
+Tipo
+Conta/Movimentação
+Categoria
+Valor
+Status
+
+Ações opcionais.
+
+---
+
+# 86. ACCOUNT/MOVEMENT COLUMN
+
+Expense:
+
+Conta corrente
+
+Income:
+
+Conta corrente
+
+Transfer:
+
+Conta corrente → Carteira
+
+---
+
+# 87. CATEGORY COLUMN
+
+Transfer sem Category:
+
+—
+
+Não inventar categoria.
+
+---
+
+# 88. VALUE
+
+Expense:
+
+- R$ 100,00
+
+Income:
+
++ R$ 500,00
+
+Transfer:
+
+R$ 300,00
+
+---
+
+# 89. COLOR
+
+Pode reforçar tipo visualmente.
+
+Mas não depender apenas de cor.
+
+---
+
+# 90. ICON
+
+Pode usar ícones já disponíveis para:
+
+Expense;
+Income;
+Transfer.
+
+Não adicionar biblioteca só para isso.
+
+---
+
+# 91. CANCELLED PRESENTATION
+
+Deve permanecer legível.
+
+Pode usar:
+
+badge;
+texto;
+tratamento visual secundário.
+
+---
+
+# 92. CANCELLED VALUE
+
+Não apresentar como se ainda tivesse efeito financeiro.
+
+Uma opção:
+
+valor visualmente atenuado + status Cancelada.
+
+Não altere amount original.
+
+---
+
+# 93. MOBILE
+
+Usar cards/list items.
+
+---
+
+# 94. MOBILE CARD
+
+Prioridade:
+
+Descrição
+Valor
+Tipo
+Data
+Conta/Movimentação
+Categoria
+Status
+
+---
+
+# 95. TRANSFER MOBILE
+
+Exibir claramente:
+
+Origem
+→
+Destino.
+
+---
+
+# 96. DATA
+
+Exibir occurredAt.
+
+---
+
+# 97. DATE FORMAT
+
+pt-BR.
+
+Reutilizar formatter existente.
+
+---
+
+# 98. NOTES
+
+Não colocar notes completas na tabela principal.
+
+---
+
+# 99. DETAIL
+
+Avalie permitir visualizar detalhes da transação.
+
+Pode ser:
+
+drawer;
+dialog;
+expansion;
+
+se simples e coerente.
+
+---
+
+# 100. DETAIL READ ONLY
+
+Detalhes podem mostrar:
+
+Descrição
+Tipo
+Data/hora
+Valor
+Conta
+Origem/Destino
+Categoria
+Status
+Observações
+
+conforme tipo.
+
+---
+
+# 101. NÃO DUPLICAR EDIT FORMS
+
+Não recriar formulários de Expense/Income/Transfer dentro da página
+unificada.
+
+---
+
+# 102. EDIT ACTION
+
+Se houver ação Editar:
+
+redirecionar ou abrir a feature específica existente.
+
+Não criar editor genérico.
+
+---
+
+# 103. CANCEL ACTION
+
+Mesmo princípio.
+
+Preferência para esta TASK:
+
+histórico unificado é primariamente READ ONLY.
+
+---
+
+# 104. NAVIGATION
+
+Se usuário clicar em uma transação, pode navegar para feature específica
+quando infraestrutura permitir.
+
+Não criar rota detail complexa sem necessidade.
+
+---
+
+# 105. LOADING
+
+Usar skeleton/loading do Design System.
+
+---
+
+# 106. NÃO MOSTRAR EMPTY DURANTE LOAD
+
+Evitar flash.
+
+---
+
+# 107. EMPTY GLOBAL
+
+Nenhuma transação:
+
+"Nenhuma transação registrada."
+
+Complemento:
+
+"Suas despesas, receitas e transferências aparecerão aqui."
+
+---
+
+# 108. FILTERED EMPTY
+
+"Nenhuma transação encontrada para os filtros selecionados."
+
+---
+
+# 109. ERROR
+
+"Não foi possível carregar o histórico de transações."
+
+Ação:
+
+"Tentar novamente"
+
+---
+
+# 110. RETRY
+
+Refazer request.
+
+Não:
+
+window.location.reload().
+
+---
+
+# 111. FILTER LOADING
+
+Troca de filtro pode manter layout estável.
+
+Evitar flash excessivo.
+
+---
+
+# 112. REQUEST RACE
+
+Mudanças rápidas de filtro:
+
+resposta antiga não pode sobrescrever filtro atual.
+
+Use estratégia já consolidada.
+
+---
+
+# 113. PAGINATION UI
+
+Reutilizar componente já utilizado em:
+
+Expenses;
+Incomes;
+Transfers.
+
+---
+
+# 114. PAGE SIZE
+
+Se UI já permite alteração:
+
+preserve.
+
+Não adicionar sem necessidade.
+
+---
+
+# 115. ACCOUNT FILTER OPTIONS
+
+Histórico deve permitir contas:
+
+ativas
++
+inativas
+
+do usuário, porque histórico pode referenciar ambas.
+
+---
+
+# 116. IMPORTANTE
+
+Não reutilizar cegamente endpoint/lista que retorna apenas active accounts
+se isso impedir filtro histórico por conta inativa.
+
+---
+
+# 117. SOLUÇÃO
+
+Use:
+
+includeInactive=true
+
+se API existente suporta.
+
+---
+
+# 118. CATEGORY FILTER OPTIONS
+
+Mesmo princípio:
+
+ativas
++
+inativas
+
+quando histórico puder referenciá-las.
+
+---
+
+# 119. CATEGORY CONTEXT
+
+Filtro geral de histórico não deve restringir apenas:
+
+EXPENSE
+
+ou:
+
+INCOME.
+
+Precisa representar categorias relevantes ao histórico completo.
+
+---
+
+# 120. CATEGORY BOTH
+
+Deve funcionar naturalmente.
+
+---
+
+# 121. FILTER CHIP/SUMMARY
+
+Se Design System já suporta, mostrar filtros ativos de forma clara.
+
+Não obrigatório criar novo componente complexo.
+
+---
+
+# 122. CLEAR FILTERS
+
+Disponibilizar:
+
+"Limpar filtros"
+
+quando houver filtros ativos.
+
+---
+
+# 123. DEFAULT VIEW
+
+Ao entrar:
+
+histórico recente;
+ordenado por occurredAt DESC;
+sem filtro de tipo/conta/categoria.
+
+Status conforme decisão histórica documentada.
+
+---
+
+# 124. URL QUERY PARAMS
+
+Avalie sincronizar filtros com query params.
+
+Recomendado se arquitetura Angular já possui padrão.
+
+Exemplo:
+
+/transactions?type=EXPENSE&page=0
+
+Isso melhora:
+
+- refresh;
+- back;
+- forward;
+- compartilhamento interno.
+
+Não introduza complexidade excessiva se não houver padrão.
+
+---
+
+# 125. FRONTEND MODELS
+
+Criar models tipados.
+
+Exemplo:
+
+TransactionHistoryItem
+TransactionType
+TransactionStatus
+TransactionHistoryPage
+TransactionHistoryFilters
+
+Reutilizar enums existentes quando seguro.
+
+---
+
+# 126. NO ANY
+
+Não usar:
+
+any.
+
+---
+
+# 127. API SERVICE
+
+Criar:
+
+TransactionHistoryApiService
+
+ou nome coerente.
+
+---
+
+# 128. NÃO USAR 3 REQUESTS
+
+Não implementar histórico como:
+
+GET /expenses
+GET /incomes
+GET /transfers
+→ merge no Angular.
+
+PROIBIDO.
+
+---
+
+# 129. MOTIVO
+
+Isso quebra:
+
+- paginação global;
+- ordenação global;
+- filtros;
+- performance;
+- totalElements;
+- consistência.
+
+---
+
+# 130. HISTÓRICO UNIFICADO É BACKEND
+
+A unificação ocorre no backend/read model.
+
+---
+
+# 131. MONEY
+
+Backend:
+
+BigDecimal.
+
+Frontend:
+
+formatter compartilhado.
+
+---
+
+# 132. PRECISION
+
+Nenhuma soma desnecessária no frontend.
+
+---
+
+# 133. ACCESSIBILITY
+
+Filtros:
+
+labels acessíveis.
+
+---
+
+# 134. TABLE
+
+Cabeçalhos corretos.
+
+---
+
+# 135. MOBILE CARDS
+
+Ordem semântica adequada para screen reader.
+
+---
+
+# 136. STATUS
+
+Não depender só de cor.
+
+---
+
+# 137. FOCUS
+
+Ao alterar paginação/filtros:
+
+não provocar foco imprevisível.
+
+---
+
+# 138. KEYBOARD
+
+Filtros e paginação utilizáveis por teclado.
+
+---
+
+# 139. RESPONSIVIDADE
+
+Validar:
+
+360 × 800
+390 × 844
+768 × 1024
+1024 × 768
+1280 × 720
+1366 × 768
+1920 × 1080
+
+---
+
+# 140. MOBILE 360
+
+Validar especialmente:
+
+- PageHeader;
+- filtros;
+- limpar filtros;
+- cards;
+- valores;
+- Transfer A → B;
+- status;
+- paginação;
+- empty;
+- error.
+
+---
+
+# 141. NO GLOBAL OVERFLOW
+
+PASS.
+
+---
+
+# 142. BACKEND TEST — ALL TYPES
+
+Criar:
+
+Expense
+Income
+Transfer
+
+GET history:
+
+retorna 3 itens.
+
+Não 4.
+
+---
+
+# 143. BACKEND TEST — TRANSFER ONCE
+
+Transfer com dois movements:
+
+1 item.
+
+---
+
+# 144. BACKEND TEST — ORDER
+
+Datas:
+
+T3
+T1
+T2
+
+resultado:
+
+T3
+T2
+T1
+
+conforme occurredAt.
+
+---
+
+# 145. BACKEND TEST — TIE
+
+Mesmo occurredAt:
+
+ordem determinística.
+
+---
+
+# 146. BACKEND TEST — OWNER
+
+A não vê B.
+
+---
+
+# 147. BACKEND TEST — TYPE EXPENSE
+
+Somente Expense.
+
+---
+
+# 148. BACKEND TEST — TYPE INCOME
+
+Somente Income.
+
+---
+
+# 149. BACKEND TEST — TYPE TRANSFER
+
+Somente Transfer.
+
+---
+
+# 150. BACKEND TEST — ACCOUNT EXPENSE
+
+Conta A:
+
+Expense em A aparece.
+
+---
+
+# 151. BACKEND TEST — ACCOUNT INCOME
+
+Income em A aparece.
+
+---
+
+# 152. BACKEND TEST — ACCOUNT TRANSFER SOURCE
+
+A → B.
+
+Filtro A:
+
+Transfer aparece uma vez.
+
+---
+
+# 153. BACKEND TEST — ACCOUNT TRANSFER DESTINATION
+
+A → B.
+
+Filtro B:
+
+Transfer aparece uma vez.
+
+---
+
+# 154. BACKEND TEST — ACCOUNT UNRELATED
+
+Filtro C:
+
+Transfer A → B não aparece.
+
+---
+
+# 155. BACKEND TEST — INACTIVE ACCOUNT FILTER
+
+Histórico funciona.
+
+---
+
+# 156. BACKEND TEST — OTHER OWNER ACCOUNT FILTER
+
+Não vaza dados.
+
+---
+
+# 157. BACKEND TEST — CATEGORY EXPENSE
+
+PASS.
+
+---
+
+# 158. BACKEND TEST — CATEGORY INCOME
+
+PASS.
+
+---
+
+# 159. BACKEND TEST — TRANSFER CATEGORY
+
+Conforme modelo real.
+
+---
+
+# 160. BACKEND TEST — INACTIVE CATEGORY
+
+Consulta histórica funciona.
+
+---
+
+# 161. BACKEND TEST — PERIOD
+
+Somente occurredAt no intervalo.
+
+---
+
+# 162. BACKEND TEST — BOUNDARY
+
+Testar início/fim exatamente.
+
+---
+
+# 163. BACKEND TEST — CANCELLED
+
+Comportamento conforme filtro.
+
+---
+
+# 164. BACKEND TEST — SEARCH
+
+Se q implementado:
+
+case-insensitive;
+description;
+owner-scoped.
+
+---
+
+# 165. BACKEND TEST — COMBINED FILTER
+
+Exemplo:
+
+Expense
++
+Account A
++
+Category X
++
+period
++
+ACTIVE.
+
+Resultado correto.
+
+---
+
+# 166. BACKEND TEST — PAGINATION
+
+Criar mais registros que page size.
+
+Validar:
+
+content;
+number;
+size;
+totalElements;
+totalPages.
+
+Conforme contrato real.
+
+---
+
+# 167. BACKEND TEST — PAGE BOUNDARY
+
+Última página correta.
+
+---
+
+# 168. BACKEND TEST — DECIMAL
+
+Amounts preservados.
+
+---
+
+# 169. BACKEND TEST — N+1
+
+Validar estratégia quando viável.
+
+---
+
+# 170. MYSQL/TESTCONTAINERS
+
+Consulta real deve ser testada em MySQL.
+
+---
+
+# 171. FRONTEND TEST — ALL
+
+Renderiza os três tipos.
+
+---
+
+# 172. FRONTEND TEST — SIGNS
+
+Expense:
+-
+
+Income:
++
+
+Transfer:
+sem semântica de ganho/perda.
+
+---
+
+# 173. FRONTEND TEST — TRANSFER
+
+Mostra:
+
+A → B.
+
+---
+
+# 174. FRONTEND TEST — TRANSFER ONCE
+
+Uma linha/card.
+
+---
+
+# 175. FRONTEND TEST — TYPE FILTER
+
+PASS.
+
+---
+
+# 176. FRONTEND TEST — ACCOUNT FILTER
+
+PASS.
+
+---
+
+# 177. FRONTEND TEST — CATEGORY FILTER
+
+PASS.
+
+---
+
+# 178. FRONTEND TEST — PERIOD FILTER
+
+PASS.
+
+---
+
+# 179. FRONTEND TEST — STATUS FILTER
+
+PASS.
+
+---
+
+# 180. FRONTEND TEST — SEARCH
+
+Se implementado:
+
+PASS.
+
+---
+
+# 181. FRONTEND TEST — COMBINED FILTER
+
+PASS.
+
+---
+
+# 182. FRONTEND TEST — CLEAR FILTERS
+
+PASS.
+
+---
+
+# 183. FRONTEND TEST — PAGINATION
+
+PASS.
+
+---
+
+# 184. FRONTEND TEST — FILTER RESET PAGE
+
+PASS.
+
+---
+
+# 185. FRONTEND TEST — REQUEST RACE
+
+PASS.
+
+---
+
+# 186. FRONTEND TEST — EMPTY
+
+PASS.
+
+---
+
+# 187. FRONTEND TEST — FILTERED EMPTY
+
+PASS.
+
+---
+
+# 188. FRONTEND TEST — ERROR
+
+PASS.
+
+---
+
+# 189. FRONTEND TEST — RETRY
+
+PASS.
+
+---
+
+# 190. E2E PRINCIPAL
+
+Criar:
+
+1 Expense;
+1 Income;
+1 Transfer.
+
+Abrir:
+
+Transações.
+
+Esperado:
+
+3 itens.
+
+---
+
+# 191. E2E ORDER
+
+Validar occurredAt DESC.
+
+---
+
+# 192. E2E TRANSFER
+
+Transfer aparece UMA vez como:
+
+A → B.
+
+---
+
+# 193. E2E FILTER EXPENSE
+
+Somente Expense.
+
+---
+
+# 194. E2E FILTER INCOME
+
+Somente Income.
+
+---
+
+# 195. E2E FILTER TRANSFER
+
+Somente Transfer.
+
+---
+
+# 196. E2E ACCOUNT SOURCE
+
+Filtro A:
+
+Transfer A → B aparece.
+
+---
+
+# 197. E2E ACCOUNT DESTINATION
+
+Filtro B:
+
+mesma Transfer aparece.
+
+---
+
+# 198. E2E CANCELLED
+
+Cancelar uma transação.
+
+Validar política/filtro.
+
+---
+
+# 199. E2E MOBILE
+
+360 × 800.
+
+PASS.
+
+---
+
+# 200. DASHBOARD REGRESSION
+
+Recent Transactions continua correto.
+
+---
+
+# 201. DASHBOARD TRANSFER REGRESSION
+
+Transfer continua UMA vez.
+
+---
+
+# 202. DASHBOARD SUMMARY REGRESSION
+
+Transfer continua não alterando:
+
+Entradas;
+Saídas;
+Saldo.
+
+---
+
+# 203. BALANCE REGRESSION
+
+Transfer continua neutra no patrimônio.
+
+---
+
+# 204. EXPENSE REGRESSION
+
+API + UI:
+
+PASS.
+
+---
+
+# 205. INCOME REGRESSION
+
+API + UI:
+
+PASS.
+
+---
+
+# 206. TRANSFER REGRESSION
+
+API + UI:
+
+PASS.
+
+---
+
+# 207. ACCOUNTS REGRESSION
+
+PASS.
+
+---
+
+# 208. CATEGORIES REGRESSION
+
+PASS.
+
+---
+
+# 209. AUTH REGRESSION
+
+PASS.
+
+---
+
+# 210. OPENAPI
+
+Documentar endpoint.
+
+---
+
+# 211. OPENAPI FILTERS
+
+Documentar:
+
+type;
+status;
+accountId;
+categoryId;
+from;
+to;
+q, se implementado;
+page;
+size.
+
+---
+
+# 212. OPENAPI ACCOUNT FILTER
+
+Documentar explicitamente:
+
+para Transfer, corresponde à origem OU destino.
+
+---
+
+# 213. OPENAPI PERIOD
+
+Documentar occurredAt.
+
+---
+
+# 214. PROBLEM DETAILS
+
+Preservar.
+
+---
+
+# 215. REQUEST ID
+
+Preservar.
+
+---
+
+# 216. BUILD BACKEND
+
+PASS.
+
+---
+
+# 217. FRONTEND LINT
+
+PASS.
+
+---
+
+# 218. FRONTEND BUILD
+
+PASS.
+
+---
+
+# 219. UNIT TESTS
+
+PASS.
+
+---
+
+# 220. INTEGRATION TESTS
+
+PASS.
+
+---
+
+# 221. E2E
+
+PASS quando configurado.
+
+---
+
+# 222. NÃO IMPLEMENTAR NESTA TASK
+
+Não implementar:
+
+- criação genérica de Transaction;
+- edição genérica;
+- cancelamento genérico;
+- Reports completos;
+- exportação PDF;
+- exportação CSV;
+- Tags;
+- Attachments;
+- budgets;
+- recurring transactions;
+- reconciliation;
+- forecasting;
+- analytics avançado.
+
+---
+
+# 223. NÃO ALTERAR SEMÂNTICA FINANCEIRA
+
+Não alterar:
+
+- fórmula de saldo;
+- fórmula de patrimônio;
+- semântica de Transfer;
+- Category rules;
+- cancellation rules;
+
+salvo bug comprovado.
+
+Se encontrar bug:
+
+documente;
+corrija na camada correta;
+adicione teste de regressão.
+
+---
+
+# 224. DEFINITION OF DONE
+
+TASK-3.10 estará concluída quando:
+
+- existir endpoint unificado de leitura;
+- endpoint for privado;
+- owner vier de CurrentUser;
+- Expense aparecer;
+- Income aparecer;
+- Transfer aparecer;
+- Transfer aparecer UMA vez;
+- paginação ocorrer no backend;
+- ordenação global usar occurredAt;
+- ordenação for determinística;
+- filtro por tipo funcionar;
+- filtro por status funcionar conforme contrato;
+- filtro por período funcionar;
+- filtro por conta funcionar;
+- Transfer for encontrada pela source OU destination;
+- Transfer não duplicar ao filtrar;
+- filtro por categoria funcionar;
+- categorias/contas inativas puderem ser usadas historicamente;
+- combinação de filtros funcionar;
+- busca por descrição funcionar se implementada;
+- query for owner-scoped;
+- não houver merge de três APIs no Angular;
+- não houver findAll + filter em memória;
+- N+1 estiver controlado;
+- MySQL/Testcontainers passar;
+- página /transactions existir;
+- Sidebar incluir histórico geral;
+- desktop usar tabela adequada;
+- mobile usar cards adequados;
+- Expense mostrar semântica de saída;
+- Income mostrar semântica de entrada;
+- Transfer mostrar A → B;
+- Cancelled ficar identificável;
+- loading funcionar;
+- empty funcionar;
+- filtered empty funcionar;
+- error funcionar;
+- retry funcionar;
+- filtros resetarem página;
+- request race estiver controlada;
+- acessibilidade estiver validada;
+- 360px funcionar;
+- Dashboard não sofrer regressão;
+- saldos não sofrerem regressão;
+- OpenAPI estiver atualizado;
+- builds passarem;
+- testes passarem;
+- E2E principal passar.
+
+---
+
+# 225. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-3.10 — HISTÓRICO UNIFICADO DE TRANSAÇÕES
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+## 1. Arquitetura
+
+Explique:
+
+UI
+→ API
+→ Query Service
+→ Ledger.
+
+## 2. Endpoint
+
+Informe.
+
+## 3. Response DTO
+
+Liste campos reais.
+
+## 4. Tipos
+
+Confirme:
+
+EXPENSE
+INCOME
+TRANSFER.
+
+## 5. Transfer
+
+Confirme:
+
+UMA transação
+UMA linha/card.
+
+## 6. Paginação
+
+Informe:
+
+default size;
+max size;
+contrato;
+count.
+
+## 7. Ordenação
+
+Informe.
+
+## 8. Filtro Type
+
+PASS / FAIL
+
+## 9. Filtro Status
+
+PASS / FAIL
+
+## 10. Filtro Period
+
+PASS / FAIL
+
+Explique boundaries.
+
+## 11. Filtro Account
+
+PASS / FAIL
+
+### Expense
+comportamento:
+
+### Income
+comportamento:
+
+### Transfer source
+comportamento:
+
+### Transfer destination
+comportamento:
+
+## 12. Filtro Category
+
+PASS / FAIL
+
+Explique Transfer.
+
+## 13. Inactive Account
+
+PASS / FAIL
+
+## 14. Inactive Category
+
+PASS / FAIL
+
+## 15. Search
+
+IMPLEMENTADO / NÃO IMPLEMENTADO
+
+Se implementado:
+
+explique.
+
+## 16. Combined Filters
+
+PASS / FAIL
+
+## 17. Ownership
+
+PASS / FAIL
+
+## 18. IDOR
+
+PASS / FAIL
+
+## 19. Query Strategy
+
+Explique.
+
+## 20. N+1
+
+PASS / FAIL
+
+## 21. Índices
+
+Liste.
+
+## 22. Migration
+
+NENHUMA
+
+ou explique.
+
+## 23. MySQL/Testcontainers
+
+PASS / FAIL
+
+## 24. Dashboard Recent Transactions
+
+Explique reutilização.
+
+## 25. Dashboard Regression
+
+PASS / FAIL
+
+## 26. Página
+
+Informe rota.
+
+## 27. Sidebar
+
+Informe estrutura.
+
+## 28. Desktop
+
+Explique tabela.
+
+## 29. Mobile
+
+Explique cards.
+
+## 30. Expense Presentation
+
+Explique.
+
+## 31. Income Presentation
+
+Explique.
+
+## 32. Transfer Presentation
+
+Explique.
+
+## 33. Cancelled Presentation
+
+Explique.
+
+## 34. Filters UI
+
+Liste.
+
+## 35. Pagination UI
+
+Explique.
+
+## 36. Loading
+
+PASS / FAIL
+
+## 37. Empty
+
+PASS / FAIL
+
+## 38. Filtered Empty
+
+PASS / FAIL
+
+## 39. Error
+
+PASS / FAIL
+
+## 40. Retry
+
+PASS / FAIL
+
+## 41. Request Race
+
+PASS / FAIL
+
+## 42. Accessibility
+
+### Keyboard
+PASS / FAIL
+
+### Labels
+PASS / FAIL
+
+### Focus
+PASS / FAIL
+
+### Status semantics
+PASS / FAIL
+
+## 43. Responsive
+
+### 360 × 800
+PASS / FAIL
+
+### 390 × 844
+PASS / FAIL
+
+### 768 × 1024
+PASS / FAIL
+
+### 1024 × 768
+PASS / FAIL
+
+### 1280 × 720
+PASS / FAIL
+
+### 1366 × 768
+PASS / FAIL
+
+### 1920 × 1080
+PASS / FAIL
+
+## 44. E2E
+
+### Expense
+PASS / FAIL
+
+### Income
+PASS / FAIL
+
+### Transfer
+PASS / FAIL
+
+### Transfer Once
+PASS / FAIL
+
+### Account Filter
+PASS / FAIL
+
+### Period Filter
+PASS / FAIL
+
+### Cancelled
+PASS / FAIL
+
+### Mobile
+PASS / FAIL
+
+## 45. Regressões
+
+### Dashboard
+PASS / FAIL
+
+### Balances
+PASS / FAIL
+
+### Expenses API
+PASS / FAIL
+
+### Expenses UI
+PASS / FAIL
+
+### Incomes API
+PASS / FAIL
+
+### Incomes UI
+PASS / FAIL
+
+### Transfers API
+PASS / FAIL
+
+### Transfers UI
+PASS / FAIL
+
+### Accounts
+PASS / FAIL
+
+### Categories
+PASS / FAIL
+
+### Authentication
+PASS / FAIL
+
+## 46. OpenAPI
+
+PASS / FAIL
+
+## 47. Backend Build
+
+PASS / FAIL
+
+## 48. Frontend Lint
+
+PASS / FAIL
+
+## 49. Frontend Build
+
+PASS / FAIL
+
+## 50. Tests
+
+PASS / FAIL
+
+## 51. Arquivos
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 52. Bugs encontrados
+
+Para cada bug:
+
+problema;
+causa;
+correção;
+teste de regressão.
+
+## 53. Dívida técnica
+
+Liste.
+
+## 54. Divergências do ADR
+
+Esperado:
+
+NENHUMA.
+
+## 55. Pendências
+
+### Bloqueantes
+
+### Não bloqueantes
+
+## 56. Próxima tarefa
+
+Se TASK-3.10 estiver aprovada, informe prontidão para:
+
+# TASK-3.11 — Gate de Qualidade e Consistência Financeira da Sprint 3
+
+NÃO implemente TASK-3.11 nesta execução.

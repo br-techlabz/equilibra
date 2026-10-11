@@ -1,0 +1,1756 @@
+# TASK-3.1 — Domínio e Persistência de Transações Financeiras
+
+Estamos na:
+
+# Sprint 3 — Transações Financeiras
+
+Já foi concluída:
+
+- TASK-3.0 — Arquitetura do Ledger e Regras Financeiras
+
+A TASK-3.0 definiu formalmente a arquitetura financeira do Equilibra por
+meio de ADR/documentação.
+
+Agora implemente:
+
+# TASK-3.1 — Domínio e Persistência de Transações Financeiras
+
+Esta TASK deverá transformar as decisões arquiteturais da TASK-3.0 em:
+
+- modelo de domínio;
+- entidades persistentes;
+- enums;
+- invariantes;
+- repositories;
+- migration;
+- constraints;
+- índices;
+- testes de domínio;
+- testes de persistência.
+
+NÃO implementar ainda:
+
+- API REST de Despesas;
+- API REST de Receitas;
+- API REST de Transferências;
+- Controllers;
+- DTOs HTTP;
+- frontend;
+- Dashboard financeiro real;
+- histórico frontend;
+- Tags;
+- Attachments;
+- relatórios.
+
+---
+
+# 1. REGRA MAIS IMPORTANTE
+
+NÃO suponha qual arquitetura foi escolhida na TASK-3.0.
+
+Leia primeiro o ADR produzido nela.
+
+O ADR da TASK-3.0 é a autoridade arquitetural desta implementação.
+
+Se o ADR escolheu:
+
+- FinancialTransaction única;
+- entidades separadas;
+- TransactionStatus;
+- cancelamento;
+- source/destination accounts;
+- política específica para categorias;
+- política específica para contas inativas;
+- optimistic locking;
+- qualquer outra decisão;
+
+IMPLEMENTE essa decisão.
+
+Não substitua silenciosamente por outra arquitetura.
+
+---
+
+# 2. DETECÇÃO DE INCONSISTÊNCIA
+
+Se durante a implementação você descobrir que alguma decisão do ADR é:
+
+- impossível com o schema atual;
+- contraditória;
+- insegura;
+- incompatível com requisitos já aprovados;
+- causadora de estado financeiro inconsistente;
+
+PARE aquela parte.
+
+Explique:
+
+1. decisão do ADR;
+2. problema encontrado;
+3. impacto;
+4. alternativa recomendada.
+
+Não altere uma decisão arquitetural importante silenciosamente.
+
+---
+
+# 3. PREPARAÇÃO OBRIGATÓRIA
+
+Leia:
+
+- CLAUDE.md
+- README.md
+- docs/architecture.md
+- docs/security.md
+- docs/api-guidelines.md
+- ADR da TASK-3.0
+- demais ADRs relevantes
+- documentação financeira criada na TASK-3.0
+
+Analise código real de:
+
+- User;
+- AssetAccount;
+- Category;
+- repositories;
+- migrations;
+- auditing;
+- UUID;
+- ownership;
+- BigDecimal;
+- MySQL;
+- Testcontainers;
+- conventions de entidades;
+- timestamps.
+
+---
+
+# 4. RELATÓRIO ANTES DA IMPLEMENTAÇÃO
+
+Antes de alterar arquivos, apresente:
+
+# TASK-3.1 — PRE-IMPLEMENTATION REPORT
+
+## Arquitetura definida pela 3.0
+
+Resuma objetivamente:
+
+- agregado escolhido;
+- TransactionType;
+- TransactionStatus, se existir;
+- representação de Expense;
+- representação de Income;
+- representação de Transfer;
+- source/destination account;
+- category;
+- cancelamento;
+- saldo;
+- ownership;
+- optimistic locking, se adotado.
+
+## Modelo proposto
+
+Liste campos da entidade/tabela.
+
+## Invariantes
+
+Liste regras que serão protegidas pelo domínio.
+
+## Persistência
+
+Explique:
+
+- tabela;
+- FKs;
+- constraints;
+- índices.
+
+## Testes
+
+Liste testes planejados.
+
+Depois implemente.
+
+---
+
+# 5. AGREGADO FINANCEIRO
+
+Implemente exatamente o agregado definido na TASK-3.0.
+
+Se a decisão foi uma entidade central:
+
+FinancialTransaction
+
+utilize essa arquitetura.
+
+Se outro nome foi formalmente escolhido:
+
+use o nome aprovado.
+
+Evite criar conceitos paralelos.
+
+---
+
+# 6. TRANSACTION TYPE
+
+Implemente os tipos aprovados.
+
+Esperado conceitualmente:
+
+EXPENSE
+INCOME
+TRANSFER
+
+Persistência:
+
+STRING.
+
+Nunca:
+
+ORDINAL.
+
+---
+
+# 7. TRANSACTION STATUS
+
+Se a TASK-3.0 aprovou status/cancelamento, implemente exatamente o modelo
+definido.
+
+Exemplo conceitual:
+
+ACTIVE
+CANCELLED
+
+Persistência:
+
+STRING.
+
+Nunca ordinal.
+
+---
+
+# 8. ID
+
+Utilize a mesma estratégia de UUID já consolidada no projeto.
+
+Não introduza nova estratégia de identificadores.
+
+---
+
+# 9. OWNER
+
+Toda transação pertence a exatamente um usuário.
+
+O modelo deverá possuir ownership explícito conforme convenção existente.
+
+Exemplo conceitual:
+
+ownerId
+
+ou associação equivalente.
+
+Use a decisão já consolidada para AssetAccount/Category.
+
+---
+
+# 10. REGRA DE OWNERSHIP
+
+A transação só pode referenciar recursos pertencentes ao mesmo owner.
+
+Conceitualmente:
+
+transaction.owner
+=
+account.owner
+=
+category.owner
+
+e, em Transfer:
+
+sourceAccount.owner
+=
+destinationAccount.owner
+=
+transaction.owner.
+
+---
+
+# 11. DESCRIPTION
+
+Implemente conforme ADR.
+
+Regras esperadas:
+
+- obrigatório;
+- trim;
+- não vazio;
+- limite definido.
+
+Se TASK-3.0 definiu 255 caracteres, utilize 255.
+
+Caso tenha definido outro valor, siga o ADR.
+
+---
+
+# 12. AMOUNT
+
+Utilize:
+
+BigDecimal
+
+Nunca:
+
+float
+double.
+
+---
+
+# 13. DATABASE AMOUNT
+
+Utilize DECIMAL conforme padrão financeiro definido.
+
+Esperado:
+
+DECIMAL(19,2)
+
+ou valor formalmente aprovado.
+
+---
+
+# 14. AMOUNT POSITIVO
+
+Se ADR aprovou regra:
+
+amount > 0
+
+proteja-a no domínio.
+
+---
+
+# 15. ZERO
+
+Se zero foi proibido:
+
+0.00
+
+deve ser rejeitado.
+
+---
+
+# 16. NEGATIVO
+
+Se amount representa magnitude positiva:
+
+-100.00
+
+deve ser rejeitado.
+
+O tipo da transação determina efeito financeiro.
+
+---
+
+# 17. ESCALA
+
+Valores com mais de duas casas:
+
+10.999
+
+devem ser rejeitados.
+
+Não arredonde silenciosamente.
+
+---
+
+# 18. occurredAt
+
+Implemente campo temporal aprovado.
+
+Ele representa:
+
+quando a movimentação financeira ocorreu.
+
+Não confundir com createdAt.
+
+---
+
+# 19. createdAt
+
+Representa:
+
+quando o registro foi criado no Equilibra.
+
+---
+
+# 20. updatedAt
+
+Representa:
+
+última alteração do registro.
+
+---
+
+# 21. TIMEZONE
+
+Siga política definida na TASK-3.0 e convenção atual do projeto.
+
+Preferencialmente persistência temporal não ambígua.
+
+Não invente uma segunda política temporal.
+
+---
+
+# 22. EXPENSE
+
+Implemente invariantes definidas no ADR.
+
+Se modelo aprovado usa:
+
+sourceAccount
+
+então conceitualmente:
+
+EXPENSE:
+
+sourceAccount != null
+destinationAccount == null
+
+---
+
+# 23. EXPENSE CATEGORY
+
+A categoria utilizada em nova Expense deverá ser compatível com:
+
+EXPENSE
+ou
+BOTH
+
+conforme regras aprovadas.
+
+---
+
+# 24. INCOME
+
+Se modelo aprovado usa destinationAccount:
+
+INCOME:
+
+sourceAccount == null
+destinationAccount != null
+
+---
+
+# 25. INCOME CATEGORY
+
+Categoria compatível com:
+
+INCOME
+ou
+BOTH.
+
+---
+
+# 26. TRANSFER
+
+Implemente conforme ADR.
+
+Conceitualmente:
+
+sourceAccount != null
+destinationAccount != null
+
+e:
+
+sourceAccount != destinationAccount.
+
+---
+
+# 27. TRANSFER CATEGORY
+
+Siga EXATAMENTE a decisão da TASK-3.0.
+
+Não invente regra nova.
+
+Se categoria for obrigatória:
+
+proteja a regra.
+
+Se houver regra específica de applicability:
+
+implemente-a.
+
+---
+
+# 28. TRANSFER CROSS-USER
+
+Transferência entre contas de usuários diferentes:
+
+PROIBIDA.
+
+---
+
+# 29. CROSS-USER EXPENSE
+
+Usuário A não pode construir Expense com conta de B.
+
+---
+
+# 30. CROSS-USER INCOME
+
+Usuário A não pode construir Income com conta de B.
+
+---
+
+# 31. CROSS-USER CATEGORY
+
+Usuário A não pode usar categoria de B.
+
+---
+
+# 32. ONDE VALIDAR OWNERSHIP
+
+Faça defesa em profundidade.
+
+Ownership deverá ser protegido na camada apropriada de domínio/aplicação e
+pela forma como repositories serão usados nas próximas tasks.
+
+Nesta TASK ainda não existe CurrentUser/HTTP use case de criação.
+
+Portanto forneça APIs de domínio/repository que tornem difícil construir
+estado cross-user incorreto.
+
+Não introduza Controller apenas para testar ownership.
+
+---
+
+# 33. ACTIVE ACCOUNT
+
+Siga decisão da TASK-3.0.
+
+Se novas transações só podem usar contas ativas:
+
+modele essa regra na operação de criação.
+
+---
+
+# 34. HISTÓRICO COM CONTA INATIVA
+
+Uma conta desativada posteriormente NÃO invalida transações históricas.
+
+Portanto:
+
+não crie constraint que torne transação inválida simplesmente porque
+account.active mudou para false.
+
+---
+
+# 35. ACTIVE CATEGORY
+
+Nova transação deve respeitar política aprovada para categoria ativa.
+
+---
+
+# 36. HISTÓRICO COM CATEGORY INATIVA
+
+Desativar Category posteriormente:
+
+não invalida transação histórica.
+
+---
+
+# 37. SALDO NEGATIVO
+
+Se ADR aprovou saldo negativo:
+
+não implemente validação de saldo insuficiente.
+
+Expense e Transfer podem levar conta abaixo de zero.
+
+---
+
+# 38. CURRENT BALANCE
+
+NÃO adicionar:
+
+currentBalance
+
+em AssetAccount.
+
+---
+
+# 39. MUTABLE BALANCE
+
+NÃO criar lógica:
+
+account.setBalance(...)
+
+ao persistir transação.
+
+---
+
+# 40. SOURCE OF TRUTH
+
+Preserve:
+
+initialBalance
++
+ledger
+
+como fonte de verdade.
+
+---
+
+# 41. EFEITO FINANCEIRO
+
+Implemente modelo/helper de domínio claro para representar o efeito de uma
+transação, se isso estiver alinhado ao ADR.
+
+Conceitualmente:
+
+EXPENSE:
+source -= amount
+
+INCOME:
+destination += amount
+
+TRANSFER:
+source -= amount
+destination += amount
+
+Não persista o resultado como saldo mutável.
+
+---
+
+# 42. BALANCE CALCULATION
+
+Nesta TASK não precisamos ainda expor API de saldo.
+
+Porém o modelo/repository deve permitir que próxima task construa consultas
+de saldo corretamente.
+
+---
+
+# 43. REPOSITORY
+
+Crie repository seguindo convenção existente.
+
+Esperado conceitualmente:
+
+FinancialTransactionRepository
+
+ou nome real aprovado.
+
+---
+
+# 44. OWNERSHIP-AWARE REPOSITORY
+
+Prepare métodos seguros, por exemplo:
+
+findByIdAndOwnerId(...)
+
+Não incentive:
+
+findById(...)
+
+para operações privadas futuras.
+
+---
+
+# 45. CONSULTA POR OWNER
+
+Prepare consulta para transações do usuário.
+
+Exemplo conceitual:
+
+findAllByOwnerId...
+
+Não implemente paginação arbitrária nesta TASK salvo decisão do ADR.
+
+---
+
+# 46. CONSULTA POR CONTA
+
+Precisaremos futuramente consultar transações que afetam uma conta.
+
+O repository deve permitir isso de forma clara.
+
+Para modelo source/destination:
+
+uma transação afeta account X quando:
+
+sourceAccount = X
+OU
+destinationAccount = X.
+
+---
+
+# 47. CONSULTA POR PERÍODO
+
+Prepare modelo/repository para consultas por:
+
+owner
++
+occurredAt.
+
+---
+
+# 48. CONSULTA POR TIPO
+
+Precisaremos:
+
+EXPENSE
+INCOME
+TRANSFER.
+
+---
+
+# 49. CONSULTA POR CATEGORY
+
+Precisaremos relatórios futuros.
+
+Não precisa criar todos os métodos possíveis agora.
+
+Evite repository method explosion.
+
+Implemente apenas consultas que já têm uso claro no ledger e próximas
+tasks.
+
+---
+
+# 50. CANCELLED
+
+Se TransactionStatus existe:
+
+consultas financeiras devem ser capazes de excluir CANCELLED.
+
+Não confundir:
+
+histórico
+com
+efeito financeiro.
+
+Histórico pode incluir cancelled.
+
+Saldo não.
+
+---
+
+# 51. CANCELAMENTO
+
+Se ADR aprovou cancelamento lógico:
+
+implemente comportamento de domínio.
+
+Exemplo conceitual:
+
+transaction.cancel(...)
+
+---
+
+# 52. CANCELLED AT
+
+Se ADR aprovou:
+
+cancelledAt
+
+implemente.
+
+Se não aprovou:
+
+não adicione.
+
+---
+
+# 53. DELETE
+
+Não implemente exclusão física como comportamento principal se ADR definiu
+cancelamento.
+
+---
+
+# 54. REATIVAÇÃO
+
+Se ADR decidiu que CANCELLED não pode ser reativada:
+
+proteja essa decisão.
+
+Se aprovou restauração:
+
+implemente conforme decisão.
+
+Não invente simetria activate/deactivate.
+
+---
+
+# 55. EDIÇÃO
+
+Implemente métodos de domínio necessários para alterações aprovadas.
+
+Exemplos conceituais:
+
+changeDescription
+changeOccurredAt
+changeAmount
+changeCategory
+changeAccount(s)
+changeNotes
+
+ou operação única de update, conforme estilo atual.
+
+Evite setters públicos indiscriminados.
+
+---
+
+# 56. CANCELLED EDIT
+
+Defina comportamento conforme ADR.
+
+Se transação cancelada é imutável:
+
+proteja.
+
+---
+
+# 57. NOTES
+
+Implemente conforme limite definido.
+
+Deve permitir multiline.
+
+Pode ser nullable/vazio conforme ADR.
+
+---
+
+# 58. TAG
+
+NÃO implementar Tag nesta TASK, salvo se ADR explicitamente tornou Tag
+parte obrigatória do núcleo — o que deverá ser justificado.
+
+Preferência de Sprint:
+
+adiada.
+
+---
+
+# 59. ATTACHMENT
+
+NÃO implementar storage/upload nesta TASK.
+
+---
+
+# 60. VERSION
+
+Se ADR aprovou optimistic locking:
+
+adicione:
+
+@Version
+
+conforme convenção JPA.
+
+---
+
+# 61. CONCORRÊNCIA
+
+Não introduza pessimistic lock para atualizar saldo porque saldo não é
+persistido.
+
+---
+
+# 62. MIGRATION
+
+Crie nova migration versionada.
+
+NÃO altere migrations já aplicadas.
+
+---
+
+# 63. TABLE
+
+Use nome aprovado.
+
+Provável:
+
+financial_transactions
+
+mas siga ADR/convenção real.
+
+---
+
+# 64. COLUNAS
+
+A migration deverá refletir exatamente o modelo escolhido.
+
+Exemplo conceitual:
+
+id
+owner_id
+type
+status
+description
+amount
+occurred_at
+category_id
+source_account_id
+destination_account_id
+notes
+created_at
+updated_at
+version
+
+A presença de cada campo depende do ADR.
+
+---
+
+# 65. FOREIGN KEY OWNER
+
+FK real para users.
+
+---
+
+# 66. FOREIGN KEY CATEGORY
+
+FK real para categories quando aplicável.
+
+---
+
+# 67. FOREIGN KEY ACCOUNTS
+
+FKs reais para asset_accounts.
+
+---
+
+# 68. DELETE BEHAVIOR
+
+Não use:
+
+ON DELETE CASCADE
+
+de forma que apagar User/Account/Category possa destruir silenciosamente
+ledger financeiro.
+
+Siga política arquitetural aprovada.
+
+---
+
+# 69. DATABASE CHECK CONSTRAINTS
+
+Avalie CHECK constraints que reforcem invariantes.
+
+Exemplos conceituais:
+
+amount > 0
+
+source != destination
+
+e combinações source/destination por type.
+
+Use apenas constraints realmente suportadas/adequadas no MySQL alvo.
+
+---
+
+# 70. DOMAIN + DATABASE
+
+Invariantes críticas devem existir no domínio.
+
+Quando apropriado, também no banco.
+
+Banco não substitui domínio.
+
+Domínio não substitui integridade referencial.
+
+---
+
+# 71. CHECK EXPENSE
+
+Se schema source/destination foi escolhido, considere constraint:
+
+EXPENSE:
+source_account_id IS NOT NULL
+AND destination_account_id IS NULL
+
+---
+
+# 72. CHECK INCOME
+
+INCOME:
+source_account_id IS NULL
+AND destination_account_id IS NOT NULL
+
+---
+
+# 73. CHECK TRANSFER
+
+TRANSFER:
+source_account_id IS NOT NULL
+AND destination_account_id IS NOT NULL
+AND source_account_id <> destination_account_id
+
+Implemente somente se compatível com arquitetura real.
+
+---
+
+# 74. CATEGORY CHECK
+
+Não tente implementar regra:
+
+CategoryApplicability
+
+como CHECK cross-table.
+
+Isso pertence ao domínio/aplicação.
+
+---
+
+# 75. OWNER CHECK CROSS-TABLE
+
+MySQL CHECK não valida ownership em outra tabela.
+
+Não tente criar constraint impossível.
+
+Ownership cross-table deverá ser protegido pela aplicação.
+
+---
+
+# 76. INDEX OWNER + DATE
+
+Planeje/implemente índice útil para histórico:
+
+(owner_id, occurred_at)
+
+ou ordem equivalente apropriada.
+
+---
+
+# 77. INDEX OWNER + TYPE + DATE
+
+Avalie necessidade:
+
+(owner_id, type, occurred_at)
+
+para KPIs/relatórios.
+
+Não crie índices indiscriminadamente.
+
+---
+
+# 78. INDEX SOURCE ACCOUNT
+
+Considere índice para:
+
+source_account_id
+
+---
+
+# 79. INDEX DESTINATION ACCOUNT
+
+Considere índice para:
+
+destination_account_id
+
+---
+
+# 80. INDEX CATEGORY
+
+Considere:
+
+owner_id + category_id + occurred_at
+
+se justificado.
+
+---
+
+# 81. STATUS INDEX
+
+Se cancelamento existir, considere consultas financeiras:
+
+owner + status + occurredAt.
+
+Avalie seletividade e consultas futuras.
+
+---
+
+# 82. TESTES DE DOMÍNIO
+
+Implemente testes para todas as invariantes.
+
+---
+
+# 83. EXPENSE VÁLIDA
+
+Crie Expense válida.
+
+Confirme:
+
+type;
+source/destination;
+amount;
+category;
+owner;
+occurredAt.
+
+---
+
+# 84. INCOME VÁLIDA
+
+Mesmo princípio.
+
+---
+
+# 85. TRANSFER VÁLIDA
+
+Origem A
+Destino B
+
+Mesmo owner.
+
+---
+
+# 86. TRANSFER MESMA CONTA
+
+A → A
+
+deve falhar.
+
+---
+
+# 87. AMOUNT ZERO
+
+deve falhar se proibido pelo ADR.
+
+---
+
+# 88. AMOUNT NEGATIVO
+
+deve falhar.
+
+---
+
+# 89. ESCALA
+
+10.999
+
+deve falhar.
+
+---
+
+# 90. PRECISÃO
+
+Confirme persistência exata de:
+
+0.10
+0.20
+100.10
+999999.99
+
+sem floating point.
+
+---
+
+# 91. DESCRIPTION BLANK
+
+deve falhar.
+
+---
+
+# 92. DESCRIPTION TRIM
+
+"  Mercado  "
+
+deve resultar conforme política:
+
+"Mercado"
+
+---
+
+# 93. DESCRIPTION MAX
+
+Acima do limite:
+
+falha.
+
+---
+
+# 94. NOTES MAX
+
+Teste limite.
+
+---
+
+# 95. CATEGORY EXPENSE
+
+EXPENSE category:
+
+aceita em Expense.
+
+---
+
+# 96. CATEGORY BOTH
+
+BOTH:
+
+aceita onde definido.
+
+---
+
+# 97. CATEGORY INCOMPATÍVEL
+
+INCOME-only category em Expense:
+
+falha.
+
+E vice-versa.
+
+---
+
+# 98. TRANSFER CATEGORY
+
+Teste exatamente a política decidida na TASK-3.0.
+
+---
+
+# 99. CATEGORY INATIVA
+
+Nova transação:
+
+falha conforme política.
+
+---
+
+# 100. ACCOUNT INATIVA
+
+Nova transação:
+
+falha conforme política.
+
+---
+
+# 101. CROSS OWNER ACCOUNT
+
+Transaction owner A
+Account owner B
+
+falha.
+
+---
+
+# 102. CROSS OWNER CATEGORY
+
+Transaction owner A
+Category owner B
+
+falha.
+
+---
+
+# 103. TRANSFER CROSS OWNER
+
+Source A
+Destination B de outro usuário
+
+falha.
+
+---
+
+# 104. CANCEL
+
+Se status existe:
+
+ACTIVE → CANCELLED
+
+testar.
+
+---
+
+# 105. CANCEL DUPLICADO
+
+Defina comportamento conforme ADR.
+
+Teste.
+
+---
+
+# 106. CANCELLED EFFECT
+
+Se houver helper de efeito financeiro:
+
+CANCELLED deve produzir efeito zero.
+
+---
+
+# 107. EDIT
+
+Teste alterações permitidas.
+
+---
+
+# 108. EDIT CANCELLED
+
+Teste política aprovada.
+
+---
+
+# 109. TIMESTAMPS
+
+Confirme:
+
+createdAt
+updatedAt
+occurredAt
+
+semanticamente distintos.
+
+---
+
+# 110. PERSISTENCE TEST
+
+Salvar/recarregar:
+
+Expense
+Income
+Transfer.
+
+---
+
+# 111. ENUM STRING
+
+Confirme no banco que type/status são persistidos como texto.
+
+---
+
+# 112. FK TEST
+
+Referências inexistentes devem ser rejeitadas pelo banco.
+
+---
+
+# 113. CHECK CONSTRAINT TEST
+
+Quando existirem CHECKs, prove que o MySQL real rejeita estado inválido.
+
+---
+
+# 114. TESTCONTAINERS
+
+Use MySQL real via Testcontainers conforme padrão existente.
+
+Não use H2 para validar schema financeiro.
+
+---
+
+# 115. MIGRATION CLEAN
+
+Banco vazio:
+
+executar todas migrations.
+
+PASS.
+
+---
+
+# 116. MIGRATION INCREMENTAL
+
+Banco no estado da Sprint 2:
+
+aplicar somente nova migration.
+
+PASS.
+
+---
+
+# 117. HIBERNATE VALIDATION
+
+Schema e entidades devem permanecer alinhados.
+
+---
+
+# 118. ASSET ACCOUNT REGRESSION
+
+Todos os testes existentes:
+
+PASS.
+
+---
+
+# 119. CATEGORY REGRESSION
+
+PASS.
+
+---
+
+# 120. AUTH REGRESSION
+
+PASS.
+
+---
+
+# 121. DASHBOARD REGRESSION
+
+Frontend não deverá ser alterado nesta TASK.
+
+Backend não deve quebrar contrato atual.
+
+---
+
+# 122. INITIAL BALANCE
+
+NÃO alterar política de initialBalance nesta TASK, salvo decisão explícita
+do ADR que já determine mudança imediata.
+
+Se mudança estiver planejada apenas após API de transações:
+
+documente e aguarde.
+
+---
+
+# 123. CATEGORY APPLICABILITY
+
+Não altere arbitrariamente Category nesta TASK.
+
+Implemente apenas as proteções necessárias ao criar transação.
+
+---
+
+# 124. ACCOUNT ACTIVE
+
+Não altere significado de active sem necessidade.
+
+---
+
+# 125. SALDO
+
+NÃO implementar currentBalance persistido.
+
+Repetindo:
+
+NÃO adicionar currentBalance em AssetAccount.
+
+---
+
+# 126. DASHBOARD
+
+NÃO atualizar Dashboard ainda.
+
+Isso ocorrerá em task posterior da Sprint 3.
+
+---
+
+# 127. FRONTEND
+
+NÃO alterar Angular.
+
+---
+
+# 128. API
+
+NÃO criar endpoints.
+
+---
+
+# 129. DTO HTTP
+
+NÃO criar requests/responses REST antecipadamente.
+
+---
+
+# 130. OPENAPI
+
+Não adicionar endpoints inexistentes.
+
+---
+
+# 131. DOCUMENTAÇÃO
+
+Atualize documentação técnica apenas quando implementação revelar detalhes
+concretos do modelo.
+
+ADR deve permanecer coerente.
+
+---
+
+# 132. CLAUDE.MD
+
+Adicione apenas regras permanentes realmente novas.
+
+Exemplos possíveis:
+
+- monetary transaction amount is positive magnitude;
+- ledger is source of truth;
+- currentBalance is not persisted;
+- transfer is net-worth neutral;
+- financial resources are ownership isolated.
+
+Não duplique regras existentes.
+
+---
+
+# 133. CÓDIGO DE PRODUÇÃO
+
+Alterações esperadas apenas em:
+
+- domínio;
+- persistence;
+- repository;
+- migrations;
+- testes;
+- documentação técnica necessária.
+
+---
+
+# 134. MAVEN TESTS
+
+Execute suíte completa.
+
+Esperado:
+
+PASS.
+
+---
+
+# 135. MAVEN BUILD
+
+Execute build completo.
+
+Esperado:
+
+PASS.
+
+---
+
+# 136. DEFINITION OF DONE
+
+TASK-3.1 estará concluída quando:
+
+- arquitetura da TASK-3.0 estiver implementada fielmente;
+- agregado financeiro existir;
+- TransactionType estiver implementado;
+- TransactionStatus estiver implementado se aprovado;
+- ownership existir;
+- Expense possuir invariantes corretas;
+- Income possuir invariantes corretas;
+- Transfer possuir invariantes corretas;
+- amount utilizar BigDecimal;
+- amount positivo estiver protegido;
+- escala monetária estiver protegida;
+- occurredAt existir;
+- createdAt/updatedAt permanecerem distintos;
+- Category estiver validada por tipo;
+- account ownership estiver protegido;
+- category ownership estiver protegido;
+- Transfer cross-user estiver bloqueada;
+- source != destination estiver protegido;
+- contas/categorias inativas seguirem política aprovada;
+- cancelamento seguir ADR;
+- currentBalance NÃO estiver persistido;
+- nenhuma mutação manual de saldo existir;
+- repository ownership-aware existir;
+- migration existir;
+- FKs existirem;
+- constraints relevantes existirem;
+- índices necessários existirem;
+- MySQL/Testcontainers passar;
+- clean migration passar;
+- incremental migration passar;
+- regressões passarem;
+- frontend permanecer inalterado;
+- nenhuma API REST nova existir.
+
+---
+
+# 137. RELATÓRIO FINAL
+
+Apresente:
+
+# TASK-3.1 — DOMÍNIO E PERSISTÊNCIA DO LEDGER
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## 1. ADR implementado
+
+Informe arquivo e decisão principal.
+
+## 2. Modelo final
+
+Liste entidade(s) e campos.
+
+## 3. TransactionType
+
+Liste valores.
+
+## 4. TransactionStatus
+
+Liste valores ou informe:
+
+NÃO UTILIZADO
+
+## 5. Expense
+
+Explique representação e invariantes.
+
+## 6. Income
+
+Explique representação e invariantes.
+
+## 7. Transfer
+
+Explique representação e invariantes.
+
+## 8. Money
+
+### Java
+tipo
+
+### MySQL
+tipo
+
+### escala
+
+### amount zero
+permitido / proibido
+
+### amount negativo
+permitido / proibido
+
+## 9. Accounts
+
+Explique source/destination.
+
+## 10. Category
+
+Explique regras por TransactionType.
+
+## 11. Ownership
+
+Confirme:
+
+transaction.owner
+account.owner
+category.owner
+
+## 12. Inactive resources
+
+Explique comportamento de:
+
+account;
+category.
+
+## 13. Cancelamento
+
+Explique implementação.
+
+## 14. Edição
+
+Explique métodos/invariantes.
+
+## 15. Saldo
+
+Confirme:
+
+currentBalance NÃO persistido.
+
+Confirme:
+
+ledger é source of truth.
+
+## 16. Migration
+
+Informe arquivo.
+
+## 17. Tabela
+
+Informe nome.
+
+## 18. Foreign Keys
+
+Liste.
+
+## 19. CHECK constraints
+
+Liste.
+
+## 20. Índices
+
+Liste e justifique.
+
+## 21. Repository
+
+Liste métodos principais.
+
+## 22. Testes de domínio
+
+PASS / FAIL
+
+Liste cenários.
+
+## 23. Testes de persistência
+
+PASS / FAIL
+
+## 24. MySQL/Testcontainers
+
+PASS / FAIL
+
+## 25. Clean migration
+
+PASS / FAIL
+
+## 26. Incremental migration
+
+PASS / FAIL
+
+## 27. Regressão
+
+### AssetAccount
+PASS / FAIL
+
+### Category
+PASS / FAIL
+
+### Authentication
+PASS / FAIL
+
+## 28. Backend build
+
+PASS / FAIL
+
+## 29. Frontend
+
+Esperado:
+
+NÃO ALTERADO
+
+## 30. API REST
+
+Esperado:
+
+NENHUMA NOVA API
+
+## 31. Arquivos
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 32. Divergências do ADR
+
+Esperado:
+
+NENHUMA
+
+Se houver, explique detalhadamente.
+
+## 33. Pendências
+
+### Bloqueantes
+
+### Não bloqueantes
+
+## 34. Próxima tarefa
+
+Se TASK-3.1 estiver aprovada, informe prontidão para:
+
+# TASK-3.2 — Casos de Uso e API REST de Despesas
+
+NÃO implemente TASK-3.2 nesta execução.

@@ -69,8 +69,8 @@ interface PanelAction {
   styles: `
     .content-panel {
       border: 0;
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-xs);
       background-color: var(--card-bg);
     }
 

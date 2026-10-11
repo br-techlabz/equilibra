@@ -1,0 +1,1977 @@
+# TASK-3.7 — Interface de Transferências
+
+Estamos na:
+
+# Sprint 3 — Transações Financeiras
+
+Concluídas e validadas:
+
+- TASK-3.0 — Arquitetura do Ledger e Regras Financeiras
+- TASK-3.1 — Domínio e Persistência de Transações Financeiras
+- TASK-3.2 — API REST de Despesas
+- TASK-3.3 — Interface de Despesas
+- TASK-3.4 — API REST de Receitas
+- TASK-3.5 — Interface de Receitas
+- TASK-3.6 — API REST de Transferências
+
+Agora implemente:
+
+# TASK-3.7 — Interface de Transferências
+
+Objetivo:
+
+Implementar a interface completa de Transferências entre Contas de Ativo,
+utilizando exclusivamente a API REAL criada na TASK-3.6.
+
+O usuário deverá conseguir:
+
+- visualizar transferências;
+- criar transferência;
+- editar transferência;
+- cancelar transferência;
+- visualizar transferências canceladas;
+- navegar pela paginação;
+- utilizar filtros suportados pela API;
+- utilizar a funcionalidade em desktop e mobile.
+
+Uma transferência representa UMA operação financeira:
+
+Conta de origem
+    ↓
+   valor
+    ↓
+Conta de destino
+
+Ela NÃO é:
+
+- Expense;
+- Income;
+- duas transações independentes.
+
+NÃO implementar nesta TASK:
+
+- Dashboard financeiro real;
+- saldo corrente;
+- patrimônio derivado;
+- relatórios;
+- Tags;
+- Attachments;
+- upload;
+- DELETE;
+- reativação sem suporte da API;
+- GenericTransactionForm;
+- GenericTransactionCrud;
+- nova arquitetura de ledger.
+
+---
+
+# 1. FONTE DE VERDADE
+
+Antes de modificar qualquer arquivo, leia:
+
+- CLAUDE.md;
+- ADR da TASK-3.0;
+- implementação da TASK-3.1;
+- API de Transfer da TASK-3.6;
+- relatório final da TASK-3.6;
+- OpenAPI atual;
+- interface de Expenses;
+- interface de Incomes;
+- Design System;
+- frontend architecture;
+- routing;
+- Sidebar;
+- AssetAccountsApiService;
+- CategoriesApiService;
+- money helpers;
+- date/time helpers;
+- Problem Details handling;
+- Auth interceptors;
+- testes Angular;
+- testes Playwright/E2E.
+
+A API REAL da TASK-3.6 é a fonte de verdade.
+
+Não presuma contratos.
+
+Não altere o backend apenas para adequá-lo a uma UI imaginada.
+
+---
+
+# 2. RELATÓRIO PRÉ-IMPLEMENTAÇÃO
+
+Antes de escrever código, produza:
+
+# TASK-3.7 — PRE-IMPLEMENTATION REPORT
+
+## 1. API encontrada
+
+Liste:
+
+- endpoints;
+- CreateTransferRequest;
+- UpdateTransferRequest;
+- TransferResponse;
+- paginação;
+- filtros;
+- cancelled;
+- category behavior;
+- erros.
+
+## 2. Semântica encontrada
+
+Explique:
+
+- sourceAccount;
+- destinationAccount;
+- amount;
+- category, se aplicável;
+- cancelamento.
+
+## 3. Expense/Income UI
+
+Liste padrões que serão reutilizados.
+
+## 4. Transfer-specific
+
+Liste comportamentos que NÃO devem ser generalizados.
+
+## 5. Componentes compartilhados
+
+Informe o que já existe e pode ser reutilizado.
+
+## 6. Plano de implementação
+
+Liste arquivos:
+
+- criar;
+- modificar;
+- reutilizar.
+
+Depois implemente.
+
+---
+
+# 3. ROTA
+
+Adicionar rota privada:
+
+/transfers
+
+ou equivalente consistente com o routing atual.
+
+Utilizar lazy loading se esse for o padrão existente.
+
+---
+
+# 4. SIDEBAR
+
+Dentro de:
+
+Transações
+
+deve existir:
+
+Despesas
+Receitas
+Transferências
+
+O item:
+
+Transferências
+
+deve navegar para a nova feature.
+
+---
+
+# 5. PAGE HEADER
+
+Título:
+
+Transferências
+
+Subtítulo sugerido:
+
+"Movimente valores entre suas contas."
+
+Ação:
+
++ Nova transferência
+
+---
+
+# 6. DESIGN SYSTEM
+
+Não redesenhar aplicação.
+
+Reutilizar:
+
+- tokens;
+- typography;
+- spacing;
+- PageHeader;
+- ContentPanel;
+- buttons;
+- drawers;
+- dialogs;
+- tables;
+- cards;
+- status;
+- EmptyState;
+- loading;
+- feedback;
+- responsive behavior.
+
+---
+
+# 7. CONSISTÊNCIA
+
+As páginas:
+
+Despesas
+Receitas
+Transferências
+
+devem pertencer claramente ao mesmo produto.
+
+---
+
+# 8. NÃO FORÇAR GENERALIZAÇÃO
+
+Transfer possui duas contas.
+
+Portanto NÃO force o formulário dentro de abstração criada para:
+
+Expense
+Income.
+
+---
+
+# 9. LISTAGEM
+
+Consumir API real:
+
+GET /api/transfers
+
+ou endpoint efetivamente implementado.
+
+---
+
+# 10. DESKTOP
+
+Preferir tabela.
+
+Colunas conceituais:
+
+Data
+Descrição
+Origem
+Destino
+Valor
+Status
+Ações
+
+Se Category faz parte do contrato aprovado:
+
+inclua Categoria quando isso não prejudicar legibilidade.
+
+---
+
+# 11. MOBILE
+
+Não comprimir tabela.
+
+Utilizar cards/list items.
+
+Estrutura recomendada:
+
+Descrição
+
+Origem
+↓
+Destino
+
+Valor
+
+Data
+Status
+
+Ações
+
+---
+
+# 12. REPRESENTAÇÃO VISUAL DA TRANSFERÊNCIA
+
+Origem e destino devem ficar visualmente claros.
+
+Exemplo conceitual:
+
+Conta corrente
+↓
+Carteira
+
+ou:
+
+Conta corrente → Carteira
+
+---
+
+# 13. NÃO REPRESENTAR COMO DESPESA + RECEITA
+
+Nunca exibir:
+
+- uma linha negativa;
+- outra linha positiva;
+
+para a mesma transferência.
+
+Ela é UMA operação.
+
+---
+
+# 14. DATA
+
+Exibir:
+
+occurredAt.
+
+Não usar createdAt como data financeira.
+
+---
+
+# 15. DATE FORMAT
+
+pt-BR.
+
+Reutilizar formatter de Expense/Income.
+
+---
+
+# 16. VALOR
+
+Exemplo:
+
+R$ 500,00
+
+Preferencialmente sem sinal negativo/positivo.
+
+Transferência apenas movimenta valor.
+
+---
+
+# 17. STATUS
+
+Traduzir enum real.
+
+Exemplo:
+
+ACTIVE → Ativa
+CANCELLED → Cancelada
+
+---
+
+# 18. CANCELLED
+
+Transferência cancelada deve continuar legível quando exibida.
+
+Não depender apenas de cor.
+
+---
+
+# 19. FILTROS
+
+Implementar somente filtros existentes na API.
+
+---
+
+# 20. INCLUDE CANCELLED
+
+Se API oferece:
+
+includeCancelled
+
+adicionar:
+
+"Mostrar transferências canceladas"
+
+Default:
+
+false.
+
+---
+
+# 21. PERIOD
+
+Se API suporta:
+
+from
+to
+
+reutilizar padrão das outras transações.
+
+---
+
+# 22. PAGINAÇÃO
+
+Se backend possui paginação:
+
+usar paginação real.
+
+Não buscar todos os registros para paginar localmente.
+
+---
+
+# 23. PAGE RESET
+
+Mudança de filtro:
+
+page = 0.
+
+---
+
+# 24. ORDER
+
+Respeitar backend.
+
+Não ordenar apenas página atual de forma enganosa.
+
+---
+
+# 25. LOADING
+
+Mesmo padrão das outras transações.
+
+---
+
+# 26. EMPTY
+
+Nenhuma transferência:
+
+"Nenhuma transferência registrada."
+
+Complemento:
+
+"Transfira valores entre suas contas para visualizar as movimentações aqui."
+
+Ação:
+
+"Nova transferência"
+
+---
+
+# 27. FILTERED EMPTY
+
+"Nenhuma transferência encontrada para os filtros selecionados."
+
+---
+
+# 28. ERROR
+
+"Não foi possível carregar suas transferências."
+
+Ação:
+
+"Tentar novamente"
+
+---
+
+# 29. RETRY
+
+Refazer request necessária.
+
+Não usar:
+
+window.location.reload().
+
+---
+
+# 30. FORMULÁRIO
+
+Ação:
+
++ Nova transferência
+
+abre formulário.
+
+Reutilize drawer/dialog pattern atual.
+
+---
+
+# 31. CAMPOS
+
+Campos conceituais:
+
+Descrição
+Data e hora
+Conta de origem
+Conta de destino
+Valor
+Categoria, SOMENTE se contrato real possuir
+Observações
+
+NÃO incluir:
+
+Tag
+Anexo
+
+---
+
+# 32. DESCRIPTION
+
+Obrigatória conforme API.
+
+Label:
+
+Descrição
+
+---
+
+# 33. occurredAt
+
+Label:
+
+Data e hora
+
+---
+
+# 34. DEFAULT DATE/TIME
+
+Nova Transfer pode iniciar com data/hora atual local se padrão existente
+faz isso corretamente.
+
+---
+
+# 35. EDIT DATE/TIME
+
+Preservar occurredAt original.
+
+---
+
+# 36. TIMEZONE
+
+Reutilizar exatamente estratégia comprovada em Expense/Income.
+
+Não criar terceiro conversor.
+
+---
+
+# 37. SOURCE ACCOUNT
+
+Label:
+
+Conta de origem
+
+Helper opcional:
+
+"De onde o dinheiro sairá."
+
+---
+
+# 38. DESTINATION ACCOUNT
+
+Label:
+
+Conta de destino
+
+Helper opcional:
+
+"Para onde o dinheiro será enviado."
+
+---
+
+# 39. ACCOUNT OPTIONS
+
+Utilizar AssetAccounts API existente.
+
+Para nova Transfer:
+
+somente contas elegíveis/ativas conforme backend.
+
+---
+
+# 40. NÃO DUPLICAR ACCOUNT REQUEST
+
+Preferencialmente carregar lista de contas uma vez.
+
+Usar a mesma coleção para:
+
+source;
+destination.
+
+---
+
+# 41. SOURCE != DESTINATION
+
+Frontend deve impedir seleção inválida.
+
+---
+
+# 42. ESTRATÉGIA RECOMENDADA
+
+Se origem = A:
+
+no seletor de destino:
+
+A deve ficar indisponível ou ser omitida.
+
+---
+
+# 43. NÃO CONFIAR APENAS NO FRONTEND
+
+Backend continua autoridade.
+
+---
+
+# 44. TROCA DE SOURCE
+
+Cenário:
+
+destination = A
+usuário muda source para A.
+
+A UI deve resolver estado inválido.
+
+Preferência:
+
+limpar destination
+
+e pedir nova seleção.
+
+Não enviar formulário inválido silenciosamente.
+
+---
+
+# 45. TROCA DE DESTINATION
+
+Mesmo princípio.
+
+---
+
+# 46. SOURCE/DESTINATION LABEL
+
+Nunca usar apenas:
+
+Conta 1
+Conta 2.
+
+Semântica deve ser explícita.
+
+---
+
+# 47. ACCOUNT EMPTY — ZERO CONTAS
+
+Se não houver conta ativa:
+
+"Você precisa cadastrar contas ativas antes de realizar uma transferência."
+
+CTA:
+
+"Cadastrar conta"
+
+---
+
+# 48. APENAS UMA CONTA
+
+Transferência exige duas contas distintas.
+
+Se usuário possui somente UMA conta elegível:
+
+"Você precisa de pelo menos duas contas ativas para realizar uma transferência."
+
+CTA:
+
+"Cadastrar outra conta"
+
+---
+
+# 49. FORM DISABLED
+
+Nesse cenário:
+
+não permitir submit.
+
+---
+
+# 50. HISTÓRICO COM CONTA INATIVA
+
+Transfer histórica pode apontar para conta posteriormente inativa.
+
+Listagem deve continuar mostrando seu nome.
+
+---
+
+# 51. EDIT + INACTIVE ACCOUNT
+
+Não faça formulário quebrar.
+
+Siga política real da API.
+
+Se backend não permite novo lançamento/alteração usando conta inativa:
+
+exiba histórico corretamente, mas exija conta elegível para salvar
+alteração quando necessário.
+
+---
+
+# 52. CATEGORY
+
+Siga EXATAMENTE a decisão da TASK-3.6.
+
+---
+
+# 53. SE TRANSFER NÃO TEM CATEGORY
+
+Não mostrar campo Categoria.
+
+---
+
+# 54. SE TRANSFER TEM CATEGORY
+
+Mostrar somente opções permitidas pelo contrato.
+
+---
+
+# 55. NÃO INVENTAR CATEGORY RULE
+
+Não assumir:
+
+BOTH
+
+automaticamente.
+
+---
+
+# 56. CATEGORY API
+
+Se necessária:
+
+reutilize CategoriesApiService.
+
+Não criar endpoint paralelo.
+
+---
+
+# 57. AMOUNT
+
+Label:
+
+Valor
+
+---
+
+# 58. MONEY INPUT
+
+Reutilizar componente/helper já comprovado em Expense/Income.
+
+---
+
+# 59. PT-BR
+
+Aceitar conforme padrão:
+
+500
+500,5
+500,50
+1.500,50
+
+---
+
+# 60. POSITIVE MAGNITUDE
+
+Enviar:
+
+500.00
+
+Não:
+
+-500.00
+
+Não:
+
++500.00 como string semântica.
+
+---
+
+# 61. ZERO
+
+Rejeitar:
+
+0
+0,00.
+
+---
+
+# 62. NEGATIVO
+
+Rejeitar.
+
+---
+
+# 63. SCALE
+
+>2 casas:
+
+rejeitar.
+
+---
+
+# 64. PRECISÃO
+
+Preservar:
+
+0,10
+0,20
+100,10
+500,55.
+
+---
+
+# 65. NÃO VALIDAR SALDO INSUFICIENTE NO FRONTEND
+
+Se ADR permite saldo negativo:
+
+NÃO bloquear transferência comparando amount com saldo.
+
+---
+
+# 66. MOTIVO
+
+Além da regra de produto, saldo corrente ainda será derivado pelo ledger.
+
+Frontend não deve inventar regra financeira.
+
+---
+
+# 67. NOTES
+
+Label:
+
+Observações
+
+Textarea multiline.
+
+Opcional conforme contrato.
+
+---
+
+# 68. TAG
+
+NÃO mostrar.
+
+---
+
+# 69. ATTACHMENT
+
+NÃO mostrar.
+
+---
+
+# 70. CREATE REQUEST
+
+Enviar somente campos permitidos.
+
+Nunca:
+
+ownerId;
+userId;
+email;
+type;
+status;
+createdAt;
+updatedAt;
+cancelledAt.
+
+---
+
+# 71. TYPE
+
+Não enviar TRANSFER se endpoint já define tipo semanticamente.
+
+---
+
+# 72. CREATE SUCCESS
+
+Mensagem:
+
+"Transferência registrada com sucesso."
+
+Depois:
+
+- fechar formulário;
+- atualizar listagem;
+- preservar estado coerente de filtros/página.
+
+---
+
+# 73. CREATE ERROR
+
+Não perder formulário em erro corrigível.
+
+---
+
+# 74. SOURCE 404
+
+Mensagem amigável:
+
+"A conta de origem selecionada não está mais disponível."
+
+Atualizar contas quando apropriado.
+
+---
+
+# 75. DESTINATION 404
+
+"A conta de destino selecionada não está mais disponível."
+
+---
+
+# 76. SOURCE 409
+
+"A conta de origem não está disponível para novos lançamentos."
+
+---
+
+# 77. DESTINATION 409
+
+"A conta de destino não está disponível para novos lançamentos."
+
+---
+
+# 78. SAME ACCOUNT ERROR
+
+Se backend devolver erro para source == destination:
+
+"Escolha contas diferentes para origem e destino."
+
+---
+
+# 79. PROBLEM DETAILS
+
+Reutilizar parser existente.
+
+Não criar tratamento paralelo.
+
+---
+
+# 80. EDIT
+
+Ação:
+
+Editar
+
+abre formulário preenchido.
+
+---
+
+# 81. EDIT FIELDS
+
+Carregar:
+
+description;
+occurredAt;
+source;
+destination;
+amount;
+category, se aplicável;
+notes.
+
+---
+
+# 82. EDIT SUBMIT
+
+PUT /api/transfers/{id}
+
+ou contrato real.
+
+---
+
+# 83. EDIT SUCCESS
+
+"Transferência atualizada com sucesso."
+
+---
+
+# 84. EDIT INVARIANT
+
+Após edição:
+
+source != destination.
+
+---
+
+# 85. CANCEL
+
+Ação:
+
+Cancelar transferência
+
+---
+
+# 86. CONFIRM CANCEL
+
+Texto:
+
+"Cancelar esta transferência?"
+
+Complemento:
+
+"A transferência permanecerá no histórico, mas deixará de afetar os saldos das contas."
+
+---
+
+# 87. CANCEL BUTTONS
+
+Ação destrutiva:
+
+"Cancelar transferência"
+
+Secundária:
+
+"Manter transferência"
+
+---
+
+# 88. CANCEL SUCCESS
+
+"Transferência cancelada com sucesso."
+
+---
+
+# 89. CANCELLED EDIT
+
+Se API proíbe:
+
+não mostrar Editar.
+
+---
+
+# 90. CANCELLED CANCEL
+
+Não mostrar Cancelar novamente.
+
+---
+
+# 91. DELETE
+
+NÃO mostrar.
+
+---
+
+# 92. REACTIVATE
+
+NÃO mostrar sem suporte explícito.
+
+---
+
+# 93. TYPED MODELS
+
+Criar/reutilizar tipos explícitos:
+
+Transfer
+CreateTransferRequest
+UpdateTransferRequest
+TransferPage
+
+Adapte aos contratos reais.
+
+---
+
+# 94. NO ANY
+
+Não usar:
+
+any
+
+para dados financeiros.
+
+---
+
+# 95. API SERVICE
+
+Criar:
+
+TransfersApiService
+
+ou nome consistente.
+
+Responsabilidades:
+
+- create;
+- list;
+- get;
+- update;
+- cancel.
+
+---
+
+# 96. STATE
+
+Usar padrão atual:
+
+Signals/RxJS/component state.
+
+Não introduzir NgRx apenas para Transfer.
+
+---
+
+# 97. SHARED INFRASTRUCTURE
+
+Agora existem três UIs financeiras:
+
+Expense
+Income
+Transfer.
+
+Faça análise de reutilização.
+
+---
+
+# 98. PODE COMPARTILHAR
+
+Quando já comprovadamente neutro:
+
+- MoneyInput;
+- money parser/formatter;
+- TransactionDateTime control;
+- pagination;
+- status display;
+- Problem Details;
+- period filter;
+- common layout primitives.
+
+---
+
+# 99. NÃO GENERALIZAR FORMULÁRIO
+
+Não criar:
+
+GenericTransactionForm
+TransactionFormConfig
+DynamicFinancialForm
+
+apenas para eliminar algumas linhas duplicadas.
+
+---
+
+# 100. NÃO GENERALIZAR FEATURE PAGE
+
+Não criar:
+
+GenericTransactionPage<T>.
+
+---
+
+# 101. MOTIVO
+
+Transfer possui invariantes próprias:
+
+- source;
+- destination;
+- source != destination;
+- duas contas;
+- neutralidade patrimonial.
+
+Essas regras devem permanecer explícitas.
+
+---
+
+# 102. REQUEST RACES
+
+Filtros/paginação rápidos:
+
+resposta antiga não pode sobrescrever estado novo.
+
+Reutilize solução já existente.
+
+---
+
+# 103. 401
+
+Interceptor global.
+
+---
+
+# 104. 403
+
+Não limpar sessão.
+
+---
+
+# 105. 404 TRANSFER
+
+Não revelar ownership.
+
+Mostrar mensagem apropriada e atualizar listagem.
+
+---
+
+# 106. LOGOUT
+
+Dados financeiros não permanecem visíveis após logout.
+
+---
+
+# 107. ACCESSIBILITY
+
+Todos os campos:
+
+labels associados.
+
+---
+
+# 108. SOURCE/DESTINATION ACCESSIBILITY
+
+Screen reader deve distinguir claramente:
+
+Conta de origem
+Conta de destino.
+
+---
+
+# 109. ERRORS
+
+Mensagens associadas aos respectivos controles.
+
+---
+
+# 110. FOCUS
+
+Drawer/dialog:
+
+focus management correto.
+
+---
+
+# 111. KEYBOARD
+
+Fluxo completo acessível por teclado.
+
+---
+
+# 112. ACTION MENU
+
+Não depender de hover.
+
+---
+
+# 113. TOUCH
+
+Targets adequados.
+
+---
+
+# 114. RESPONSIVIDADE
+
+Teste:
+
+360 × 800
+390 × 844
+768 × 1024
+1024 × 768
+1280 × 720
+1366 × 768
+1920 × 1080
+
+---
+
+# 115. MOBILE — FOCO ESPECIAL
+
+Em 360 × 800 validar:
+
+- header;
+- Nova transferência;
+- filtros;
+- cards;
+- origem → destino;
+- valor;
+- status;
+- drawer;
+- source select;
+- destination select;
+- date/time;
+- notes;
+- confirmation dialog.
+
+---
+
+# 116. NO OVERFLOW
+
+Nenhum overflow horizontal global.
+
+---
+
+# 117. TEST — MONEY
+
+0.10
+1.00
+100.50
+1234.56
+
+formatados corretamente.
+
+---
+
+# 118. TEST — INPUT MONEY
+
+"500,55"
+
+→ request correto.
+
+---
+
+# 119. TEST — INVALID MONEY
+
+0
+-10
+10,999
+abc
+
+rejeitados.
+
+---
+
+# 120. TEST — DATE
+
+occurredAt correto.
+
+---
+
+# 121. TEST — TIMEZONE
+
+API → UI → API
+
+sem shift indevido.
+
+---
+
+# 122. TEST — ACCOUNTS
+
+Lista correta de contas elegíveis.
+
+---
+
+# 123. TEST — SAME ACCOUNT
+
+Source A.
+
+Destination A:
+
+impossível/submission bloqueado.
+
+---
+
+# 124. TEST — SOURCE CHANGE
+
+Destination A.
+
+Mudar source para A.
+
+Estado inválido resolvido.
+
+---
+
+# 125. TEST — ONE ACCOUNT
+
+Form não permite transferência.
+
+Mensagem correta.
+
+---
+
+# 126. TEST — ZERO ACCOUNTS
+
+Mensagem/CTA corretos.
+
+---
+
+# 127. TEST — CREATE
+
+Preencher:
+
+source A;
+destination B;
+amount;
+description;
+date;
+demais campos.
+
+Submit.
+
+API correta.
+
+Listagem atualizada.
+
+---
+
+# 128. TEST — CREATE DIRECTION
+
+Após create:
+
+UI deve mostrar:
+
+A → B
+
+e nunca:
+
+B → A.
+
+---
+
+# 129. TEST — EDIT
+
+Alterar:
+
+A → B
+
+para:
+
+A → C
+
+ou cenário válido equivalente.
+
+Salvar.
+
+UI correta.
+
+---
+
+# 130. TEST — CANCEL
+
+Confirmar.
+
+API chamada.
+
+UI atualizada.
+
+---
+
+# 131. TEST — CANCELLED
+
+Ações inválidas ausentes.
+
+---
+
+# 132. TEST — EMPTY
+
+PASS.
+
+---
+
+# 133. TEST — FILTERED EMPTY
+
+PASS.
+
+---
+
+# 134. TEST — ERROR
+
+PASS.
+
+---
+
+# 135. TEST — RETRY
+
+PASS.
+
+---
+
+# 136. TEST — PAGINATION
+
+Se aplicável:
+
+PASS.
+
+---
+
+# 137. TEST — INCLUDE CANCELLED
+
+Se aplicável:
+
+PASS.
+
+---
+
+# 138. E2E PRINCIPAL
+
+Fluxo real:
+
+1. registrar/login;
+2. criar/garantir Conta A ativa;
+3. criar/garantir Conta B ativa;
+4. acessar Transferências;
+5. Nova transferência;
+6. selecionar A como origem;
+7. selecionar B como destino;
+8. informar valor;
+9. preencher demais campos;
+10. salvar;
+11. validar listagem A → B;
+12. editar;
+13. validar alteração;
+14. cancelar;
+15. habilitar canceladas;
+16. validar CANCELLED.
+
+---
+
+# 139. E2E SAME ACCOUNT
+
+Tentar:
+
+A → A.
+
+UI não deve permitir submit válido.
+
+---
+
+# 140. E2E CROSS-USER
+
+Frontend normalmente não terá conta de outro usuário disponível.
+
+Mesmo assim, backend já protege isso.
+
+Não criar hack de frontend para testar IDOR se API tests já cobrem.
+
+---
+
+# 141. E2E MOBILE
+
+Executar fluxo representativo:
+
+360 × 800.
+
+---
+
+# 142. NETWORK
+
+Nenhum:
+
+401 inesperado;
+403 inesperado;
+404 inesperado;
+409 inesperado;
+500.
+
+---
+
+# 143. CONSOLE
+
+Sem erros inesperados.
+
+---
+
+# 144. EXPENSE REGRESSION
+
+PASS.
+
+---
+
+# 145. INCOME REGRESSION
+
+PASS.
+
+---
+
+# 146. ACCOUNTS REGRESSION
+
+PASS.
+
+---
+
+# 147. CATEGORIES REGRESSION
+
+PASS.
+
+---
+
+# 148. AUTH REGRESSION
+
+PASS.
+
+---
+
+# 149. DASHBOARD REGRESSION
+
+PASS.
+
+Ainda sem integração ao ledger.
+
+---
+
+# 150. BACKEND
+
+Não alterar backend salvo bloqueador real descoberto no contrato.
+
+Se houver:
+
+documente;
+faça correção mínima;
+adicione teste;
+não redesenhe API.
+
+---
+
+# 151. LINT
+
+PASS.
+
+---
+
+# 152. UNIT TESTS
+
+PASS.
+
+---
+
+# 153. PRODUCTION BUILD
+
+PASS.
+
+---
+
+# 154. PLAYWRIGHT
+
+PASS quando configurado.
+
+---
+
+# 155. DEFINITION OF DONE
+
+TASK-3.7 estará concluída quando:
+
+- rota de Transferências existir;
+- Sidebar funcionar;
+- API real de Transfer for utilizada;
+- listagem funcionar;
+- paginação funcionar conforme backend;
+- filtros reais funcionarem;
+- occurredAt estiver correto;
+- source estiver correto;
+- destination estiver correto;
+- source != destination estiver protegido na UI;
+- amount BRL estiver correto;
+- amount zero for rejeitado;
+- amount negativo for rejeitado;
+- >2 casas for rejeitado;
+- precisão monetária estiver preservada;
+- Category seguir exatamente contrato;
+- notes funcionar;
+- Nova transferência funcionar;
+- Editar funcionar;
+- Cancelar funcionar;
+- canceladas puderem ser consultadas;
+- Transfer aparecer como UMA operação;
+- direção A → B estiver clara;
+- DELETE não existir;
+- Reactivate não aparecer sem suporte;
+- ownerId não for enviado;
+- type não for enviado;
+- status não for enviado;
+- saldo insuficiente não for inventado como validação;
+- zero/uma conta forem tratados;
+- loading funcionar;
+- empty funcionar;
+- filtered empty funcionar;
+- error funcionar;
+- retry funcionar;
+- timezone estiver correto;
+- acessibilidade estiver validada;
+- 360px funcionar;
+- nenhum overflow global existir;
+- Expense não sofrer regressão;
+- Income não sofrer regressão;
+- Accounts não sofrer regressão;
+- Categories não sofrer regressão;
+- Auth não sofrer regressão;
+- Dashboard permanecer inalterado;
+- lint passar;
+- unit tests passarem;
+- production build passar;
+- E2E passar quando configurado.
+
+---
+
+# 156. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-3.7 — INTERFACE DE TRANSFERÊNCIAS
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## 1. Rota
+
+Informe.
+
+## 2. Sidebar
+
+Informe.
+
+## 3. API
+
+Liste endpoints utilizados.
+
+## 4. Models
+
+Liste types/interfaces.
+
+## 5. Listagem
+
+Informe:
+
+- desktop;
+- mobile;
+- paginação;
+- filtros;
+- ordenação.
+
+## 6. Representação
+
+Explique como:
+
+source → destination
+
+é exibido.
+
+## 7. Formulário
+
+Liste campos.
+
+## 8. Source Account
+
+Explique comportamento.
+
+## 9. Destination Account
+
+Explique comportamento.
+
+## 10. Source != Destination
+
+PASS / FAIL
+
+Explique proteção.
+
+## 11. Zero/uma conta
+
+Explique UX.
+
+## 12. Category
+
+Explique contrato real.
+
+## 13. Money
+
+Explique:
+
+- input;
+- parsing;
+- validation;
+- precision;
+- formatting.
+
+## 14. Date/Time
+
+Explique:
+
+UI
+→ API
+→ UI.
+
+## 15. Create
+
+PASS / FAIL
+
+## 16. Edit
+
+PASS / FAIL
+
+## 17. Cancel
+
+PASS / FAIL
+
+## 18. Cancelled
+
+Explique.
+
+## 19. Delete
+
+Esperado:
+
+NÃO IMPLEMENTADO
+
+## 20. Reactivate
+
+Esperado:
+
+NÃO IMPLEMENTADO
+
+## 21. Tags
+
+Esperado:
+
+NÃO IMPLEMENTADAS
+
+## 22. Attachments
+
+Esperado:
+
+NÃO IMPLEMENTADOS
+
+## 23. Loading
+
+PASS / FAIL
+
+## 24. Empty
+
+PASS / FAIL
+
+## 25. Filtered Empty
+
+PASS / FAIL
+
+## 26. Error
+
+PASS / FAIL
+
+## 27. Retry
+
+PASS / FAIL
+
+## 28. Accessibility
+
+### Keyboard
+PASS / FAIL
+
+### Focus
+PASS / FAIL
+
+### Labels
+PASS / FAIL
+
+### Errors
+PASS / FAIL
+
+### Touch
+PASS / FAIL
+
+## 29. Responsive
+
+### 360 × 800
+PASS / FAIL
+
+### 390 × 844
+PASS / FAIL
+
+### 768 × 1024
+PASS / FAIL
+
+### 1024 × 768
+PASS / FAIL
+
+### 1280 × 720
+PASS / FAIL
+
+### 1366 × 768
+PASS / FAIL
+
+### 1920 × 1080
+PASS / FAIL
+
+## 30. E2E
+
+PASS / FAIL / NÃO CONFIGURADO
+
+## 31. Mobile E2E
+
+PASS / FAIL / NÃO CONFIGURADO
+
+## 32. Console
+
+PASS / FAIL
+
+## 33. Regressão
+
+### Expenses
+PASS / FAIL
+
+### Incomes
+PASS / FAIL
+
+### Accounts
+PASS / FAIL
+
+### Categories
+PASS / FAIL
+
+### Authentication
+PASS / FAIL
+
+### Dashboard
+PASS / FAIL
+
+## 34. Lint
+
+PASS / FAIL
+
+## 35. Unit tests
+
+PASS / FAIL
+
+## 36. Production build
+
+PASS / FAIL
+
+## 37. Backend alterado
+
+Esperado:
+
+NÃO
+
+Se alterado:
+
+explique bloqueador e correção.
+
+## 38. Arquivos
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 39. Reutilização
+
+### Shared infrastructure
+
+### Expense-specific
+
+### Income-specific
+
+### Transfer-specific
+
+### Mantido separado propositalmente
+
+## 40. Bugs encontrados
+
+Liste:
+
+problema;
+causa;
+correção;
+teste.
+
+## 41. Pendências
+
+### Bloqueantes
+
+### Não bloqueantes
+
+## 42. Próxima tarefa
+
+Se TASK-3.7 estiver aprovada, informe prontidão para:
+
+# TASK-3.8 — Saldo Corrente e Patrimônio Derivados do Ledger
+
+NÃO implemente TASK-3.8 nesta execução.

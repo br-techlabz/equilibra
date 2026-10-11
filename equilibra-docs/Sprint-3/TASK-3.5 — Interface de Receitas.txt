@@ -1,0 +1,1917 @@
+# TASK-3.5 — Interface de Receitas
+
+Estamos na:
+
+# Sprint 3 — Transações Financeiras
+
+Concluídas:
+
+- TASK-3.0 — Arquitetura do Ledger e Regras Financeiras
+- TASK-3.1 — Domínio e Persistência de Transações Financeiras
+- TASK-3.2 — Casos de Uso e API REST de Despesas
+- TASK-3.3 — Interface de Despesas
+- TASK-3.4 — Casos de Uso e API REST de Receitas
+
+Agora implemente:
+
+# TASK-3.5 — Interface de Receitas
+
+O objetivo é implementar a interface completa de Receitas/Rendas utilizando:
+
+- a API REAL criada na TASK-3.4;
+- o Design System existente;
+- os padrões consolidados pela interface de Despesas;
+- os componentes compartilhados já existentes.
+
+O usuário deverá conseguir:
+
+- visualizar receitas;
+- registrar receita;
+- editar receita;
+- cancelar receita;
+- visualizar receitas canceladas;
+- navegar pela paginação;
+- utilizar filtros suportados pela API;
+- utilizar a funcionalidade adequadamente em desktop e mobile.
+
+NÃO implementar nesta TASK:
+
+- Transferências;
+- Tags;
+- Attachments;
+- upload;
+- Dashboard financeiro real;
+- relatórios;
+- saldo corrente persistido;
+- DELETE físico;
+- reativação sem suporte da API;
+- GenericTransactionForm;
+- GenericTransactionCrud;
+- framework genérico de transações.
+
+---
+
+# 1. FONTE DE VERDADE
+
+Antes de modificar código, leia:
+
+- CLAUDE.md;
+- README.md;
+- docs/frontend-architecture.md;
+- docs/design-system.md;
+- ADR da TASK-3.0;
+- documentação das TASKs 3.1–3.4;
+- OpenAPI atual.
+
+Inspecione principalmente:
+
+- implementação REAL da API de Income;
+- interface de Expenses;
+- ExpensesApiService;
+- models de Expense;
+- money input/helpers;
+- date/time helpers;
+- AssetAccount API;
+- Category API;
+- PageHeader;
+- ContentPanel;
+- drawers/dialogs;
+- EmptyState;
+- paginação;
+- Problem Details;
+- Auth interceptors;
+- Sidebar;
+- routing;
+- testes unitários;
+- testes E2E/Playwright.
+
+Não presuma contratos.
+
+A implementação real é a fonte de verdade.
+
+---
+
+# 2. RELATÓRIO PRÉ-IMPLEMENTAÇÃO
+
+Antes de alterar arquivos, apresente:
+
+# TASK-3.5 — PRE-IMPLEMENTATION REPORT
+
+## API de Income encontrada
+
+Liste:
+
+- endpoints;
+- requests;
+- responses;
+- paginação;
+- filtros;
+- cancelled;
+- erros.
+
+## Expense UI encontrada
+
+Liste:
+
+- estrutura da página;
+- formulário;
+- paginação;
+- money input;
+- date/time;
+- estados;
+- mobile;
+- testes.
+
+## Reutilização
+
+Classifique:
+
+A — componentes já compartilhados;
+B — código Expense-specific;
+C — duplicação que agora pode justificar pequena extração;
+D — comportamento específico de Income.
+
+## Plano
+
+Liste arquivos a:
+
+- criar;
+- modificar;
+- reutilizar.
+
+Depois implemente.
+
+---
+
+# 3. ROTA
+
+Adicionar rota privada:
+
+/incomes
+
+ou path consistente com arquitetura real.
+
+Lazy loading quando esse for o padrão existente.
+
+---
+
+# 4. SIDEBAR
+
+Dentro de:
+
+Transações
+
+deve existir item:
+
+Receitas
+
+ou:
+
+Receitas/Rendas
+
+Escolha terminologia consistente com o restante da aplicação.
+
+Preferência visual:
+
+Receitas
+
+---
+
+# 5. TERMINOLOGIA
+
+Utilize uma terminologia consistente.
+
+Na interface principal:
+
+Receitas
+
+Descrição conceitual:
+
+entradas de dinheiro.
+
+Evite alternar sem necessidade entre:
+
+Receita
+Renda
+Entrada
+Provento
+
+---
+
+# 6. PAGE HEADER
+
+Título:
+
+Receitas
+
+Subtítulo sugerido:
+
+"Registre e acompanhe suas entradas de dinheiro."
+
+Ação:
+
++ Nova receita
+
+---
+
+# 7. DESIGN SYSTEM
+
+Não criar nova identidade visual.
+
+Reutilize integralmente:
+
+- typography;
+- spacing;
+- tokens;
+- cards;
+- buttons;
+- drawers;
+- tables;
+- status;
+- empty states;
+- loading;
+- feedback;
+- responsive rules.
+
+---
+
+# 8. CONSISTÊNCIA COM DESPESAS
+
+As telas:
+
+Despesas
+Receitas
+
+devem parecer partes do mesmo produto.
+
+Diferenças devem existir apenas quando houver significado financeiro ou
+necessidade real de UX.
+
+---
+
+# 9. NÃO COPIAR CEGAMENTE
+
+Não copie toda a feature Expense e apenas troque nomes.
+
+Primeiro identifique o que já pode ser reutilizado com segurança.
+
+---
+
+# 10. LISTAGEM
+
+Consumir:
+
+GET /api/incomes
+
+real.
+
+Nenhum mock financeiro em produção.
+
+---
+
+# 11. DESKTOP
+
+Utilize padrão equivalente a Despesas.
+
+Colunas conceituais:
+
+Data
+Descrição
+Conta
+Categoria
+Valor
+Status
+Ações
+
+Adapte ao contrato real.
+
+---
+
+# 12. MOBILE
+
+Utilize cards/list items.
+
+Prioridade:
+
+Descrição
+Valor
+Data
+Conta
+Categoria
+Status
+Ações
+
+Não force tabela desktop em 360px.
+
+---
+
+# 13. DATA
+
+Exibir:
+
+occurredAt
+
+e não:
+
+createdAt
+
+como data financeira.
+
+---
+
+# 14. DATA PT-BR
+
+Formato consistente com Expense.
+
+Exemplo:
+
+dd/MM/yyyy HH:mm
+
+---
+
+# 15. CONTA
+
+Mostrar nome da conta que recebeu a receita.
+
+Não UUID.
+
+---
+
+# 16. CATEGORIA
+
+Mostrar nome da Category.
+
+---
+
+# 17. VALOR
+
+BRL / pt-BR.
+
+Exemplo:
+
+R$ 5.000,00
+
+---
+
+# 18. SINAL VISUAL
+
+O amount persistido continua positivo.
+
+Na UI pode ser exibido:
+
+R$ 5.000,00
+
+ou:
+
++ R$ 5.000,00
+
+se isso estiver alinhado ao padrão visual.
+
+Não altere contrato financeiro.
+
+---
+
+# 19. SEMÂNTICA POR COR
+
+Pode haver tratamento visual diferente de Expense, mas:
+
+não depender apenas de cor.
+
+Texto/contexto deve transmitir significado.
+
+---
+
+# 20. STATUS
+
+Traduzir conforme API real.
+
+Exemplo:
+
+ACTIVE → Ativa
+CANCELLED → Cancelada
+
+Não exibir enums crus ao usuário.
+
+---
+
+# 21. CANCELLED
+
+Receita cancelada deve permanecer visível quando filtro correspondente
+estiver habilitado.
+
+Deve ser distinguível e legível.
+
+---
+
+# 22. FILTROS
+
+Implemente apenas filtros suportados pela API.
+
+---
+
+# 23. INCLUDE CANCELLED
+
+Se API possui:
+
+includeCancelled
+
+ofereça:
+
+"Mostrar receitas canceladas"
+
+Default:
+
+false.
+
+---
+
+# 24. PERIOD
+
+Se API suporta:
+
+from
+to
+
+reutilize o padrão de Expense.
+
+---
+
+# 25. PAGINAÇÃO
+
+Se API de Income é paginada:
+
+use paginação do backend.
+
+Nunca:
+
+carregar tudo
++
+paginar no frontend.
+
+---
+
+# 26. PAGINATION UX
+
+Reutilize componente/padrão de Expense.
+
+---
+
+# 27. FILTER RESET
+
+Mudança de filtro:
+
+voltar à página 0.
+
+---
+
+# 28. ORDER
+
+Respeitar ordenação fornecida pela API.
+
+Não reordenar apenas a página atual de forma enganosa.
+
+---
+
+# 29. LOADING
+
+Mesmo padrão de Expense.
+
+---
+
+# 30. EMPTY STATE
+
+Nenhuma receita:
+
+"Nenhuma receita registrada."
+
+Complemento:
+
+"Registre sua primeira receita para começar a acompanhar suas entradas."
+
+Ação:
+
+"Registrar receita"
+
+---
+
+# 31. FILTERED EMPTY
+
+Quando filtros não retornarem registros:
+
+"Nenhuma receita encontrada para os filtros selecionados."
+
+Não tratar como primeira utilização.
+
+---
+
+# 32. ERROR
+
+"Não foi possível carregar suas receitas."
+
+Ação:
+
+"Tentar novamente"
+
+---
+
+# 33. RETRY
+
+Refazer request.
+
+Não usar:
+
+window.location.reload().
+
+---
+
+# 34. CREATE
+
+Botão:
+
++ Nova receita
+
+abre formulário.
+
+---
+
+# 35. FORM PATTERN
+
+Reutilize padrão de Expense.
+
+Preferencialmente:
+
+drawer lateral desktop;
+drawer amplo/full-screen mobile;
+
+se esse for o padrão atual.
+
+---
+
+# 36. CAMPOS
+
+Campos atuais:
+
+Descrição
+Data e hora
+Conta
+Valor
+Categoria
+Observações
+
+NÃO incluir:
+
+Tag
+Anexo
+
+---
+
+# 37. DESCRIPTION
+
+Obrigatória.
+
+Respeite contrato real.
+
+---
+
+# 38. DESCRIPTION VALIDATION
+
+- não vazia;
+- não somente espaços;
+- maxLength correto.
+
+---
+
+# 39. DATE/TIME
+
+Label:
+
+Data e hora
+
+Mapeia para:
+
+occurredAt.
+
+---
+
+# 40. DEFAULT DATE
+
+Nova receita pode iniciar com:
+
+data/hora atual local
+
+desde que mapping para API preserve instante corretamente.
+
+---
+
+# 41. EDIT DATE
+
+Em edição:
+
+preservar occurredAt real.
+
+Nunca substituir por "agora".
+
+---
+
+# 42. TIMEZONE
+
+Reutilize exatamente a estratégia comprovada em Expense.
+
+Não implemente segundo conversor temporal.
+
+---
+
+# 43. ACCOUNT
+
+Label:
+
+Conta
+
+Semântica:
+
+conta que RECEBERÁ o dinheiro.
+
+---
+
+# 44. ACCOUNT OPTIONS
+
+Carregar somente contas elegíveis para novos lançamentos.
+
+Normalmente:
+
+active = true.
+
+---
+
+# 45. ACCOUNT API
+
+Reutilizar serviço existente de AssetAccounts.
+
+Não criar endpoint paralelo.
+
+---
+
+# 46. ACCOUNT EMPTY
+
+Se usuário não possui conta ativa:
+
+"Você precisa cadastrar uma conta ativa antes de registrar uma receita."
+
+Ação:
+
+"Cadastrar conta"
+
+→ rota de contas.
+
+---
+
+# 47. ACCOUNT INACTIVE HISTORY
+
+Receita histórica pode apontar para conta posteriormente inativa.
+
+A tela deve continuar conseguindo exibir esse registro.
+
+Na edição, siga exatamente comportamento permitido pela API.
+
+---
+
+# 48. CATEGORY
+
+Label:
+
+Categoria
+
+---
+
+# 49. CATEGORY CONTEXT
+
+Consultar Category API usando contexto:
+
+INCOME
+
+---
+
+# 50. CATEGORY RESULT
+
+Devem estar disponíveis:
+
+INCOME
+BOTH
+
+ativas.
+
+---
+
+# 51. EXPENSE CATEGORY
+
+Categoria exclusivamente:
+
+EXPENSE
+
+não deve aparecer no seletor de nova receita.
+
+---
+
+# 52. BOTH CATEGORY
+
+Deve aparecer.
+
+---
+
+# 53. CATEGORY EMPTY
+
+Se nenhuma categoria aplicável:
+
+"Você precisa cadastrar uma categoria de receita antes de registrar uma
+receita."
+
+Ação:
+
+"Cadastrar categoria"
+
+→ /categories
+
+---
+
+# 54. CATEGORY INACTIVE HISTORY
+
+Receita histórica deve continuar exibindo categoria posteriormente
+desativada.
+
+---
+
+# 55. AMOUNT
+
+Label:
+
+Valor
+
+---
+
+# 56. MONEY INPUT
+
+Reutilize componente/helper comprovado em Expense.
+
+Não crie segundo parser de moeda.
+
+---
+
+# 57. PT-BR INPUT
+
+Suportar conforme padrão atual:
+
+5000
+5000,5
+5000,50
+5.000,50
+
+---
+
+# 58. AMOUNT CONTRACT
+
+Enviar magnitude positiva.
+
+---
+
+# 59. ZERO
+
+Rejeitar:
+
+0
+0,00
+
+---
+
+# 60. NEGATIVO
+
+Rejeitar:
+
+-10
+-10,00
+
+---
+
+# 61. SCALE
+
+Mais de duas casas:
+
+rejeitar.
+
+Não arredondar silenciosamente.
+
+---
+
+# 62. PRECISÃO
+
+Preservar corretamente:
+
+0,10
+0,20
+100,10
+5000,55
+
+---
+
+# 63. NOTES
+
+Textarea.
+
+Multiline.
+
+Opcional conforme API.
+
+Reutilize limite e validação existentes.
+
+---
+
+# 64. TAG
+
+NÃO exibir.
+
+---
+
+# 65. ATTACHMENT
+
+NÃO exibir.
+
+---
+
+# 66. CREATE REQUEST
+
+Enviar apenas campos aceitos pela API.
+
+Nunca enviar:
+
+ownerId
+userId
+email
+type
+status
+sourceAccountId
+destinationAccountId
+createdAt
+updatedAt
+cancelledAt.
+
+---
+
+# 67. TYPE
+
+Frontend não precisa enviar:
+
+INCOME
+
+se endpoint já define semanticamente o tipo.
+
+---
+
+# 68. CREATE SUCCESS
+
+Após 201:
+
+- fechar formulário;
+- exibir feedback;
+- atualizar listagem.
+
+Mensagem:
+
+"Receita registrada com sucesso."
+
+---
+
+# 69. CREATE ERROR
+
+Preservar dados digitados em erros corrigíveis.
+
+---
+
+# 70. PROBLEM DETAILS
+
+Reutilizar parser existente.
+
+---
+
+# 71. 400
+
+Mostrar erros de validação adequadamente.
+
+---
+
+# 72. 404 ACCOUNT
+
+Se conta deixar de estar disponível entre carregamento e submit:
+
+mensagem amigável;
+recarregar opções quando apropriado.
+
+---
+
+# 73. 404 CATEGORY
+
+Mesmo princípio.
+
+---
+
+# 74. 409 ACCOUNT
+
+Mensagem sugerida:
+
+"A conta selecionada não está disponível para novos lançamentos."
+
+---
+
+# 75. 409 CATEGORY
+
+Mensagem:
+
+"A categoria selecionada não pode ser usada nesta receita."
+
+---
+
+# 76. EDIT
+
+Ação:
+
+Editar
+
+abre formulário em modo edição.
+
+---
+
+# 77. EDIT LOAD
+
+Carregar:
+
+description;
+occurredAt;
+account;
+amount;
+category;
+notes.
+
+---
+
+# 78. EDIT SUBMIT
+
+PUT /api/incomes/{id}
+
+ou contrato real.
+
+---
+
+# 79. EDIT SUCCESS
+
+"Receita atualizada com sucesso."
+
+---
+
+# 80. CANCEL
+
+Ação:
+
+Cancelar receita
+
+---
+
+# 81. CONFIRMATION
+
+Antes de cancelar:
+
+"Cancelar esta receita?"
+
+Complemento sugerido:
+
+"A receita permanecerá no histórico, mas deixará de afetar os cálculos
+financeiros."
+
+Ajuste ao comportamento real.
+
+---
+
+# 82. CONFIRM BUTTONS
+
+Primário destrutivo:
+
+"Cancelar receita"
+
+Secundário:
+
+"Manter receita"
+
+---
+
+# 83. CANCEL SUCCESS
+
+"Receita cancelada com sucesso."
+
+---
+
+# 84. CANCELLED EDIT
+
+Se backend proíbe edição:
+
+não oferecer Editar.
+
+---
+
+# 85. CANCELLED CANCEL
+
+Não oferecer cancelamento novamente sem necessidade.
+
+---
+
+# 86. DELETE
+
+NÃO mostrar.
+
+---
+
+# 87. REACTIVATE
+
+NÃO mostrar sem endpoint correspondente.
+
+---
+
+# 88. TYPED MODELS
+
+Crie/reutilize models TypeScript.
+
+Exemplos:
+
+Income
+CreateIncomeRequest
+UpdateIncomeRequest
+IncomePage
+
+Adapte ao contrato real.
+
+---
+
+# 89. NO ANY
+
+Não utilizar `any` para dados financeiros.
+
+---
+
+# 90. API SERVICE
+
+Criar:
+
+IncomesApiService
+
+ou nome consistente.
+
+Responsabilidades:
+
+- create;
+- list;
+- get;
+- update;
+- cancel.
+
+---
+
+# 91. NÃO DUPLICAR INFRAESTRUTURA
+
+Se Expense já possui abstrações realmente neutras como:
+
+MoneyInput;
+TransactionDateTimeInput;
+Pagination;
+ProblemDetails handling;
+
+reutilize.
+
+---
+
+# 92. NÃO GENERALIZAR FEATURE
+
+Não transformar Expense e Income em uma única feature configurada por:
+
+type = 'expense' | 'income'
+
+nesta TASK.
+
+---
+
+# 93. MOTIVO
+
+Transferência ainda virá e possui duas contas.
+
+Generalização baseada apenas em Expense/Income pode produzir abstração
+errada.
+
+---
+
+# 94. STATE
+
+Use padrão Angular atual.
+
+Não introduza NgRx apenas para Income.
+
+---
+
+# 95. REQUEST RACES
+
+Filtros/paginação rápidos não devem permitir resposta antiga sobrescrever
+estado novo.
+
+Se Expense já resolveu isso:
+
+reutilize estratégia.
+
+---
+
+# 96. AUXILIARY LOADING
+
+Conta e categoria devem ter:
+
+loading;
+error;
+empty.
+
+---
+
+# 97. LOGOUT
+
+Dados de Income não podem permanecer visíveis após logout.
+
+---
+
+# 98. 401
+
+Interceptor global.
+
+Não implementar auth local.
+
+---
+
+# 99. 403
+
+Não limpar sessão.
+
+---
+
+# 100. 404 INCOME
+
+Se registro desaparecer/ficar indisponível:
+
+feedback amigável;
+atualizar listagem.
+
+Não revelar ownership.
+
+---
+
+# 101. ACCESSIBILITY
+
+Preserve padrão aprovado na Sprint UI.
+
+---
+
+# 102. LABELS
+
+Todos os inputs com labels reais.
+
+---
+
+# 103. VALIDATION ERRORS
+
+Associados aos campos.
+
+---
+
+# 104. FOCUS
+
+Ao abrir formulário:
+
+foco adequado.
+
+Ao fechar:
+
+retornar ao acionador quando possível.
+
+---
+
+# 105. KEYBOARD
+
+Fluxo completo por teclado.
+
+---
+
+# 106. ACTION MENU
+
+Não depender de hover.
+
+---
+
+# 107. TOUCH
+
+Alvos adequados em mobile.
+
+---
+
+# 108. RESPONSIVIDADE
+
+Teste:
+
+360 × 800
+390 × 844
+768 × 1024
+1024 × 768
+1280 × 720
+1366 × 768
+1920 × 1080
+
+---
+
+# 109. MOBILE
+
+Validar:
+
+- PageHeader;
+- Nova receita;
+- filtros;
+- cards;
+- valores;
+- drawer;
+- date/time;
+- account select;
+- category select;
+- textarea;
+- actions;
+- confirmação.
+
+---
+
+# 110. OVERFLOW
+
+Nenhum overflow horizontal global em 360px.
+
+---
+
+# 111. TEST — MODELS
+
+Tipos corretos.
+
+---
+
+# 112. TEST — STATUS
+
+ACTIVE/CANCELLED corretamente apresentados.
+
+---
+
+# 113. TEST — MONEY FORMAT
+
+Testar:
+
+0.10
+1.00
+100.50
+1234.56
+5000.55.
+
+---
+
+# 114. TEST — MONEY INPUT
+
+"0,10"
+
+→ request:
+
+0.10
+
+conforme contrato real.
+
+---
+
+# 115. TEST — INVALID MONEY
+
+0
+-10
+10,999
+abc
+
+rejeitados.
+
+---
+
+# 116. TEST — DATE
+
+Mapping correto.
+
+---
+
+# 117. TEST — TIMEZONE
+
+Instante conhecido:
+
+API → UI → API
+
+sem deslocamento indevido.
+
+---
+
+# 118. TEST — ACCOUNT OPTIONS
+
+Somente elegíveis para nova receita.
+
+---
+
+# 119. TEST — CATEGORY OPTIONS
+
+INCOME + BOTH.
+
+---
+
+# 120. TEST — EXPENSE CATEGORY
+
+Não aparece.
+
+---
+
+# 121. TEST — CREATE
+
+Form válido.
+
+POST correto.
+
+Listagem atualizada.
+
+---
+
+# 122. TEST — EDIT
+
+Abrir;
+alterar;
+salvar;
+atualizar UI.
+
+---
+
+# 123. TEST — CANCEL
+
+Confirmar;
+API chamada;
+UI atualizada.
+
+---
+
+# 124. TEST — CANCELLED ACTIONS
+
+Ações inválidas ausentes.
+
+---
+
+# 125. TEST — EMPTY
+
+Estado correto.
+
+---
+
+# 126. TEST — FILTERED EMPTY
+
+Estado correto.
+
+---
+
+# 127. TEST — ERROR
+
+Estado correto.
+
+---
+
+# 128. TEST — RETRY
+
+Erro
+→ retry
+→ sucesso.
+
+---
+
+# 129. TEST — PAGINATION
+
+Se API paginada:
+
+- next;
+- previous;
+- page;
+- size;
+- filtros resetam page.
+
+---
+
+# 130. TEST — INCLUDE CANCELLED
+
+Toggle deve alterar request.
+
+---
+
+# 131. E2E PRINCIPAL
+
+Fluxo real:
+
+1. registrar/login;
+2. garantir AssetAccount ativa;
+3. garantir Category INCOME ou BOTH;
+4. acessar Receitas;
+5. criar Income;
+6. validar listagem;
+7. editar Income;
+8. validar alteração;
+9. cancelar Income;
+10. habilitar canceladas;
+11. validar status.
+
+---
+
+# 132. E2E BOTH
+
+Category BOTH deve funcionar.
+
+---
+
+# 133. E2E EXPENSE CATEGORY
+
+Categoria EXPENSE-only não deve aparecer.
+
+---
+
+# 134. E2E ACCOUNT INACTIVE
+
+Conta inativa não deve aparecer para nova Income.
+
+---
+
+# 135. E2E MOBILE
+
+Executar fluxo representativo:
+
+360 × 800.
+
+---
+
+# 136. NETWORK
+
+Nenhum erro inesperado:
+
+401
+403
+404
+500.
+
+---
+
+# 137. CONSOLE
+
+Sem erros inesperados.
+
+---
+
+# 138. REGRESSÃO EXPENSE UI
+
+A interface de Despesas deve continuar funcionando integralmente.
+
+---
+
+# 139. REGRESSÃO ACCOUNTS
+
+PASS.
+
+---
+
+# 140. REGRESSÃO CATEGORIES
+
+PASS.
+
+---
+
+# 141. REGRESSÃO AUTH
+
+PASS.
+
+---
+
+# 142. REGRESSÃO DASHBOARD
+
+PASS.
+
+Dashboard ainda não deve incorporar ledger.
+
+---
+
+# 143. NÃO ALTERAR DASHBOARD
+
+Não implementar ainda:
+
+Entradas reais;
+Saídas reais;
+Saldo real;
+Patrimônio derivado;
+gráfico;
+transações recentes.
+
+---
+
+# 144. NÃO IMPLEMENTAR TRANSFER
+
+Não iniciar Transfer nesta TASK.
+
+---
+
+# 145. REVISÃO DE REUTILIZAÇÃO
+
+Agora existem:
+
+Expense UI
+Income UI.
+
+Faça comparação objetiva.
+
+Classifique código:
+
+A — específico de Expense;
+B — específico de Income;
+C — infraestrutura financeira realmente comum;
+D — duplicação tolerável até Transfer existir.
+
+---
+
+# 146. EXTRAÇÃO
+
+Extraia C somente quando:
+
+- responsabilidade estiver clara;
+- não esconder semântica;
+- não criar configuração complexa;
+- não dificultar Transfer futura.
+
+---
+
+# 147. CANDIDATOS POSSÍVEIS
+
+Exemplos:
+
+- MoneyInput;
+- formatMoney;
+- parseMoney;
+- TransactionDateTime control;
+- pagination model;
+- status presentation;
+- Problem Details handling.
+
+Somente se o código real justificar.
+
+---
+
+# 148. NÃO CRIAR
+
+Não criar:
+
+GenericTransactionPage
+GenericTransactionForm
+TransactionCrudConfig
+TransactionFeatureFactory
+DynamicFinancialForm
+
+---
+
+# 149. LINT
+
+Execute lint completo.
+
+PASS.
+
+---
+
+# 150. UNIT TESTS
+
+PASS.
+
+---
+
+# 151. PRODUCTION BUILD
+
+PASS.
+
+---
+
+# 152. E2E
+
+Execute quando configurado.
+
+PASS.
+
+---
+
+# 153. DEFINITION OF DONE
+
+TASK-3.5 estará concluída quando:
+
+- rota de Receitas existir;
+- Sidebar navegar para Receitas;
+- API real de Income for utilizada;
+- listagem funcionar;
+- paginação real funcionar;
+- filtros suportados funcionarem;
+- occurredAt estiver correto;
+- conta aparecer corretamente;
+- categoria aparecer corretamente;
+- valor BRL estiver correto;
+- status estiver traduzido;
+- mobile usar cards/list adequada;
+- Nova receita funcionar;
+- Editar funcionar;
+- Cancelar funcionar;
+- canceladas puderem ser consultadas;
+- DELETE não existir;
+- Reactivate não aparecer sem suporte;
+- Account select usar contas elegíveis;
+- Category select usar INCOME + BOTH;
+- EXPENSE-only não aparecer;
+- amount zero for rejeitado;
+- amount negativo for rejeitado;
+- >2 casas for rejeitado;
+- precisão monetária estiver preservada;
+- timezone estiver correto;
+- notes funcionar;
+- ownerId não for enviado;
+- type não for enviado;
+- status não for enviado;
+- loading funcionar;
+- empty funcionar;
+- filtered empty funcionar;
+- error funcionar;
+- retry funcionar;
+- acessibilidade estiver validada;
+- 360px funcionar;
+- não houver overflow global;
+- Expense não sofrer regressão;
+- Accounts não sofrer regressão;
+- Categories não sofrer regressão;
+- Auth não sofrer regressão;
+- Dashboard permanecer sem integração do ledger;
+- lint passar;
+- unit tests passarem;
+- production build passar;
+- E2E passar quando configurado;
+- Transfer NÃO tiver sido implementada.
+
+---
+
+# 154. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-3.5 — INTERFACE DE RECEITAS
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## 1. Rota
+
+Informe.
+
+## 2. Sidebar
+
+Informe.
+
+## 3. API
+
+Liste endpoints utilizados.
+
+## 4. Models
+
+Liste interfaces/types.
+
+## 5. Listagem
+
+Informe:
+
+- desktop;
+- mobile;
+- paginação;
+- filtros;
+- ordenação.
+
+## 6. Formulário
+
+Liste campos.
+
+## 7. Account
+
+Confirme semântica:
+
+conta recebe o valor.
+
+## 8. Category
+
+Confirme:
+
+INCOME
++
+BOTH.
+
+## 9. Money
+
+Explique:
+
+- entrada;
+- parsing;
+- validação;
+- precisão;
+- formatação.
+
+## 10. Date/Time
+
+Explique:
+
+UI
+→ API
+→ UI
+
+## 11. Create
+
+PASS / FAIL
+
+## 12. Edit
+
+PASS / FAIL
+
+## 13. Cancel
+
+PASS / FAIL
+
+## 14. Cancelled
+
+Explique comportamento.
+
+## 15. Delete
+
+Esperado:
+
+NÃO IMPLEMENTADO
+
+## 16. Tags
+
+Esperado:
+
+NÃO IMPLEMENTADAS
+
+## 17. Attachments
+
+Esperado:
+
+NÃO IMPLEMENTADOS
+
+## 18. Loading
+
+PASS / FAIL
+
+## 19. Empty
+
+PASS / FAIL
+
+## 20. Filtered Empty
+
+PASS / FAIL
+
+## 21. Error
+
+PASS / FAIL
+
+## 22. Retry
+
+PASS / FAIL
+
+## 23. Accessibility
+
+### Keyboard
+PASS / FAIL
+
+### Focus
+PASS / FAIL
+
+### Labels
+PASS / FAIL
+
+### Errors
+PASS / FAIL
+
+### Touch
+PASS / FAIL
+
+## 24. Responsive
+
+### 360 × 800
+PASS / FAIL
+
+### 390 × 844
+PASS / FAIL
+
+### 768 × 1024
+PASS / FAIL
+
+### 1024 × 768
+PASS / FAIL
+
+### 1280 × 720
+PASS / FAIL
+
+### 1366 × 768
+PASS / FAIL
+
+### 1920 × 1080
+PASS / FAIL
+
+## 25. E2E
+
+PASS / FAIL / NÃO CONFIGURADO
+
+## 26. Mobile E2E
+
+PASS / FAIL / NÃO CONFIGURADO
+
+## 27. Console
+
+PASS / FAIL
+
+## 28. Regressão
+
+### Expenses
+PASS / FAIL
+
+### Accounts
+PASS / FAIL
+
+### Categories
+PASS / FAIL
+
+### Authentication
+PASS / FAIL
+
+### Dashboard
+PASS / FAIL
+
+## 29. Lint
+
+PASS / FAIL
+
+## 30. Unit tests
+
+PASS / FAIL
+
+## 31. Production build
+
+PASS / FAIL
+
+## 32. Backend alterado
+
+Esperado:
+
+NÃO
+
+Se alterado, explique.
+
+## 33. Arquivos
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 34. Reutilização Expense × Income
+
+### A — Expense-specific
+
+### B — Income-specific
+
+### C — compartilhado
+
+### D — mantido separado até Transfer
+
+## 35. Bugs encontrados
+
+Liste:
+
+problema;
+causa;
+correção;
+teste.
+
+## 36. Pendências
+
+### Bloqueantes
+
+### Não bloqueantes
+
+## 37. Próxima tarefa
+
+Se TASK-3.5 estiver aprovada, informe prontidão para:
+
+# TASK-3.6 — Casos de Uso e API REST de Transferências
+
+NÃO implemente TASK-3.6 nesta execução.

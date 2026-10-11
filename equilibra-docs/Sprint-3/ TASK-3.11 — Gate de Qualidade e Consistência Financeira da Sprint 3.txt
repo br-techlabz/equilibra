@@ -1,0 +1,3121 @@
+# TASK-3.11 — Gate de Qualidade e Consistência Financeira da Sprint 3
+
+Estamos no encerramento da:
+
+# Sprint 3 — Transações Financeiras
+
+Foram implementadas:
+
+- TASK-3.0 — Arquitetura do Ledger e Regras Financeiras
+- TASK-3.1 — Domínio e Persistência de Transações Financeiras
+- TASK-3.2 — API REST de Despesas
+- TASK-3.3 — Interface de Despesas
+- TASK-3.4 — API REST de Receitas
+- TASK-3.5 — Interface de Receitas
+- TASK-3.6 — API REST de Transferências
+- TASK-3.7 — Interface de Transferências
+- TASK-3.8 — Saldo Corrente e Patrimônio Derivados do Ledger
+- TASK-3.9 — Dashboard Financeiro Integrado ao Ledger
+- TASK-3.10 — Histórico Unificado de Transações
+
+Agora execute:
+
+# TASK-3.11 — Gate de Qualidade e Consistência Financeira da Sprint 3
+
+Esta TASK é um GATE.
+
+Objetivo:
+
+Auditar, testar e corrigir a Sprint 3 como um sistema financeiro integrado.
+
+NÃO implementar novas funcionalidades de produto.
+
+O objetivo é responder:
+
+"O ledger financeiro do Equilibra está consistente, seguro, preciso,
+isolado por usuário e pronto para servir como fundação das próximas
+sprints?"
+
+Somente aprove a Sprint 3 se a resposta puder ser demonstrada por:
+
+- código;
+- testes;
+- banco;
+- API;
+- frontend;
+- E2E.
+
+---
+
+# 1. REGRA PRINCIPAL
+
+NÃO assumir que as TASKs anteriores estão corretas apenas porque foram
+marcadas como concluídas.
+
+Revisar criticamente a implementação real.
+
+---
+
+# 2. FONTE DE VERDADE
+
+Leia antes de modificar código:
+
+- CLAUDE.md;
+- todos os ADRs financeiros;
+- relatórios finais das TASKs 3.0–3.10;
+- migrations;
+- entidades;
+- repositories;
+- query services;
+- application services/use cases;
+- controllers;
+- DTOs;
+- OpenAPI;
+- Angular services;
+- telas financeiras;
+- Dashboard;
+- Histórico;
+- testes unitários;
+- integration tests;
+- E2E;
+- configuração MySQL/Testcontainers.
+
+---
+
+# 3. RELATÓRIO PRÉ-GATE
+
+Antes de corrigir qualquer coisa, produza:
+
+# TASK-3.11 — PRE-GATE AUDIT
+
+## 1. Arquitetura atual
+
+Descreva:
+
+UI
+→ REST
+→ Application
+→ Domain
+→ Repository
+→ MySQL.
+
+## 2. Ledger
+
+Explique fonte de verdade.
+
+## 3. Expense
+
+Explique representação e efeito financeiro.
+
+## 4. Income
+
+Explique representação e efeito financeiro.
+
+## 5. Transfer
+
+Explique representação e efeito financeiro.
+
+## 6. Cancellation
+
+Explique funcionamento.
+
+## 7. Balance
+
+Explique cálculo.
+
+## 8. Net Worth
+
+Explique cálculo.
+
+## 9. Dashboard
+
+Explique agregações.
+
+## 10. History
+
+Explique consulta unificada.
+
+## 11. Ownership
+
+Explique estratégia.
+
+## 12. Money
+
+Explique BigDecimal/DECIMAL/scale.
+
+## 13. Time
+
+Explique occurredAt/timezone/boundaries.
+
+## 14. Concurrency
+
+Explique mecanismos existentes.
+
+## 15. Problemas encontrados
+
+Classifique:
+
+CRITICAL
+HIGH
+MEDIUM
+LOW.
+
+## 16. Plano de correção
+
+Liste somente correções necessárias.
+
+Depois execute o gate.
+
+---
+
+# 4. NÃO IMPLEMENTAR NOVAS FEATURES
+
+NÃO adicionar:
+
+- Reports;
+- Tags;
+- Attachments;
+- upload;
+- budgets;
+- recurring transactions;
+- reconciliation;
+- notifications;
+- forecasting;
+- importação bancária;
+- exportação;
+- multi-currency;
+- compartilhamento familiar;
+- novas categorias de transação.
+
+---
+
+# 5. CORREÇÕES SÃO PERMITIDAS
+
+Pode corrigir bugs encontrados em:
+
+- backend;
+- frontend;
+- migrations novas;
+- queries;
+- índices;
+- validação;
+- segurança;
+- testes;
+- documentação;
+- OpenAPI.
+
+---
+
+# 6. NÃO MASCARAR BUGS
+
+Não alterar teste correto apenas para fazê-lo passar.
+
+Se teste revelar violação de regra financeira:
+
+corrigir produção.
+
+---
+
+# 7. INVARIANTE CENTRAL — EXPENSE
+
+Expense ACTIVE de valor X:
+
+efeito líquido = -X.
+
+---
+
+# 8. INVARIANTE CENTRAL — INCOME
+
+Income ACTIVE de valor X:
+
+efeito líquido = +X.
+
+---
+
+# 9. INVARIANTE CENTRAL — TRANSFER
+
+Transfer ACTIVE:
+
+source = -X
+destination = +X.
+
+---
+
+# 10. INVARIANTE DE TRANSFERÊNCIA
+
+Para qualquer Transfer válida:
+
+Σ efeitos financeiros da Transfer = 0.
+
+---
+
+# 11. CRÍTICO
+
+Transfer nunca cria nem destrói patrimônio.
+
+---
+
+# 12. CANCELLED
+
+Toda transação CANCELLED:
+
+efeito financeiro = 0.
+
+---
+
+# 13. AMOUNT
+
+Amount financeiro deve ser:
+
+> 0
+
+para Expense, Income e Transfer.
+
+---
+
+# 14. ZERO
+
+amount = 0:
+
+inválido.
+
+---
+
+# 15. NEGATIVE INPUT
+
+amount < 0:
+
+inválido.
+
+---
+
+# 16. SCALE
+
+Mais de duas casas decimais:
+
+inválido.
+
+---
+
+# 17. NÃO ROUND
+
+Não arredondar silenciosamente:
+
+10.999
+
+para:
+
+11.00.
+
+Rejeitar.
+
+---
+
+# 18. MONEY TYPES
+
+Auditar backend inteiro.
+
+Não permitir cálculo financeiro com:
+
+double;
+float.
+
+---
+
+# 19. BIGDECIMAL
+
+Valores financeiros:
+
+BigDecimal.
+
+---
+
+# 20. DATABASE
+
+Valores monetários:
+
+DECIMAL adequado.
+
+---
+
+# 21. FRONTEND PRECISION
+
+Frontend não deve ser autoridade para somas financeiras.
+
+---
+
+# 22. PRECISION TEST
+
+Testar:
+
+0.10 + 0.20 = 0.30
+
+exatamente no resultado financeiro.
+
+---
+
+# 23. PRECISION TEST 2
+
+Conta initial:
+
+100.10
+
+Income:
+
+0.20
+
+Expense:
+
+0.10
+
+Saldo:
+
+100.20.
+
+---
+
+# 24. LARGE VALUE
+
+Testar valor alto dentro do limite DECIMAL.
+
+Garantir:
+
+- persistência;
+- API;
+- agregação;
+- UI.
+
+---
+
+# 25. OVERFLOW
+
+Valor acima da capacidade definida:
+
+erro controlado.
+
+Nunca:
+
+500;
+truncamento;
+wrap;
+persistência parcial.
+
+---
+
+# 26. BALANCE
+
+currentBalance:
+
+DERIVADO.
+
+---
+
+# 27. PROIBIDO
+
+Não deve existir currentBalance persistido como source of truth.
+
+---
+
+# 28. AUDIT
+
+Pesquisar código/schema por:
+
+current_balance
+setBalance
+updateBalance
+incrementBalance
+decrementBalance
+
+ou equivalentes.
+
+Confirmar que nenhuma lógica paralela de saldo foi criada.
+
+---
+
+# 29. FORMULA
+
+Validar contra modelo real:
+
+initialBalance
++ Income ACTIVE
+- Expense ACTIVE
++ Transfer incoming ACTIVE
+- Transfer outgoing ACTIVE.
+
+Ou equivalente via AccountMovement.
+
+---
+
+# 30. ZERO TRANSACTIONS
+
+initial = 1000
+
+current = 1000.
+
+---
+
+# 31. NEGATIVE BALANCE
+
+initial = 100
+
+Expense = 250
+
+current = -150.
+
+Deve ser permitido se ADR atual permite saldo negativo.
+
+---
+
+# 32. NET WORTH
+
+Validar regra real da TASK-3.8.
+
+---
+
+# 33. NET WORTH — INCOME
+
+Income aumenta patrimônio.
+
+---
+
+# 34. NET WORTH — EXPENSE
+
+Expense reduz patrimônio.
+
+---
+
+# 35. NET WORTH — TRANSFER
+
+Transfer não altera patrimônio.
+
+---
+
+# 36. NET WORTH — CANCELLED
+
+Cancelled não altera patrimônio.
+
+---
+
+# 37. TRANSFER TEST PRINCIPAL
+
+A initial = 1000
+B initial = 500
+
+Net Worth = 1500.
+
+Transfer:
+
+A → B = 300.
+
+Esperado:
+
+A = 700
+B = 800
+Net Worth = 1500.
+
+---
+
+# 38. TRANSFER CANCEL
+
+Cancelar Transfer.
+
+Esperado:
+
+A = 1000
+B = 500
+Net Worth = 1500.
+
+---
+
+# 39. TRANSFER UPDATE AMOUNT
+
+Criar:
+
+A → B = 100.
+
+Alterar:
+
+A → B = 250.
+
+Esperado:
+
+apenas efeito de 250.
+
+NÃO:
+
+100 + 250.
+
+---
+
+# 40. TRANSFER UPDATE DESTINATION
+
+Criar:
+
+A → B = 300.
+
+Alterar:
+
+A → C = 300.
+
+Esperado:
+
+A = initialA - 300
+B = initialB
+C = initialC + 300.
+
+---
+
+# 41. TRANSFER UPDATE SOURCE
+
+Criar:
+
+A → B.
+
+Alterar:
+
+C → B.
+
+A deixa de sofrer efeito.
+
+---
+
+# 42. TRANSFER SAME ACCOUNT
+
+A → A:
+
+inválido.
+
+Backend deve rejeitar independentemente da UI.
+
+---
+
+# 43. TRANSFER CROSS USER SOURCE
+
+User A tentando source de User B:
+
+não permitido.
+
+---
+
+# 44. TRANSFER CROSS USER DESTINATION
+
+User A tentando destination de User B:
+
+não permitido.
+
+---
+
+# 45. TRANSFER ATOMICITY
+
+Falha em qualquer parte da criação:
+
+nenhum efeito parcial.
+
+---
+
+# 46. TRANSFER UPDATE ATOMICITY
+
+Falha durante update:
+
+estado anterior preservado integralmente.
+
+---
+
+# 47. TRANSFER CANCEL ATOMICITY
+
+Cancelamento não pode remover efeito apenas de uma conta.
+
+---
+
+# 48. EXPENSE CREATE
+
+Criar Expense:
+
+saldo reduz exatamente uma vez.
+
+---
+
+# 49. EXPENSE UPDATE AMOUNT
+
+100 → 250.
+
+Saldo deve refletir 250.
+
+Não 350.
+
+---
+
+# 50. EXPENSE UPDATE ACCOUNT
+
+Mover Expense:
+
+A → B.
+
+A deixa de sofrer efeito.
+
+B passa a sofrer.
+
+---
+
+# 51. EXPENSE CANCEL
+
+Efeito desaparece.
+
+---
+
+# 52. INCOME CREATE
+
+Criar Income:
+
+saldo aumenta exatamente uma vez.
+
+---
+
+# 53. INCOME UPDATE AMOUNT
+
+100 → 250.
+
+Saldo reflete 250.
+
+Não 350.
+
+---
+
+# 54. INCOME UPDATE ACCOUNT
+
+Mover Income:
+
+A → B.
+
+A deixa de receber.
+
+B passa a receber.
+
+---
+
+# 55. INCOME CANCEL
+
+Efeito desaparece.
+
+---
+
+# 56. DOUBLE CANCEL
+
+Cancelar duas vezes.
+
+Deve ser:
+
+idempotente
+
+ou seguir contrato formal existente.
+
+Nunca causar efeito financeiro adicional.
+
+---
+
+# 57. CANCELLED UPDATE
+
+Validar política do ADR.
+
+Se transação CANCELLED não pode ser editada:
+
+backend deve impedir.
+
+---
+
+# 58. CANCELLED HISTORY
+
+Cancelamento não remove registro histórico.
+
+---
+
+# 59. PHYSICAL DELETE
+
+Auditar APIs.
+
+Não deve existir DELETE financeiro se ADR definiu cancelamento lógico.
+
+---
+
+# 60. DATABASE DELETE
+
+Não remover transação cancelada fisicamente.
+
+---
+
+# 61. ACCOUNT DEACTIVATION
+
+Desativar conta:
+
+não cancela transações existentes.
+
+---
+
+# 62. INACTIVE ACCOUNT HISTORY
+
+Histórico permanece consultável.
+
+---
+
+# 63. NEW TRANSACTION + INACTIVE ACCOUNT
+
+Deve seguir regra consolidada.
+
+Normalmente:
+
+rejeitar.
+
+---
+
+# 64. REACTIVATION
+
+Reativar conta:
+
+histórico e saldo derivado permanecem consistentes.
+
+---
+
+# 65. CATEGORY DEACTIVATION
+
+Não altera transações históricas.
+
+---
+
+# 66. INACTIVE CATEGORY HISTORY
+
+Histórico continua exibindo categoria.
+
+---
+
+# 67. NEW TRANSACTION + INACTIVE CATEGORY
+
+Rejeitar conforme regra existente.
+
+---
+
+# 68. CATEGORY APPLICABILITY — EXPENSE
+
+Expense aceita:
+
+EXPENSE
+BOTH
+
+conforme modelo atual.
+
+---
+
+# 69. CATEGORY APPLICABILITY — INCOME
+
+Income aceita:
+
+INCOME
+BOTH.
+
+---
+
+# 70. CATEGORY WRONG CONTEXT
+
+Expense + INCOME-only:
+
+rejeitar.
+
+Income + EXPENSE-only:
+
+rejeitar.
+
+---
+
+# 71. TRANSFER CATEGORY
+
+Seguir EXATAMENTE decisão já implementada.
+
+Não reinterpretar.
+
+---
+
+# 72. CATEGORY APPLICABILITY EDITING
+
+Esta era uma dívida técnica anterior.
+
+Agora existem transações.
+
+Auditar risco de alterar applicability de categoria já utilizada.
+
+---
+
+# 73. EXEMPLO
+
+Categoria EXPENSE usada em Expenses.
+
+Alterar para:
+
+INCOME
+
+pode tornar histórico semanticamente incompatível.
+
+---
+
+# 74. DECISÃO
+
+Se ADR já resolveu:
+
+validar.
+
+Se ainda não resolveu:
+
+não deixar ambiguidade sair do gate.
+
+Preferência:
+
+bloquear mudança de applicability quando houver transações incompatíveis
+existentes.
+
+---
+
+# 75. INITIAL BALANCE EDITING
+
+Também era dívida técnica anterior.
+
+Auditar decisão da TASK-3.8.
+
+---
+
+# 76. REGRA
+
+Não permitir que edição arbitrária de initialBalance corrompa semântica
+histórica após existência de transações.
+
+---
+
+# 77. SE BLOQUEADO APÓS MOVEMENT
+
+Validar:
+
+backend;
+frontend;
+409;
+Problem Details;
+teste.
+
+---
+
+# 78. OWNERSHIP
+
+Este gate deve tratar isolamento multiusuário como CRÍTICO.
+
+---
+
+# 79. USER A / USER B
+
+Criar dois usuários reais em testes.
+
+---
+
+# 80. ASSET ACCOUNT IDOR
+
+A tenta:
+
+GET
+PUT
+activate
+deactivate
+
+em conta de B.
+
+Resultado:
+
+404 quando aplicável.
+
+---
+
+# 81. CATEGORY IDOR
+
+Mesmo princípio.
+
+---
+
+# 82. EXPENSE IDOR
+
+A conhece UUID de Expense de B.
+
+GET:
+
+404.
+
+UPDATE:
+
+404.
+
+CANCEL:
+
+404.
+
+---
+
+# 83. INCOME IDOR
+
+Mesmo princípio.
+
+---
+
+# 84. TRANSFER IDOR
+
+Mesmo princípio.
+
+---
+
+# 85. HISTORY ISOLATION
+
+Histórico de A nunca contém B.
+
+---
+
+# 86. DASHBOARD ISOLATION
+
+Cards de A nunca incluem B.
+
+---
+
+# 87. GRAPH ISOLATION
+
+Séries de A nunca incluem B.
+
+---
+
+# 88. RECENT ISOLATION
+
+Recentes de A nunca incluem B.
+
+---
+
+# 89. BALANCE ISOLATION
+
+Saldo de conta de A nunca considera movement de B.
+
+---
+
+# 90. NET WORTH ISOLATION
+
+Patrimônio de A nunca inclui conta de B.
+
+---
+
+# 91. FILTER ACCOUNT IDOR
+
+A tenta filtrar histórico usando accountId de B.
+
+Não revelar existência.
+
+---
+
+# 92. FILTER CATEGORY IDOR
+
+Mesmo princípio.
+
+---
+
+# 93. MASS ASSIGNMENT
+
+Auditar TODOS os write DTOs.
+
+---
+
+# 94. PROIBIDO CLIENT CONTROL
+
+Cliente nunca controla:
+
+ownerId;
+userId;
+email;
+type;
+status;
+createdAt;
+updatedAt;
+cancelledAt;
+currentBalance;
+ledger movement sign.
+
+---
+
+# 95. TYPE SPOOFING
+
+Expense endpoint não pode criar:
+
+INCOME
+TRANSFER.
+
+---
+
+# 96. INCOME SPOOFING
+
+Income endpoint não pode criar outro tipo.
+
+---
+
+# 97. TRANSFER SPOOFING
+
+Transfer endpoint não pode criar Expense/Income.
+
+---
+
+# 98. STATUS SPOOFING
+
+Create não aceita:
+
+CANCELLED
+
+do cliente.
+
+---
+
+# 99. CURRENT BALANCE SPOOFING
+
+Create/Update Account não aceita currentBalance como autoridade.
+
+---
+
+# 100. AUTH
+
+Sem JWT:
+
+private endpoints → 401.
+
+---
+
+# 101. 401 FRONTEND
+
+401:
+
+limpa sessão e redireciona conforme política existente.
+
+---
+
+# 102. 403 FRONTEND
+
+403:
+
+NÃO limpa sessão.
+
+---
+
+# 103. EXTERNAL AUTH HEADER
+
+Authorization nunca deve ser enviado a URL externa.
+
+---
+
+# 104. REQUEST ID
+
+Auditar todos endpoints novos da Sprint 3.
+
+---
+
+# 105. PROBLEM DETAILS
+
+Erros devem continuar padronizados.
+
+---
+
+# 106. SQL LEAK
+
+Nenhuma mensagem SQL/constraint interna exposta ao usuário.
+
+---
+
+# 107. VALIDATION ERRORS
+
+400 estruturado.
+
+---
+
+# 108. CONFLICT
+
+Estados incompatíveis:
+
+409 quando política atual definir.
+
+---
+
+# 109. NOT FOUND
+
+Private-resource inexistente ou de outro owner:
+
+404.
+
+---
+
+# 110. TIME
+
+Auditar occurredAt.
+
+---
+
+# 111. createdAt != occurredAt
+
+Nenhum relatório financeiro deve usar createdAt como data da movimentação.
+
+---
+
+# 112. PERIOD FILTERS
+
+Dashboard e History:
+
+occurredAt.
+
+---
+
+# 113. BOUNDARIES
+
+Dashboard e History devem usar mesma semântica temporal.
+
+---
+
+# 114. TIMEZONE
+
+Backend/frontend devem concordar.
+
+---
+
+# 115. ROUND TRIP
+
+UI
+→ API
+→ DB
+→ API
+→ UI
+
+não deve deslocar data/hora indevidamente.
+
+---
+
+# 116. MIDNIGHT
+
+Testar transação próxima de:
+
+00:00.
+
+---
+
+# 117. DAY BOUNDARY
+
+Validar inclusão no período correto.
+
+---
+
+# 118. MONTH BOUNDARY
+
+Validar:
+
+último dia
+→ primeiro dia do mês seguinte.
+
+---
+
+# 119. YEAR BOUNDARY
+
+Validar:
+
+31/12
+→ 01/01.
+
+---
+
+# 120. FUTURE occurredAt
+
+Validar política existente.
+
+Não inventar nova regra.
+
+---
+
+# 121. DASHBOARD — ENTRADAS
+
+Somente:
+
+Income ACTIVE do período.
+
+---
+
+# 122. DASHBOARD — SAÍDAS
+
+Somente:
+
+Expense ACTIVE do período.
+
+---
+
+# 123. DASHBOARD — SALDO
+
+Income - Expense.
+
+---
+
+# 124. DASHBOARD — TRANSFER
+
+Não entra em:
+
+Entradas
+Saídas
+Saldo.
+
+---
+
+# 125. DASHBOARD — NET WORTH
+
+Posição atual.
+
+---
+
+# 126. PERIOD × NET WORTH
+
+Trocar período:
+
+netWorth não muda apenas por causa do filtro.
+
+---
+
+# 127. DASHBOARD GRAPH
+
+Validar opening balance.
+
+---
+
+# 128. GRAPH CRITICAL TEST
+
+Conta:
+
+initial = 1000.
+
+Antes do período:
+
+Income = 500
+Expense = 200.
+
+Saldo inicial do gráfico no período:
+
+1300.
+
+Não:
+
+1000.
+
+---
+
+# 129. GRAPH EXPENSE
+
+Reduz série correta.
+
+---
+
+# 130. GRAPH INCOME
+
+Aumenta série correta.
+
+---
+
+# 131. GRAPH TRANSFER
+
+Source cai.
+
+Destination sobe.
+
+---
+
+# 132. GRAPH TRANSFER NEUTRALITY
+
+Soma das contas permanece constante devido somente à Transfer.
+
+---
+
+# 133. GRAPH CANCELLED
+
+Não afeta.
+
+---
+
+# 134. GRAPH PERFORMANCE
+
+Não executar:
+
+query por conta × bucket.
+
+---
+
+# 135. RECENT TRANSACTIONS
+
+Expense:
+
+uma entrada.
+
+Income:
+
+uma entrada.
+
+Transfer:
+
+UMA entrada.
+
+---
+
+# 136. RECENT ORDER
+
+occurredAt DESC.
+
+---
+
+# 137. HISTORY
+
+Expense + Income + Transfer.
+
+---
+
+# 138. HISTORY TRANSFER
+
+UMA entrada.
+
+---
+
+# 139. HISTORY PAGINATION
+
+Paginação global no banco.
+
+---
+
+# 140. PROIBIDO FRONTEND MERGE
+
+Não aceitar implementação:
+
+GET Expenses
++
+GET Incomes
++
+GET Transfers
++
+merge Angular.
+
+---
+
+# 141. HISTORY ORDER
+
+Global:
+
+occurredAt DESC.
+
+---
+
+# 142. HISTORY FILTER TYPE
+
+Validar.
+
+---
+
+# 143. HISTORY FILTER STATUS
+
+Validar.
+
+---
+
+# 144. HISTORY FILTER PERIOD
+
+Validar.
+
+---
+
+# 145. HISTORY FILTER ACCOUNT
+
+Expense:
+account.
+
+Income:
+account.
+
+Transfer:
+source OR destination.
+
+---
+
+# 146. HISTORY FILTER TRANSFER ONCE
+
+Filtro source/destination:
+
+Transfer aparece uma única vez.
+
+---
+
+# 147. HISTORY FILTER CATEGORY
+
+Validar regra real.
+
+---
+
+# 148. HISTORY INACTIVE ACCOUNT
+
+Consulta histórica deve funcionar.
+
+---
+
+# 149. HISTORY INACTIVE CATEGORY
+
+Consulta histórica deve funcionar.
+
+---
+
+# 150. HISTORY COMBINED FILTERS
+
+Validar combinação.
+
+---
+
+# 151. HISTORY SEARCH
+
+Se implementada:
+
+validar ownership e paginação.
+
+---
+
+# 152. PAGINATION
+
+Validar:
+
+page;
+size;
+totalElements;
+totalPages;
+last page;
+empty page.
+
+---
+
+# 153. DETERMINISTIC ORDER
+
+Mesmo occurredAt:
+
+resultado estável.
+
+---
+
+# 154. PERFORMANCE AUDIT
+
+Revisar queries críticas:
+
+- account balances;
+- net worth;
+- dashboard summary;
+- graph;
+- recent transactions;
+- history.
+
+---
+
+# 155. N+1
+
+Não aceitar N+1 evidente.
+
+---
+
+# 156. DATABASE AGGREGATION
+
+Somas financeiras devem preferencialmente acontecer no banco quando
+apropriado.
+
+---
+
+# 157. NÃO CARREGAR LEDGER INTEIRO
+
+Não aceitar:
+
+findAll transactions
+→ calcular Dashboard em Java.
+
+---
+
+# 158. INDEX REVIEW
+
+Auditar índices necessários para:
+
+owner;
+type;
+status;
+occurredAt;
+account;
+category;
+source/destination;
+movement account.
+
+---
+
+# 159. EXPLAIN
+
+Quando viável, analisar planos de execução das queries críticas em MySQL.
+
+Não precisa micro-otimizar dataset pequeno.
+
+Procure problemas estruturais.
+
+---
+
+# 160. MIGRATION
+
+Se índice crítico faltar:
+
+nova migration.
+
+Nunca alterar migration aplicada.
+
+---
+
+# 161. CONCURRENCY
+
+Auditar estratégia real definida no ADR.
+
+---
+
+# 162. OPTIMISTIC LOCK
+
+Se implementado:
+
+testar conflito.
+
+---
+
+# 163. LOST UPDATE
+
+Garantir que updates concorrentes não deixem agregado/movements
+inconsistentes.
+
+---
+
+# 164. CREATE TRANSFER CONCURRENT
+
+Não deve produzir half-transfer.
+
+---
+
+# 165. CANCEL VS UPDATE
+
+Avaliar cenário concorrente:
+
+Thread A atualiza.
+Thread B cancela.
+
+Resultado deve ser consistente com política de locking.
+
+---
+
+# 166. DUPLICATE SUBMIT
+
+Auditar comportamento de duplo clique/request duplicado.
+
+Se idempotency key NÃO faz parte da arquitetura:
+
+não inventar sistema complexo nesta TASK.
+
+Mas garantir que frontend bloqueie submit enquanto request está em voo,
+se padrão atual assim determina.
+
+Documentar risco residual.
+
+---
+
+# 167. TRANSACTIONAL BOUNDARIES
+
+Create/Update/Cancel financeiros devem ser atômicos.
+
+---
+
+# 168. ROLLBACK TEST
+
+Forçar erro após parte da operação.
+
+Banco deve retornar ao estado consistente.
+
+---
+
+# 169. FK
+
+Auditar FKs.
+
+---
+
+# 170. CASCADE
+
+Nenhum cascade perigoso deve apagar ledger.
+
+---
+
+# 171. USER DELETE
+
+Se sistema ainda não implementa exclusão de usuário:
+
+não inventar.
+
+Apenas auditar cascades existentes.
+
+---
+
+# 172. ACCOUNT DELETE
+
+Não deve existir exclusão física normal que destrua histórico.
+
+---
+
+# 173. CATEGORY DELETE
+
+Mesmo princípio.
+
+---
+
+# 174. OPENAPI
+
+Auditar todos endpoints da Sprint 3.
+
+---
+
+# 175. OPENAPI CONTRACT
+
+Comparar documentação com comportamento real.
+
+---
+
+# 176. DTO DRIFT
+
+Frontend models devem corresponder ao contrato.
+
+---
+
+# 177. UNKNOWN ENUM
+
+Backend:
+
+400 quando request inválido.
+
+Frontend:
+
+não quebrar silenciosamente em response inesperado.
+
+---
+
+# 178. UI — EXPENSE
+
+Auditar:
+
+create;
+edit;
+cancel;
+list;
+pagination;
+filters;
+money;
+date;
+errors.
+
+---
+
+# 179. UI — INCOME
+
+Mesmo gate.
+
+---
+
+# 180. UI — TRANSFER
+
+Auditar:
+
+source;
+destination;
+source != destination;
+duas contas;
+edit;
+cancel;
+history;
+money;
+date.
+
+---
+
+# 181. UI — ACCOUNTS
+
+Auditar:
+
+initialBalance;
+currentBalance;
+negative;
+inactive;
+editing policy.
+
+---
+
+# 182. UI — DASHBOARD
+
+Auditar:
+
+cards;
+period;
+chart;
+recent;
+accounts;
+loading;
+error;
+retry.
+
+---
+
+# 183. UI — HISTORY
+
+Auditar:
+
+filters;
+pagination;
+Expense;
+Income;
+Transfer;
+cancelled;
+mobile.
+
+---
+
+# 184. FALSE ZERO
+
+Nenhuma tela deve exibir:
+
+R$ 0,00
+
+como substituto de erro/loading desconhecido.
+
+---
+
+# 185. LOADING
+
+Estados claros.
+
+---
+
+# 186. EMPTY
+
+Estados legítimos.
+
+---
+
+# 187. ERROR
+
+Estados claros.
+
+---
+
+# 188. RETRY
+
+Funcional.
+
+---
+
+# 189. STALE DATA
+
+Após:
+
+create;
+edit;
+cancel;
+activate/deactivate;
+
+telas relevantes devem atualizar corretamente.
+
+---
+
+# 190. CACHE
+
+Se existe caching:
+
+não compartilhar dados entre usuários/sessões.
+
+---
+
+# 191. LOGOUT
+
+Após logout:
+
+dados financeiros anteriores não ficam visíveis.
+
+---
+
+# 192. LOGIN USER B
+
+Após logout de A e login de B:
+
+nenhum dado visual de A deve persistir.
+
+---
+
+# 193. RESPONSIVE GATE
+
+Validar:
+
+360 × 800
+390 × 844
+768 × 1024
+1024 × 768
+1280 × 720
+1366 × 768
+1920 × 1080
+
+---
+
+# 194. GLOBAL OVERFLOW
+
+Nenhuma página financeira pode gerar overflow horizontal global.
+
+---
+
+# 195. MOBILE DRAWERS
+
+Forms utilizáveis.
+
+---
+
+# 196. MOBILE TABLES
+
+Quando tabela não couber:
+
+usar comportamento já definido.
+
+Não comprimir até ficar ilegível.
+
+---
+
+# 197. TOUCH TARGETS
+
+Adequados.
+
+---
+
+# 198. ACCESSIBILITY GATE
+
+Auditar:
+
+- keyboard;
+- focus;
+- labels;
+- error announcements;
+- contrast;
+- semantic headings;
+- status not color-only;
+- chart accessibility;
+- dialogs/drawers;
+- focus return.
+
+---
+
+# 199. REDUCED MOTION
+
+Respeitar quando infraestrutura atual suportar.
+
+---
+
+# 200. TEST SUITE — GOLDEN SCENARIO
+
+Criar cenário integrado obrigatório.
+
+User A:
+
+Account A:
+initial = 1000.00
+
+Account B:
+initial = 500.00
+
+Estado inicial:
+
+A = 1000
+B = 500
+Net Worth = 1500.
+
+---
+
+# 201. GOLDEN — INCOME
+
+Criar:
+
+Income A = 700.00.
+
+Esperado:
+
+A = 1700
+B = 500
+Net Worth = 2200.
+
+Dashboard no período:
+
+Entradas = 700
+Saídas = 0
+Saldo = 700.
+
+---
+
+# 202. GOLDEN — EXPENSE
+
+Criar:
+
+Expense A = 200.00.
+
+Esperado:
+
+A = 1500
+B = 500
+Net Worth = 2000.
+
+Dashboard:
+
+Entradas = 700
+Saídas = 200
+Saldo = 500.
+
+---
+
+# 203. GOLDEN — TRANSFER
+
+Criar:
+
+Transfer A → B = 300.
+
+Esperado:
+
+A = 1200
+B = 800
+Net Worth = 2000.
+
+Dashboard:
+
+Entradas = 700
+Saídas = 200
+Saldo = 500.
+
+---
+
+# 204. GOLDEN — HISTORY
+
+Esperado:
+
+3 transações.
+
+Não:
+
+4.
+
+---
+
+# 205. GOLDEN — RECENT
+
+Transfer:
+
+UMA entrada.
+
+---
+
+# 206. GOLDEN — CANCEL TRANSFER
+
+Esperado:
+
+A = 1500
+B = 500
+Net Worth = 2000.
+
+Dashboard fluxo:
+
+inalterado.
+
+---
+
+# 207. GOLDEN — CANCEL EXPENSE
+
+Esperado:
+
+A = 1700
+B = 500
+Net Worth = 2200.
+
+Dashboard:
+
+Entradas = 700
+Saídas = 0
+Saldo = 700.
+
+---
+
+# 208. GOLDEN — CANCEL INCOME
+
+Esperado:
+
+A = 1000
+B = 500
+Net Worth = 1500.
+
+Dashboard:
+
+Entradas = 0
+Saídas = 0
+Saldo = 0.
+
+---
+
+# 209. GOLDEN — CANCELLED HISTORY
+
+Histórico continua contendo registros conforme filtro/política.
+
+---
+
+# 210. GOLDEN — USER B
+
+Criar User B.
+
+Account B1:
+
+initial = 9999.
+
+Nada de User B pode alterar resultados de User A.
+
+---
+
+# 211. GOLDEN — PRECISION
+
+User A:
+
+Account C initial = 0.10
+
+Income = 0.20
+
+Expected:
+
+0.30.
+
+---
+
+# 212. E2E GOLDEN
+
+Executar fluxo representativo real via UI + API + DB.
+
+Não apenas mocks de frontend.
+
+---
+
+# 213. E2E MOBILE
+
+Executar fluxo financeiro representativo em:
+
+360 × 800.
+
+---
+
+# 214. TESTCONTAINERS
+
+Integration tests financeiros críticos:
+
+MySQL real via Testcontainers.
+
+---
+
+# 215. UNIT TESTS
+
+PASS.
+
+---
+
+# 216. INTEGRATION TESTS
+
+PASS.
+
+---
+
+# 217. SECURITY TESTS
+
+PASS.
+
+---
+
+# 218. E2E
+
+PASS quando configurado.
+
+---
+
+# 219. BACKEND BUILD
+
+PASS.
+
+---
+
+# 220. FRONTEND LINT
+
+PASS.
+
+---
+
+# 221. FRONTEND BUILD
+
+PASS.
+
+---
+
+# 222. CONSOLE
+
+Sem erros inesperados durante E2E.
+
+---
+
+# 223. NETWORK
+
+Sem:
+
+500 inesperado;
+401 inesperado;
+403 inesperado;
+404 inesperado;
+409 inesperado.
+
+---
+
+# 224. LOGS
+
+Sem stack traces inesperados.
+
+---
+
+# 225. TEST QUALITY
+
+Não criar testes que apenas verificam:
+
+status 200
+
+quando regra financeira precisa ser validada.
+
+---
+
+# 226. ASSERT FINANCIAL RESULT
+
+Testes devem verificar números finais.
+
+---
+
+# 227. ASSERT DATABASE STATE
+
+Nos casos críticos, verificar estado persistido.
+
+---
+
+# 228. ASSERT NO DUPLICATION
+
+Especialmente Transfer.
+
+---
+
+# 229. ASSERT OWNER
+
+Especialmente queries agregadas.
+
+---
+
+# 230. ASSERT CANCELLED
+
+Especialmente Dashboard e balances.
+
+---
+
+# 231. BUG FIX POLICY
+
+Para cada bug encontrado:
+
+1. reproduzir;
+2. criar teste falhando;
+3. corrigir;
+4. executar teste;
+5. executar regressão relacionada;
+6. documentar.
+
+---
+
+# 232. CRITICAL BUG
+
+Qualquer bug que permita:
+
+- saldo incorreto;
+- patrimônio incorreto;
+- Transfer criar/destruir valor;
+- acesso cross-user;
+- corrupção parcial;
+- double application;
+- perda de ledger;
+
+BLOQUEIA Sprint 3.
+
+---
+
+# 233. HIGH BUG
+
+Problemas relevantes de:
+
+- filtros;
+- paginação;
+- timezone;
+- cancellation;
+- stale data;
+- precision;
+- ownership behavior;
+
+devem ser corrigidos antes de aprovação.
+
+---
+
+# 234. MEDIUM/LOW
+
+Podem permanecer somente se:
+
+- não comprometem consistência;
+- estão documentados;
+- possuem plano futuro.
+
+---
+
+# 235. DOCUMENTAÇÃO
+
+Atualizar documentação técnica consolidada.
+
+---
+
+# 236. FINANCIAL INVARIANTS DOCUMENT
+
+Criar/atualizar documento curto com regras permanentes:
+
+1. amount é magnitude positiva;
+2. Expense reduz saldo;
+3. Income aumenta saldo;
+4. Transfer source reduz;
+5. Transfer destination aumenta;
+6. Transfer é patrimonialmente neutra;
+7. Cancelled possui efeito zero;
+8. currentBalance é derivado;
+9. patrimônio é derivado;
+10. occurredAt é data financeira;
+11. owner vem do contexto autenticado;
+12. private resources são ownership-scoped.
+
+---
+
+# 237. TECH DEBT REVIEW
+
+Revisar dívidas acumuladas:
+
+- initialBalance editing;
+- CategoryApplicability editing;
+- Dashboard transitional logic;
+- duplicated transaction UI infrastructure;
+- query performance;
+- concurrency;
+- idempotency.
+
+---
+
+# 238. REMOVER DÍVIDA RESOLVIDA
+
+Não manter documentação dizendo que algo está pendente se já foi
+resolvido.
+
+---
+
+# 239. NÃO CRIAR ABSTRAÇÃO GENÉRICA NO GATE
+
+Não aproveitar gate para fazer grande refactor como:
+
+GenericTransactionEngine
+GenericFinancialCrud
+DynamicFinancialForm.
+
+---
+
+# 240. REFACTOR
+
+Somente refactors:
+
+- pequenos;
+- seguros;
+- justificados por bug/manutenção;
+- cobertos por testes.
+
+---
+
+# 241. DEFINITION OF DONE
+
+TASK-3.11 só pode ser marcada CONCLUÍDA/APROVADA quando:
+
+- ledger estiver consistente;
+- Expense tiver efeito correto;
+- Income tiver efeito correto;
+- Transfer tiver efeito correto;
+- Transfer for zero-sum;
+- Transfer aparecer uma vez;
+- Cancelled tiver efeito zero;
+- updates não duplicarem efeito;
+- cancellation não duplicar efeito;
+- currentBalance for derivado;
+- netWorth for derivado;
+- Transfer não alterar netWorth;
+- precisão decimal estiver correta;
+- valores inválidos forem rejeitados;
+- ownership estiver protegido;
+- IDOR/BOLA estiver protegido;
+- mass assignment estiver protegido;
+- Dashboard estiver consistente;
+- gráfico estiver consistente;
+- Histórico estiver consistente;
+- paginação estiver correta;
+- occurredAt estiver correto;
+- timezone estiver correto;
+- queries críticas não tiverem N+1 estrutural;
+- atomicidade estiver garantida;
+- concorrência estiver coerente com ADR;
+- Problem Details estiver consistente;
+- Request ID estiver consistente;
+- OpenAPI estiver consistente;
+- frontend não calcular regra financeira crítica;
+- mobile estiver funcional;
+- acessibilidade estiver aceitável;
+- backend build passar;
+- frontend lint passar;
+- frontend build passar;
+- unit tests passarem;
+- integration tests passarem;
+- security tests passarem;
+- E2E passar quando configurado;
+- Golden Scenario passar;
+- nenhum bug CRITICAL/HIGH permanecer aberto.
+
+---
+
+# 242. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-3.11 — GATE DE QUALIDADE E CONSISTÊNCIA FINANCEIRA
+
+## STATUS
+
+Escolher EXATAMENTE uma opção:
+
+SPRINT 3 APROVADA
+
+ou
+
+SPRINT 3 REPROVADA
+
+Não usar "quase aprovada".
+
+---
+
+## 1. Resumo executivo
+
+Informe estado geral.
+
+---
+
+## 2. Ledger
+
+PASS / FAIL
+
+Explique.
+
+---
+
+## 3. Expense
+
+### Create
+PASS / FAIL
+
+### Update
+PASS / FAIL
+
+### Cancel
+PASS / FAIL
+
+### Account change
+PASS / FAIL
+
+### Financial effect
+PASS / FAIL
+
+---
+
+## 4. Income
+
+### Create
+PASS / FAIL
+
+### Update
+PASS / FAIL
+
+### Cancel
+PASS / FAIL
+
+### Account change
+PASS / FAIL
+
+### Financial effect
+PASS / FAIL
+
+---
+
+## 5. Transfer
+
+### Create
+PASS / FAIL
+
+### Update amount
+PASS / FAIL
+
+### Update source
+PASS / FAIL
+
+### Update destination
+PASS / FAIL
+
+### Cancel
+PASS / FAIL
+
+### Source != Destination
+PASS / FAIL
+
+### Atomicity
+PASS / FAIL
+
+### Zero-sum
+PASS / FAIL
+
+### Net Worth Neutrality
+PASS / FAIL
+
+---
+
+## 6. Cancelled
+
+Financial effect zero:
+
+PASS / FAIL
+
+Historical preservation:
+
+PASS / FAIL
+
+---
+
+## 7. Money
+
+### BigDecimal
+PASS / FAIL
+
+### DECIMAL
+PASS / FAIL
+
+### No double/float
+PASS / FAIL
+
+### > 0
+PASS / FAIL
+
+### Max 2 decimals
+PASS / FAIL
+
+### No silent rounding
+PASS / FAIL
+
+### 0.10 + 0.20 = 0.30
+PASS / FAIL
+
+### Large value
+PASS / FAIL
+
+---
+
+## 8. Current Balance
+
+Derived:
+
+PASS / FAIL
+
+Persisted source of truth:
+
+Esperado:
+
+NÃO
+
+---
+
+## 9. Net Worth
+
+Derived:
+
+PASS / FAIL
+
+Expense effect:
+
+PASS / FAIL
+
+Income effect:
+
+PASS / FAIL
+
+Transfer neutrality:
+
+PASS / FAIL
+
+---
+
+## 10. Initial Balance Editing
+
+Informe política final.
+
+PASS / FAIL
+
+---
+
+## 11. Category Applicability Editing
+
+Informe política final.
+
+PASS / FAIL
+
+---
+
+## 12. Ownership
+
+### Accounts
+PASS / FAIL
+
+### Categories
+PASS / FAIL
+
+### Expenses
+PASS / FAIL
+
+### Incomes
+PASS / FAIL
+
+### Transfers
+PASS / FAIL
+
+### Balances
+PASS / FAIL
+
+### Dashboard
+PASS / FAIL
+
+### History
+PASS / FAIL
+
+---
+
+## 13. IDOR/BOLA
+
+PASS / FAIL
+
+Liste cenários testados.
+
+---
+
+## 14. Mass Assignment
+
+PASS / FAIL
+
+---
+
+## 15. Authentication
+
+### 401
+PASS / FAIL
+
+### 403
+PASS / FAIL
+
+### Logout
+PASS / FAIL
+
+### User switching
+PASS / FAIL
+
+### Authorization external URL
+PASS / FAIL
+
+---
+
+## 16. Date/Time
+
+### occurredAt
+PASS / FAIL
+
+### Timezone
+PASS / FAIL
+
+### Day boundary
+PASS / FAIL
+
+### Month boundary
+PASS / FAIL
+
+### Year boundary
+PASS / FAIL
+
+---
+
+## 17. Dashboard
+
+### Entradas
+PASS / FAIL
+
+### Saídas
+PASS / FAIL
+
+### Saldo
+PASS / FAIL
+
+### Patrimônio
+PASS / FAIL
+
+### Period × Net Worth
+PASS / FAIL
+
+### Graph
+PASS / FAIL
+
+### Opening Balance
+PASS / FAIL
+
+### Recent Transactions
+PASS / FAIL
+
+### Transfer Once
+PASS / FAIL
+
+---
+
+## 18. Histórico Unificado
+
+### Expense
+PASS / FAIL
+
+### Income
+PASS / FAIL
+
+### Transfer
+PASS / FAIL
+
+### Transfer Once
+PASS / FAIL
+
+### Pagination
+PASS / FAIL
+
+### Ordering
+PASS / FAIL
+
+### Type Filter
+PASS / FAIL
+
+### Status Filter
+PASS / FAIL
+
+### Period Filter
+PASS / FAIL
+
+### Account Filter
+PASS / FAIL
+
+### Category Filter
+PASS / FAIL
+
+### Combined Filters
+PASS / FAIL
+
+---
+
+## 19. Performance
+
+### Balance queries
+PASS / FAIL
+
+### Dashboard queries
+PASS / FAIL
+
+### Graph queries
+PASS / FAIL
+
+### History queries
+PASS / FAIL
+
+### N+1
+PASS / FAIL
+
+### Indexes
+PASS / FAIL
+
+---
+
+## 20. Concurrency
+
+Explique política.
+
+### Update conflicts
+PASS / FAIL
+
+### Cancel vs Update
+PASS / FAIL
+
+### Transfer atomicity
+PASS / FAIL
+
+### Rollback
+PASS / FAIL
+
+---
+
+## 21. Database
+
+### FKs
+PASS / FAIL
+
+### Cascades
+PASS / FAIL
+
+### Migrations
+PASS / FAIL
+
+### MySQL/Testcontainers
+PASS / FAIL
+
+---
+
+## 22. API
+
+### Problem Details
+PASS / FAIL
+
+### Request ID
+PASS / FAIL
+
+### OpenAPI
+PASS / FAIL
+
+### SQL leakage
+PASS / FAIL
+
+---
+
+## 23. Frontend
+
+### Accounts
+PASS / FAIL
+
+### Expenses
+PASS / FAIL
+
+### Incomes
+PASS / FAIL
+
+### Transfers
+PASS / FAIL
+
+### Dashboard
+PASS / FAIL
+
+### History
+PASS / FAIL
+
+---
+
+## 24. Responsive
+
+### 360 × 800
+PASS / FAIL
+
+### 390 × 844
+PASS / FAIL
+
+### 768 × 1024
+PASS / FAIL
+
+### 1024 × 768
+PASS / FAIL
+
+### 1280 × 720
+PASS / FAIL
+
+### 1366 × 768
+PASS / FAIL
+
+### 1920 × 1080
+PASS / FAIL
+
+---
+
+## 25. Accessibility
+
+### Keyboard
+PASS / FAIL
+
+### Focus
+PASS / FAIL
+
+### Labels
+PASS / FAIL
+
+### Errors
+PASS / FAIL
+
+### Contrast
+PASS / FAIL
+
+### Status semantics
+PASS / FAIL
+
+### Chart
+PASS / FAIL
+
+---
+
+## 26. Golden Scenario
+
+### Initial
+
+A:
+B:
+Net Worth:
+
+### Income +700
+
+A:
+B:
+Net Worth:
+Entradas:
+Saídas:
+Saldo:
+
+### Expense -200
+
+A:
+B:
+Net Worth:
+Entradas:
+Saídas:
+Saldo:
+
+### Transfer A → B 300
+
+A:
+B:
+Net Worth:
+Entradas:
+Saídas:
+Saldo:
+
+### History count
+
+Esperado:
+
+3.
+
+Resultado:
+
+### Cancel Transfer
+
+Resultado:
+
+### Cancel Expense
+
+Resultado:
+
+### Cancel Income
+
+Resultado:
+
+---
+
+## 27. Multi-user Golden Scenario
+
+PASS / FAIL
+
+Explique User A × User B.
+
+---
+
+## 28. Precision Scenario
+
+0.10 + 0.20
+
+Resultado:
+
+---
+
+## 29. Builds
+
+### Backend
+PASS / FAIL
+
+### Frontend lint
+PASS / FAIL
+
+### Frontend build
+PASS / FAIL
+
+---
+
+## 30. Tests
+
+### Unit
+PASS / FAIL
+
+### Integration
+PASS / FAIL
+
+### Security
+PASS / FAIL
+
+### Testcontainers
+PASS / FAIL
+
+### E2E
+PASS / FAIL / NÃO CONFIGURADO
+
+### Mobile E2E
+PASS / FAIL / NÃO CONFIGURADO
+
+---
+
+## 31. Bugs encontrados
+
+Para cada bug:
+
+### BUG-X
+
+Severidade:
+CRITICAL / HIGH / MEDIUM / LOW
+
+Problema:
+
+Causa:
+
+Correção:
+
+Teste de regressão:
+
+Status:
+
+CORRIGIDO / ABERTO
+
+---
+
+## 32. Bugs abertos
+
+### CRITICAL
+
+Esperado:
+
+NENHUM.
+
+### HIGH
+
+Esperado:
+
+NENHUM.
+
+### MEDIUM
+
+Liste.
+
+### LOW
+
+Liste.
+
+---
+
+## 33. Dívidas técnicas resolvidas
+
+Liste.
+
+---
+
+## 34. Dívidas técnicas restantes
+
+Liste e classifique.
+
+---
+
+## 35. Arquivos alterados no gate
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+---
+
+## 36. Migrations criadas no gate
+
+Liste.
+
+Se nenhuma:
+
+NENHUMA.
+
+---
+
+## 37. Divergências do ADR
+
+Esperado:
+
+NENHUMA.
+
+Se houver:
+
+explique.
+
+---
+
+## 38. Invariantes financeiras finais
+
+Liste as invariantes que agora estão protegidas por testes automatizados.
+
+---
+
+## 39. Veredito
+
+Escolher:
+
+SPRINT 3 APROVADA
+
+ou
+
+SPRINT 3 REPROVADA
+
+Justifique objetivamente.
+
+---
+
+# REGRA FINAL
+
+Não declarar:
+
+SPRINT 3 APROVADA
+
+se existir qualquer bug aberto classificado como:
+
+CRITICAL
+ou
+HIGH.
+
+Se houver falha financeira, de ownership, atomicidade ou precisão:
+
+SPRINT 3 REPROVADA.
+
+Corrija quando estiver dentro do escopo deste gate e repita os testes.
+
+Somente encerre quando o estado final puder ser demonstrado.
+
+Se a Sprint 3 for aprovada:
+
+NÃO inicie automaticamente a próxima Sprint.

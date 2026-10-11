@@ -1,0 +1,2310 @@
+# TASK-4.5 — API e Ciclo de Vida de Anexos nas Transações
+
+Estamos na:
+
+# Sprint 4 — Enriquecimento das Transações
+
+Concluídas:
+
+- TASK-4.0 — Arquitetura de Tags e Anexos
+- TASK-4.1 — Domínio, Persistência e API de Tags
+- TASK-4.2 — Interface de Tags
+- TASK-4.3 — Associação de Tags às Transações
+- TASK-4.4 — Infraestrutura Segura de Anexos
+
+Agora implemente:
+
+# TASK-4.5 — API e Ciclo de Vida de Anexos nas Transações
+
+Objetivo:
+
+Transformar a infraestrutura segura de Attachments criada na TASK-4.4
+em funcionalidade backend completa para as transações financeiras.
+
+Implementar:
+
+1. upload autenticado;
+2. persistência da metadata;
+3. associação à FinancialTransaction lógica;
+4. listagem de anexos;
+5. download autenticado;
+6. remoção;
+7. autorização owner-scoped;
+8. limites;
+9. validação;
+10. consistência DB × storage;
+11. Problem Details;
+12. Request ID;
+13. OpenAPI;
+14. testes.
+
+A funcionalidade deve funcionar para:
+
+- Expense;
+- Income;
+- Transfer.
+
+Attachment pertence à FinancialTransaction lógica.
+
+NÃO pertence ao AccountMovement.
+
+Nesta TASK:
+
+NÃO implementar ainda a interface Angular completa de anexos.
+
+---
+
+# 1. FONTE DE VERDADE
+
+Antes de modificar código, leia obrigatoriamente:
+
+- CLAUDE.md;
+- ADR da TASK-4.0;
+- relatório da TASK-4.3;
+- relatório da TASK-4.4;
+- implementação real de TransactionAttachment;
+- AttachmentStorage;
+- implementação local de storage;
+- AttachmentPolicy;
+- validação MIME/signature;
+- checksum;
+- configuração multipart;
+- FinancialTransaction;
+- Expense;
+- Income;
+- Transfer;
+- AccountMovement;
+- CurrentUser;
+- Spring Security;
+- Problem Details;
+- Request ID;
+- OpenAPI;
+- repositories;
+- migrations;
+- testes existentes.
+
+Não presuma nomes de classes ou endpoints.
+
+O código real e o ADR são a fonte de verdade.
+
+Se este prompt divergir do ADR 4.0:
+
+SIGA O ADR.
+
+Documente qualquer divergência no relatório final.
+
+---
+
+# 2. PRE-IMPLEMENTATION REPORT
+
+Antes de modificar arquivos, produza:
+
+# TASK-4.5 — PRE-IMPLEMENTATION REPORT
+
+## 1. Infraestrutura disponível
+
+Informe:
+
+Attachment entity:
+Storage interface:
+Storage implementation:
+Policy:
+MIME validation:
+Checksum:
+Repository:
+Configuration:
+
+## 2. Attachment Lifecycle
+
+Descreva fluxo proposto:
+
+upload
+→ metadata
+→ list
+→ download
+→ delete.
+
+## 3. API
+
+Liste endpoints propostos.
+
+## 4. Ownership
+
+Explique como cada operação será protegida.
+
+## 5. Transaction Types
+
+Explique como Expense, Income e Transfer utilizarão a mesma
+infraestrutura sem criar três implementações duplicadas.
+
+## 6. Cancelled Transactions
+
+Informe política do ADR.
+
+## 7. DB × Storage Consistency
+
+Explique:
+
+upload failure;
+DB failure;
+delete failure;
+orphan prevention.
+
+## 8. HTTP Errors
+
+Liste códigos.
+
+## 9. Security
+
+Explique:
+
+IDOR;
+path traversal;
+MIME;
+download;
+filename;
+storageKey;
+JWT.
+
+## 10. Tests
+
+Liste cenários.
+
+## 11. Files
+
+Liste:
+
+criar;
+modificar;
+reutilizar.
+
+Depois implemente.
+
+---
+
+# 3. PRINCÍPIO FINANCEIRO
+
+Attachment é metadata.
+
+Portanto:
+
+upload attachment
+→ efeito financeiro = 0.
+
+download attachment
+→ efeito financeiro = 0.
+
+delete attachment
+→ efeito financeiro = 0.
+
+Nenhuma operação desta TASK pode alterar:
+
+- amount;
+- occurredAt;
+- transaction type;
+- transaction status;
+- account;
+- sourceAccount;
+- destinationAccount;
+- AccountMovement;
+- currentBalance;
+- netWorth.
+
+---
+
+# 4. API ARCHITECTURE
+
+Seguir estratégia definida no ADR 4.0.
+
+Preferência conceitual:
+
+POST
+/api/transactions/{transactionId}/attachments
+
+GET
+/api/transactions/{transactionId}/attachments
+
+GET
+/api/attachments/{attachmentId}/content
+
+DELETE
+/api/attachments/{attachmentId}
+
+Se ADR aprovou outro contrato:
+
+seguir ADR.
+
+---
+
+# 5. IMPORTANTE SOBRE /api/transactions
+
+A existência de endpoints de metadata em:
+
+/api/transactions/{id}/attachments
+
+NÃO significa criar CRUD financeiro genérico.
+
+Continua proibido criar:
+
+POST /api/transactions
+PUT /api/transactions/{id}
+
+para operações financeiras.
+
+Writes financeiros continuam semanticamente separados:
+
+/api/expenses
+/api/incomes
+/api/transfers.
+
+---
+
+# 6. MOTIVO
+
+Attachment é metadata comum à FinancialTransaction lógica.
+
+Logo um subresource compartilhado é aceitável se ADR assim definiu.
+
+---
+
+# 7. UPLOAD
+
+Implementar upload multipart autenticado.
+
+---
+
+# 8. CONTENT TYPE
+
+Endpoint:
+
+multipart/form-data.
+
+---
+
+# 9. FIELD
+
+Preferência:
+
+file
+
+para upload individual.
+
+Se ADR aprovou upload múltiplo por request:
+
+seguir ADR.
+
+---
+
+# 10. RECOMENDAÇÃO
+
+Mesmo permitindo vários attachments por transaction:
+
+preferir um arquivo por request inicialmente.
+
+Isso simplifica:
+
+- atomicidade;
+- retry;
+- progress;
+- tratamento de falha;
+- limites.
+
+Se ADR determinou diferente:
+
+seguir ADR.
+
+---
+
+# 11. UPLOAD FLOW
+
+Fluxo obrigatório conceitual:
+
+1. autenticar;
+2. obter CurrentUser;
+3. localizar FinancialTransaction owner-scoped;
+4. validar estado da transaction;
+5. verificar limite de attachments;
+6. validar filename;
+7. validar tamanho;
+8. validar MIME declarado;
+9. validar assinatura real;
+10. determinar media type canônico;
+11. gerar attachmentId;
+12. gerar storageKey;
+13. calcular SHA-256;
+14. armazenar bytes;
+15. persistir metadata;
+16. compensar storage se DB falhar;
+17. retornar metadata.
+
+Adapte à infraestrutura real da 4.4.
+
+---
+
+# 12. CURRENT USER
+
+owner sempre vem de:
+
+JWT
+→ SecurityContext
+→ CurrentUser.
+
+---
+
+# 13. REQUEST NÃO ACEITA OWNER
+
+Nunca aceitar:
+
+ownerId;
+userId;
+email.
+
+---
+
+# 14. TRANSACTION OWNERSHIP
+
+Upload para transaction do usuário atual:
+
+permitido.
+
+---
+
+# 15. OTHER USER TRANSACTION
+
+User A conhece UUID de transaction de User B.
+
+POST attachment:
+
+404.
+
+---
+
+# 16. NONEXISTENT TRANSACTION
+
+404.
+
+---
+
+# 17. WRONG TYPE
+
+Não importa se é:
+
+Expense;
+Income;
+Transfer.
+
+Todos podem possuir attachment.
+
+---
+
+# 18. CANCELLED TRANSACTION
+
+Seguir exatamente política do ADR 4.0.
+
+Se ADR determinou que transaction CANCELLED não aceita novos
+attachments:
+
+retornar conflito conforme contrato.
+
+Se ADR permitiu metadata em cancelled:
+
+seguir ADR.
+
+Não inventar nova política.
+
+---
+
+# 19. MAX ATTACHMENTS
+
+Aplicar limite definido na TASK-4.4/ADR.
+
+---
+
+# 20. CONCURRENCY
+
+CRÍTICO:
+
+Dois uploads concorrentes não podem contornar facilmente o limite de
+attachments.
+
+Se existe limite N:
+
+não confiar apenas em:
+
+count
+→ if count < N
+→ insert
+
+sem analisar race condition.
+
+Implemente proteção adequada ao modelo real.
+
+---
+
+# 21. MAX FILE SIZE
+
+Aplicar política central da 4.4.
+
+Não duplicar constante.
+
+---
+
+# 22. EMPTY FILE
+
+Rejeitar.
+
+---
+
+# 23. MIME
+
+Usar validator central da 4.4.
+
+---
+
+# 24. NÃO CONFIAR NO CLIENTE
+
+Não confiar isoladamente em:
+
+filename;
+extension;
+Multipart Content-Type.
+
+---
+
+# 25. MAGIC BYTES
+
+Usar validação implementada na 4.4.
+
+---
+
+# 26. ALLOWED TYPES
+
+Usar exatamente whitelist configurada/aprovada.
+
+Não recriar lista dentro do controller.
+
+---
+
+# 27. STORAGE KEY
+
+Gerado no servidor.
+
+---
+
+# 28. NÃO ACEITAR STORAGE KEY
+
+Request não possui:
+
+storageKey.
+
+---
+
+# 29. ORIGINAL FILENAME
+
+Capturado do multipart apenas como metadata.
+
+---
+
+# 30. SANITIZATION
+
+Usar política criada na 4.4.
+
+---
+
+# 31. CHECKSUM
+
+Calculado pelo servidor.
+
+---
+
+# 32. STORAGE
+
+Usar AttachmentStorage.
+
+Controller/Application Service NÃO acessa filesystem diretamente.
+
+---
+
+# 33. NO java.nio.file IN CONTROLLER
+
+Controller não deve conhecer path físico.
+
+---
+
+# 34. TRANSACTION BOUNDARY
+
+Documentar claramente:
+
+MySQL transaction
+≠
+filesystem transaction.
+
+---
+
+# 35. STORAGE FIRST / DB SECOND
+
+Se ADR adotou:
+
+storage
+→ DB
+
+implementar compensação.
+
+---
+
+# 36. DB FAILURE
+
+Se storage foi escrito e persistência da metadata falha:
+
+remover arquivo armazenado.
+
+---
+
+# 37. COMPENSATION FAILURE
+
+Se remoção compensatória falhar:
+
+- registrar erro;
+- preservar Request ID;
+- registrar attachment/storage identifier seguro;
+- não expor path;
+- não expor stack ao cliente.
+
+---
+
+# 38. STORAGE FAILURE
+
+Se storage falhar:
+
+não persistir metadata válida apontando para arquivo inexistente.
+
+---
+
+# 39. RESPONSE
+
+Upload bem-sucedido:
+
+preferência:
+
+201 Created.
+
+---
+
+# 40. RESPONSE DTO
+
+Conceitualmente:
+
+{
+  "id": "...",
+  "fileName": "comprovante.pdf",
+  "contentType": "application/pdf",
+  "sizeBytes": 123456,
+  "createdAt": "..."
+}
+
+Adapte aos nomes reais.
+
+---
+
+# 41. NÃO EXPOR
+
+Não retornar:
+
+ownerId;
+storageKey;
+filesystem path;
+checksum interno, salvo decisão explícita do ADR/API.
+
+---
+
+# 42. CHECKSUM RESPONSE
+
+Se ADR não exige checksum público:
+
+manter interno.
+
+---
+
+# 43. LIST
+
+Implementar listagem de attachments da transaction.
+
+---
+
+# 44. ENDPOINT
+
+Conforme ADR.
+
+Conceitualmente:
+
+GET /api/transactions/{transactionId}/attachments
+
+---
+
+# 45. OWNERSHIP LIST
+
+Transaction deve ser localizada por:
+
+transactionId + current owner.
+
+---
+
+# 46. OTHER OWNER LIST
+
+404.
+
+Não:
+
+[].
+
+---
+
+# 47. MOTIVO
+
+Retornar [] poderia revelar comportamento diferente entre:
+
+transaction existente de outro usuário
+e
+transaction inexistente.
+
+Manter política consistente.
+
+---
+
+# 48. EMPTY LIST
+
+Transaction própria sem attachments:
+
+200 [].
+
+---
+
+# 49. ORDER
+
+Ordenação determinística.
+
+Preferência:
+
+createdAt ASC
+
+ou ordem definida no ADR.
+
+---
+
+# 50. LIST RESPONSE
+
+Metadata somente.
+
+Nunca bytes.
+
+---
+
+# 51. N+1
+
+Listagem não deve carregar ledger ou outras relações desnecessárias.
+
+---
+
+# 52. DOWNLOAD
+
+Implementar download autenticado.
+
+---
+
+# 53. ENDPOINT
+
+Conforme ADR.
+
+Conceitualmente:
+
+GET /api/attachments/{attachmentId}/content
+
+---
+
+# 54. LOOKUP
+
+Attachment deve ser buscado ownership-aware.
+
+---
+
+# 55. OTHER OWNER ATTACHMENT
+
+404.
+
+---
+
+# 56. NONEXISTENT ATTACHMENT
+
+404.
+
+---
+
+# 57. STORAGE FILE MISSING
+
+Cenário:
+
+metadata existe
+mas bytes não existem.
+
+Isso é inconsistência interna.
+
+Não retornar:
+
+404 como se attachment nunca tivesse existido
+
+sem avaliar política.
+
+Preferência:
+
+erro interno controlado/Problem Details apropriado
++
+log de integridade.
+
+Não expor storage path.
+
+Seguir ADR se definido.
+
+---
+
+# 58. STREAMING
+
+Download deve ser streaming.
+
+---
+
+# 59. NÃO CARREGAR TODO ARQUIVO
+
+Evitar:
+
+byte[]
+
+se storage já fornece stream/resource.
+
+---
+
+# 60. CONTENT TYPE
+
+Usar media type validado armazenado na metadata.
+
+---
+
+# 61. CONTENT LENGTH
+
+Quando seguro/disponível:
+
+enviar sizeBytes.
+
+---
+
+# 62. CONTENT DISPOSITION
+
+Usar:
+
+attachment
+
+por padrão.
+
+---
+
+# 63. FILENAME
+
+Gerar Content-Disposition com encoding seguro.
+
+---
+
+# 64. CRLF
+
+Nunca concatenar filename cru em header.
+
+---
+
+# 65. X-CONTENT-TYPE-OPTIONS
+
+Adicionar:
+
+X-Content-Type-Options: nosniff
+
+se infraestrutura global ainda não adiciona.
+
+---
+
+# 66. CACHE CONTROL
+
+Arquivo privado.
+
+Preferência:
+
+Cache-Control: private, no-store
+
+ou política definida no ADR.
+
+---
+
+# 67. NO PUBLIC CACHE
+
+Nunca:
+
+public, max-age=...
+
+para attachments privados.
+
+---
+
+# 68. JWT
+
+Download continua autenticado pelo Authorization header.
+
+---
+
+# 69. NO TOKEN IN QUERY STRING
+
+PROIBIDO criar:
+
+?token=JWT
+
+para download.
+
+---
+
+# 70. NO PUBLIC SIGNED URL
+
+Não implementar signed URL nesta fase.
+
+---
+
+# 71. STORAGE KEY
+
+Nunca expor no URL.
+
+---
+
+# 72. PATH
+
+Nunca expor path.
+
+---
+
+# 73. RANGE
+
+Range requests não são necessários nesta fase.
+
+Não implementar sem necessidade.
+
+---
+
+# 74. DELETE ATTACHMENT
+
+Implementar remoção conforme ADR.
+
+---
+
+# 75. ENDPOINT
+
+Conceitualmente:
+
+DELETE /api/attachments/{attachmentId}
+
+ou endpoint aprovado.
+
+---
+
+# 76. DELETE AUTHORIZATION
+
+Attachment deve pertencer ao CurrentUser.
+
+---
+
+# 77. OTHER OWNER DELETE
+
+404.
+
+---
+
+# 78. TRANSACTION
+
+Remover attachment NÃO remove/cancela transaction.
+
+---
+
+# 79. LEDGER
+
+Remover attachment não altera movements.
+
+---
+
+# 80. TAGS
+
+Remover attachment não altera Tags.
+
+---
+
+# 81. CATEGORY
+
+Não altera Category.
+
+---
+
+# 82. DELETE FLOW
+
+Seguir estratégia de consistência aprovada no ADR.
+
+---
+
+# 83. DB × STORAGE DELETE
+
+Analise cuidadosamente ordem:
+
+DB metadata delete
+vs
+storage bytes delete.
+
+---
+
+# 84. NÃO FINGIR ACID
+
+Não existe atomicidade distribuída automática.
+
+---
+
+# 85. FAILURE POLICY
+
+Implementar exatamente estratégia da 4.0/4.4.
+
+---
+
+# 86. IDEMPOTENCY
+
+Definir comportamento.
+
+DELETE de attachment inexistente:
+
+preferência:
+
+404
+
+porque recurso não existe.
+
+Seguir convenção real.
+
+---
+
+# 87. CANCELLED TRANSACTION ATTACHMENT DELETE
+
+Seguir ADR.
+
+Se metadata de cancelled transaction é imutável:
+
+bloquear.
+
+Se remoção de attachment é permitida:
+
+permitir.
+
+Não decidir novamente.
+
+---
+
+# 88. PHYSICAL BYTES
+
+Se delete for aprovado como remoção real:
+
+storage.delete(storageKey).
+
+---
+
+# 89. METADATA
+
+Remover ou marcar conforme modelo aprovado.
+
+Não inventar soft-delete se ADR escolheu physical metadata delete.
+
+---
+
+# 90. AUDIT
+
+Se ADR determinou retenção:
+
+seguir.
+
+---
+
+# 91. ATTACHMENT LIMIT AFTER DELETE
+
+Após remoção bem-sucedida:
+
+slot fica disponível novamente se limite for por attachments atuais.
+
+---
+
+# 92. ERROR MODEL
+
+Usar Problem Details existente.
+
+---
+
+# 93. HTTP — 400
+
+Request inválido.
+
+---
+
+# 94. HTTP — 401
+
+Sem autenticação.
+
+---
+
+# 95. HTTP — 404
+
+Transaction/Attachment inexistente ou outro owner.
+
+---
+
+# 96. HTTP — 409
+
+Estado incompatível:
+
+por exemplo:
+
+cancelled transaction
+ou limite atingido
+
+se essa foi a semântica aprovada.
+
+---
+
+# 97. HTTP — 413
+
+Arquivo acima do limite.
+
+Preferir 413 Payload Too Large se infraestrutura permitir mapear de
+forma consistente.
+
+---
+
+# 98. SPRING MULTIPART LIMIT
+
+Também mapear:
+
+MaxUploadSizeExceededException
+
+ou equivalente
+
+para Problem Details coerente.
+
+---
+
+# 99. HTTP — 415
+
+Media type não suportado / arquivo incompatível.
+
+---
+
+# 100. 500
+
+Storage/integrity failure inesperada:
+
+Problem Details seguro.
+
+Nunca incluir:
+
+path;
+storageKey;
+SQL;
+stack trace.
+
+---
+
+# 101. REQUEST ID
+
+Todos os erros e logs devem preservar Request ID.
+
+---
+
+# 102. CONTROLLER
+
+Controller deve ser fino.
+
+Responsabilidades:
+
+- HTTP;
+- multipart;
+- DTO mapping;
+- response headers.
+
+---
+
+# 103. APPLICATION SERVICE
+
+Responsável por:
+
+- ownership;
+- transaction lookup;
+- state validation;
+- policy;
+- orchestration storage/metadata;
+- compensation.
+
+---
+
+# 104. STORAGE
+
+Responsável por bytes.
+
+Não decide:
+
+owner;
+transaction state;
+financial rules.
+
+---
+
+# 105. REPOSITORY
+
+Responsável por metadata.
+
+---
+
+# 106. NO GOD SERVICE
+
+Evitar uma classe que concentre:
+
+HTTP + auth + validation + filesystem + JPA + headers.
+
+---
+
+# 107. NO THREE DUPLICATE IMPLEMENTATIONS
+
+Não criar:
+
+ExpenseAttachmentService
+IncomeAttachmentService
+TransferAttachmentService
+
+se comportamento é exatamente o mesmo.
+
+---
+
+# 108. MOTIVO
+
+Attachment pertence à FinancialTransaction base.
+
+---
+
+# 109. FINANCIAL WRITE APIs
+
+Não modificar sem necessidade:
+
+Expense create/update;
+Income create/update;
+Transfer create/update.
+
+---
+
+# 110. ATTACHMENT UPLOAD SEPARADO
+
+Upload acontece depois de existir transactionId.
+
+---
+
+# 111. NÃO MULTIPART EXPENSE CREATE
+
+Não converter:
+
+POST /api/expenses
+
+em multipart.
+
+---
+
+# 112. NÃO MULTIPART INCOME CREATE
+
+Mesmo.
+
+---
+
+# 113. NÃO MULTIPART TRANSFER CREATE
+
+Mesmo.
+
+---
+
+# 114. OPENAPI
+
+Documentar upload multipart.
+
+---
+
+# 115. OPENAPI FILE
+
+Usar schema:
+
+type: string
+format: binary
+
+conforme tooling atual.
+
+---
+
+# 116. OPENAPI DOWNLOAD
+
+Documentar binary response e media types possíveis.
+
+---
+
+# 117. OPENAPI LIST
+
+Documentar metadata response.
+
+---
+
+# 118. OPENAPI DELETE
+
+Documentar status.
+
+---
+
+# 119. OPENAPI ERRORS
+
+Documentar:
+
+400;
+401;
+404;
+409;
+413;
+415;
+500 quando relevante.
+
+---
+
+# 120. SECURITY — IDOR TEST
+
+User A cria Expense e Attachment.
+
+User B conhece:
+
+transactionId
+attachmentId.
+
+B tenta:
+
+list;
+upload;
+download;
+delete.
+
+Todos bloqueados.
+
+---
+
+# 121. EXPECTED IDOR
+
+404 para recursos privados de outro owner conforme política consolidada.
+
+---
+
+# 122. SECURITY — STORAGE PATH
+
+Nenhum response contém:
+
+storageKey;
+absolute path;
+relative filesystem path interno.
+
+---
+
+# 123. SECURITY — PUBLIC ACCESS
+
+Tentar acessar arquivo sem Authorization:
+
+401.
+
+---
+
+# 124. SECURITY — STATIC URL
+
+Não deve existir URL alternativa pública.
+
+---
+
+# 125. SECURITY — MIME SPOOF
+
+Upload:
+
+evil.exe
+
+renomeado para:
+
+recibo.pdf
+
+rejeitado.
+
+---
+
+# 126. SECURITY — OVERSIZED
+
+Arquivo acima do limite:
+
+rejeitado antes de persistência final.
+
+---
+
+# 127. SECURITY — HTML
+
+Rejeitado.
+
+---
+
+# 128. SECURITY — SVG
+
+Rejeitado se policy aprovada.
+
+---
+
+# 129. SECURITY — FILENAME
+
+Testar:
+
+../../secret.pdf
+..\..\secret.pdf
+arquivo\r\nX-Test: evil.pdf
+
+Nenhum deve gerar vulnerabilidade.
+
+---
+
+# 130. STORAGE ROOT
+
+Upload não pode escrever fora do root.
+
+---
+
+# 131. DOWNLOAD ROOT
+
+Download não pode ler fora do root.
+
+---
+
+# 132. CHECKSUM
+
+Validar checksum persistido corresponde ao conteúdo armazenado no
+cenário normal.
+
+---
+
+# 133. CHECKSUM ON DOWNLOAD
+
+Não recalcular SHA-256 em todo download sem necessidade.
+
+Metadata é suficiente para integridade registrada.
+
+---
+
+# 134. CORRUPTION DETECTION
+
+Se ADR determinou verificação no download:
+
+seguir.
+
+Caso contrário:
+
+não adicionar custo desnecessário.
+
+---
+
+# 135. TEST — EXPENSE UPLOAD
+
+Criar Expense.
+
+Upload PDF.
+
+Listar.
+
+Download.
+
+Comparar bytes.
+
+Delete.
+
+Expense continua existindo.
+
+Saldo inalterado.
+
+---
+
+# 136. TEST — INCOME UPLOAD
+
+Mesmo fluxo.
+
+---
+
+# 137. TEST — TRANSFER UPLOAD
+
+Mesmo fluxo.
+
+---
+
+# 138. TRANSFER IMPORTANT
+
+Attachment aparece uma vez.
+
+Não duas vezes por movements.
+
+---
+
+# 139. TEST — MULTIPLE ATTACHMENTS
+
+Se cardinalidade 0..N:
+
+upload:
+
+nota.pdf
+recibo.jpg
+
+List:
+
+2.
+
+---
+
+# 140. SAME FILENAME
+
+Upload:
+
+recibo.pdf
+recibo.pdf
+
+Se limite permitir:
+
+ambos coexistem.
+
+IDs/storageKeys diferentes.
+
+---
+
+# 141. LIMIT
+
+Upload até limite:
+
+PASS.
+
+Upload limite + 1:
+
+rejeitado.
+
+---
+
+# 142. CONCURRENT LIMIT
+
+Criar teste concorrente se viável.
+
+Garantir que limite não seja ultrapassado por race simples.
+
+---
+
+# 143. INVALID MIME
+
+Nenhuma metadata persistida.
+
+Nenhum arquivo final órfão.
+
+---
+
+# 144. DB FAILURE TEST
+
+Simular falha de persistência após storage.
+
+Esperado:
+
+arquivo compensado.
+
+---
+
+# 145. STORAGE FAILURE TEST
+
+Simular store failure.
+
+Esperado:
+
+metadata não persistida.
+
+---
+
+# 146. DELETE STORAGE FAILURE
+
+Testar estratégia aprovada.
+
+Estado final deve seguir política documentada.
+
+---
+
+# 147. MISSING PHYSICAL FILE
+
+Metadata existe, bytes ausentes.
+
+Download:
+
+erro seguro.
+
+Log:
+
+integrity problem.
+
+---
+
+# 148. CANCELLED TRANSACTION
+
+Testar upload/list/download/delete conforme política do ADR.
+
+---
+
+# 149. TAG REGRESSION
+
+Transaction com Tags + Attachment.
+
+Adicionar/remover Attachment:
+
+Tags permanecem iguais.
+
+---
+
+# 150. CATEGORY REGRESSION
+
+Category permanece igual.
+
+---
+
+# 151. NOTES REGRESSION
+
+Notes permanecem iguais.
+
+---
+
+# 152. FINANCIAL REGRESSION — EXPENSE
+
+Conta:
+
+1000.
+
+Expense:
+
+200.
+
+Saldo:
+
+800.
+
+Upload Attachment.
+
+Saldo:
+
+800.
+
+Delete Attachment.
+
+Saldo:
+
+800.
+
+---
+
+# 153. FINANCIAL REGRESSION — INCOME
+
+Conta:
+
+1000.
+
+Income:
+
+200.
+
+Saldo:
+
+1200.
+
+Upload/Delete:
+
+saldo continua 1200.
+
+---
+
+# 154. FINANCIAL REGRESSION — TRANSFER
+
+A = 1000
+B = 500
+
+Transfer A → B 300.
+
+A = 700
+B = 800.
+
+Upload Attachment.
+
+A = 700
+B = 800.
+
+Delete Attachment.
+
+A = 700
+B = 800.
+
+---
+
+# 155. NET WORTH
+
+Attachment operations:
+
+delta netWorth = 0.
+
+---
+
+# 156. DASHBOARD
+
+Não mostrar Attachments ainda.
+
+Nenhuma mudança financeira.
+
+---
+
+# 157. HISTORY
+
+Não integrar visualmente ainda.
+
+Mas attachment não pode criar nova linha de transaction.
+
+---
+
+# 158. TRANSACTION COUNT
+
+Criar Attachment:
+
+número de FinancialTransactions não muda.
+
+---
+
+# 159. ACCOUNT MOVEMENT COUNT
+
+Criar Attachment:
+
+número de AccountMovements não muda.
+
+---
+
+# 160. MYSQL/TESTCONTAINERS
+
+Executar testes reais para metadata.
+
+---
+
+# 161. STORAGE TESTS
+
+Continuar usando temp directory.
+
+---
+
+# 162. TEST CLEANUP
+
+Testes não deixam arquivos residuais.
+
+---
+
+# 163. BUILD
+
+Backend:
+
+PASS.
+
+---
+
+# 164. FRONTEND
+
+Sem funcionalidade Angular nova.
+
+Lint/build devem continuar passando conforme pipeline.
+
+---
+
+# 165. PERFORMANCE
+
+List metadata:
+
+não abrir bytes.
+
+---
+
+# 166. DOWNLOAD
+
+Abrir apenas attachment solicitado.
+
+---
+
+# 167. NO N+1
+
+Listagem de attachments não precisa carregar relações financeiras
+inteiras.
+
+---
+
+# 168. STREAM RESOURCE MANAGEMENT
+
+Streams devem fechar corretamente.
+
+---
+
+# 169. LARGE FILE TEST
+
+Dentro do limite:
+
+upload/download sem OutOfMemory e sem byte[] desnecessário.
+
+---
+
+# 170. OBSERVABILITY
+
+Logar falhas relevantes:
+
+- validation rejection, sem conteúdo;
+- storage failure;
+- compensation failure;
+- missing physical file.
+
+Não logar bytes.
+
+---
+
+# 171. PRIVACY
+
+Evitar logar original filename em nível alto sem necessidade.
+
+---
+
+# 172. NO MALWARE CLAIM
+
+Não afirmar que arquivo é "seguro" apenas porque passou MIME/signature.
+
+---
+
+# 173. DOCUMENTATION
+
+Atualizar docs com:
+
+- endpoints;
+- lifecycle;
+- ownership;
+- upload;
+- download;
+- delete;
+- allowed types;
+- max size;
+- max attachments;
+- error semantics;
+- consistency strategy;
+- deployment/storage limitations.
+
+---
+
+# 174. NÃO IMPLEMENTAR
+
+Nesta TASK:
+
+- Angular Attachment component;
+- drag-and-drop;
+- upload progress UI;
+- preview de imagem;
+- preview de PDF;
+- thumbnails;
+- OCR;
+- S3;
+- MinIO;
+- signed URL;
+- public URLs;
+- malware scanner falso;
+- attachment filter no History;
+- attachment no Dashboard;
+- attachment no Reports.
+
+---
+
+# 175. DEFINITION OF DONE
+
+TASK-4.5 estará concluída quando:
+
+- upload autenticado funcionar;
+- Expense aceitar Attachment;
+- Income aceitar Attachment;
+- Transfer aceitar Attachment;
+- Attachment pertencer à transação lógica;
+- Attachment não pertencer a AccountMovement;
+- owner vier de CurrentUser;
+- cross-user upload retornar política segura;
+- list funcionar;
+- cross-user list estiver bloqueado;
+- download autenticado funcionar;
+- download for streaming;
+- Content-Disposition for seguro;
+- nosniff estiver aplicado conforme arquitetura;
+- cache privado estiver correto;
+- JWT não estiver em query string;
+- delete funcionar;
+- cross-user delete estiver bloqueado;
+- max size estiver aplicado;
+- max attachments estiver aplicado;
+- MIME whitelist estiver aplicada;
+- magic bytes estiverem validados;
+- spoofing estiver bloqueado;
+- storageKey não for exposto;
+- filesystem path não for exposto;
+- DB/storage compensation funcionar;
+- storage failure não criar metadata inválida;
+- Problem Details funcionar;
+- Request ID funcionar;
+- OpenAPI estiver atualizado;
+- MySQL/Testcontainers passar;
+- storage tests passarem;
+- security tests passarem;
+- ledger permanecer inalterado;
+- currentBalance permanecer correto;
+- netWorth permanecer correto;
+- Tags permanecerem corretas;
+- Dashboard permanecer correto;
+- History continuar com uma Transfer lógica;
+- backend build passar;
+- frontend regressions passarem;
+- UI Angular de Attachments NÃO tiver sido implementada.
+
+---
+
+# 176. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-4.5 — API E CICLO DE VIDA DE ANEXOS
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+## 1. ADR utilizado
+
+Arquivo:
+
+## 2. Endpoints
+
+### Upload
+Method:
+Path:
+Response:
+
+### List
+Method:
+Path:
+Response:
+
+### Download
+Method:
+Path:
+
+### Delete
+Method:
+Path:
+
+## 3. Supported Transactions
+
+Expense:
+PASS / FAIL
+
+Income:
+PASS / FAIL
+
+Transfer:
+PASS / FAIL
+
+## 4. Ownership
+
+CurrentUser:
+PASS / FAIL
+
+Cross-user transaction:
+PASS / FAIL
+
+Cross-user attachment:
+PASS / FAIL
+
+IDOR result:
+
+## 5. Upload
+
+Multipart:
+PASS / FAIL
+
+Streaming:
+PASS / FAIL
+
+Filename validation:
+PASS / FAIL
+
+Size validation:
+PASS / FAIL
+
+MIME validation:
+PASS / FAIL
+
+Magic bytes:
+PASS / FAIL
+
+Checksum:
+PASS / FAIL
+
+## 6. Limits
+
+Max file size:
+
+Max attachments:
+
+Concurrent protection:
+
+## 7. Storage
+
+Implementation:
+
+StorageKey exposed:
+YES / NO
+
+Expected:
+NO
+
+Path exposed:
+YES / NO
+
+Expected:
+NO
+
+## 8. DB × Storage Consistency
+
+Storage failure:
+PASS / FAIL
+
+DB failure compensation:
+PASS / FAIL
+
+Compensation failure handling:
+PASS / FAIL
+
+Delete failure:
+PASS / FAIL
+
+Missing physical file:
+PASS / FAIL
+
+## 9. List
+
+Own transaction:
+PASS / FAIL
+
+Empty:
+PASS / FAIL
+
+Other owner:
+PASS / FAIL
+
+Ordering:
+
+## 10. Download
+
+Authentication:
+PASS / FAIL
+
+Authorization:
+PASS / FAIL
+
+Streaming:
+PASS / FAIL
+
+Content-Type:
+PASS / FAIL
+
+Content-Length:
+PASS / FAIL / N/A
+
+Content-Disposition:
+PASS / FAIL
+
+Filename encoding:
+PASS / FAIL
+
+Nosniff:
+PASS / FAIL
+
+Cache-Control:
+PASS / FAIL
+
+JWT query parameter:
+YES / NO
+
+Expected:
+NO
+
+## 11. Delete
+
+Own attachment:
+PASS / FAIL
+
+Other owner:
+PASS / FAIL
+
+Transaction preserved:
+PASS / FAIL
+
+Ledger preserved:
+PASS / FAIL
+
+## 12. Cancelled Transaction
+
+Upload:
+comportamento:
+
+List:
+comportamento:
+
+Download:
+comportamento:
+
+Delete:
+comportamento:
+
+Conforme ADR:
+PASS / FAIL
+
+## 13. Security
+
+Path traversal:
+PASS / FAIL
+
+MIME spoof:
+PASS / FAIL
+
+Oversized:
+PASS / FAIL
+
+HTML:
+PASS / FAIL
+
+SVG:
+PASS / FAIL
+
+Executable:
+PASS / FAIL
+
+CRLF filename:
+PASS / FAIL
+
+Public URL:
+PASS / FAIL
+
+Static access:
+PASS / FAIL
+
+## 14. HTTP
+
+400:
+PASS / FAIL
+
+401:
+PASS / FAIL
+
+404:
+PASS / FAIL
+
+409:
+PASS / FAIL
+
+413:
+PASS / FAIL
+
+415:
+PASS / FAIL
+
+500 sanitized:
+PASS / FAIL
+
+## 15. Problem Details
+
+PASS / FAIL
+
+## 16. Request ID
+
+PASS / FAIL
+
+## 17. OpenAPI
+
+Upload:
+PASS / FAIL
+
+List:
+PASS / FAIL
+
+Download:
+PASS / FAIL
+
+Delete:
+PASS / FAIL
+
+Errors:
+PASS / FAIL
+
+## 18. Tests
+
+Unit:
+PASS / FAIL
+
+Application:
+PASS / FAIL
+
+Repository:
+PASS / FAIL
+
+Storage:
+PASS / FAIL
+
+Security:
+PASS / FAIL
+
+Integration:
+PASS / FAIL
+
+MySQL/Testcontainers:
+PASS / FAIL
+
+## 19. Financial Regression
+
+Expense:
+PASS / FAIL
+
+Income:
+PASS / FAIL
+
+Transfer:
+PASS / FAIL
+
+Current Balance:
+PASS / FAIL
+
+Net Worth:
+PASS / FAIL
+
+Dashboard:
+PASS / FAIL
+
+History:
+PASS / FAIL
+
+## 20. Tag Regression
+
+PASS / FAIL
+
+## 21. Golden Scenario
+
+A initial:
+1000
+
+B initial:
+500
+
+Income:
+700
+
+Expense:
+200
+
+Transfer:
+300
+
+Expected:
+
+A = 1200
+B = 800
+Net Worth = 2000
+Entradas = 700
+Saídas = 200
+Saldo = 500
+History = 3 logical transactions
+
+Adicionar/remover attachments altera valores?
+YES / NO
+
+Esperado:
+NO
+
+Resultado:
+PASS / FAIL
+
+## 22. Builds
+
+Backend:
+PASS / FAIL
+
+Frontend lint:
+PASS / FAIL
+
+Frontend build:
+PASS / FAIL
+
+## 23. Files
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 24. Bugs encontrados
+
+Para cada:
+
+Severidade:
+Problema:
+Causa:
+Correção:
+Teste:
+
+## 25. Divergências do ADR
+
+Esperado:
+
+NENHUMA.
+
+## 26. Dívida técnica
+
+Liste somente itens reais.
+
+## 27. Fora de escopo confirmado
+
+Angular Attachment UI:
+NÃO IMPLEMENTADA
+
+Preview:
+NÃO IMPLEMENTADO
+
+OCR:
+NÃO IMPLEMENTADO
+
+S3:
+NÃO IMPLEMENTADO
+
+MinIO:
+NÃO IMPLEMENTADO
+
+Signed URLs:
+NÃO IMPLEMENTADAS
+
+Reports:
+NÃO ALTERADOS
+
+## 28. Próxima Task
+
+Se TASK-4.5 estiver aprovada, declarar prontidão para:
+
+# TASK-4.6 — Interface de Anexos em Despesas, Receitas e Transferências
+
+NÃO implementar TASK-4.6 nesta execução.

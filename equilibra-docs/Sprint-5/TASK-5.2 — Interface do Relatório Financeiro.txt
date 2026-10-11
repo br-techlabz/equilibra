@@ -1,0 +1,2428 @@
+# TASK-5.2 — Interface do Relatório Financeiro
+
+Estamos na:
+
+# SPRINT 5 — RELATÓRIOS FINANCEIROS
+
+Concluídas:
+
+- TASK-5.0 — Arquitetura e Regras dos Relatórios Financeiros
+- TASK-5.1 — Backend do Relatório Financeiro
+
+Agora implemente:
+
+# TASK-5.2 — INTERFACE DO RELATÓRIO FINANCEIRO
+
+Objetivo:
+
+Implementar no Angular a interface completa do Relatório Financeiro,
+consumindo exclusivamente o backend real entregue pela TASK-5.1.
+
+A tela deve permitir ao usuário:
+
+- selecionar período;
+- selecionar uma, várias ou todas as contas;
+- aplicar filtros;
+- visualizar saldo inicial;
+- visualizar receitas;
+- visualizar despesas;
+- visualizar resultado financeiro;
+- visualizar transferências de forma semanticamente correta;
+- visualizar variação do saldo;
+- visualizar saldo final;
+- visualizar detalhamento das movimentações, caso previsto pelo ADR/API;
+- compreender claramente a diferença entre resultado financeiro e
+  variação do saldo.
+
+Esta TASK é prioritariamente FRONTEND.
+
+NÃO recalcular regras financeiras no Angular.
+
+NÃO implementar exportação ainda.
+
+---
+
+# 1. FONTE DE VERDADE
+
+Antes de modificar código, leia:
+
+- CLAUDE.md;
+- ADR da TASK-5.0;
+- relatório da TASK-5.1;
+- OpenAPI atual;
+- endpoint real do Financial Report;
+- DTOs reais;
+- semântica real de from/to;
+- semântica real de accountIds;
+- semântica real de transferências;
+- política real para contas inativas;
+- Dashboard atual;
+- History atual;
+- Design System;
+- PageHeader;
+- ContentPanel;
+- StatCard;
+- EmptyState;
+- componentes de formulário;
+- componentes de seleção;
+- padrões de loading/error;
+- Angular routing;
+- Auth Guard;
+- Authorization interceptor;
+- Request ID interceptor;
+- Problem Details handling;
+- testes frontend existentes.
+
+O contrato real da TASK-5.1 é a autoridade.
+
+Se este prompt divergir:
+
+seguir ADR + OpenAPI + implementação real.
+
+---
+
+# 2. PRE-IMPLEMENTATION REPORT
+
+ANTES de modificar arquivos, produza:
+
+# TASK-5.2 — PRE-IMPLEMENTATION REPORT
+
+## 1. API
+
+Method:
+Path:
+
+## 2. Request
+
+Liste todos os parâmetros reais.
+
+## 3. Response
+
+Liste estrutura real do DTO.
+
+## 4. Financial Semantics
+
+Explique:
+
+Opening Balance;
+Income;
+Expense;
+Financial Result;
+Internal Transfers;
+Incoming Boundary Transfers;
+Outgoing Boundary Transfers;
+Balance Change;
+Closing Balance.
+
+## 5. Account Selection
+
+Explique contrato para:
+
+uma;
+várias;
+todas;
+inativas.
+
+## 6. Existing Components
+
+Liste componentes reutilizáveis.
+
+## 7. Proposed Page Structure
+
+Descreva layout.
+
+## 8. State
+
+Descreva:
+
+initial;
+loading;
+success;
+empty;
+error.
+
+## 9. Responsive Strategy
+
+Desktop/tablet/mobile.
+
+## 10. Accessibility
+
+Descreva abordagem.
+
+## 11. Tests
+
+Liste testes.
+
+## 12. Files
+
+Criar:
+Modificar:
+Reutilizar:
+
+Somente depois implemente.
+
+---
+
+# 3. ROUTE
+
+Criar rota privada conforme convenções do projeto.
+
+Preferência conceitual:
+
+/reports/financial
+
+Se ADR/projeto definiu outro path:
+
+usar o real.
+
+---
+
+# 4. SIDEBAR
+
+Adicionar/ativar estrutura:
+
+Relatórios
+  Financeiro
+  Por categoria
+  Auditoria
+
+Nesta TASK:
+
+somente Financeiro precisa funcionar.
+
+---
+
+# 5. FUTURE ITEMS
+
+Para "Por categoria" e "Auditoria":
+
+seguir padrão atual do projeto para itens ainda não disponíveis.
+
+Não criar páginas falsas.
+
+---
+
+# 6. PAGE STRUCTURE
+
+Usar:
+
+AuthenticatedLayout
+→ PageHeader
+→ filtros
+→ resumo
+→ conteúdo analítico
+→ detalhes.
+
+---
+
+# 7. PAGE HEADER
+
+Título:
+
+Relatório financeiro
+
+Subtítulo sugerido:
+
+"Analise receitas, despesas e a evolução dos saldos das suas contas."
+
+Adapte ao padrão visual real.
+
+---
+
+# 8. NÃO CRIAR DESIGN SYSTEM PARALELO
+
+Reutilizar:
+
+spacing;
+typography;
+cards;
+buttons;
+inputs;
+selects;
+drawers;
+tables;
+empty states;
+loading states;
+error states.
+
+---
+
+# 9. FILTROS
+
+Criar área clara:
+
+Filtros do relatório.
+
+---
+
+# 10. PERÍODO
+
+Disponibilizar:
+
+Data inicial
+Data final
+
+ou Date Range component existente.
+
+---
+
+# 11. DEFAULT PERIOD
+
+Seguir ADR.
+
+Se definido como mês atual:
+
+usar mês atual.
+
+---
+
+# 12. NO SILENT TIMEZONE BUG
+
+Converter datas conforme contrato real da API.
+
+---
+
+# 13. OCCURRED AT
+
+O relatório é baseado em occurredAt.
+
+Frontend não precisa recalcular isso.
+
+---
+
+# 14. DATE-ONLY UX
+
+Se usuário seleciona datas sem hora:
+
+mapear corretamente para o intervalo definido pelo backend.
+
+---
+
+# 15. INTERVAL
+
+Se backend usa:
+
+[from, to)
+
+garantir que UX de "até 31/10" resulte no intervalo correto.
+
+Não excluir acidentalmente transações do último dia.
+
+---
+
+# 16. REUSE DATE STRATEGY
+
+Reutilizar helpers de data já comprovados no projeto.
+
+Não criar terceiro conversor de timezone.
+
+---
+
+# 17. ACCOUNT FILTER
+
+Criar seleção de contas.
+
+---
+
+# 18. MULTISELECT
+
+Deve permitir:
+
+- todas;
+- uma;
+- várias.
+
+---
+
+# 19. ACCOUNT DISPLAY
+
+Mostrar:
+
+nome da conta
+
+e, se necessário:
+
+tipo.
+
+Nunca UUID como label principal.
+
+---
+
+# 20. INACTIVE ACCOUNTS
+
+Se ADR permite contas inativas:
+
+elas devem estar disponíveis no filtro.
+
+---
+
+# 21. INACTIVE LABEL
+
+Indicar claramente:
+
+"Inativa"
+
+sem depender apenas de cor.
+
+---
+
+# 22. ALL ACCOUNTS
+
+Oferecer opção clara:
+
+Todas as contas.
+
+---
+
+# 23. ALL SEMANTICS
+
+Não enviar lista enorme de IDs se API define ausência de accountIds como
+"todas".
+
+Seguir contrato real.
+
+---
+
+# 24. SELECTED ACCOUNT IDS
+
+Nunca enviar:
+
+ownerId;
+userId;
+email.
+
+---
+
+# 25. APPLY FILTER
+
+Usar botão:
+
+Aplicar filtros
+
+conforme arquitetura da TASK-5.0.
+
+---
+
+# 26. MOTIVO
+
+Não disparar consultas financeiras pesadas a cada clique do multiselect.
+
+---
+
+# 27. RESET
+
+Adicionar:
+
+Restaurar filtros
+
+ou equivalente.
+
+---
+
+# 28. RESET DEFAULT
+
+Voltar para:
+
+período padrão;
+todas as contas.
+
+---
+
+# 29. APPLIED VS DRAFT FILTERS
+
+CRÍTICO.
+
+Diferenciar:
+
+filtros que usuário está editando
+
+de:
+
+filtros usados no relatório atualmente exibido.
+
+---
+
+# 30. EXEMPLO
+
+Usuário visualiza setembro.
+
+Muda Data inicial para outubro.
+
+Antes de clicar Aplicar:
+
+dados ainda representam setembro.
+
+A UI não deve fingir que representam outubro.
+
+---
+
+# 31. RECOMMENDATION
+
+Manter:
+
+draftFilters
+appliedFilters
+
+ou estratégia equivalente tipada.
+
+---
+
+# 32. FILTER VALIDATION
+
+Antes da request:
+
+validar período.
+
+---
+
+# 33. INVALID PERIOD
+
+Data inicial >= Data final:
+
+feedback claro.
+
+---
+
+# 34. NO REQUEST
+
+Não chamar backend com período obviamente inválido.
+
+---
+
+# 35. BACKEND AUTHORITY
+
+Backend continua validando.
+
+---
+
+# 36. FILTER URL STATE
+
+Se ADR aprovou query params:
+
+sincronizar filtros aplicados com URL.
+
+---
+
+# 37. SECURITY URL
+
+Nunca colocar:
+
+ownerId;
+JWT;
+dados privados desnecessários.
+
+---
+
+# 38. INITIAL LOAD
+
+Seguir decisão da arquitetura.
+
+Preferência:
+
+carregar relatório automaticamente com:
+
+mês atual;
+todas as contas.
+
+---
+
+# 39. LOADING
+
+Enquanto consulta inicial está carregando:
+
+não mostrar valores R$ 0,00 como se fossem reais.
+
+---
+
+# 40. SKELETON/SPINNER
+
+Usar padrão consolidado.
+
+---
+
+# 41. ERROR
+
+Erro de API:
+
+não mostrar zeros falsos.
+
+---
+
+# 42. ERROR STATE
+
+Exemplo:
+
+"Não foi possível carregar o relatório."
+
+Ação:
+
+"Tentar novamente".
+
+---
+
+# 43. RETRY
+
+Reutiliza appliedFilters.
+
+---
+
+# 44. 401
+
+Comportamento global.
+
+---
+
+# 45. 403
+
+Não limpar sessão.
+
+---
+
+# 46. 404
+
+Se conta deixou de existir/não está disponível:
+
+mostrar mensagem segura e permitir ajustar filtros.
+
+---
+
+# 47. 400
+
+Mostrar erro de filtros quando aplicável.
+
+---
+
+# 48. PROBLEM DETAILS
+
+Reutilizar infraestrutura existente.
+
+---
+
+# 49. REQUEST ID
+
+Preservar comportamento existente.
+
+---
+
+# 50. SUMMARY
+
+Criar seção principal do relatório.
+
+---
+
+# 51. CORE METRICS
+
+Exibir conforme DTO real:
+
+Saldo inicial;
+Receitas;
+Despesas;
+Resultado financeiro;
+Variação do saldo;
+Saldo final.
+
+---
+
+# 52. TRANSFER METRICS
+
+Exibir conforme ADR/API:
+
+Transferências internas;
+Transferências recebidas;
+Transferências enviadas
+
+ou nomenclatura real aprovada.
+
+---
+
+# 53. NÃO CHAMAR TRANSFERÊNCIA DE RECEITA
+
+Obrigatório.
+
+---
+
+# 54. NÃO CHAMAR TRANSFERÊNCIA DE DESPESA
+
+Obrigatório.
+
+---
+
+# 55. FINANCIAL RESULT
+
+Label:
+
+Resultado financeiro
+
+Valor:
+
+income - expense
+
+já fornecido pelo backend.
+
+---
+
+# 56. NÃO RECALCULAR
+
+Mesmo sendo simples:
+
+não criar uma segunda regra financeira no Angular.
+
+Exibir DTO.
+
+---
+
+# 57. BALANCE CHANGE
+
+Label:
+
+Variação do saldo
+
+---
+
+# 58. EXPLAIN DIFFERENCE
+
+Adicionar ajuda discreta.
+
+Exemplo:
+
+"Resultado financeiro considera receitas e despesas. A variação do saldo
+também considera transferências que entram ou saem das contas
+selecionadas."
+
+---
+
+# 59. TOOLTIP/HELP
+
+A explicação precisa ser acessível também por teclado/touch.
+
+Não depender exclusivamente de hover.
+
+---
+
+# 60. OPENING BALANCE
+
+Label:
+
+Saldo inicial
+
+Ajuda opcional:
+
+"Saldo das contas selecionadas no início do período."
+
+---
+
+# 61. CLOSING BALANCE
+
+Label:
+
+Saldo final
+
+Ajuda:
+
+"Saldo das contas selecionadas ao final do período."
+
+---
+
+# 62. CARD COUNT
+
+Não criar nove StatCards gigantes se prejudicar leitura.
+
+---
+
+# 63. VISUAL HIERARCHY
+
+Sugestão:
+
+Linha principal:
+
+Saldo inicial
+Receitas
+Despesas
+Saldo final
+
+Linha secundária/summary:
+
+Resultado financeiro
+Variação do saldo
+Transferências.
+
+Mas adaptar ao Design System e DTO real.
+
+---
+
+# 64. NO SEMANTIC COLOR ONLY
+
+Receita/despesa podem usar semântica visual existente.
+
+Mas texto/sinal deve deixar significado claro.
+
+---
+
+# 65. NEGATIVE VALUE
+
+Suportar:
+
+saldo inicial negativo;
+resultado negativo;
+variação negativa;
+saldo final negativo.
+
+---
+
+# 66. BRL
+
+Usar formatador monetário consolidado.
+
+---
+
+# 67. NO FLOAT CALCULATION
+
+Frontend apenas formata valores retornados.
+
+---
+
+# 68. DECIMAL STRING
+
+Se API serializa BigDecimal como number ou string:
+
+modelar corretamente conforme contrato real.
+
+---
+
+# 69. ACCOUNT BREAKDOWN
+
+Se TASK-5.1 implementou detalhamento por conta:
+
+mostrar.
+
+---
+
+# 70. SECTION
+
+Título sugerido:
+
+Saldos por conta
+
+---
+
+# 71. ACCOUNT BREAKDOWN CONTENT
+
+Conforme DTO real, mostrar:
+
+Conta;
+Saldo inicial;
+Entradas;
+Saídas;
+Transferências;
+Saldo final.
+
+---
+
+# 72. IMPORTANT
+
+Não reinterpretar transfer classification.
+
+Usar campos fornecidos.
+
+---
+
+# 73. DESKTOP
+
+Tabela pode ser adequada.
+
+---
+
+# 74. MOBILE
+
+Cards/lista.
+
+Não forçar tabela larga.
+
+---
+
+# 75. INACTIVE ACCOUNT IN BREAKDOWN
+
+Exibir estado se útil.
+
+---
+
+# 76. TOTAL
+
+Não somar client-side para substituir summary do backend.
+
+---
+
+# 77. DETAILS
+
+Se TASK-5.1 implementou detalhes paginados:
+
+criar seção:
+
+Movimentações do período.
+
+---
+
+# 78. IF NOT IMPLEMENTED
+
+Não inventar endpoint.
+
+Não montar detalhes juntando Expense/Income/Transfer no frontend.
+
+---
+
+# 79. DETAILS SOURCE
+
+Usar response/endpoint real do Financial Report.
+
+---
+
+# 80. LOGICAL TRANSACTION
+
+Transfer aparece uma vez.
+
+---
+
+# 81. TABLE DESKTOP
+
+Conforme contrato real, colunas podem incluir:
+
+Data;
+Descrição;
+Tipo;
+Conta/Origem-Destino;
+Categoria;
+Valor;
+Status.
+
+---
+
+# 82. TAGS
+
+Se DTO inclui:
+
+mostrar de forma compacta.
+
+---
+
+# 83. ATTACHMENT COUNT
+
+Se DTO inclui:
+
+pode mostrar indicador.
+
+---
+
+# 84. NÃO CARREGAR ATTACHMENTS
+
+Não fazer request por linha.
+
+---
+
+# 85. ATTACHMENT DOWNLOAD
+
+Não é objetivo principal desta tela.
+
+Se History component já oferece de forma limpa e ADR aprovou:
+
+pode reutilizar.
+
+Caso contrário:
+
+não implementar.
+
+---
+
+# 86. PAGINATION
+
+Usar backend.
+
+---
+
+# 87. PAGE CHANGE
+
+Não recalcular summary.
+
+---
+
+# 88. PAGE CHANGE REQUEST
+
+Se API composta exige nova request:
+
+summary recebido deve permanecer matematicamente idêntico.
+
+---
+
+# 89. FILTER CHANGE
+
+Ao aplicar novos filtros:
+
+reset page = 0.
+
+---
+
+# 90. PAGE SIZE
+
+Seguir padrões do projeto.
+
+---
+
+# 91. NO CLIENT PAGINATION
+
+Proibido.
+
+---
+
+# 92. NO CLIENT FILTERING
+
+Proibido para filtros financeiros.
+
+---
+
+# 93. ORDERING
+
+Usar ordem do backend.
+
+---
+
+# 94. NO FAKE SORT
+
+Não oferecer sort client-side se só ordena página atual.
+
+---
+
+# 95. EMPTY REPORT
+
+Distinguir duas situações:
+
+A) contas existem, mas nenhuma movimentação no período;
+B) usuário não possui contas.
+
+---
+
+# 96. NO MOVEMENTS
+
+Ainda pode haver:
+
+Saldo inicial;
+Saldo final.
+
+---
+
+# 97. CRITICAL
+
+"Sem movimentações" NÃO significa necessariamente:
+
+Saldo inicial = 0.
+
+---
+
+# 98. EXAMPLE
+
+Conta tem initialBalance 1000.
+
+Nenhuma movimentação no mês.
+
+Relatório:
+
+Saldo inicial = 1000
+Receitas = 0
+Despesas = 0
+Variação = 0
+Saldo final = 1000.
+
+---
+
+# 99. EMPTY TRANSACTION LIST
+
+Mostrar:
+
+"Nenhuma movimentação no período."
+
+Mas summary permanece visível.
+
+---
+
+# 100. NO ACCOUNTS
+
+Mostrar empty state:
+
+"Você ainda não possui contas para gerar este relatório."
+
+CTA:
+
+"Gerenciar contas"
+
+ou "Criar conta"
+
+conforme fluxo existente.
+
+---
+
+# 101. CHART
+
+Se ADR 5.0 aprovou gráfico para Financial Report:
+
+implementar somente se backend 5.1 fornece dados necessários.
+
+---
+
+# 102. NO CLIENT RECONSTRUCTION
+
+Não reconstruir histórico de saldos no frontend a partir das transactions
+se backend não fornece série.
+
+---
+
+# 103. IF SERIES EXISTS
+
+Título sugerido:
+
+Evolução do saldo
+
+---
+
+# 104. CHART
+
+Reutilizar infraestrutura ECharts já usada no Dashboard.
+
+---
+
+# 105. NO SECOND CHART LIBRARY
+
+Obrigatório.
+
+---
+
+# 106. CHART SEMANTICS
+
+Mostrar evolução do saldo agregado das contas selecionadas.
+
+---
+
+# 107. CHART TRANSFERS
+
+Transferências internas não alteram saldo agregado.
+
+Boundary transfers alteram.
+
+Backend deve refletir isso nos dados.
+
+---
+
+# 108. CHART ACCESSIBILITY
+
+Gráfico não pode ser única representação.
+
+---
+
+# 109. CHART EMPTY
+
+Sem dados suficientes:
+
+empty state real.
+
+---
+
+# 110. NO FAKE SERIES
+
+Obrigatório.
+
+---
+
+# 111. SERVICE
+
+Criar serviço tipado:
+
+FinancialReportService
+
+ou nome coerente.
+
+---
+
+# 112. MODELS
+
+Criar models/interfaces tipados conforme OpenAPI.
+
+---
+
+# 113. NO ANY
+
+Obrigatório.
+
+---
+
+# 114. REQUEST MODEL
+
+Tipar filtros.
+
+---
+
+# 115. RESPONSE MODEL
+
+Tipar summary e details.
+
+---
+
+# 116. NO BUSINESS CALCULATION SERVICE
+
+Não criar no Angular:
+
+FinancialCalculatorService.
+
+---
+
+# 117. SERVER AUTHORITY
+
+Todos os totais vêm do backend.
+
+---
+
+# 118. SHARED REPORT FILTERS
+
+Pode criar componente reutilizável:
+
+ReportFiltersComponent
+
+SOMENTE se a abstração já for claramente útil para:
+
+Financial;
+Category;
+Audit.
+
+---
+
+# 119. MINIMUM SHARED SCOPE
+
+Period + Account multiselect.
+
+---
+
+# 120. DO NOT OVERGENERALIZE
+
+Não criar:
+
+DynamicReportFilter;
+ReportSchema;
+ReportConfigEngine.
+
+---
+
+# 121. RECOMMENDATION
+
+Uma implementação simples e reutilizável de:
+
+period + accounts + apply/reset
+
+é suficiente.
+
+---
+
+# 122. ACCOUNT DATA
+
+Usar AssetAccountService existente.
+
+---
+
+# 123. INCLUDE INACTIVE
+
+Se filtro precisa delas:
+
+usar endpoint existente com includeInactive=true.
+
+---
+
+# 124. NO NEW ACCOUNT ENDPOINT
+
+Não criar backend só para popular dropdown, salvo blocker comprovado.
+
+---
+
+# 125. REQUEST EFFICIENCY
+
+Carregar contas uma vez por entrada na página.
+
+---
+
+# 126. REPORT REQUEST
+
+Uma request por Apply, salvo arquitetura real exigir summary/details
+separados.
+
+---
+
+# 127. REQUEST RACE
+
+CRÍTICO.
+
+Se usuário aplicar filtros rapidamente:
+
+resposta antiga não pode sobrescrever nova.
+
+---
+
+# 128. RXJS
+
+Usar switchMap/cancelamento ou estratégia equivalente.
+
+---
+
+# 129. DESTROY
+
+Não deixar subscriptions vazarem.
+
+Usar padrão Angular atual.
+
+---
+
+# 130. LOADING RACE
+
+Estado loading deve corresponder à request atual.
+
+---
+
+# 131. URL QUERY PARAMS
+
+Se implementados:
+
+navegação back/forward deve restaurar appliedFilters corretamente.
+
+---
+
+# 132. INVALID URL PARAMS
+
+Não quebrar página.
+
+Normalizar/rejeitar de forma segura.
+
+---
+
+# 133. ACCESSIBILITY — FILTERS
+
+Todos inputs possuem labels.
+
+---
+
+# 134. MULTISELECT
+
+Operável por teclado.
+
+---
+
+# 135. APPLY BUTTON
+
+Nome acessível.
+
+---
+
+# 136. LOADING
+
+Anunciável quando apropriado.
+
+---
+
+# 137. ERROR
+
+Anunciável.
+
+---
+
+# 138. SUMMARY
+
+Cards precisam ter label + valor compreensíveis por screen reader.
+
+---
+
+# 139. HELP
+
+Tooltips/explicações acessíveis por teclado.
+
+---
+
+# 140. TABLE
+
+Headers semânticos.
+
+---
+
+# 141. MOBILE CARDS
+
+Ordem de leitura lógica.
+
+---
+
+# 142. FOCUS
+
+Após erro de filtro:
+
+foco adequado.
+
+---
+
+# 143. RESPONSIVE
+
+Validar:
+
+360 × 800
+390 × 844
+768 × 1024
+1024 × 768
+1280 × 720
+1366 × 768
+1920 × 1080.
+
+---
+
+# 144. 360PX
+
+Obrigatório:
+
+- filtros utilizáveis;
+- cards sem overflow;
+- valores monetários legíveis;
+- account multiselect utilizável;
+- detalhes utilizáveis;
+- nenhum scroll horizontal global.
+
+---
+
+# 145. LARGE MONEY
+
+Testar:
+
+R$ 9.999.999.999,99
+
+sem destruir layout.
+
+---
+
+# 146. LONG ACCOUNT NAME
+
+Testar nome longo.
+
+---
+
+# 147. MANY ACCOUNTS
+
+Multiselect continua utilizável.
+
+---
+
+# 148. MANY SELECTED
+
+Não deixar chips expandirem página indefinidamente.
+
+Pode resumir:
+
+"5 contas selecionadas".
+
+---
+
+# 149. TEST — SERVICE
+
+Request sem accountIds:
+
+contrato correto para todas.
+
+---
+
+# 150. TEST — SINGLE ACCOUNT
+
+ID correto.
+
+---
+
+# 151. TEST — MULTIPLE ACCOUNTS
+
+IDs corretos.
+
+---
+
+# 152. TEST — PERIOD
+
+Serialização correta.
+
+---
+
+# 153. TEST — RESPONSE
+
+DTO tipado.
+
+---
+
+# 154. TEST — DEFAULT FILTER
+
+Período padrão correto.
+
+---
+
+# 155. TEST — APPLY
+
+Só filtros aplicados alteram relatório.
+
+---
+
+# 156. TEST — DRAFT
+
+Editar filtro sem Apply:
+
+não altera relatório exibido.
+
+---
+
+# 157. TEST — RESET
+
+Restaura defaults.
+
+---
+
+# 158. TEST — INVALID PERIOD
+
+Sem request.
+
+Erro visível.
+
+---
+
+# 159. TEST — LOADING
+
+Não exibe zeros falsos.
+
+---
+
+# 160. TEST — ERROR
+
+Não exibe summary antigo como se fosse do novo filtro sem indicação.
+
+---
+
+# 161. STALE DATA POLICY
+
+Durante reload, escolher explicitamente:
+
+A) esconder dados anteriores;
+
+ou
+
+B) manter dados anteriores com indicador "Atualizando".
+
+Preferência:
+
+manter se não gerar confusão.
+
+Mas appliedFilters exibidos devem corresponder aos dados.
+
+---
+
+# 162. TEST — RETRY
+
+Usa filtros aplicados.
+
+---
+
+# 163. TEST — SUMMARY
+
+Renderiza exatamente valores da API.
+
+---
+
+# 164. TEST — NO RECALCULATION
+
+Fornecer response propositalmente com:
+
+income = 100
+expense = 30
+financialResult = 999
+
+UI deve mostrar:
+
+999
+
+se contrato diz que backend é autoridade.
+
+Esse teste evita cálculo paralelo.
+
+---
+
+# 165. OBSERVAÇÃO
+
+O backend obviamente deveria nunca retornar 999 nesse cenário real.
+
+Este é apenas teste de responsabilidade arquitetural do frontend.
+
+---
+
+# 166. TEST — NEGATIVE
+
+Resultado negativo renderiza corretamente.
+
+---
+
+# 167. TEST — TRANSFERS
+
+Internal/incoming/outgoing labels corretos.
+
+---
+
+# 168. TEST — NO TRANSFER AS INCOME
+
+PASS obrigatório.
+
+---
+
+# 169. TEST — NO TRANSFER AS EXPENSE
+
+PASS obrigatório.
+
+---
+
+# 170. TEST — EMPTY MOVEMENTS
+
+Summary permanece.
+
+---
+
+# 171. TEST — NO ACCOUNTS
+
+Empty state correto.
+
+---
+
+# 172. TEST — ACCOUNT BREAKDOWN
+
+Se implementado:
+
+renderização correta.
+
+---
+
+# 173. TEST — DETAILS
+
+Se implementado:
+
+pagination server-side.
+
+---
+
+# 174. TEST — TRANSFER ONCE
+
+Uma linha.
+
+---
+
+# 175. TEST — CHART
+
+Somente se API fornece série.
+
+---
+
+# 176. E2E GOLDEN SCENARIO
+
+Reproduzir cenário da TASK-5.1:
+
+A initial:
+1000
+
+B initial:
+500
+
+C initial:
+200
+
+Antes do período:
+
+Income A:
+100
+
+No período:
+
+Income A:
+700
+
+Expense A:
+200
+
+Transfer A → B:
+300
+
+Transfer C → A:
+50.
+
+---
+
+# 177. E2E — ALL ACCOUNTS
+
+Esperado na UI:
+
+Saldo inicial:
+R$ 1.800,00
+
+Receitas:
+R$ 700,00
+
+Despesas:
+R$ 200,00
+
+Resultado financeiro:
+R$ 500,00
+
+Transferências internas:
+R$ 350,00
+
+Transferências recebidas da fronteira:
+R$ 0,00
+
+Transferências enviadas da fronteira:
+R$ 0,00
+
+Variação do saldo:
+R$ 500,00
+
+Saldo final:
+R$ 2.300,00.
+
+Usar nomenclatura real do ADR/UI.
+
+---
+
+# 178. E2E — A ONLY
+
+Esperado:
+
+Saldo inicial:
+R$ 1.100,00
+
+Receitas:
+R$ 700,00
+
+Despesas:
+R$ 200,00
+
+Resultado financeiro:
+R$ 500,00
+
+Transferências recebidas:
+R$ 50,00
+
+Transferências enviadas:
+R$ 300,00
+
+Variação:
+R$ 250,00
+
+Saldo final:
+R$ 1.350,00.
+
+---
+
+# 179. E2E — A+B
+
+Esperado:
+
+Saldo inicial:
+R$ 1.600,00
+
+Receitas:
+R$ 700,00
+
+Despesas:
+R$ 200,00
+
+Transferências internas:
+R$ 300,00
+
+Transferências recebidas:
+R$ 50,00
+
+Transferências enviadas:
+R$ 0,00
+
+Resultado:
+R$ 500,00
+
+Variação:
+R$ 550,00
+
+Saldo final:
+R$ 2.150,00.
+
+---
+
+# 180. E2E — B ONLY
+
+Saldo inicial:
+R$ 500,00
+
+Receitas:
+R$ 0,00
+
+Despesas:
+R$ 0,00
+
+Resultado:
+R$ 0,00
+
+Recebidas:
+R$ 300,00
+
+Variação:
+R$ 300,00
+
+Saldo final:
+R$ 800,00.
+
+---
+
+# 181. E2E — C ONLY
+
+Saldo inicial:
+R$ 200,00
+
+Enviadas:
+R$ 50,00
+
+Variação:
+-R$ 50,00
+
+Saldo final:
+R$ 150,00.
+
+---
+
+# 182. UI INVARIANT DISPLAY
+
+Não precisa mostrar equação matematicamente o tempo inteiro.
+
+Mas os números devem reconciliar:
+
+Saldo final
+=
+Saldo inicial
++
+Variação do saldo.
+
+---
+
+# 183. HELP TEXT
+
+Pode explicar isso discretamente no relatório.
+
+---
+
+# 184. CANCELLED E2E
+
+Adicionar Expense cancelada 999.
+
+Não aparece nos totals ativos conforme ADR.
+
+---
+
+# 185. TAG E2E
+
+Adicionar Tags:
+
+totals não mudam.
+
+---
+
+# 186. ATTACHMENT E2E
+
+Adicionar Attachments:
+
+totals não mudam.
+
+---
+
+# 187. USER B E2E
+
+Dados de B:
+
+nunca aparecem.
+
+---
+
+# 188. BACKEND CHANGES
+
+Esperado:
+
+NENHUMA.
+
+---
+
+# 189. BLOCKER RULE
+
+Se API 5.1 não fornece dado indispensável definido no ADR:
+
+NÃO inventar cálculo financeiro no Angular.
+
+Parar e reportar:
+
+BLOCKED
+
+com:
+
+- dado faltante;
+- endpoint/DTO afetado;
+- impacto;
+- menor correção backend necessária.
+
+---
+
+# 190. BUG RULE
+
+Se backend retornar cálculo comprovadamente incorreto:
+
+não mascarar no frontend.
+
+Criar teste/reprodução e corrigir origem somente se necessário para
+desbloquear esta TASK.
+
+Documentar.
+
+---
+
+# 191. NO EXPORT
+
+Não implementar:
+
+PDF;
+CSV;
+XLSX;
+print report.
+
+---
+
+# 192. NO CATEGORY REPORT
+
+Não implementar.
+
+---
+
+# 193. NO AUDIT REPORT
+
+Não implementar.
+
+---
+
+# 194. NO CUSTOM REPORT BUILDER
+
+Não implementar.
+
+---
+
+# 195. NO SAVED FILTERS
+
+Não implementar.
+
+---
+
+# 196. NO SCHEDULED REPORT
+
+Não implementar.
+
+---
+
+# 197. NO EMAIL REPORT
+
+Não implementar.
+
+---
+
+# 198. NO REPORT SHARING
+
+Não implementar.
+
+---
+
+# 199. DEFINITION OF DONE
+
+TASK-5.2 estará concluída quando:
+
+- rota privada existir;
+- menu Relatórios → Financeiro funcionar;
+- Design System for reutilizado;
+- período puder ser selecionado;
+- default estiver correto;
+- uma conta puder ser selecionada;
+- várias contas puderem ser selecionadas;
+- todas as contas puderem ser selecionadas;
+- contas inativas seguirem ADR;
+- draft/applied filters estiverem corretos;
+- Aplicar filtros funcionar;
+- Restaurar funcionar;
+- período inválido for tratado;
+- loading não mostrar zeros falsos;
+- error não mostrar zeros falsos;
+- retry funcionar;
+- Saldo inicial vier do backend;
+- Receitas vierem do backend;
+- Despesas vierem do backend;
+- Resultado financeiro vier do backend;
+- transferências forem exibidas separadamente;
+- Transfer nunca aparecer como Income/Expense;
+- Variação do saldo vier do backend;
+- Saldo final vier do backend;
+- frontend não recalcular regra financeira;
+- valores negativos funcionarem;
+- BRL estiver correto;
+- account breakdown funcionar se API oferecer;
+- details funcionar se API oferecer;
+- pagination for server-side se existir;
+- Transfer aparecer uma vez;
+- chart só existir se backend fornecer dados;
+- nenhum fake data existir;
+- nenhuma request N+1 de Attachments existir;
+- nenhum ownerId for enviado;
+- auth continuar correta;
+- Problem Details funcionar;
+- Request ID continuar preservado;
+- 360px funcionar;
+- acessibilidade funcionar;
+- unit tests passarem;
+- E2E Golden Scenario passar se E2E estiver configurado;
+- lint passar;
+- production build passar;
+- regressões das telas anteriores passarem.
+
+---
+
+# 200. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-5.2 — INTERFACE DO RELATÓRIO FINANCEIRO
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+## 1. Route
+
+Path:
+
+Private:
+PASS / FAIL
+
+## 2. Navigation
+
+Relatórios:
+PASS / FAIL
+
+Financeiro:
+PASS / FAIL
+
+## 3. API
+
+Method:
+
+Path:
+
+Typed:
+PASS / FAIL
+
+## 4. Filters
+
+Period:
+PASS / FAIL
+
+Single account:
+PASS / FAIL
+
+Multiple accounts:
+PASS / FAIL
+
+All accounts:
+PASS / FAIL
+
+Inactive accounts:
+PASS / FAIL
+
+Apply:
+PASS / FAIL
+
+Reset:
+PASS / FAIL
+
+Draft vs Applied:
+PASS / FAIL
+
+## 5. Period
+
+Default:
+
+Validation:
+PASS / FAIL
+
+Timezone:
+PASS / FAIL
+
+Boundary:
+PASS / FAIL
+
+## 6. Summary
+
+Opening Balance:
+PASS / FAIL
+
+Income:
+PASS / FAIL
+
+Expense:
+PASS / FAIL
+
+Financial Result:
+PASS / FAIL
+
+Balance Change:
+PASS / FAIL
+
+Closing Balance:
+PASS / FAIL
+
+## 7. Transfers
+
+Internal:
+PASS / FAIL
+
+Incoming Boundary:
+PASS / FAIL
+
+Outgoing Boundary:
+PASS / FAIL
+
+Displayed as Income:
+YES / NO
+
+Expected:
+NO
+
+Displayed as Expense:
+YES / NO
+
+Expected:
+NO
+
+## 8. Frontend Financial Calculations
+
+Business calculations performed:
+YES / NO
+
+Expected:
+NO
+
+Backend values displayed directly:
+PASS / FAIL
+
+## 9. Account Breakdown
+
+Implemented:
+YES / NO / NOT IN API
+
+Desktop:
+PASS / FAIL / N/A
+
+Mobile:
+PASS / FAIL / N/A
+
+## 10. Details
+
+Implemented:
+YES / NO / NOT IN API
+
+Server pagination:
+PASS / FAIL / N/A
+
+Transfer once:
+PASS / FAIL / N/A
+
+## 11. Chart
+
+Implemented:
+YES / NO
+
+Backend series:
+YES / NO / N/A
+
+Fake series:
+YES / NO
+
+Expected:
+NO
+
+## 12. States
+
+Initial:
+PASS / FAIL
+
+Loading:
+PASS / FAIL
+
+Success:
+PASS / FAIL
+
+No movements:
+PASS / FAIL
+
+No accounts:
+PASS / FAIL
+
+Error:
+PASS / FAIL
+
+Retry:
+PASS / FAIL
+
+## 13. Problem Details
+
+PASS / FAIL
+
+## 14. Authentication
+
+401:
+PASS / FAIL
+
+403:
+PASS / FAIL
+
+ownerId sent:
+YES / NO
+
+Expected:
+NO
+
+## 15. Accessibility
+
+Labels:
+PASS / FAIL
+
+Keyboard:
+PASS / FAIL
+
+Multiselect:
+PASS / FAIL
+
+Help:
+PASS / FAIL
+
+Tables:
+PASS / FAIL / N/A
+
+Focus:
+PASS / FAIL
+
+## 16. Responsive
+
+360 × 800:
+PASS / FAIL
+
+390 × 844:
+PASS / FAIL
+
+768 × 1024:
+PASS / FAIL
+
+1024 × 768:
+PASS / FAIL
+
+1280 × 720:
+PASS / FAIL
+
+1366 × 768:
+PASS / FAIL
+
+1920 × 1080:
+PASS / FAIL
+
+## 17. Golden Scenario — All Accounts
+
+Opening:
+resultado
+
+Income:
+resultado
+
+Expense:
+resultado
+
+Financial Result:
+resultado
+
+Internal Transfers:
+resultado
+
+Incoming:
+resultado
+
+Outgoing:
+resultado
+
+Balance Change:
+resultado
+
+Closing:
+resultado
+
+PASS / FAIL
+
+## 18. Golden Scenario — A Only
+
+Opening:
+resultado
+
+Income:
+resultado
+
+Expense:
+resultado
+
+Incoming:
+resultado
+
+Outgoing:
+resultado
+
+Balance Change:
+resultado
+
+Closing:
+resultado
+
+PASS / FAIL
+
+## 19. Golden Scenario — A+B
+
+Opening:
+resultado
+
+Internal:
+resultado
+
+Incoming:
+resultado
+
+Outgoing:
+resultado
+
+Closing:
+resultado
+
+PASS / FAIL
+
+## 20. Regressions
+
+Dashboard:
+PASS / FAIL
+
+Accounts:
+PASS / FAIL
+
+Categories:
+PASS / FAIL
+
+Tags:
+PASS / FAIL
+
+Expenses:
+PASS / FAIL
+
+Income:
+PASS / FAIL
+
+Transfers:
+PASS / FAIL
+
+History:
+PASS / FAIL
+
+Attachments:
+PASS / FAIL
+
+## 21. Tests
+
+Service:
+PASS / FAIL
+
+Component:
+PASS / FAIL
+
+Integration:
+PASS / FAIL
+
+E2E:
+PASS / FAIL / NÃO CONFIGURADO
+
+## 22. Builds
+
+Lint:
+PASS / FAIL
+
+Frontend tests:
+PASS / FAIL
+
+Production build:
+PASS / FAIL
+
+Backend regression:
+PASS / FAIL
+
+## 23. Backend Changes
+
+Expected:
+NONE
+
+Actual:
+
+## 24. Files
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 25. Bugs Found
+
+Para cada:
+
+Severity:
+Problem:
+Root cause:
+Fix:
+Regression test:
+
+## 26. Divergences
+
+Expected:
+NONE
+
+## 27. Out of Scope Confirmed
+
+Category Report:
+NOT IMPLEMENTED
+
+Audit Report:
+NOT IMPLEMENTED
+
+PDF:
+NOT IMPLEMENTED
+
+CSV:
+NOT IMPLEMENTED
+
+XLSX:
+NOT IMPLEMENTED
+
+Saved Reports:
+NOT IMPLEMENTED
+
+Scheduled Reports:
+NOT IMPLEMENTED
+
+## 28. Next Task
+
+Se TASK-5.2 estiver concluída:
+
+READY FOR:
+
+# TASK-5.3 — Backend do Relatório por Categoria
+
+NÃO implementar TASK-5.3 nesta execução.

@@ -1,0 +1,2539 @@
+# TASK-5.0 — Arquitetura e Regras dos Relatórios Financeiros
+
+Estamos iniciando:
+
+# SPRINT 5 — RELATÓRIOS FINANCEIROS
+
+A Sprint 4 foi oficialmente:
+
+APROVADA.
+
+As fundações das Sprints anteriores devem ser consideradas estáveis.
+
+Especialmente:
+
+- autenticação;
+- isolamento multiusuário;
+- Asset Accounts;
+- Categories;
+- FinancialTransaction;
+- AccountMovement / ledger;
+- Expense;
+- Income;
+- Transfer;
+- cancellation;
+- currentBalance;
+- netWorth;
+- Dashboard;
+- History;
+- Tags;
+- Transaction ↔ Tags;
+- Attachments;
+- secure attachment storage.
+
+Não alterar essas fundações sem bug comprovado.
+
+---
+
+# OBJETIVO DA SPRINT 5
+
+Implementar os relatórios originalmente previstos para o Equilibra:
+
+1. Relatório Financeiro;
+2. Relatório por Categoria;
+3. Relatório de Auditoria.
+
+Todos devem permitir filtragem por:
+
+- período;
+- uma ou mais contas de ativo;
+
+e demais filtros específicos quando fizerem sentido.
+
+---
+
+# ROADMAP PROPOSTO
+
+TASK-5.0
+Arquitetura e Regras dos Relatórios Financeiros
+
+TASK-5.1
+Backend — Relatório Financeiro
+
+TASK-5.2
+Frontend — Relatório Financeiro
+
+TASK-5.3
+Backend — Relatório por Categoria
+
+TASK-5.4
+Frontend — Relatório por Categoria
+
+TASK-5.5
+Backend — Relatório de Auditoria
+
+TASK-5.6
+Frontend — Relatório de Auditoria
+
+TASK-5.7
+Exportação dos Relatórios
+
+TASK-5.8
+Gate de Qualidade e Consistência Financeira da Sprint 5
+
+NÃO implementar as tasks 5.1+ nesta execução.
+
+---
+
+# TASK-5.0
+
+Esta é uma TASK DE ARQUITETURA.
+
+Não implementar ainda:
+
+- controllers de relatório;
+- páginas Angular de relatório;
+- PDF;
+- CSV;
+- Excel;
+- gráficos novos;
+- exportação;
+- consultas finais dos relatórios.
+
+O objetivo é produzir um ADR executável para as próximas tasks.
+
+---
+
+# 1. FONTE DE VERDADE
+
+Antes de propor arquitetura, leia obrigatoriamente:
+
+- CLAUDE.md;
+- ADR do ledger da Sprint 3;
+- relatório final/gate da Sprint 3;
+- ADR da Sprint 4;
+- relatório final/gate da Sprint 4;
+- FinancialTransaction;
+- AccountMovement;
+- AssetAccount;
+- Category;
+- Tag;
+- TransactionAttachment;
+- Expense;
+- Income;
+- Transfer;
+- cancellation;
+- current balance query;
+- net worth query;
+- Dashboard query;
+- History query;
+- migrations;
+- índices;
+- OpenAPI;
+- testes financeiros;
+- testes de isolamento multiusuário.
+
+O código real é fonte de verdade.
+
+Não invente uma segunda definição de:
+
+saldo;
+receita;
+despesa;
+transferência;
+patrimônio.
+
+---
+
+# 2. PRE-ARCHITECTURE REPORT
+
+Antes de escrever o ADR, produza:
+
+# TASK-5.0 — PRE-ARCHITECTURE REPORT
+
+## Ledger
+
+Explique o modelo real.
+
+## FinancialTransaction
+
+Explique tipos e status.
+
+## AccountMovement
+
+Explique sinais e relacionamento.
+
+## Current Balance
+
+Explique cálculo real.
+
+## Dashboard
+
+Explique cálculo atual de:
+
+Entradas;
+Saídas;
+Saldo;
+Patrimônio.
+
+## History
+
+Explique query/read model atual.
+
+## Category
+
+Explique applicability.
+
+## Tags
+
+Explique associação.
+
+## Attachments
+
+Explique relação.
+
+## Period Semantics
+
+Explique política atual de occurredAt/timezone.
+
+## Ownership
+
+Explique CurrentUser/owner scoping.
+
+## Performance
+
+Liste queries/read models potencialmente reutilizáveis.
+
+## Existing Indexes
+
+Liste índices relevantes.
+
+## Risks
+
+Liste riscos de duplicação de regra financeira.
+
+Depois produza o ADR.
+
+---
+
+# 3. PRINCÍPIO ARQUITETURAL
+
+Relatórios são READ MODELS.
+
+Eles NÃO são nova fonte de verdade financeira.
+
+---
+
+# 4. SOURCE OF TRUTH
+
+Fonte de verdade continua sendo:
+
+FinancialTransaction
++
+AccountMovement
++
+initialBalance
+
+conforme arquitetura aprovada.
+
+---
+
+# 5. NÃO PERSISTIR TOTAL DE RELATÓRIO
+
+Não criar tabelas como:
+
+monthly_income_total;
+expense_report_total;
+category_total;
+report_balance.
+
+---
+
+# 6. NÃO CRIAR SEGUNDO LEDGER
+
+Proibido duplicar movimentos para facilitar relatórios.
+
+---
+
+# 7. NÃO RECALCULAR REGRAS DIFERENTES
+
+Dashboard e Reports devem concordar para o mesmo escopo.
+
+---
+
+# 8. RELATÓRIO FINANCEIRO — OBJETIVO
+
+Definir arquitetura para relatório que permita analisar, em determinado
+período e conjunto de contas:
+
+- saldo inicial;
+- receitas;
+- despesas;
+- transferências;
+- saldo final;
+- evolução financeira;
+- movimentações.
+
+---
+
+# 9. FILTRO DE PERÍODO
+
+Obrigatório.
+
+Definir contrato.
+
+Preferência conceitual:
+
+from
+to
+
+---
+
+# 10. SEMÂNTICA TEMPORAL
+
+Usar:
+
+occurredAt.
+
+Nunca:
+
+createdAt
+
+para competência financeira.
+
+---
+
+# 11. INTERVALO
+
+Reutilizar política consolidada.
+
+Preferência:
+
+[from, to)
+
+Não criar semântica diferente do Dashboard/History.
+
+---
+
+# 12. TIMEZONE
+
+Documentar explicitamente:
+
+- timezone armazenado;
+- timezone interpretado;
+- frontend → backend;
+- boundary de dia.
+
+Não inventar timezone novo.
+
+---
+
+# 13. MULTIPLE ACCOUNTS
+
+Relatórios devem aceitar:
+
+uma;
+várias;
+todas as contas do usuário.
+
+---
+
+# 14. ACCOUNT IDS
+
+Cliente pode enviar apenas:
+
+accountIds.
+
+Nunca:
+
+ownerId.
+
+---
+
+# 15. OWNERSHIP
+
+Todos accountIds precisam pertencer ao CurrentUser.
+
+---
+
+# 16. FOREIGN ACCOUNT ID
+
+User A envia accountId de User B.
+
+Definir resposta segura consistente com política existente.
+
+Preferência:
+
+404.
+
+---
+
+# 17. DUPLICATE ACCOUNT IDS
+
+Definir comportamento.
+
+Preferência:
+
+normalizar/deduplicar IDs
+
+ou rejeitar deterministicamente.
+
+Documentar.
+
+---
+
+# 18. EMPTY ACCOUNT FILTER
+
+Definir claramente.
+
+Recomendação:
+
+nenhum accountId informado
+=
+todas as contas elegíveis do CurrentUser.
+
+Não usar:
+
+empty list = zero contas
+
+sem necessidade.
+
+---
+
+# 19. INACTIVE ACCOUNTS
+
+CRÍTICO.
+
+Relatórios históricos precisam poder considerar contas inativas.
+
+Definir política.
+
+---
+
+# 20. RECOMENDAÇÃO
+
+Filtros de relatório devem poder selecionar:
+
+contas ativas e inativas próprias.
+
+---
+
+# 21. MOTIVO
+
+Desativar conta não deve apagar histórico financeiro.
+
+---
+
+# 22. CURRENT NET WORTH
+
+Separar claramente:
+
+posição atual
+
+de
+
+fluxo no período.
+
+---
+
+# 23. REPORT OPENING BALANCE
+
+Definir:
+
+saldo da conta imediatamente antes de `from`.
+
+---
+
+# 24. FORMULA
+
+Conceitualmente:
+
+openingBalance(account, from) =
+initialBalance
++ soma dos movimentos ACTIVE anteriores a from.
+
+Adapte ao ledger real.
+
+---
+
+# 25. REPORT CLOSING BALANCE
+
+Conceitualmente:
+
+closingBalance =
+openingBalance
++ movimentos financeiros ACTIVE dentro do período.
+
+---
+
+# 26. INITIAL BALANCE
+
+initialBalance não é uma Income.
+
+---
+
+# 27. IMPORTANTE
+
+Não incluir initialBalance em:
+
+Receitas.
+
+---
+
+# 28. RECEITAS
+
+Definir:
+
+ACTIVE INCOME no período.
+
+---
+
+# 29. DESPESAS
+
+Definir:
+
+ACTIVE EXPENSE no período.
+
+---
+
+# 30. CANCELLED
+
+CANCELLED:
+
+efeito financeiro = 0.
+
+---
+
+# 31. TRANSFER
+
+CRÍTICO.
+
+Transferência não é:
+
+Receita.
+
+Transferência não é:
+
+Despesa.
+
+---
+
+# 32. GLOBAL REPORT
+
+Quando source e destination estão ambas dentro do conjunto selecionado:
+
+transfer é movimento interno.
+
+Efeito líquido agregado:
+
+0.
+
+---
+
+# 33. PARTIAL ACCOUNT FILTER
+
+Caso importante:
+
+Accounts selecionadas:
+A
+
+Transfer:
+A → B
+
+B não selecionada.
+
+Do ponto de vista do conjunto A:
+
+há saída de caixa do conjunto selecionado.
+
+---
+
+# 34. MAS NÃO É EXPENSE
+
+Mesmo nesse caso:
+
+não classificar como Expense.
+
+---
+
+# 35. TRANSFER FLOW
+
+ADR deve decidir representação separada:
+
+Transferências de entrada
+Transferências de saída
+
+quando cruzam a fronteira do conjunto selecionado.
+
+---
+
+# 36. INTERNAL TRANSFER
+
+Se:
+
+source ∈ selected
+AND
+destination ∈ selected
+
+classificar como:
+
+internal transfer.
+
+---
+
+# 37. OUTGOING TRANSFER
+
+source ∈ selected
+destination ∉ selected
+
+classificar:
+
+outgoing transfer.
+
+---
+
+# 38. INCOMING TRANSFER
+
+source ∉ selected
+destination ∈ selected
+
+classificar:
+
+incoming transfer.
+
+---
+
+# 39. NET MOVEMENT
+
+Definir métrica.
+
+Conceitualmente:
+
+netMovement =
+income
+- expense
++ incomingExternalTransfer
+- outgoingExternalTransfer.
+
+---
+
+# 40. INTERNAL TRANSFER
+
+Contribuição ao netMovement agregado:
+
+0.
+
+---
+
+# 41. FINANCIAL RESULT
+
+Separar:
+
+resultado financeiro
+
+de:
+
+variação do saldo das contas selecionadas.
+
+---
+
+# 42. RECOMENDAÇÃO
+
+Resultado financeiro:
+
+income - expense.
+
+---
+
+# 43. BALANCE CHANGE
+
+Variação do saldo:
+
+income
+- expense
++ incoming transfers across selection boundary
+- outgoing transfers across selection boundary.
+
+---
+
+# 44. MOTIVO
+
+Isso evita chamar transferência de receita/despesa.
+
+---
+
+# 45. ADR DEVE NOMEAR ESSAS MÉTRICAS
+
+Evitar nomes ambíguos.
+
+---
+
+# 46. STANDARD FINANCIAL REPORT
+
+Propor estrutura conceitual.
+
+Exemplo:
+
+Period
+Selected Accounts
+
+Opening Balance
+
+Income
+Expense
+
+Financial Result
+
+Incoming Transfers
+Outgoing Transfers
+Internal Transfers
+
+Net Balance Change
+
+Closing Balance
+
+---
+
+# 47. VALIDATION EQUATION
+
+ADR deve definir equação verificável:
+
+closingBalance
+=
+openingBalance
++
+income
+-
+expense
++
+incomingBoundaryTransfers
+-
+outgoingBoundaryTransfers.
+
+Internal transfers = 0 agregado.
+
+---
+
+# 48. REPORT TRANSACTION DETAIL
+
+Definir se relatório financeiro terá seção/lista de movimentações.
+
+Recomendação:
+
+sim.
+
+---
+
+# 49. LOGICAL TRANSACTIONS
+
+Detalhamento deve usar:
+
+FinancialTransaction lógica.
+
+---
+
+# 50. TRANSFER ONCE
+
+Transfer aparece uma vez.
+
+---
+
+# 51. NÃO MOSTRAR ACCOUNT MOVEMENT COMO TRANSAÇÃO DUPLICADA
+
+Movements são mecanismo do ledger.
+
+---
+
+# 52. REPORT BY CATEGORY — OBJECTIVE
+
+Agrupar:
+
+Income e Expense
+
+por Category.
+
+---
+
+# 53. TRANSFER CATEGORY
+
+CRÍTICO.
+
+Seguir decisão existente do ADR sobre Category em Transfer.
+
+---
+
+# 54. NÃO INVENTAR
+
+Se Transfer não possui Category compatível:
+
+não forçar.
+
+---
+
+# 55. CATEGORY TOTALS
+
+Para Expense:
+
+somar despesas por categoria.
+
+Para Income:
+
+somar receitas por categoria.
+
+---
+
+# 56. CATEGORY DIRECTION
+
+Não misturar automaticamente:
+
+Income 100
+Expense 100
+
+em:
+
+Category total = 0
+
+sem mostrar composição.
+
+---
+
+# 57. RECOMENDAÇÃO
+
+Por categoria:
+
+incomeTotal;
+expenseTotal;
+netResult.
+
+---
+
+# 58. NET RESULT
+
+incomeTotal - expenseTotal.
+
+---
+
+# 59. BOTH CATEGORY
+
+CategoryApplicability.BOTH:
+
+pode possuir Income e Expense.
+
+Mostrar ambos separadamente.
+
+---
+
+# 60. EXPENSE CATEGORY
+
+Somente despesas historicamente válidas.
+
+---
+
+# 61. INCOME CATEGORY
+
+Somente receitas historicamente válidas.
+
+---
+
+# 62. INACTIVE CATEGORY
+
+Continua no relatório histórico.
+
+---
+
+# 63. CATEGORY RENAME
+
+Relatório usa nome atual da Category, salvo se arquitetura existente
+implementa snapshot histórico.
+
+Não inventar snapshot.
+
+---
+
+# 64. NO CATEGORY
+
+Decidir se transações podem existir sem Category.
+
+Se sim:
+
+grupo:
+
+"Sem categoria".
+
+Se Category é obrigatória:
+
+documentar que grupo não ocorre.
+
+---
+
+# 65. CATEGORY FILTER
+
+Definir se relatório por categoria permite selecionar uma ou mais
+Categories.
+
+Recomendação:
+
+sim, se não complicar contrato.
+
+---
+
+# 66. OWNERSHIP CATEGORY
+
+Mesmo padrão owner-scoped.
+
+---
+
+# 67. TAG FILTER
+
+Avaliar se Reports devem permitir filtro por Tags.
+
+---
+
+# 68. RECOMENDAÇÃO
+
+Como Tags já fazem parte da metadata financeira e History suporta
+filtro:
+
+preparar arquitetura para:
+
+0..N tagIds.
+
+---
+
+# 69. MAS
+
+Não tornar obrigatório se isso aumentar excessivamente TASK-5.1.
+
+ADR deve decidir.
+
+---
+
+# 70. SEMANTICS
+
+Se múltiplas Tags:
+
+reutilizar ANY/ALL definido no History.
+
+Não criar semântica diferente.
+
+---
+
+# 71. AUDIT REPORT — OBJECTIVE
+
+Relatório de Auditoria deve apresentar todas as transações do usuário
+dentro do escopo solicitado.
+
+---
+
+# 72. AUDIT IS NOT LEDGER DEBUG
+
+Não expor detalhes internos desnecessários como:
+
+storageKey;
+DB IDs internos não úteis;
+filesystem;
+SQL;
+stack;
+JWT.
+
+---
+
+# 73. AUDIT TRANSACTION
+
+Mostrar conceitualmente:
+
+- transaction ID;
+- type;
+- status;
+- description;
+- occurredAt;
+- amount;
+- account / source / destination;
+- category;
+- Tags;
+- attachment count;
+- notes;
+- createdAt;
+- updatedAt.
+
+Ajustar conforme modelo real.
+
+---
+
+# 74. CANCELLED AUDIT
+
+Auditoria deve incluir CANCELLED por padrão?
+
+ADR deve decidir.
+
+---
+
+# 75. RECOMENDAÇÃO
+
+Sim.
+
+Auditoria existe justamente para rastreabilidade.
+
+---
+
+# 76. AUDIT STATUS FILTER
+
+Permitir:
+
+ALL
+ACTIVE
+CANCELLED.
+
+---
+
+# 77. AUDIT TYPE FILTER
+
+Permitir:
+
+ALL
+EXPENSE
+INCOME
+TRANSFER.
+
+---
+
+# 78. AUDIT ACCOUNT FILTER
+
+Uma/várias contas.
+
+Transfer corresponde se:
+
+source OR destination
+
+estiver selecionada.
+
+---
+
+# 79. TRANSFER ONCE
+
+Mesmo no Audit:
+
+uma linha lógica.
+
+---
+
+# 80. AUDIT CATEGORY FILTER
+
+Se suportado:
+
+seguir History.
+
+---
+
+# 81. AUDIT TAG FILTER
+
+Se suportado:
+
+seguir History.
+
+---
+
+# 82. ATTACHMENTS
+
+Audit mostra:
+
+attachmentCount
+
+ou metadata segura.
+
+Não bytes.
+
+---
+
+# 83. NOTES
+
+Auditoria pode mostrar Notes.
+
+---
+
+# 84. CREATED VS OCCURRED
+
+Auditoria pode mostrar ambos.
+
+Finance period continua baseado em occurredAt.
+
+---
+
+# 85. CREATED AT FILTER
+
+Não adicionar filtro por createdAt sem requisito.
+
+---
+
+# 86. AUDIT ORDER
+
+Definir ordem estável.
+
+Preferência:
+
+occurredAt DESC
++ stable tie-breaker.
+
+---
+
+# 87. PAGINATION
+
+Auditoria deve ser paginada server-side.
+
+---
+
+# 88. FINANCIAL SUMMARY PAGINATION
+
+Resumo financeiro NÃO pode ser calculado somente sobre a página atual.
+
+---
+
+# 89. CRITICAL
+
+Totals devem considerar:
+
+todo conjunto filtrado.
+
+Não apenas transactions retornadas na página.
+
+---
+
+# 90. REPORT SUMMARY VS DETAILS
+
+Arquitetura deve separar:
+
+summary aggregate
+
+de
+
+paged details.
+
+---
+
+# 91. POSSIBLE RESPONSE
+
+Conceitualmente:
+
+{
+  "summary": {...},
+  "transactions": {
+     "content": [...],
+     "page": ...,
+     "totalElements": ...
+  }
+}
+
+OU endpoints separados.
+
+ADR deve decidir.
+
+---
+
+# 92. RECOMMENDATION
+
+Avaliar endpoints separados se isso simplificar:
+
+GET /api/reports/financial/summary
+GET /api/reports/financial/transactions
+
+Mas evitar requests excessivos.
+
+---
+
+# 93. ALTERNATIVE
+
+Um endpoint composto também é válido.
+
+Escolher conscientemente.
+
+---
+
+# 94. REPORT READ MODEL
+
+Criar serviços/read models dedicados.
+
+Não enfiar tudo em:
+
+FinancialTransactionRepository.
+
+---
+
+# 95. QUERY LAYER
+
+Pode usar:
+
+JPQL;
+native SQL;
+projections;
+
+conforme necessidade.
+
+---
+
+# 96. COMPLEX AGGREGATION
+
+Native SQL é aceitável se:
+
+- tipado;
+- testado;
+- owner-scoped;
+- documentado;
+- adequado ao MySQL.
+
+---
+
+# 97. DO NOT FORCE JPA
+
+Não gerar solução pior apenas para evitar SQL.
+
+---
+
+# 98. DO NOT CREATE REPORT DATABASE
+
+MySQL atual é suficiente para MVP.
+
+---
+
+# 99. NO ELASTICSEARCH
+
+Não necessário.
+
+---
+
+# 100. NO DATA WAREHOUSE
+
+Não necessário.
+
+---
+
+# 101. OWNER SCOPE FIRST
+
+Toda query de relatório deve conter ownership explicitamente.
+
+---
+
+# 102. NEVER POST-FILTER OWNER
+
+Proibido:
+
+buscar tudo
+→ filtrar owner em Java.
+
+---
+
+# 103. MULTIUSER
+
+Owner faz parte da query.
+
+---
+
+# 104. ACCOUNT VALIDATION
+
+Antes de executar relatório:
+
+validar accountIds no escopo do owner.
+
+---
+
+# 105. CATEGORY VALIDATION
+
+Mesmo.
+
+---
+
+# 106. TAG VALIDATION
+
+Mesmo.
+
+---
+
+# 107. MASS ASSIGNMENT
+
+Reports são read-only.
+
+Nenhum DTO aceita owner.
+
+---
+
+# 108. REPORT API
+
+Tudo privado.
+
+---
+
+# 109. 401
+
+Sem JWT.
+
+---
+
+# 110. 404
+
+IDs privados de outro owner conforme política.
+
+---
+
+# 111. 400
+
+Filtro inválido.
+
+---
+
+# 112. PERIOD VALIDATION
+
+Definir:
+
+from < to.
+
+---
+
+# 113. SAME INSTANT
+
+from == to:
+
+preferência:
+
+400.
+
+---
+
+# 114. REVERSED PERIOD
+
+from > to:
+
+400.
+
+---
+
+# 115. MAX PERIOD
+
+Decidir se MVP impõe limite.
+
+---
+
+# 116. RECOMMENDATION
+
+Não impor limite arbitrário sem necessidade.
+
+Mas projetar queries eficientes.
+
+---
+
+# 117. DEFAULT PERIOD
+
+Definir frontend/API.
+
+---
+
+# 118. RECOMMENDATION UI
+
+Default:
+
+mês atual.
+
+---
+
+# 119. API DEFAULT
+
+Avaliar se API exige explicitamente from/to.
+
+---
+
+# 120. RECOMMENDATION
+
+API:
+
+from/to obrigatórios nos relatórios financeiros.
+
+Isso evita consultas acidentais ilimitadas.
+
+Audit pode ter política própria.
+
+---
+
+# 121. BRL
+
+Sistema atualmente trabalha em BRL.
+
+---
+
+# 122. NO CURRENCY FIELD
+
+Não introduzir multi-currency na Sprint 5.
+
+---
+
+# 123. MONEY
+
+Backend:
+
+BigDecimal.
+
+---
+
+# 124. DB
+
+DECIMAL.
+
+---
+
+# 125. FRONTEND
+
+Não usar float ingênuo para somatórios financeiros.
+
+---
+
+# 126. ROUNDING
+
+Relatórios não fazem rounding intermediário indevido.
+
+---
+
+# 127. SCALE
+
+Preservar 2 casas conforme política financeira.
+
+---
+
+# 128. PERFORMANCE — OPENING BALANCE
+
+Não carregar todas transactions anteriores ao período em Java.
+
+---
+
+# 129. DB AGGREGATION
+
+Calcular opening balance com agregação no banco.
+
+---
+
+# 130. PERFORMANCE — SUMMARY
+
+Agregação no DB.
+
+---
+
+# 131. PERFORMANCE — CATEGORY
+
+GROUP BY no DB.
+
+---
+
+# 132. PERFORMANCE — AUDIT
+
+Paginação no DB.
+
+---
+
+# 133. NO N+1
+
+Detalhes precisam carregar nomes/metadata sem N+1.
+
+---
+
+# 134. TAGS
+
+Se incluídas:
+
+batch/projection.
+
+---
+
+# 135. ATTACHMENT COUNT
+
+Aggregate no DB.
+
+---
+
+# 136. INDEX REVIEW
+
+ADR deve revisar necessidade de índices para:
+
+owner_id;
+occurred_at;
+type;
+status;
+account movements;
+account_id;
+category_id;
+transaction-tag;
+attachments.
+
+---
+
+# 137. COMPOSITE INDEX
+
+Não criar automaticamente.
+
+Avaliar query real.
+
+---
+
+# 138. MIGRATION
+
+TASK-5.0 não cria migration.
+
+Apenas recomendar para task futura se comprovadamente necessária.
+
+---
+
+# 139. DASHBOARD CONSISTENCY
+
+Definir invariantes.
+
+Para mesmo:
+
+owner;
+period;
+all accounts;
+
+Financial Report:
+
+income
+
+deve ser igual ao Dashboard:
+
+Entradas.
+
+---
+
+# 140. EXPENSE CONSISTENCY
+
+Financial Report expense
+
+=
+
+Dashboard Saídas
+
+para mesmo escopo.
+
+---
+
+# 141. FINANCIAL RESULT CONSISTENCY
+
+income - expense
+
+=
+
+Dashboard Saldo.
+
+---
+
+# 142. IMPORTANT
+
+Dashboard Patrimônio atual pode não equivaler ao closing balance de um
+período histórico.
+
+Documentar diferença.
+
+---
+
+# 143. CURRENT POSITION
+
+Dashboard Patrimônio:
+
+posição atual.
+
+---
+
+# 144. HISTORICAL CLOSING
+
+Report closingBalance:
+
+posição no fim do período selecionado.
+
+---
+
+# 145. CHART CONSISTENCY
+
+Relatório futuro pode reutilizar conceito do chart de saldo.
+
+Não necessariamente código.
+
+---
+
+# 146. HISTORY CONSISTENCY
+
+Audit Report deve concordar com History para mesmo filtro,
+respeitando diferenças explicitamente documentadas.
+
+---
+
+# 147. CANCELLED DIFFERENCE
+
+History pode defaultar ACTIVE.
+
+Audit pode defaultar ALL.
+
+Documentar.
+
+---
+
+# 148. TAGS CONSISTENCY
+
+Semântica de tag filter igual ao History.
+
+---
+
+# 149. ACCOUNT FILTER CONSISTENCY
+
+Transfer source OR destination.
+
+---
+
+# 150. CATEGORY CONSISTENCY
+
+Mesma regra.
+
+---
+
+# 151. EXPORT ARCHITECTURE
+
+Planejar TASK-5.7.
+
+Não implementar.
+
+---
+
+# 152. EXPORT SOURCE
+
+Export deve usar o MESMO report read model.
+
+---
+
+# 153. CRITICAL
+
+Não criar:
+
+PDF calculation logic
+CSV calculation logic
+UI calculation logic
+
+separados.
+
+---
+
+# 154. SINGLE REPORT DATA MODEL
+
+Cálculo financeiro no backend.
+
+---
+
+# 155. EXPORT FORMATS
+
+Avaliar:
+
+PDF
+CSV
+
+e eventualmente XLSX.
+
+---
+
+# 156. DO NOT COMMIT YET
+
+TASK-5.0 apenas define.
+
+---
+
+# 157. FRONTEND ARCHITECTURE
+
+Definir navegação:
+
+Relatórios
+├── Financeiro
+├── Por categoria
+└── Auditoria
+
+---
+
+# 158. ROUTES
+
+Conceitualmente:
+
+/reports/financial
+/reports/categories
+/reports/audit
+
+Adapte às convenções existentes.
+
+---
+
+# 159. SHARED FILTERS
+
+Há reutilização legítima entre relatórios.
+
+---
+
+# 160. POSSIBLE COMPONENT
+
+ReportFiltersComponent
+
+pode ser apropriado para:
+
+period;
+accounts.
+
+---
+
+# 161. NÃO CRIAR DYNAMIC REPORT ENGINE
+
+Proibido abstrair todos relatórios em configs genéricas.
+
+---
+
+# 162. ACCOUNT MULTISELECT
+
+Frontend deve carregar contas:
+
+ativas e inativas.
+
+---
+
+# 163. ALL ACCOUNTS
+
+UX precisa oferecer:
+
+Todas as contas.
+
+---
+
+# 164. PERIOD COMPONENT
+
+Pode reutilizar DateRange existente se houver.
+
+---
+
+# 165. DEFAULT
+
+Mês atual.
+
+---
+
+# 166. APPLY
+
+Decidir:
+
+auto query on every filter
+
+ou
+
+button "Aplicar filtros".
+
+---
+
+# 167. RECOMMENDATION
+
+Para relatórios:
+
+botão:
+
+"Aplicar filtros".
+
+Evita queries pesadas enquanto usuário ainda escolhe filtros.
+
+---
+
+# 168. RESET
+
+"Limpar filtros" / "Restaurar".
+
+---
+
+# 169. LOADING
+
+Relatórios não mostram zero antes de carregar.
+
+---
+
+# 170. ERROR
+
+Erro não pode aparecer como:
+
+R$ 0,00.
+
+---
+
+# 171. EMPTY
+
+Distinguir:
+
+sem movimentações
+
+de:
+
+erro.
+
+---
+
+# 172. URL STATE
+
+Avaliar se filtros devem ficar em query params.
+
+---
+
+# 173. RECOMMENDATION
+
+Sim, se padrão Angular atual permitir de forma limpa.
+
+Benefícios:
+
+refresh;
+bookmark;
+back/forward.
+
+---
+
+# 174. SECURITY
+
+Nunca incluir:
+
+ownerId
+
+em query params.
+
+---
+
+# 175. ACCESSIBILITY
+
+Filtros com labels.
+
+---
+
+# 176. TABLES
+
+Responsivas.
+
+---
+
+# 177. MOBILE
+
+Não tentar comprimir tabela enorme.
+
+Usar cards/list pattern consolidado.
+
+---
+
+# 178. REPORT CHARTS
+
+Não definir gráficos decorativos.
+
+Cada gráfico precisa responder pergunta real.
+
+---
+
+# 179. FINANCIAL REPORT CHART
+
+Possível:
+
+evolução do saldo no período.
+
+---
+
+# 180. CATEGORY REPORT CHART
+
+Possível:
+
+distribuição de despesas/receitas por categoria.
+
+---
+
+# 181. AUDIT
+
+Provavelmente sem gráfico.
+
+---
+
+# 182. COLORS
+
+Seguir Design System.
+
+---
+
+# 183. ACCESSIBLE CHARTS
+
+Dados também precisam existir em forma textual/tabular.
+
+---
+
+# 184. NO CHART AS ONLY SOURCE
+
+Obrigatório.
+
+---
+
+# 185. REPORT TEST STRATEGY
+
+ADR deve especificar testes.
+
+---
+
+# 186. GOLDEN REPORT SCENARIO
+
+Criar cenário conceitual obrigatório para tasks seguintes.
+
+Accounts:
+
+A initial = 1000
+B initial = 500
+C initial = 200
+
+Antes do período:
+
+Income A = 100
+
+Opening balances no início do período:
+
+A = 1100
+B = 500
+C = 200.
+
+---
+
+# 187. WITHIN PERIOD
+
+Income A:
+700
+Category:
+Salário
+
+Expense A:
+200
+Category:
+Moradia
+
+Transfer A → B:
+300
+
+Transfer C → A:
+50.
+
+---
+
+# 188. SELECT ALL A+B+C
+
+Opening:
+1800
+
+Income:
+700
+
+Expense:
+200
+
+Internal transfers:
+350
+
+Incoming boundary:
+0
+
+Outgoing boundary:
+0
+
+Financial result:
+500
+
+Balance change:
+500
+
+Closing:
+2300.
+
+---
+
+# 189. VERIFY INDIVIDUAL
+
+A:
+
+Opening:
+1100
+
+Income:
+700
+
+Expense:
+200
+
+Incoming transfer:
+50
+
+Outgoing transfer:
+300
+
+Closing:
+1350.
+
+---
+
+# 190. B
+
+Opening:
+500
+
+Incoming transfer:
+300
+
+Closing:
+800.
+
+---
+
+# 191. C
+
+Opening:
+200
+
+Outgoing transfer:
+50
+
+Closing:
+150.
+
+---
+
+# 192. SUM
+
+1350 + 800 + 150 = 2300.
+
+---
+
+# 193. SELECT A ONLY
+
+Opening:
+1100
+
+Income:
+700
+
+Expense:
+200
+
+Incoming boundary transfer:
+50
+
+Outgoing boundary transfer:
+300
+
+Financial result:
+500
+
+Balance change:
+250
+
+Closing:
+1350.
+
+---
+
+# 194. SELECT A+B
+
+Opening:
+1600
+
+Income:
+700
+
+Expense:
+200
+
+A→B:
+
+internal transfer 300.
+
+C→A:
+
+incoming boundary 50.
+
+Financial result:
+500.
+
+Balance change:
+550.
+
+Closing:
+2150.
+
+---
+
+# 195. CATEGORY REPORT
+
+Salário:
+
+Income:
+700
+
+Expense:
+0
+
+Net:
+700.
+
+Moradia:
+
+Income:
+0
+
+Expense:
+200
+
+Net:
+-200.
+
+---
+
+# 196. CANCELLED GOLDEN
+
+Adicionar:
+
+Cancelled Expense 999.
+
+Não altera:
+
+financial summary;
+balances;
+category totals ativos.
+
+---
+
+# 197. AUDIT GOLDEN
+
+Audit pode listar Cancelled Expense conforme default definido.
+
+---
+
+# 198. TAG GOLDEN
+
+Associar Tag:
+
+Mensal
+
+à Expense.
+
+Se report tag filter for adotado:
+
+filtro Mensal retorna Expense.
+
+---
+
+# 199. ATTACHMENT GOLDEN
+
+Expense possui:
+
+2 Attachments.
+
+Audit:
+
+attachmentCount = 2.
+
+Não altera totals.
+
+---
+
+# 200. USER B
+
+Criar User B com dados equivalentes.
+
+Nenhum relatório de User A inclui dados de B.
+
+---
+
+# 201. ADR REQUIRED DECISIONS
+
+O ADR deve responder explicitamente:
+
+1. Quais são os três relatórios?
+2. Quais filtros cada um suporta?
+3. Como funciona período?
+4. Como funciona timezone?
+5. Como selecionar uma/várias/todas contas?
+6. Contas inativas podem ser selecionadas?
+7. Como validar ownership?
+8. Como calcular opening balance?
+9. Como calcular closing balance?
+10. Como calcular Income?
+11. Como calcular Expense?
+12. Como Transfer funciona com todas contas?
+13. Como Transfer funciona com subconjunto de contas?
+14. O que é internal transfer?
+15. O que é incoming boundary transfer?
+16. O que é outgoing boundary transfer?
+17. O que é financial result?
+18. O que é balance change?
+19. Como Cancelled funciona?
+20. Como Category report funciona?
+21. Como BOTH funciona?
+22. Como categorias inativas funcionam?
+23. Como Audit funciona?
+24. Audit inclui cancelled por padrão?
+25. Audit é paginado?
+26. Tags entram como filtro?
+27. Qual semântica de múltiplas Tags?
+28. Attachments aparecem onde?
+29. Como evitar N+1?
+30. Como calcular summary sem depender da página?
+31. Qual arquitetura de endpoint?
+32. Qual read model?
+33. Qual estratégia de query?
+34. Quais índices precisam ser revisados?
+35. Como Dashboard e Reports permanecem consistentes?
+36. Como History e Audit permanecem consistentes?
+37. Como export futuro reutilizará os mesmos dados?
+38. Quais componentes Angular serão compartilhados?
+39. Como mobile funcionará?
+40. Qual Golden Scenario será obrigatório?
+
+Nenhum desses pontos pode ficar implicitamente ambíguo se afetar
+correção financeira.
+
+---
+
+# 202. ADR OUTPUT
+
+Criar documento técnico versionado no local padrão do projeto.
+
+Título:
+
+# ADR — Arquitetura dos Relatórios Financeiros
+
+Estrutura mínima:
+
+## Status
+
+APPROVED / PROPOSED
+
+## Context
+
+## Existing Financial Model
+
+## Goals
+
+## Non-Goals
+
+## Report Types
+
+## Financial Report
+
+## Category Report
+
+## Audit Report
+
+## Period Semantics
+
+## Account Selection
+
+## Inactive Accounts
+
+## Transfer Semantics
+
+## Opening Balance
+
+## Closing Balance
+
+## Financial Result
+
+## Balance Change
+
+## Categories
+
+## Tags
+
+## Attachments
+
+## Cancelled Transactions
+
+## Ownership and Security
+
+## API Architecture
+
+## Read Models
+
+## Query Strategy
+
+## Pagination
+
+## Performance
+
+## Index Review
+
+## Frontend Architecture
+
+## Responsive Strategy
+
+## Accessibility
+
+## Export Strategy
+
+## Golden Scenario
+
+## Testing Strategy
+
+## Risks
+
+## Technical Debt
+
+## Consequences
+
+## Decision
+
+---
+
+# 203. NO IMPLEMENTATION
+
+Depois de escrever ADR:
+
+não implementar TASK-5.1.
+
+---
+
+# 204. VALIDATION
+
+Verificar ADR contra:
+
+ledger;
+Dashboard;
+History;
+multi-user;
+Sprint 4.
+
+---
+
+# 205. FINAL REPORT
+
+Produza:
+
+# TASK-5.0 — ARQUITETURA DOS RELATÓRIOS FINANCEIROS
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+## 1. ADR
+
+Arquivo:
+
+Status:
+
+## 2. Report Types
+
+Financial:
+definição
+
+Category:
+definição
+
+Audit:
+definição
+
+## 3. Period
+
+Field:
+
+Interval semantics:
+
+Timezone:
+
+## 4. Account Filter
+
+Single:
+YES / NO
+
+Multiple:
+YES / NO
+
+All:
+YES / NO
+
+Inactive:
+YES / NO
+
+## 5. Opening Balance
+
+Formula:
+
+## 6. Income
+
+Formula:
+
+## 7. Expense
+
+Formula:
+
+## 8. Transfers
+
+Internal:
+
+Incoming boundary:
+
+Outgoing boundary:
+
+## 9. Financial Result
+
+Formula:
+
+## 10. Balance Change
+
+Formula:
+
+## 11. Closing Balance
+
+Formula:
+
+## 12. Category Report
+
+Income:
+
+Expense:
+
+BOTH:
+
+Inactive:
+
+## 13. Audit
+
+Cancelled default:
+
+Pagination:
+
+Ordering:
+
+## 14. Tags
+
+Filter:
+YES / NO
+
+Multiple semantics:
+ANY / ALL / N/A
+
+## 15. Attachments
+
+Financial report:
+
+Category report:
+
+Audit report:
+
+## 16. Security
+
+Owner scoping:
+
+Foreign account:
+
+Foreign category:
+
+Foreign tag:
+
+## 17. API Architecture
+
+Descreva endpoints planejados.
+
+## 18. Read Models
+
+Liste.
+
+## 19. Query Strategy
+
+Opening balance:
+
+Summary:
+
+Category aggregation:
+
+Audit:
+
+## 20. Pagination
+
+Financial details:
+
+Audit:
+
+Summary independent from page:
+PASS / FAIL
+
+## 21. Performance
+
+N+1 prevention:
+
+Indexes to review:
+
+## 22. Dashboard Consistency
+
+Income:
+PASS / FAIL
+
+Expense:
+PASS / FAIL
+
+Financial result:
+PASS / FAIL
+
+## 23. History Consistency
+
+PASS / FAIL
+
+## 24. Golden Scenario
+
+All accounts:
+resultado esperado
+
+A only:
+resultado esperado
+
+A+B:
+resultado esperado
+
+Category:
+resultado esperado
+
+Audit:
+resultado esperado
+
+## 25. Frontend Architecture
+
+Routes:
+
+Shared filters:
+
+Mobile:
+
+## 26. Export Strategy
+
+PDF:
+
+CSV:
+
+XLSX:
+
+Source of truth:
+
+## 27. Open Questions
+
+Esperado:
+
+NONE para decisões financeiras essenciais.
+
+## 28. Implementation
+
+Backend endpoints:
+NOT IMPLEMENTED
+
+Angular report pages:
+NOT IMPLEMENTED
+
+Exports:
+NOT IMPLEMENTED
+
+## 29. Files
+
+Criados:
+
+Modificados:
+
+## 30. Readiness
+
+Se ADR estiver aprovado:
+
+READY FOR TASK-5.1
+
+# TASK-5.1 — Backend do Relatório Financeiro
+
+NÃO implementar TASK-5.1 nesta execução.

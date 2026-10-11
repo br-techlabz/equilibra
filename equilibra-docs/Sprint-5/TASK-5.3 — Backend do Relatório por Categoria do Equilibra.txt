@@ -1,0 +1,88 @@
+Implemente a TASK-5.3 — Backend do Relatório por Categoria do Equilibra.
+
+CONTEXTO
+Stack: Spring Boot 4, MySQL e Angular 19.
+TASK-5.0: ADR de relatórios concluído.
+TASK-5.1: backend do Relatório Financeiro concluído.
+TASK-5.2: interface do Relatório Financeiro — verificar status real antes de prosseguir.
+Sprints 3 e 4 aprovadas.
+
+ESCOPO
+Backend only: read model, consultas agregadas, API REST, OpenAPI, testes e documentação. Não implementar frontend, exportação ou auditoria.
+
+1. Leia CLAUDE.md, ADR 5.0, ADR ledger, implementação 5.1, Category, FinancialTransaction, AccountMovement, Dashboard, History, CurrentUser, migrations, índices e testes. ADR e código real prevalecem sobre sugestões deste prompt.
+
+2. Antes de editar, produza PRE-IMPLEMENTATION REPORT: contrato previsto, filtros, semântica de categorias EXPENSE/INCOME/BOTH, transferências, cancelamentos, contas selecionadas, categorias inativas, queries, ownership, índices, testes e arquivos.
+
+3. Implementar endpoint GET /api/reports/categories ou path exato do ADR, autenticado. Filtros: from/to e accountIds (uma, várias ou todas); categoryIds e tagIds apenas se aprovados no ADR. Período usa occurredAt e limites temporais aprovados. Identidade vem exclusivamente de CurrentUser, nunca de ownerId no request.
+
+4. Retornar agrupamentos por categoria com categoryId, categoryName, applicability, incomeTotal, expenseTotal, netResult, conforme ADR. Categoria BOTH pode possuir receitas e despesas, exibidas separadamente. Não compensar receitas/despesas silenciosamente. Categorias inativas com transações históricas permanecem visíveis. Categoria renomeada segue política histórica aprovada. Se transações sem categoria forem permitidas, criar agrupamento explícito Sem categoria, sem UUID fictício.
+
+5. Somar apenas transações ACTIVE do tipo INCOME ou EXPENSE no período e nas contas selecionadas. CANCELLED não contribui. Transferências não são receita nem despesa, mesmo quando cruzam o conjunto de contas selecionadas. Não inserir transferências em categoria BOTH por conveniência. Seguir exatamente ADR caso tenha previsto apresentação separada de transferências.
+
+6. Resumo do relatório deve incluir incomeTotal, expenseTotal, netResult e agrupamentos. Definir também total e percentual de participação por categoria, se previsto no ADR, com denominadores corretos: receitas sobre receitas; despesas sobre despesas. Divisão por zero deve ser tratada. Percentuais são apresentação analítica, não fonte de verdade financeira.
+
+7. Filtros por contas: validar TODOS os UUIDs fornecidos contra CurrentUser antes de consultar. ID estrangeiro/inexistente segue política privada (normalmente 404), sem ignorar silenciosamente IDs inválidos. Ausência de accountIds significa todas as contas conforme ADR. Contas inativas próprias devem poder participar de consultas históricas conforme ADR. IDs duplicados não podem duplicar totais.
+
+8. Filtros por categorias: se implementados, validar ownership e aceitar categorias inativas históricas. Filtros por Tags, se previstos, usam a mesma semântica ANY/ALL do Histórico; múltiplas tags jamais podem multiplicar valores de uma transação.
+
+9. Segurança: toda query deve ser owner-scoped no banco. Nunca carregar dados de outros usuários e filtrar depois em Java. Não expor ownerId, SQL, storageKey, caminhos de arquivo ou dados privados. Reutilizar Problem Details, Request ID e política 400/401/404.
+
+10. Performance: agregações SQL/JPQL no MySQL, GROUP BY apropriado, parâmetros vinculados, sem carregar todas as transações em memória. Evitar N+1 e joins multiplicadores envolvendo tags, anexos ou movimentos. Revisar índices existentes; migration nova apenas se necessária. Não modificar migrations aplicadas.
+
+11. Consistência: para o mesmo usuário, período, conjunto de contas e demais filtros equivalentes, a soma de incomeTotal de todas as categorias deve igualar incomeTotal do Financial Report 5.1; idem expenseTotal e netResult. Se categorias forem filtradas, comparar com subconjunto equivalente, não com relatório financeiro sem filtro.
+
+12. GOLDEN SCENARIO:
+Contas A=1000, B=500, C=200; antes do período Income A=100.
+Dentro do período: Income A=700 categoria Salário; Expense A=200 categoria Moradia; Transfer A→B=300; Transfer C→A=50.
+Todas contas: Salário income=700 expense=0 net=700; Moradia income=0 expense=200 net=-200. Totais income=700 expense=200 net=500.
+A apenas: mesmos totais de categoria, apesar das transferências.
+B apenas: income=0 expense=0.
+Categoria BOTH com Income 125.10 e Expense 25.20: net=99.90.
+Adicionar Cancelled Expense 999: não altera totais.
+Adicionar tags e anexos: não altera totais.
+User B com dados equivalentes: não contamina User A.
+Testar 0.10+0.20=0.30.
+
+13. Testes obrigatórios: categoria EXPENSE, INCOME e BOTH; ativa/inativa; sem categoria se permitido; category rename; período from/to; conta única/múltipla/todas; conta inativa; foreign account/category/tag; cancelamento; transferência neutra; tags múltiplas sem duplicação; anexos sem efeito; BigDecimal; zero; resultado negativo; categorias sem transações; isolamento multiusuário; reconciliação com 5.1; Testcontainers/MySQL; OpenAPI; regressões financeiras.
+
+14. API: DTOs explícitos, tipados, não retornar entidades JPA. Ordenação determinística dos grupos (por valor ou nome conforme ADR, com desempate estável). Se ADR requer paginação, totais devem considerar todo o conjunto filtrado, não apenas a página. Não criar GenericReportEngine ou segundo ledger.
+
+15. Não implementar Angular, gráficos, exportação PDF/CSV/XLSX, auditoria, orçamento por categoria, metas, contas de despesas, cache, tabelas de totais materializados, ou endpoints de escrita.
+
+DEFINITION OF DONE
+- Endpoint seguro e documentado.
+- Filtros de período/contas corretos.
+- Categorias EXPENSE/INCOME/BOTH corretas.
+- Categorias inativas históricas preservadas.
+- Cancelled sem efeito.
+- Transferências excluídas dos totais de receita/despesa.
+- BigDecimal sem perda de precisão.
+- Sem multiplicação por joins.
+- Agregação no banco e sem N+1.
+- Isolamento multiusuário validado.
+- Reconciliação com Relatório Financeiro 5.1 aprovada.
+- Golden Scenario aprovado.
+- Testcontainers, testes de segurança e build backend aprovados.
+
+RELATÓRIO FINAL
+Entregar TASK-5.3 — BACKEND DO RELATÓRIO POR CATEGORIA com:
+Status CONCLUÍDA/NÃO CONCLUÍDA/BLOCKED;
+ADR e divergências;
+endpoint, request e response;
+filtros;
+fórmulas e agrupamentos;
+categorias BOTH/inativas/sem categoria;
+transferências e cancelamentos;
+ownership e segurança;
+query strategy, índices, migrations;
+Golden Scenario;
+reconciliação com 5.1;
+testes executados e resultados reais;
+bugs corrigidos;
+arquivos criados/modificados;
+dívidas técnicas reais;
+fora de escopo confirmado.
+
+Ao terminar, declarar READY FOR TASK-5.4 — Interface do Relatório por Categoria.
+NÃO implementar TASK-5.4 nesta execução.

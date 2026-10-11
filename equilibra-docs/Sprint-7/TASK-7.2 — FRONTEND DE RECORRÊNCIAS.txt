@@ -1,0 +1,1050 @@
+# TASK-7.2 — FRONTEND DE RECORRÊNCIAS
+
+PROJETO: EQUILIBRA
+SPRINT: 7 — PREVISIBILIDADE FINANCEIRA
+
+STACK FRONTEND:
+Angular 19
+Angular Material
+TypeScript
+RxJS
+Design System Equilibra
+
+BACKEND:
+Spring Boot 4
+MySQL
+JWT
+
+CONTEXTO
+
+Sprints 0 a 6 aprovadas.
+
+TASK-7.0 — Arquitetura da Sprint 7 concluída.
+TASK-7.1 — Backend de Recorrências concluído.
+
+OBJETIVO
+
+Implementar a interface Angular de gerenciamento
+de regras de despesas e receitas recorrentes.
+
+A interface deverá permitir:
+
+- listar recorrências;
+- criar recorrências;
+- consultar detalhes;
+- editar recorrências;
+- filtrar por tipo e estado, conforme API;
+- pausar, reativar ou encerrar regras, se permitido;
+- visualizar periodicidade e vencimentos;
+- consultar histórico de regras, se aprovado.
+
+A interface deve consumir exclusivamente
+os endpoints reais da TASK-7.1.
+
+NÃO implementar novas regras financeiras.
+
+NÃO implementar TASK-7.3 nesta execução.
+
+==================================================
+1. INSPEÇÃO OBRIGATÓRIA
+==================================================
+
+Antes de modificar arquivos, inspecionar:
+
+- CLAUDE.md;
+- ADR da TASK-7.0;
+- relatório final da TASK-7.1;
+- endpoints reais;
+- DTOs reais;
+- enums reais;
+- OpenAPI;
+- periodicidades aprovadas;
+- estados aprovados;
+- política de datas;
+- política de edição;
+- política de pausa;
+- política de reativação;
+- política de encerramento;
+- estratégia de ocorrências;
+- Angular routing;
+- Auth Guard;
+- sidebar;
+- PageHeader;
+- ContentPanel;
+- formulários;
+- dialogs/drawers;
+- componentes monetários;
+- seletores de contas;
+- seletores de categorias;
+- serviços Angular;
+- interceptors;
+- testes frontend.
+
+Não inferir contratos a partir dos exemplos
+deste prompt.
+
+==================================================
+2. PRE-IMPLEMENTATION REPORT
+==================================================
+
+Antes de editar, produzir:
+
+# TASK-7.2 — PRE-IMPLEMENTATION REPORT
+
+1. ADR utilizado.
+2. Endpoints disponíveis.
+3. DTOs reais.
+4. Tipos financeiros.
+5. Periodicidades.
+6. Estados.
+7. Transições permitidas.
+8. Política de datas.
+9. Política de edição.
+10. Estratégia de ocorrências.
+11. Componentes reutilizáveis.
+12. Estrutura de rotas.
+13. Estratégia de formulários.
+14. Estratégia de atualização.
+15. Responsividade.
+16. Acessibilidade.
+17. Testes.
+18. Arquivos previstos.
+19. Bloqueadores.
+
+Se faltar contrato essencial,
+registrar BLOCKED.
+
+==================================================
+3. ROTA
+==================================================
+
+Criar rota autenticada:
+
+/recurrences
+
+ou rota aprovada no ADR.
+
+Reutilizar layout existente.
+
+Não criar layout paralelo.
+
+==================================================
+4. SIDEBAR
+==================================================
+
+Adicionar item:
+
+Recorrências
+
+Ícone sugerido:
+
+repeat.
+
+Respeitar sidebar expandida e recolhida.
+
+Respeitar navegação mobile.
+
+==================================================
+5. PAGE HEADER
+==================================================
+
+Título:
+
+Minhas Recorrências
+
+Subtítulo:
+
+"Organize seus compromissos periódicos."
+
+Ação principal:
+
+Nova recorrência.
+
+==================================================
+6. IDENTIDADE VISUAL
+==================================================
+
+Preservar identidade Equilibra.
+
+Cor principal:
+
+#4c1d95.
+
+Usar tokens do tema e componentes
+compartilhados existentes.
+
+Não introduzir estilo desconectado.
+
+==================================================
+7. LISTAGEM
+==================================================
+
+Exibir recorrências do usuário.
+
+Campos conforme DTO real:
+
+- descrição;
+- tipo;
+- valor;
+- periodicidade;
+- vencimento;
+- categoria;
+- conta;
+- estado;
+- ações disponíveis.
+
+Não inventar campos.
+
+==================================================
+8. LAYOUT DESKTOP
+==================================================
+
+Preferir tabela ou cards conforme
+padrão existente.
+
+Garantir leitura rápida de:
+
+tipo;
+valor;
+periodicidade;
+status;
+vencimento.
+
+==================================================
+9. LAYOUT MOBILE
+==================================================
+
+Preferir cards compactos.
+
+Evitar tabela larga.
+
+Ações devem ser acessíveis
+por menu ou botões adequados.
+
+==================================================
+10. FILTROS
+==================================================
+
+Implementar somente filtros
+suportados pelo backend.
+
+Exemplos conceituais:
+
+- todas;
+- despesas;
+- receitas;
+- ativas;
+- pausadas;
+- encerradas.
+
+Não inventar estados.
+
+==================================================
+11. ORDENAÇÃO
+==================================================
+
+Seguir contrato real.
+
+Possibilidades:
+
+- descrição;
+- próxima data;
+- valor;
+- criação.
+
+Não ordenar por campo inexistente.
+
+==================================================
+12. RESUMOS FINANCEIROS
+==================================================
+
+Se exibir indicadores agregados,
+definir semântica correta.
+
+Não somar valores de recorrências
+sem normalizar periodicidades.
+
+Exemplo:
+
+uma recorrência semanal não equivale
+a uma recorrência mensal.
+
+Se API não fornecer agregados confiáveis,
+omitir KPIs monetários.
+
+Não chamar valores previstos de saldo real.
+
+==================================================
+13. CRIAÇÃO
+==================================================
+
+Botão:
+
+Nova recorrência.
+
+Abrir drawer ou dialog conforme
+padrão de formulários existente.
+
+Consumir POST real da TASK-7.1.
+
+==================================================
+14. TIPO
+==================================================
+
+Permitir somente tipos aprovados.
+
+Exemplos:
+
+Despesa;
+Receita.
+
+Não oferecer transferência recorrente
+se backend não suportar.
+
+==================================================
+15. DESCRIÇÃO
+==================================================
+
+Campo conforme DTO.
+
+Validar:
+
+obrigatoriedade;
+tamanho;
+espaços;
+mensagens.
+
+==================================================
+16. VALOR
+==================================================
+
+Utilizar componente monetário existente.
+
+Formato pt-BR.
+
+Exemplo:
+
+R$ 129,90.
+
+Converter para payload conforme contrato.
+
+Evitar float para cálculos financeiros.
+
+Validar precisão de duas casas.
+
+==================================================
+17. PERIODICIDADE
+==================================================
+
+Oferecer somente frequências reais
+do backend.
+
+Exemplos conceituais:
+
+Diária;
+Semanal;
+Mensal;
+Anual.
+
+Não adicionar frequência não aprovada.
+
+==================================================
+18. FORMULÁRIO DINÂMICO
+==================================================
+
+Campos dependentes da periodicidade
+devem aparecer conforme ADR.
+
+Exemplos:
+
+Mensal:
+dia de vencimento.
+
+Semanal:
+dia da semana, se previsto.
+
+Anual:
+dia e mês, se previsto.
+
+Não apresentar campos que backend
+não reconhece.
+
+==================================================
+19. DIA 31
+==================================================
+
+Exibir comportamento aprovado
+para meses sem o dia selecionado.
+
+Não implementar regra de calendário
+divergente do backend.
+
+==================================================
+20. ANO BISSEXTO
+==================================================
+
+Se recorrência anual permitir 29/02,
+apresentar semântica definida no ADR.
+
+Não deslocar datas silenciosamente.
+
+==================================================
+21. DATA INICIAL
+==================================================
+
+Usar datepicker.
+
+Respeitar LocalDate.
+
+Não converter datas civis de forma
+que provoque deslocamento por timezone.
+
+==================================================
+22. DATA FINAL
+==================================================
+
+Se existir:
+
+campo opcional ou obrigatório
+conforme ADR.
+
+Validar relação com data inicial.
+
+==================================================
+23. CATEGORIA
+==================================================
+
+Usar seletor de categorias existente.
+
+Despesa:
+EXPENSE ou BOTH.
+
+Receita:
+INCOME ou BOTH.
+
+Respeitar categorias inativas
+e política histórica.
+
+==================================================
+24. CONTA
+==================================================
+
+Se backend exigir conta:
+
+usar seletor de AssetAccount existente.
+
+Não permitir conta estrangeira.
+
+Respeitar conta inativa.
+
+Não sugerir que vincular conta
+gera lançamento financeiro.
+
+==================================================
+25. VALIDAÇÕES
+==================================================
+
+Reutilizar Angular Reactive Forms.
+
+Validar:
+
+- campos obrigatórios;
+- descrição;
+- valor;
+- periodicidade;
+- datas;
+- categoria;
+- conta;
+- vencimento;
+- combinações inválidas.
+
+Backend continua sendo autoridade.
+
+==================================================
+26. SUBMISSÃO
+==================================================
+
+Durante envio:
+
+desabilitar submissão duplicada.
+
+Mostrar loading.
+
+Não anunciar sucesso antes
+da resposta HTTP.
+
+==================================================
+27. DETALHAMENTO
+==================================================
+
+Permitir consultar detalhes da regra.
+
+Mostrar campos reais.
+
+Exibir política de vigência
+e estado quando aplicável.
+
+==================================================
+28. EDIÇÃO
+==================================================
+
+Permitir alterar somente campos
+autorizados pelo backend.
+
+Respeitar estado atual da regra.
+
+Não permitir alteração de ownerId ou ID.
+
+==================================================
+29. EDIÇÃO DE SÉRIE
+==================================================
+
+Se backend distinguir:
+
+- esta ocorrência;
+- futuras ocorrências;
+- toda série;
+
+apresentar somente opções reais.
+
+Se TASK-7.1 ainda não implementar
+edição de ocorrências:
+
+não criar interface fictícia.
+
+==================================================
+30. ALTERAÇÃO DE VALOR
+==================================================
+
+Se regra existente for editada:
+
+explicar consequências aprovadas
+sobre futuras ocorrências.
+
+Não afirmar que pagamentos passados
+serão modificados.
+
+==================================================
+31. PAUSA
+==================================================
+
+Se endpoint existir:
+
+permitir pausar regra.
+
+Exibir confirmação quando necessária.
+
+Atualizar estado após resposta.
+
+==================================================
+32. REATIVAÇÃO
+==================================================
+
+Se endpoint existir:
+
+permitir reativar regra.
+
+Respeitar transições permitidas.
+
+==================================================
+33. ENCERRAMENTO
+==================================================
+
+Se endpoint existir:
+
+permitir encerrar regra.
+
+Confirmar consequências.
+
+Não excluir histórico financeiro.
+
+==================================================
+34. CANCELAMENTO
+==================================================
+
+Se endpoint existir:
+
+permitir cancelar conforme ADR.
+
+Não criar DELETE genérico
+sem contrato aprovado.
+
+==================================================
+35. ESTADOS VISUAIS
+==================================================
+
+Usar rótulos dos estados reais.
+
+Exemplos conceituais:
+
+Ativa;
+Pausada;
+Encerrada;
+Cancelada.
+
+Não depender somente de cores.
+
+==================================================
+36. SERVIÇO ANGULAR
+==================================================
+
+Criar:
+
+RecurrenceService
+
+ou nome coerente com projeto.
+
+Usar HttpClient.
+
+Consumir API real.
+
+Reutilizar interceptors.
+
+Não enviar ownerId.
+
+==================================================
+37. MODELS
+==================================================
+
+Criar interfaces tipadas
+baseadas nos DTOs reais.
+
+Exemplos:
+
+Recurrence;
+CreateRecurrenceRequest;
+UpdateRecurrenceRequest;
+RecurrenceFilter.
+
+Não usar any.
+
+==================================================
+38. AUTHENTICATION
+==================================================
+
+Reutilizar JWT em memória.
+
+Não usar localStorage para token.
+
+401 segue fluxo global.
+
+403 não encerra sessão indevidamente.
+
+==================================================
+39. MULTIUSER
+==================================================
+
+Não enviar ownerId.
+
+Não armazenar dados entre sessões
+de usuários diferentes.
+
+Limpar estado após logout.
+
+Backend permanece responsável
+pelo isolamento.
+
+==================================================
+40. LOADING
+==================================================
+
+Implementar loading para:
+
+lista;
+detalhes;
+criação;
+edição;
+transições.
+
+Não mostrar dados obsoletos
+como se fossem atuais.
+
+==================================================
+41. EMPTY STATE
+==================================================
+
+Sem recorrências:
+
+"Você ainda não cadastrou recorrências."
+
+CTA:
+
+"Criar primeira recorrência."
+
+==================================================
+42. ERROR STATE
+==================================================
+
+Em erro HTTP:
+
+mostrar mensagem clara;
+permitir retry;
+preservar dados do formulário
+quando apropriado.
+
+Não converter erro em lista vazia.
+
+==================================================
+43. PROBLEM DETAILS
+==================================================
+
+Reutilizar tratamento existente.
+
+400:
+validação.
+
+401:
+autenticação.
+
+404:
+recurso indisponível.
+
+409:
+conflito/transição inválida.
+
+422:
+regra de domínio, se aplicável.
+
+500:
+erro sanitizado.
+
+==================================================
+44. REQUESTS CONCORRENTES
+==================================================
+
+Mudança rápida de filtros
+não pode exibir resposta antiga.
+
+Usar switchMap ou equivalente.
+
+Cancelar subscriptions adequadamente.
+
+==================================================
+45. ATUALIZAÇÃO APÓS CRUD
+==================================================
+
+Após criar:
+
+atualizar lista.
+
+Após editar:
+
+atualizar card e detalhes.
+
+Após pausar/reativar/encerrar:
+
+atualizar estado.
+
+Não recalcular dados financeiros
+no frontend.
+
+==================================================
+46. RESPONSIVIDADE
+==================================================
+
+Validar:
+
+360x800;
+390x844;
+768x1024;
+1024x768;
+1280x720;
+1366x768;
+1920x1080.
+
+Verificar:
+
+sidebar;
+filtros;
+cards;
+formulários;
+dialogs;
+datas;
+valores grandes;
+nomes longos;
+menus de ação;
+ausência de overflow horizontal global.
+
+==================================================
+47. ACESSIBILIDADE
+==================================================
+
+Garantir:
+
+labels;
+foco;
+navegação por teclado;
+contraste;
+mensagens de erro;
+ícones acessíveis;
+confirmações;
+status textuais;
+campos condicionais anunciáveis.
+
+==================================================
+48. GOLDEN — DESPESA MENSAL
+==================================================
+
+Criar:
+
+Internet residencial.
+EXPENSE.
+129.90.
+MONTHLY.
+Dia 10.
+Início outubro/2026.
+
+Esperado:
+
+regra criada;
+valor formatado;
+periodicidade correta;
+nenhuma alteração em saldo real.
+
+==================================================
+49. GOLDEN — RECEITA MENSAL
+==================================================
+
+Criar:
+
+Salário.
+INCOME.
+3500.00.
+MONTHLY.
+Dia 5.
+
+Esperado:
+
+regra criada;
+categoria correta;
+nenhuma receita financeira
+efetivada automaticamente.
+
+==================================================
+50. GOLDEN — EDIÇÃO
+==================================================
+
+Alterar Internet:
+
+129.90 -> 149.90.
+
+Esperado:
+
+valor atualizado conforme API;
+vigência respeitada;
+sem alteração em ledger.
+
+==================================================
+51. GOLDEN — PAUSA
+==================================================
+
+Se permitida:
+
+pausar regra.
+
+Esperado:
+
+estado correto;
+ações corretas;
+sem alteração de saldo.
+
+==================================================
+52. GOLDEN — REATIVAÇÃO
+==================================================
+
+Se permitida:
+
+reativar regra.
+
+Esperado:
+
+estado correto;
+lista atualizada.
+
+==================================================
+53. GOLDEN — MULTIUSER
+==================================================
+
+User A e User B possuem regras.
+
+Frontend não envia ownerId.
+
+A vê apenas regras de A.
+
+B vê apenas regras de B.
+
+==================================================
+54. TESTES UNITÁRIOS
+==================================================
+
+Cobrir:
+
+- serviço HTTP;
+- modelos;
+- listagem;
+- filtros;
+- criação;
+- edição;
+- detalhes;
+- periodicidades;
+- datas;
+- validações;
+- estados;
+- transições;
+- loading;
+- empty;
+- error;
+- retry;
+- requests concorrentes.
+
+==================================================
+55. TESTES E2E
+==================================================
+
+Se infraestrutura existir:
+
+validar:
+
+navegação;
+criação;
+edição;
+pausa;
+reativação;
+encerramento;
+responsividade.
+
+Não declarar PASS sem executar.
+
+==================================================
+56. REGRESSÕES
+==================================================
+
+Executar regressões relevantes:
+
+Authentication;
+Asset Accounts;
+Categories;
+Expenses;
+Income;
+Transfers;
+Dashboard;
+History;
+Tags;
+Attachments;
+Reports;
+Exports;
+Budgets;
+Budget Alerts;
+Financial Goals.
+
+Não alterar ledger.
+
+==================================================
+57. BUILD E QUALIDADE
+==================================================
+
+Executar:
+
+Angular lint;
+Angular unit tests;
+Angular production build;
+E2E, se configurado.
+
+Registrar comandos e resultados reais.
+
+==================================================
+58. FORA DO ESCOPO
+==================================================
+
+Não implementar:
+
+- backend novo;
+- endpoints inexistentes;
+- calendário financeiro;
+- geração de compromissos fora do ADR;
+- pagamento de ocorrências;
+- baixa financeira;
+- projeção de fluxo de caixa;
+- alertas de vencimento;
+- notificações externas;
+- alterações no ledger;
+- TASK-7.3.
+
+==================================================
+59. DEFINITION OF DONE
+==================================================
+
+TASK-7.2 concluída quando:
+
+- rota privada funcionando;
+- sidebar integrada;
+- listagem funcionando;
+- criação funcionando;
+- edição funcionando;
+- detalhes funcionando;
+- filtros corretos;
+- periodicidades corretas;
+- datas corretas;
+- valores BRL corretos;
+- estados e transições corretos;
+- loading/empty/error/retry;
+- autenticação preservada;
+- ownership preservado;
+- responsividade validada;
+- acessibilidade validada;
+- testes unitários aprovados;
+- lint aprovado;
+- production build aprovado;
+- regressões relevantes aprovadas;
+- nenhuma movimentação financeira indevida.
+
+==================================================
+60. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-7.2 — FRONTEND DE RECORRÊNCIAS
+
+STATUS:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+1. ADR utilizado.
+2. Contratos REST.
+3. Rota.
+4. Sidebar.
+5. Componentes.
+6. Serviços Angular.
+7. Modelos.
+8. Criação.
+9. Edição.
+10. Detalhes.
+11. Filtros.
+12. Periodicidades.
+13. Datas.
+14. Contas e categorias.
+15. Estados.
+16. Transições.
+17. Formatação BRL.
+18. Loading/empty/error.
+19. Concorrência.
+20. Responsividade.
+21. Acessibilidade.
+22. Golden Scenarios.
+23. Testes unitários.
+24. E2E.
+25. Lint.
+26. Production build.
+27. Regressões.
+28. Arquivos modificados.
+29. Bugs encontrados/corrigidos.
+30. Divergências do ADR.
+31. Dívidas técnicas.
+32. Fora do escopo confirmado.
+
+Se concluída:
+
+READY FOR TASK-7.3 — Backend de Compromissos Futuros
+e Efetivação Financeira.
+
+NÃO implementar TASK-7.3 nesta execução.

@@ -1,0 +1,2345 @@
+# TASK-4.4 — Infraestrutura Segura de Anexos
+
+Estamos na:
+
+# Sprint 4 — Enriquecimento das Transações
+
+Concluídas:
+
+- TASK-4.0 — Arquitetura de Tags e Anexos
+- TASK-4.1 — Domínio, Persistência e API de Tags
+- TASK-4.2 — Interface de Tags
+- TASK-4.3 — Associação de Tags às Transações
+
+A Sprint 3 foi aprovada e suas invariantes financeiras permanecem
+congeladas.
+
+Agora implemente:
+
+# TASK-4.4 — Infraestrutura Segura de Anexos
+
+Objetivo:
+
+Construir a infraestrutura backend segura e reutilizável necessária para
+Attachments de transações financeiras.
+
+Esta TASK deve implementar a FUNDAÇÃO de:
+
+- modelo de metadata de Attachment;
+- persistência;
+- migration;
+- abstração de storage;
+- implementação local de storage para MVP;
+- configuração;
+- validação de arquivos;
+- limites;
+- MIME/media type;
+- assinatura/magic bytes;
+- checksum;
+- geração segura de storage keys;
+- proteção contra path traversal;
+- consistência entre MySQL e storage;
+- autorização/ownership preparada;
+- testes.
+
+IMPORTANTE:
+
+Nesta TASK ainda NÃO implementar a experiência completa de upload nas
+telas Angular.
+
+Também não transformar esta TASK em implementação completa da API de
+Attachments se o ADR separou infraestrutura de endpoints funcionais.
+
+A TASK-4.5 será responsável pelo ciclo funcional de Attachments nas
+transações.
+
+---
+
+# 1. FONTE DE VERDADE
+
+Antes de modificar código, leia obrigatoriamente:
+
+- CLAUDE.md;
+- ADR da TASK-4.0;
+- relatório da TASK-4.1;
+- relatório da TASK-4.2;
+- relatório da TASK-4.3;
+- ADR do ledger;
+- FinancialTransaction;
+- Expense;
+- Income;
+- Transfer;
+- AccountMovement, se existir;
+- Tag;
+- migrations;
+- Spring Security;
+- CurrentUser;
+- Problem Details;
+- Request ID;
+- OpenAPI;
+- application.yml/properties;
+- profiles;
+- Docker/Docker Compose;
+- testes;
+- configuração de filesystem/static resources;
+- dependências Maven/Gradle.
+
+O ADR da TASK-4.0 é a autoridade principal para Attachments.
+
+Se este prompt divergir do ADR:
+
+SIGA O ADR.
+
+Documente a divergência no relatório final.
+
+---
+
+# 2. PRE-IMPLEMENTATION REPORT
+
+ANTES de modificar arquivos, produza:
+
+# TASK-4.4 — PRE-IMPLEMENTATION REPORT
+
+## 1. Decisões do ADR 4.0
+
+Informe:
+
+- modelo Attachment;
+- cardinalidade;
+- ownership;
+- storage abstraction;
+- storage MVP;
+- metadata vs bytes;
+- MIME types;
+- tamanho máximo;
+- número máximo de anexos, se definido;
+- checksum;
+- storage key;
+- upload flow;
+- delete flow;
+- authorization;
+- cancelled transaction behavior.
+
+## 2. Infraestrutura existente
+
+Procure:
+
+- Multipart;
+- FileStorage;
+- Attachment;
+- Resource;
+- filesystem;
+- static resources;
+- S3;
+- MinIO;
+- upload/download.
+
+Classifique:
+
+REUTILIZÁVEL
+PARCIALMENTE REUTILIZÁVEL
+OBSOLETO
+NÃO EXISTE.
+
+## 3. Domain/Persistence Model
+
+Mostre modelo proposto.
+
+## 4. Storage Architecture
+
+Mostre interfaces e dependências.
+
+## 5. Local Storage
+
+Mostre estratégia.
+
+## 6. Security
+
+Mostre validações e threat mitigations.
+
+## 7. Consistency
+
+Explique DB × filesystem.
+
+## 8. Configuration
+
+Liste properties.
+
+## 9. Migration
+
+Mostre schema.
+
+## 10. Tests
+
+Liste estratégia.
+
+## 11. Files
+
+Liste:
+
+- criar;
+- modificar;
+- reutilizar.
+
+Somente depois implemente.
+
+---
+
+# 3. PRINCÍPIO FUNDAMENTAL
+
+Attachment é METADATA da transação.
+
+Attachment NÃO possui efeito financeiro.
+
+Criar Attachment:
+
+balance delta = 0.
+
+Remover Attachment:
+
+balance delta = 0.
+
+Download:
+
+balance delta = 0.
+
+---
+
+# 4. NÃO TOCAR NO LEDGER
+
+Não modificar regras de:
+
+Expense;
+Income;
+Transfer;
+AccountMovement;
+currentBalance;
+netWorth.
+
+---
+
+# 5. TRANSACTION ATTACHMENT
+
+Implementar entidade conforme ADR.
+
+Nome esperado:
+
+TransactionAttachment
+
+ou equivalente aprovado.
+
+---
+
+# 6. MODELO
+
+Conceitualmente:
+
+TransactionAttachment
+
+- id
+- ownerId, se ADR aprovou owner explícito
+- transactionId
+- originalFileName
+- storageKey
+- contentType
+- sizeBytes
+- checksumSha256
+- createdAt
+
+Use exatamente campos aprovados no ADR.
+
+---
+
+# 7. ID
+
+Seguir UUID do projeto.
+
+---
+
+# 8. TRANSACTION
+
+Attachment pertence a UMA FinancialTransaction lógica.
+
+---
+
+# 9. TRANSACTION TYPES
+
+Deve ser estruturalmente compatível com:
+
+EXPENSE
+INCOME
+TRANSFER.
+
+---
+
+# 10. TRANSFER
+
+Attachment pertence à Transfer lógica.
+
+NÃO:
+
+source movement
+destination movement.
+
+---
+
+# 11. CARDINALIDADE
+
+Seguir ADR.
+
+Se aprovado:
+
+FinancialTransaction
+1
+→
+0..N TransactionAttachments.
+
+---
+
+# 12. OWNER
+
+Seguir decisão do ADR.
+
+Se ownerId explícito foi aprovado:
+
+ele é obrigatório e server-controlled.
+
+---
+
+# 13. OWNER CONSISTENCY
+
+Se Attachment possui ownerId:
+
+Attachment.ownerId deve ser igual a Transaction.ownerId.
+
+---
+
+# 14. REQUEST
+
+Cliente nunca poderá controlar:
+
+ownerId;
+storageKey;
+sizeBytes;
+checksum;
+createdAt.
+
+---
+
+# 15. ORIGINAL FILE NAME
+
+Persistir apenas para apresentação/download.
+
+Não utilizar como caminho físico.
+
+---
+
+# 16. ORIGINAL FILE NAME LIMIT
+
+Aplicar limite aprovado no ADR.
+
+Se ADR adotou 255:
+
+usar 255.
+
+---
+
+# 17. FILE NAME VALIDATION
+
+Proteger contra:
+
+- CR;
+- LF;
+- NUL;
+- control characters;
+- header injection;
+- nomes absurdamente longos.
+
+---
+
+# 18. UNICODE
+
+Permitir nomes legítimos como:
+
+comprovante-água.pdf
+nota-fiscal-são-paulo.pdf
+
+---
+
+# 19. PATH TRAVERSAL
+
+Filename como:
+
+../../etc/passwd
+
+NUNCA deve determinar localização física.
+
+---
+
+# 20. STORAGE KEY
+
+Gerado exclusivamente pelo servidor.
+
+---
+
+# 21. STORAGE KEY PROPERTIES
+
+Deve ser:
+
+- único;
+- não controlado pelo cliente;
+- independente de originalFileName;
+- adequado para futura implementação S3.
+
+---
+
+# 22. NÃO PERSISTIR ABSOLUTE PATH
+
+PROIBIDO persistir:
+
+/home/bill/equilibra/uploads/...
+C:\uploads\...
+
+Persistir somente storageKey lógico.
+
+---
+
+# 23. STORAGE ABSTRACTION
+
+Implementar abstração aprovada no ADR.
+
+Exemplo conceitual:
+
+AttachmentStorage
+
+com operações equivalentes a:
+
+store(...)
+open(...)
+delete(...)
+exists(...)
+
+Não precisa usar exatamente esses nomes.
+
+---
+
+# 24. DOMAIN INDEPENDENCE
+
+Domínio não deve depender de:
+
+java.nio.file.Path
+
+como conceito de negócio.
+
+---
+
+# 25. STORAGE IMPLEMENTATION
+
+Implementar storage MVP aprovado.
+
+Esperado:
+
+LocalFileSystemAttachmentStorage
+
+ou equivalente.
+
+---
+
+# 26. FUTURE STORAGE
+
+Arquitetura deve permitir implementação futura:
+
+S3AttachmentStorage
+
+ou storage S3-compatible
+
+sem alterar regras de domínio.
+
+NÃO implementar S3 agora.
+
+---
+
+# 27. STORAGE ROOT
+
+Configurável.
+
+Nunca hardcoded.
+
+---
+
+# 28. CONFIGURATION
+
+Usar configuração central.
+
+Conceitualmente:
+
+equilibra:
+  attachments:
+    storage-type: local
+    local-root: ...
+    max-file-size: ...
+    max-attachments-per-transaction: ...
+    allowed-media-types: ...
+
+Adapte ao padrão real.
+
+---
+
+# 29. CONFIGURATION PROPERTIES
+
+Preferir:
+
+@ConfigurationProperties
+
+tipado
+
+se projeto segue esse padrão.
+
+---
+
+# 30. NÃO ESPALHAR MAGIC NUMBERS
+
+Não definir:
+
+10 MB
+
+em:
+
+Controller
+Service
+Validator
+Angular
+
+separadamente.
+
+Backend deve ter política central.
+
+---
+
+# 31. ATTACHMENT POLICY
+
+Se ADR aprovou:
+
+AttachmentPolicy
+
+ou equivalente,
+
+implementar política central.
+
+---
+
+# 32. MAX FILE SIZE
+
+Usar limite do ADR.
+
+Se ADR decidiu:
+
+10 MB
+
+então:
+
+10 MB por arquivo.
+
+---
+
+# 33. SPRING MULTIPART
+
+Configuração global deve ser compatível.
+
+Não deixar:
+
+regra de negócio = 10 MB
+
+mas Spring = 1 MB
+
+ou vice-versa sem intenção.
+
+---
+
+# 34. MAX REQUEST SIZE
+
+Definir valor coerente.
+
+Se múltiplos arquivos serão enviados individualmente:
+
+request size pode acompanhar limite por arquivo + overhead.
+
+---
+
+# 35. MAX ATTACHMENTS
+
+Se ADR definiu limite por transação:
+
+modelar/configurar política.
+
+Mesmo que endpoint completo venha na 4.5.
+
+---
+
+# 36. EMPTY FILE
+
+0 bytes:
+
+rejeitar.
+
+---
+
+# 37. ALLOWED MEDIA TYPES
+
+Usar whitelist EXATA do ADR.
+
+Esperado, se aprovado:
+
+application/pdf
+image/jpeg
+image/png
+image/webp
+
+---
+
+# 38. DENY BY DEFAULT
+
+Tipo não presente na whitelist:
+
+rejeitar.
+
+---
+
+# 39. SVG
+
+Se ADR rejeitou SVG:
+
+não aceitar:
+
+image/svg+xml.
+
+---
+
+# 40. EXECUTABLES
+
+Não aceitar:
+
+application/x-msdownload;
+application/java-archive;
+application/x-sh;
+text/html;
+application/javascript;
+
+ou equivalentes.
+
+---
+
+# 41. EXTENSION IS NOT AUTHORITY
+
+Não validar somente extensão.
+
+---
+
+# 42. CLIENT CONTENT TYPE IS NOT AUTHORITY
+
+Não confiar somente em:
+
+MultipartFile.getContentType().
+
+---
+
+# 43. SIGNATURE VALIDATION
+
+Implementar validação mínima de conteúdo conforme ADR.
+
+---
+
+# 44. MAGIC BYTES
+
+Validar assinatura real para tipos permitidos.
+
+---
+
+# 45. PDF
+
+Validar assinatura de PDF de forma segura e razoável.
+
+---
+
+# 46. JPEG
+
+Validar JPEG.
+
+---
+
+# 47. PNG
+
+Validar PNG.
+
+---
+
+# 48. WEBP
+
+Validar WEBP se estiver na whitelist.
+
+---
+
+# 49. SPOOFING
+
+Exemplo:
+
+virus.exe renomeado para:
+
+comprovante.pdf
+
+e enviado como:
+
+application/pdf
+
+não deve ser aceito se bytes não forem PDF.
+
+---
+
+# 50. DEPENDENCY
+
+Se for necessária biblioteca para detecção:
+
+avaliar cuidadosamente.
+
+Preferir solução pequena e madura.
+
+Não adicionar framework pesado sem necessidade.
+
+---
+
+# 51. MIME NORMALIZATION
+
+Após validação:
+
+persistir contentType canônico determinado pelo servidor.
+
+Não necessariamente o valor bruto enviado pelo cliente.
+
+---
+
+# 52. CHECKSUM
+
+Implementar checksum conforme ADR.
+
+Esperado:
+
+SHA-256.
+
+---
+
+# 53. SERVER CALCULATED
+
+Cliente não fornece checksum como autoridade.
+
+---
+
+# 54. CHECKSUM FORMAT
+
+Definir formato estável.
+
+Preferência:
+
+hex lowercase.
+
+---
+
+# 55. STREAMING CHECKSUM
+
+Evitar carregar arquivo inteiro em memória apenas para calcular SHA-256.
+
+---
+
+# 56. FILE MEMORY
+
+Evitar:
+
+multipart.getBytes()
+
+para arquivos grandes se não for necessário.
+
+Preferir streaming.
+
+---
+
+# 57. STORE STREAM
+
+Storage abstraction deve permitir estratégia eficiente.
+
+---
+
+# 58. TEMP FILE
+
+Se implementação usar arquivo temporário:
+
+- diretório seguro;
+- cleanup garantido;
+- não confiar no filename original.
+
+---
+
+# 59. ATOMIC LOCAL WRITE
+
+Para filesystem local:
+
+preferir escrever em arquivo temporário
+e depois mover para destino final.
+
+Isso reduz risco de arquivo parcialmente escrito.
+
+---
+
+# 60. STORAGE ROOT ESCAPE
+
+Antes de acessar arquivo:
+
+path resolvido deve permanecer dentro de storage root.
+
+Defense-in-depth mesmo com storageKey server-generated.
+
+---
+
+# 61. SYMLINK
+
+Avalie risco de symlink no storage local.
+
+Storage root deve ser controlado pela aplicação.
+
+Não seguir caminhos arbitrários fornecidos externamente.
+
+---
+
+# 62. STORAGE KEY GENERATION
+
+Preferir UUIDs e estrutura lógica aprovada.
+
+Exemplo conceitual:
+
+{ownerId}/{transactionId}/{attachmentId}
+
+ou equivalente.
+
+---
+
+# 63. ORIGINAL EXTENSION
+
+Não é necessário incorporar extensão original ao storageKey.
+
+---
+
+# 64. DUPLICATE FILE NAMES
+
+Dois:
+
+recibo.pdf
+
+na mesma transação:
+
+devem poder coexistir se ADR permitir múltiplos anexos.
+
+---
+
+# 65. STORAGE COLLISION
+
+Storage key collision deve ser praticamente impossível e protegida.
+
+Não sobrescrever arquivo existente silenciosamente.
+
+---
+
+# 66. OVERWRITE
+
+store() não deve sobrescrever attachment existente por acidente.
+
+---
+
+# 67. DATABASE
+
+Criar migration nova para metadata.
+
+---
+
+# 68. TABLE
+
+Nome conforme ADR.
+
+Esperado:
+
+transaction_attachments
+
+---
+
+# 69. COLUMNS
+
+Conforme modelo aprovado.
+
+Conceitualmente:
+
+id
+owner_id
+transaction_id
+original_file_name
+storage_key
+content_type
+size_bytes
+checksum_sha256
+created_at
+
+---
+
+# 70. STORAGE KEY UNIQUE
+
+Adicionar UNIQUE se ADR assim determinou.
+
+Recomendado:
+
+sim.
+
+---
+
+# 71. CHECKSUM
+
+Não tornar checksum globalmente unique.
+
+Arquivos idênticos podem existir legitimamente.
+
+---
+
+# 72. FK TRANSACTION
+
+Obrigatória.
+
+---
+
+# 73. FK OWNER
+
+Se owner explícito:
+
+obrigatória.
+
+---
+
+# 74. OWNER CONSISTENCY DB
+
+Avalie se schema consegue reforçar:
+
+attachment owner
+=
+transaction owner.
+
+Se não for razoável no MySQL/modelo atual:
+
+application layer deve garantir.
+
+Documente.
+
+---
+
+# 75. CASCADE
+
+Seguir ADR.
+
+Não criar cascade que possa apagar ledger ou metadata financeira por
+acidente.
+
+---
+
+# 76. INDEXES
+
+Avaliar:
+
+transaction_id;
+owner_id;
+storage_key unique.
+
+Não criar índices redundantes.
+
+---
+
+# 77. REPOSITORY
+
+Criar repository ownership-aware.
+
+---
+
+# 78. LOOKUP
+
+Operações futuras devem permitir:
+
+findByIdAndOwnerId
+
+ou equivalente.
+
+---
+
+# 79. LIST BY TRANSACTION
+
+Preparar query:
+
+transactionId + ownerId.
+
+---
+
+# 80. COUNT
+
+Se existe max attachments por transaction:
+
+repository deve permitir count owner/transaction.
+
+---
+
+# 81. NÃO EXPOR STORAGE KEY
+
+Por padrão, response público futuro não precisa revelar storageKey.
+
+---
+
+# 82. STORAGE KEY INTERNAL
+
+Tratar como implementação interna.
+
+---
+
+# 83. STORAGE CONTENT
+
+Storage nunca decide autorização.
+
+---
+
+# 84. AUTHORIZATION LAYER
+
+Authorization acontece antes de abrir bytes.
+
+---
+
+# 85. PRIVATE FILES
+
+Nenhum attachment deve ser público.
+
+---
+
+# 86. STATIC RESOURCES
+
+Auditar Spring static resource mappings.
+
+Garantir que storage root NÃO seja servido por:
+
+/uploads/**
+/files/**
+/static/**
+
+ou equivalente.
+
+---
+
+# 87. WEB SERVER
+
+Se Docker/Nginx existir:
+
+auditar para garantir que storage directory não está mapeado
+publicamente.
+
+---
+
+# 88. NO PUBLIC URL
+
+Não criar URL pública direta para arquivo.
+
+---
+
+# 89. STORAGE API
+
+Storage recebe storageKey interno.
+
+Não:
+
+owner-provided URL.
+
+---
+
+# 90. DOWNLOAD PREPARATION
+
+A TASK-4.5 poderá fazer:
+
+authenticated request
+→ CurrentUser
+→ metadata owner check
+→ storage open.
+
+Infraestrutura 4.4 deve permitir isso.
+
+---
+
+# 91. IDOR
+
+Repository deve permitir consulta owner-scoped.
+
+---
+
+# 92. 404 POLICY
+
+A API futura deve conseguir responder 404 tanto para:
+
+attachment inexistente
+quanto attachment de outro owner.
+
+---
+
+# 93. CONTENT DISPOSITION
+
+Criar helper seguro se necessário para uso futuro.
+
+Filename nunca concatenado cru em header.
+
+---
+
+# 94. CRLF
+
+Nomes contendo:
+
+\r
+\n
+
+devem ser rejeitados ou sanitizados conforme ADR.
+
+---
+
+# 95. STORED XSS
+
+originalFileName é texto.
+
+Nunca renderizar como HTML.
+
+Backend não deve produzir HTML com filename.
+
+---
+
+# 96. DOWNLOAD CONTENT TYPE
+
+A futura resposta deve usar contentType validado pelo servidor.
+
+---
+
+# 97. NOSNIFF
+
+Preparar política para:
+
+X-Content-Type-Options: nosniff.
+
+---
+
+# 98. CACHE
+
+Downloads privados devem futuramente usar política apropriada,
+preferencialmente:
+
+Cache-Control: private/no-store
+
+conforme ADR.
+
+---
+
+# 99. STORAGE CONSISTENCY
+
+CRÍTICO.
+
+DB e filesystem não compartilham transação ACID.
+
+Implementar estratégia de consistência aprovada no ADR.
+
+---
+
+# 100. STORE FLOW
+
+Se infraestrutura incluir orchestration nesta TASK:
+
+seguir fluxo aprovado.
+
+Conceitualmente:
+
+validate
+→ generate IDs/key
+→ write storage
+→ persist metadata
+→ compensate storage on DB failure.
+
+---
+
+# 101. DB FAILURE
+
+Se arquivo foi armazenado e metadata falha:
+
+tentar remover arquivo.
+
+---
+
+# 102. COMPENSATION FAILURE
+
+Se cleanup também falhar:
+
+logar erro com:
+
+requestId;
+attachmentId/storage key técnico apropriado.
+
+Não expor detalhes ao usuário.
+
+---
+
+# 103. STORAGE FAILURE
+
+Se store falha:
+
+metadata não deve ser persistida como se arquivo existisse.
+
+---
+
+# 104. ORPHAN
+
+Não deixar inconsistência silenciosa.
+
+---
+
+# 105. ORPHAN CLEANUP
+
+Se ADR planejou job futuro:
+
+documentar extension point.
+
+Não implementar scheduler agora.
+
+---
+
+# 106. DELETE CONSISTENCY
+
+Se delete físico dos bytes será feito na TASK-4.5:
+
+infraestrutura deve oferecer primitive segura.
+
+Não implementar endpoint ainda.
+
+---
+
+# 107. DELETE MISSING FILE
+
+Definir comportamento do storage.
+
+Preferência:
+
+delete idempotente
+
+ou resultado explícito consistente.
+
+Documentar.
+
+---
+
+# 108. STORAGE EXCEPTIONS
+
+Não vazar:
+
+IOException;
+absolute path;
+filesystem structure.
+
+Mapear para exceções de aplicação apropriadas.
+
+---
+
+# 109. LOGGING
+
+Não logar bytes.
+
+---
+
+# 110. NO FILE CONTENT LOGGING
+
+Mesmo em DEBUG.
+
+---
+
+# 111. LOG STORAGE FAILURE
+
+Pode registrar identificadores técnicos seguros.
+
+Nunca registrar conteúdo.
+
+---
+
+# 112. MALWARE
+
+Não implementar antivírus falso.
+
+---
+
+# 113. MALWARE DOCUMENTATION
+
+Registrar:
+
+magic-byte/MIME validation NÃO é malware scanning.
+
+---
+
+# 114. FUTURE SCANNER
+
+Se ADR aprovou extension point:
+
+AttachmentScanner
+
+pode existir como abstração somente se realmente útil.
+
+Não criar arquitetura vazia desnecessária.
+
+---
+
+# 115. NO OCR
+
+Não implementar.
+
+---
+
+# 116. NO IMAGE PROCESSING
+
+Não implementar.
+
+---
+
+# 117. NO THUMBNAIL
+
+Não implementar.
+
+---
+
+# 118. NO PDF PARSING
+
+Não implementar além do necessário para identificação segura do tipo.
+
+---
+
+# 119. NO S3
+
+Não implementar.
+
+---
+
+# 120. NO MINIO
+
+Não implementar.
+
+---
+
+# 121. NO BASE64
+
+Não criar modelo de bytes Base64.
+
+---
+
+# 122. NO BLOB
+
+Se ADR rejeitou BLOB:
+
+não criar BLOB/LONGBLOB.
+
+---
+
+# 123. FILESYSTEM DIRECTORY
+
+Na inicialização:
+
+validar/criar storage root conforme política.
+
+---
+
+# 124. STARTUP FAILURE
+
+Se diretório obrigatório não puder ser criado/escrito:
+
+falhar de forma clara e segura.
+
+Não iniciar aplicação fingindo storage funcional.
+
+---
+
+# 125. DIRECTORY PERMISSIONS
+
+Documentar que storage root deve ter acesso mínimo necessário.
+
+---
+
+# 126. DOCKER
+
+Se projeto usa Docker Compose:
+
+preparar volume persistente para storage local se ADR definiu.
+
+---
+
+# 127. CONTAINER EPHEMERAL STORAGE
+
+Não depender silenciosamente do filesystem efêmero do container.
+
+---
+
+# 128. DEV ENVIRONMENT
+
+Fornecer configuração de desenvolvimento adequada.
+
+---
+
+# 129. TEST ENVIRONMENT
+
+Usar temp directory.
+
+---
+
+# 130. PROD
+
+Não assumir local storage como solução final distribuída.
+
+Documentar limitação.
+
+---
+
+# 131. TEST STORAGE CONTRACT
+
+Criar testes para a abstração de storage.
+
+---
+
+# 132. STORE TEST
+
+Gravar conteúdo.
+
+Ler conteúdo.
+
+Comparar.
+
+---
+
+# 133. EXISTS TEST
+
+Se operação existe:
+
+validar.
+
+---
+
+# 134. DELETE TEST
+
+Gravar
+→ delete
+→ não existe.
+
+---
+
+# 135. SAME ORIGINAL NAME
+
+Dois arquivos com mesmo nome original:
+
+storage keys diferentes.
+
+---
+
+# 136. PATH TRAVERSAL TEST
+
+Filename:
+
+../../secret.pdf
+
+não pode escapar root.
+
+---
+
+# 137. STORAGE KEY TRAVERSAL
+
+Mesmo storageKey inválido/manipulado internamente:
+
+storage deve possuir defense-in-depth contra:
+
+../
+
+se interface permitir String key.
+
+---
+
+# 138. EMPTY TEST
+
+0 bytes:
+
+rejeitado pela policy.
+
+---
+
+# 139. SIZE TEST
+
+Arquivo exatamente no limite:
+
+aceito.
+
+---
+
+# 140. OVER SIZE TEST
+
+limite + 1 byte:
+
+rejeitado.
+
+---
+
+# 141. PDF TEST
+
+PDF válido:
+
+aceito.
+
+---
+
+# 142. PDF SPOOF TEST
+
+Arquivo aleatório:
+
+filename .pdf
+content-type application/pdf
+
+rejeitado.
+
+---
+
+# 143. JPEG TEST
+
+válido.
+
+---
+
+# 144. JPEG SPOOF
+
+rejeitado.
+
+---
+
+# 145. PNG TEST
+
+válido.
+
+---
+
+# 146. PNG SPOOF
+
+rejeitado.
+
+---
+
+# 147. WEBP TEST
+
+se permitido:
+
+válido.
+
+---
+
+# 148. SVG TEST
+
+se não permitido:
+
+rejeitado.
+
+---
+
+# 149. HTML TEST
+
+rejeitado.
+
+---
+
+# 150. EXECUTABLE TEST
+
+rejeitado.
+
+---
+
+# 151. CONTENT TYPE MISMATCH
+
+Exemplo:
+
+bytes PNG
+cliente declara JPEG.
+
+Definir conforme ADR.
+
+Preferência segura:
+
+rejeitar inconsistência em vez de aceitar silenciosamente.
+
+---
+
+# 152. CHECKSUM TEST
+
+Conteúdo conhecido:
+
+SHA-256 esperado.
+
+---
+
+# 153. CHECKSUM STREAM TEST
+
+Garantir que cálculo não corrompe stream destinado ao storage.
+
+---
+
+# 154. FILENAME TEST
+
+Unicode legítimo:
+
+aceito.
+
+---
+
+# 155. CRLF TEST
+
+rejeitado/sanitizado conforme ADR.
+
+---
+
+# 156. NUL TEST
+
+rejeitado.
+
+---
+
+# 157. LONG NAME TEST
+
+acima do limite:
+
+rejeitado.
+
+---
+
+# 158. DB TEST
+
+Metadata persiste corretamente.
+
+---
+
+# 159. FK TEST
+
+Attachment não pode apontar para transaction inexistente.
+
+---
+
+# 160. OWNER TEST
+
+Se owner explícito:
+
+metadata deve obedecer owner.
+
+---
+
+# 161. CROSS USER PREPARATION
+
+Repository não deve permitir lookup inseguro como caminho padrão.
+
+---
+
+# 162. MYSQL
+
+Usar Testcontainers para:
+
+migration;
+constraints;
+FKs;
+indexes;
+repository.
+
+---
+
+# 163. CLEAN DB
+
+Todas migrations desde zero:
+
+PASS.
+
+---
+
+# 164. UPGRADE DB
+
+Aplicar nova migration sobre schema da TASK-4.3:
+
+PASS.
+
+---
+
+# 165. LEDGER REGRESSION
+
+Executar suíte financeira crítica.
+
+---
+
+# 166. GOLDEN SCENARIO
+
+A initial = 1000
+B initial = 500
+
+Income A = 700
+Expense A = 200
+Transfer A → B = 300
+
+Esperado:
+
+A = 1200
+B = 800
+Net Worth = 2000
+
+Entradas = 700
+Saídas = 200
+Saldo = 500.
+
+Criar metadata/infraestrutura de Attachment:
+
+NENHUM valor muda.
+
+---
+
+# 167. TAG REGRESSION
+
+Tags continuam funcionando:
+
+- CRUD;
+- association;
+- inactive historical;
+- Expense;
+- Income;
+- Transfer.
+
+---
+
+# 168. HISTORY REGRESSION
+
+Transfer continua aparecendo uma vez.
+
+---
+
+# 169. DASHBOARD REGRESSION
+
+Sem alteração funcional.
+
+---
+
+# 170. BUILD
+
+Backend build:
+
+PASS.
+
+---
+
+# 171. TESTS
+
+Backend unit/integration/security/storage tests:
+
+PASS.
+
+---
+
+# 172. FRONTEND
+
+Como não deve haver mudança funcional Angular:
+
+lint/build devem continuar passando conforme pipeline.
+
+---
+
+# 173. API ENDPOINTS
+
+IMPORTANTE:
+
+Se ADR 4.0 reservou endpoints funcionais para task posterior:
+
+NÃO implementar endpoints completos de upload/download/delete agora.
+
+---
+
+# 174. PERMITIDO
+
+Pode implementar componentes internos necessários para tornar a
+infraestrutura testável.
+
+---
+
+# 175. NÃO EXPOR STORAGE DIRETAMENTE
+
+Nenhum endpoint técnico como:
+
+/api/storage/{key}
+
+deve existir.
+
+---
+
+# 176. NÃO CRIAR PUBLIC FILE SERVER
+
+Nenhum:
+
+/uploads/**
+/attachments/public/**
+
+---
+
+# 177. SECURITY CONFIG
+
+Não adicionar permitAll para storage.
+
+---
+
+# 178. OPENAPI
+
+Se nenhum endpoint novo existir:
+
+não inventar endpoints apenas para documentar infraestrutura.
+
+Documentar modelo técnico nos docs/ADR apropriados.
+
+---
+
+# 179. ARCHITECTURAL TEST
+
+Se projeto usa ArchUnit ou equivalente:
+
+considerar regra:
+
+domain não depende da implementação local de storage.
+
+---
+
+# 180. DEPENDENCY DIRECTION
+
+Esperado conceitualmente:
+
+Application/Domain
+        |
+        v
+AttachmentStorage interface
+        ^
+        |
+Infrastructure LocalFileSystemAttachmentStorage
+
+Adapte à arquitetura real.
+
+---
+
+# 181. NO GOD SERVICE
+
+Não criar:
+
+AttachmentEverythingService
+
+responsável por:
+
+validation
+filesystem
+authorization
+repository
+HTTP
+ledger.
+
+Separar responsabilidades de forma pragmática.
+
+---
+
+# 182. NÃO OVERENGINEER
+
+Também não criar dezenas de interfaces sem necessidade.
+
+Precisamos de uma fronteira clara entre:
+
+metadata/application
+e
+storage.
+
+---
+
+# 183. SECURITY REVIEW
+
+Antes de concluir, auditar explicitamente:
+
+- path traversal;
+- public access;
+- MIME spoofing;
+- oversized files;
+- executable files;
+- SVG;
+- HTML;
+- filename injection;
+- CRLF;
+- NUL;
+- storage key control;
+- cross-user metadata;
+- absolute path leakage;
+- exception leakage;
+- storage root escape.
+
+---
+
+# 184. PERFORMANCE
+
+Upload/download futuro deve poder usar streaming.
+
+Não desenhar API interna que obrigue carregar 10 MB × N em memória.
+
+---
+
+# 185. RESOURCE MANAGEMENT
+
+Streams devem ser fechados corretamente.
+
+---
+
+# 186. FILE DESCRIPTORS
+
+Testes repetidos não devem vazar descriptors.
+
+---
+
+# 187. CONCURRENCY
+
+Dois uploads futuros com mesmo originalFileName:
+
+não devem colidir.
+
+Storage keys independentes.
+
+---
+
+# 188. TRANSACTIONAL BOUNDARY
+
+Documentar claramente o que é:
+
+DB transaction
+
+e o que não é:
+
+filesystem transaction.
+
+---
+
+# 189. DOCUMENTATION
+
+Atualizar documentação técnica da Sprint 4 com:
+
+- attachment model;
+- storage abstraction;
+- local storage;
+- configuration;
+- security policy;
+- MIME whitelist;
+- size limits;
+- checksum;
+- consistency strategy;
+- deployment considerations.
+
+---
+
+# 190. DEFINITION OF DONE
+
+TASK-4.4 estará concluída quando:
+
+- ADR 4.0 tiver sido seguido;
+- TransactionAttachment metadata estiver modelado;
+- migration nova existir;
+- schema estiver correto;
+- FK para FinancialTransaction estiver correta;
+- ownership estiver conforme ADR;
+- storageKey for server-controlled;
+- originalFileName não controlar path;
+- absolute path não for persistido;
+- storage abstraction existir;
+- implementação local existir;
+- storage root for configurável;
+- storage root não for público;
+- storage root escape estiver protegido;
+- overwrite acidental estiver protegido;
+- tamanho máximo estiver centralizado;
+- empty file estiver rejeitado;
+- MIME whitelist estiver implementada;
+- magic-byte/signature validation estiver implementada;
+- MIME spoofing estiver testado;
+- SVG policy estiver aplicada;
+- executables estiverem rejeitados;
+- checksum SHA-256 estiver implementado se aprovado no ADR;
+- streaming for usado de forma adequada;
+- configuração multipart estiver coerente;
+- filesystem temporário dos testes estiver isolado;
+- DB/storage consistency strategy estiver implementada ou preparada
+  exatamente conforme escopo do ADR;
+- repository for ownership-aware;
+- nenhum public /uploads existir;
+- nenhum endpoint inseguro de storage existir;
+- MySQL/Testcontainers passar;
+- storage contract tests passarem;
+- security tests passarem;
+- clean migration passar;
+- upgrade migration passar;
+- ledger regressions passarem;
+- Tags regressions passarem;
+- backend build passar;
+- frontend continuar compilando;
+- nenhuma UI de upload tiver sido implementada;
+- nenhum endpoint público de arquivo tiver sido criado.
+
+---
+
+# 191. RELATÓRIO FINAL
+
+Produza:
+
+# TASK-4.4 — INFRAESTRUTURA SEGURA DE ANEXOS
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+## 1. ADR utilizado
+
+Arquivo:
+
+Decisões aplicadas:
+
+## 2. Attachment Model
+
+Classe:
+
+Campos:
+
+Ownership:
+
+Cardinality:
+
+## 3. Database
+
+Table:
+
+Columns:
+
+FKs:
+
+Indexes:
+
+Constraints:
+
+## 4. Migration
+
+Arquivo:
+
+Clean DB:
+PASS / FAIL
+
+Upgrade:
+PASS / FAIL
+
+## 5. Storage Abstraction
+
+Interface:
+
+Operações:
+
+## 6. Local Storage
+
+Implementação:
+
+Root:
+
+Configurable:
+PASS / FAIL
+
+Publicly exposed:
+YES / NO
+
+Esperado:
+NO
+
+## 7. Storage Key
+
+Estratégia:
+
+Server controlled:
+PASS / FAIL
+
+Unique:
+PASS / FAIL
+
+## 8. Filename
+
+Unicode:
+PASS / FAIL
+
+Path independent:
+PASS / FAIL
+
+CRLF protection:
+PASS / FAIL
+
+NUL protection:
+PASS / FAIL
+
+Max length:
+PASS / FAIL
+
+## 9. File Policy
+
+Max size:
+
+Max attachments:
+
+Allowed media types:
+
+## 10. MIME Validation
+
+Client MIME trusted:
+YES / NO
+
+Esperado:
+NO
+
+Magic bytes:
+PASS / FAIL
+
+Mismatch:
+PASS / FAIL
+
+## 11. File Types
+
+PDF:
+PASS / FAIL
+
+JPEG:
+PASS / FAIL
+
+PNG:
+PASS / FAIL
+
+WEBP:
+PASS / FAIL / N/A
+
+SVG rejected:
+PASS / FAIL
+
+HTML rejected:
+PASS / FAIL
+
+Executable rejected:
+PASS / FAIL
+
+## 12. Checksum
+
+Algorithm:
+
+Server calculated:
+PASS / FAIL
+
+Streaming:
+PASS / FAIL
+
+## 13. Path Traversal
+
+Original filename:
+PASS / FAIL
+
+Storage key:
+PASS / FAIL
+
+Root escape:
+PASS / FAIL
+
+## 14. Storage Consistency
+
+Store failure:
+PASS / FAIL
+
+DB failure compensation:
+PASS / FAIL / PREPARADO PARA 4.5
+
+Orphan strategy:
+
+## 15. Repository
+
+Ownership-aware:
+PASS / FAIL
+
+List by transaction:
+PASS / FAIL
+
+Count:
+PASS / FAIL / N/A
+
+## 16. Security
+
+Public storage:
+PASS / FAIL
+
+permitAll:
+PASS / FAIL
+
+Absolute path leak:
+PASS / FAIL
+
+Exception leak:
+PASS / FAIL
+
+## 17. Docker
+
+Persistent volume:
+PASS / FAIL / N/A
+
+## 18. Tests
+
+Domain:
+PASS / FAIL
+
+Policy:
+PASS / FAIL
+
+Storage contract:
+PASS / FAIL
+
+Filesystem:
+PASS / FAIL
+
+Repository:
+PASS / FAIL
+
+Security:
+PASS / FAIL
+
+MySQL/Testcontainers:
+PASS / FAIL
+
+## 19. Financial Regression
+
+Expense:
+PASS / FAIL
+
+Income:
+PASS / FAIL
+
+Transfer:
+PASS / FAIL
+
+Balance:
+PASS / FAIL
+
+Net Worth:
+PASS / FAIL
+
+Dashboard:
+PASS / FAIL
+
+History:
+PASS / FAIL
+
+## 20. Tags Regression
+
+CRUD:
+PASS / FAIL
+
+Associations:
+PASS / FAIL
+
+## 21. Build
+
+Backend:
+PASS / FAIL
+
+Frontend:
+PASS / FAIL
+
+## 22. Threat Review
+
+### IDOR
+Status:
+
+### Path Traversal
+Status:
+
+### MIME Spoofing
+Status:
+
+### Oversized Upload
+Status:
+
+### Executable Upload
+Status:
+
+### SVG
+Status:
+
+### Stored XSS Filename
+Status:
+
+### Header Injection
+Status:
+
+### Public Storage Exposure
+Status:
+
+### Storage Exhaustion
+Status:
+
+### Orphan Files
+Status:
+
+## 23. Files
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## 24. Bugs encontrados
+
+Para cada:
+
+Severidade:
+Problema:
+Causa:
+Correção:
+Teste de regressão:
+
+## 25. Divergências do ADR
+
+Esperado:
+
+NENHUMA.
+
+## 26. Dívida técnica
+
+Liste somente dívida real.
+
+## 27. Fora de escopo confirmado
+
+Angular Upload UI:
+NÃO IMPLEMENTADA
+
+Attachment Download UI:
+NÃO IMPLEMENTADA
+
+S3:
+NÃO IMPLEMENTADO
+
+MinIO:
+NÃO IMPLEMENTADO
+
+OCR:
+NÃO IMPLEMENTADO
+
+Thumbnail:
+NÃO IMPLEMENTADO
+
+Malware Scanner:
+NÃO IMPLEMENTADO, salvo se já existia infraestrutura real
+
+## 28. Próxima Task
+
+Se TASK-4.4 estiver concluída, declarar prontidão para:
+
+# TASK-4.5 — API e Ciclo de Vida de Anexos nas Transações
+
+NÃO implementar TASK-4.5 nesta execução.

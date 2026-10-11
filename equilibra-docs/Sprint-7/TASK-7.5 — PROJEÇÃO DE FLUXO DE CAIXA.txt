@@ -1,0 +1,1052 @@
+# TASK-7.5 — PROJEÇÃO DE FLUXO DE CAIXA
+
+PROJETO: EQUILIBRA
+SPRINT: 7 — PREVISIBILIDADE FINANCEIRA
+
+STACK:
+Spring Boot 4
+Angular 19
+Angular Material
+ECharts
+MySQL
+Flyway
+Testcontainers
+
+CONTEXTO
+
+Sprints 0 a 6 aprovadas.
+TASK-7.0 — Arquitetura e ADR concluídos.
+TASK-7.1 — Backend de Recorrências concluído.
+TASK-7.2 — Frontend de Recorrências concluído.
+TASK-7.3 — Backend de Compromissos Futuros concluído.
+TASK-7.4 — Calendário Financeiro concluído.
+
+OBJETIVO
+
+Implementar a projeção de fluxo de caixa
+com base nos saldos financeiros reais
+e nos compromissos futuros elegíveis.
+
+Disponibilizar cálculo autoritativo no backend
+e visualização responsiva no frontend,
+se esse escopo estiver autorizado pelo ADR.
+
+A projeção é exclusivamente consultiva.
+
+NÃO alterar o ledger.
+
+NÃO criar transações financeiras.
+
+NÃO efetivar compromissos automaticamente.
+
+==================================================
+1. INSPEÇÃO OBRIGATÓRIA
+==================================================
+
+Ler:
+
+- CLAUDE.md;
+- ADR da TASK-7.0;
+- relatórios das TASKS 7.1–7.4;
+- modelo de AssetAccount;
+- cálculo de saldo real;
+- FinancialTransaction;
+- AccountMovement;
+- Expense;
+- Income;
+- Transfer;
+- FinancialCommitment/Occurrence real;
+- estados de compromissos;
+- datas de vencimento;
+- datas de efetivação;
+- geração de recorrências;
+- OpenAPI;
+- relatórios financeiros;
+- dashboard;
+- Angular routing;
+- ECharts existentes;
+- serviços frontend;
+- testes existentes.
+
+Não presumir nomes de classes
+ou contratos a partir deste prompt.
+
+==================================================
+2. GATE ARQUITETURAL
+==================================================
+
+Confirmar no ADR:
+
+A. Fonte de saldo inicial.
+
+B. Horizonte de projeção.
+
+C. Contas incluídas.
+
+D. Compromissos elegíveis.
+
+E. Tratamento de atrasados.
+
+F. Tratamento de efetivados.
+
+G. Tratamento de cancelados.
+
+H. Receitas e despesas.
+
+I. Transferências previstas, se existirem.
+
+J. Datas de projeção.
+
+K. Timezone.
+
+L. Ordenação de eventos no mesmo dia.
+
+M. Ocorrências recorrentes ainda não geradas.
+
+N. Geração sob demanda.
+
+O. Riscos de dupla contagem.
+
+P. Precisão monetária.
+
+Q. Tratamento de contas inativas.
+
+R. Resolução temporal do gráfico.
+
+S. Escopo backend/frontend da TASK-7.5.
+
+Se decisão essencial não existir,
+registrar BLOCKED.
+
+Não inventar regra financeira.
+
+==================================================
+3. PRE-IMPLEMENTATION REPORT
+==================================================
+
+Produzir antes de editar:
+
+# TASK-7.5 — PRE-IMPLEMENTATION REPORT
+
+1. ADR.
+2. Fonte de saldos.
+3. Fonte de compromissos.
+4. Estados elegíveis.
+5. Horizonte.
+6. Datas.
+7. Contas.
+8. Recorrências.
+9. Transferências.
+10. Fórmulas.
+11. Endpoints.
+12. DTOs.
+13. UI.
+14. Segurança.
+15. Performance.
+16. Testes.
+17. Arquivos previstos.
+18. Bloqueadores.
+
+==================================================
+4. PRINCÍPIO CENTRAL
+==================================================
+
+Saldo real e saldo projetado
+são conceitos distintos.
+
+Saldo real:
+derivado do ledger.
+
+Saldo projetado:
+derivado do saldo real mais
+eventos futuros elegíveis.
+
+Não persistir saldo projetado
+como saldo financeiro real.
+
+==================================================
+5. FONTE DO SALDO REAL
+==================================================
+
+Reutilizar cálculo autoritativo
+existente no backend.
+
+Não duplicar fórmula do ledger.
+
+Não confiar em valor informado
+pelo frontend.
+
+==================================================
+6. SALDO INICIAL
+==================================================
+
+Definir instante/data de referência
+conforme ADR.
+
+O primeiro ponto da projeção
+deve reconciliar com o saldo real
+das contas selecionadas.
+
+Documentar política de eventos
+do dia de referência.
+
+==================================================
+7. COMPROMISSOS ELEGÍVEIS
+==================================================
+
+Selecionar somente compromissos
+que devem afetar o futuro
+segundo o ADR.
+
+Normalmente:
+
+pendentes;
+não efetivados;
+não cancelados.
+
+Não assumir estados sem verificar
+a implementação real.
+
+==================================================
+8. COMPROMISSOS EFETIVADOS
+==================================================
+
+Não contar compromisso efetivado
+como evento futuro.
+
+Seu efeito já está no ledger.
+
+Evitar dupla contagem.
+
+==================================================
+9. COMPROMISSOS CANCELADOS
+==================================================
+
+Excluir eventos cancelados
+conforme ADR.
+
+Não projetar pagamento ou recebimento
+que deixou de existir.
+
+==================================================
+10. COMPROMISSOS ATRASADOS
+==================================================
+
+Aplicar política aprovada.
+
+Possibilidades:
+
+- considerar no início do horizonte;
+- separar em indicador;
+- projetar para nova data;
+- excluir do gráfico.
+
+Não escolher silenciosamente.
+
+==================================================
+11. DESPESAS FUTURAS
+==================================================
+
+Compromissos EXPENSE elegíveis
+reduzem saldo projetado.
+
+Não alteram saldo real.
+
+==================================================
+12. RECEITAS FUTURAS
+==================================================
+
+Compromissos INCOME elegíveis
+aumentam saldo projetado.
+
+Não criam receita efetiva.
+
+==================================================
+13. TRANSFERÊNCIAS
+==================================================
+
+Se transferências previstas existirem:
+
+entre contas selecionadas,
+efeito líquido consolidado zero.
+
+Se apenas origem estiver selecionada,
+saída projetada.
+
+Se apenas destino estiver selecionado,
+entrada projetada.
+
+Não inventar transferência prevista
+se o domínio não a suporta.
+
+==================================================
+14. MÚLTIPLAS CONTAS
+==================================================
+
+Permitir seleção conforme ADR.
+
+Projetar:
+
+conta individual;
+conjunto de contas;
+consolidado.
+
+Todas devem pertencer ao usuário.
+
+==================================================
+15. CONTAS INATIVAS
+==================================================
+
+Seguir política histórica
+e de projeção definida no ADR.
+
+Não ocultar movimentos históricos
+indevidamente.
+
+==================================================
+16. FÓRMULA
+==================================================
+
+Para cada data:
+
+projectedBalance(date) =
+realOpeningBalance
++ SUM(eligibleProjectedIncome until date)
+- SUM(eligibleProjectedExpense until date)
++/- eligibleProjectedTransfers, if approved.
+
+Usar BigDecimal.
+
+Não usar float/double.
+
+==================================================
+17. GRANULARIDADE
+==================================================
+
+Definir pontos por:
+
+dia;
+semana;
+mês;
+
+conforme ADR e horizonte.
+
+Não agregar de forma que esconda
+saldos negativos relevantes
+sem informar limitação.
+
+==================================================
+18. ORDEM TEMPORAL
+==================================================
+
+Ordenar eventos por data
+e critério estável.
+
+Para múltiplos eventos no mesmo dia,
+usar semântica diária aprovada.
+
+Não inventar horário de pagamento.
+
+==================================================
+19. COMPETÊNCIA VERSUS VENCIMENTO
+==================================================
+
+Projeção de caixa deve usar
+data financeira projetada
+aprovada no ADR.
+
+Não usar createdAt.
+
+Não confundir com competência
+de relatórios ou orçamentos.
+
+==================================================
+20. RECORRÊNCIAS FUTURAS
+==================================================
+
+Se ocorrências já forem materializadas:
+
+usar fonte aprovada.
+
+Se geração sob demanda for autorizada:
+
+usar gerador existente.
+
+Evitar criar ocorrências duplicadas.
+
+Não criar lançamentos reais.
+
+==================================================
+21. HORIZONTE
+==================================================
+
+Implementar horizontes aprovados.
+
+Exemplos conceituais:
+
+30 dias;
+60 dias;
+90 dias;
+6 meses;
+12 meses.
+
+Não oferecer períodos sem suporte
+ou com custo excessivo.
+
+==================================================
+22. RESULTADO DO CÁLCULO
+==================================================
+
+Retornar conforme contrato aprovado:
+
+saldo inicial;
+saldo final projetado;
+receitas previstas;
+despesas previstas;
+variação projetada;
+série temporal;
+eventos;
+mínimo projetado, se aprovado.
+
+Não inventar métricas obrigatórias.
+
+==================================================
+23. VALORES NEGATIVOS
+==================================================
+
+Permitir saldo projetado negativo.
+
+Não truncar em zero.
+
+Identificar visualmente riscos,
+sem afirmar insolvência definitiva.
+
+==================================================
+24. PRECISÃO
+==================================================
+
+Usar BigDecimal e DECIMAL(19,2)
+nas fontes persistidas.
+
+Definir escala e arredondamento.
+
+Não introduzir diferenças de centavos.
+
+==================================================
+25. RECONCILIAÇÃO
+==================================================
+
+Validar:
+
+saldo inicial;
+somatório de eventos;
+saldo final;
+série temporal.
+
+O último ponto deve reconciliar
+com o total projetado.
+
+==================================================
+26. API REST
+==================================================
+
+Implementar endpoint read-only
+conforme convenções reais.
+
+Exemplo conceitual:
+
+GET /api/cash-flow/forecast
+
+Parâmetros conforme ADR:
+
+startDate;
+endDate;
+accountIds.
+
+Não criar contrato divergente
+sem documentar.
+
+==================================================
+27. DTOs
+==================================================
+
+Usar DTOs tipados.
+
+Não expor entidades JPA.
+
+Não aceitar ownerId.
+
+Representar dinheiro com precisão.
+
+==================================================
+28. SEGURANÇA
+==================================================
+
+ownerId derivado do JWT.
+
+Todas as consultas owner-scoped.
+
+Contas estrangeiras:
+404 ou política aprovada.
+
+Não permitir vazamento por agregação.
+
+==================================================
+29. CONSULTAS
+==================================================
+
+Priorizar agregação eficiente
+e consultas em lote.
+
+Evitar N+1.
+
+Evitar carregar ledger inteiro
+para calcular saldo atual.
+
+==================================================
+30. PERFORMANCE
+==================================================
+
+Validar:
+
+índices;
+filtros;
+horizonte;
+volume;
+paginação de eventos, se necessária;
+queries;
+tempo de resposta.
+
+Não inventar benchmark.
+
+==================================================
+31. OPENAPI
+==================================================
+
+Documentar:
+
+endpoint;
+filtros;
+schemas;
+valores;
+datas;
+erros;
+autenticação;
+semântica da projeção.
+
+==================================================
+32. PROBLEM DETAILS
+==================================================
+
+Reutilizar padrão existente:
+
+400;
+401;
+403;
+404;
+422, se aplicável;
+500.
+
+Preservar Request ID.
+
+==================================================
+33. FRONTEND — ROTA
+==================================================
+
+Criar rota autenticada:
+
+/cash-flow
+
+ou rota aprovada no ADR.
+
+Não duplicar rota existente.
+
+==================================================
+34. FRONTEND — SIDEBAR
+==================================================
+
+Adicionar:
+
+Fluxo de Caixa
+
+Ícone sugerido:
+
+chart-line.
+
+Preservar menu recolhível
+e responsividade.
+
+==================================================
+35. FRONTEND — PAGE HEADER
+==================================================
+
+Título:
+
+Projeção de Fluxo de Caixa
+
+Subtítulo:
+
+"Antecipe a evolução dos seus saldos."
+
+==================================================
+36. FRONTEND — FILTROS
+==================================================
+
+Permitir selecionar:
+
+horizonte;
+contas;
+
+conforme backend.
+
+Não oferecer filtros inexistentes.
+
+==================================================
+37. FRONTEND — KPIs
+==================================================
+
+Exibir dados reais da API:
+
+saldo atual;
+saldo projetado;
+recebimentos previstos;
+pagamentos previstos.
+
+Separar visualmente real e previsto.
+
+==================================================
+38. FRONTEND — GRÁFICO
+==================================================
+
+Utilizar ECharts.
+
+Gráfico de linha ou área
+conforme design system.
+
+Exibir:
+
+datas;
+saldo projetado;
+tooltips BRL;
+valores negativos;
+linha de zero, se útil.
+
+Não calcular saldo em JavaScript
+a partir de dados incompletos.
+
+==================================================
+39. FRONTEND — EVENTOS
+==================================================
+
+Se API fornecer eventos:
+
+exibir compromissos que compõem
+a projeção.
+
+Permitir navegação para agenda,
+se houver identificadores e rota.
+
+==================================================
+40. FRONTEND — ESTADOS
+==================================================
+
+Implementar:
+
+loading;
+empty;
+error;
+retry.
+
+Não mostrar dados obsoletos
+como projeção atual.
+
+==================================================
+41. FRONTEND — CONCORRÊNCIA
+==================================================
+
+Troca rápida de filtros:
+
+usar switchMap ou equivalente.
+
+Não renderizar resposta de
+seleção anterior.
+
+==================================================
+42. FRONTEND — PRECISÃO
+==================================================
+
+Usar formatação monetária pt-BR.
+
+Não recalcular valores monetários
+com Number quando isso causar
+perda de precisão.
+
+Backend é fonte autoritativa.
+
+==================================================
+43. FRONTEND — RESPONSIVIDADE
+==================================================
+
+Validar:
+
+360x800;
+390x844;
+768x1024;
+1024x768;
+1280x720;
+1366x768;
+1920x1080.
+
+Gráfico deve redimensionar.
+
+Sem overflow horizontal global.
+
+==================================================
+44. FRONTEND — ACESSIBILIDADE
+==================================================
+
+Garantir:
+
+labels;
+teclado;
+foco;
+contraste;
+alternativa textual ao gráfico;
+valores não dependentes de cor;
+tooltips acessíveis quando possível.
+
+==================================================
+45. GOLDEN — SEM COMPROMISSOS
+==================================================
+
+Saldo real:
+5000.00.
+
+Nenhum compromisso elegível.
+
+Esperado:
+
+saldo final projetado=5000.00;
+receitas previstas=0;
+despesas previstas=0.
+
+==================================================
+46. GOLDEN — RECEITAS E DESPESAS
+==================================================
+
+Saldo real:
+5000.00.
+
+Receita futura:
+3500.00.
+
+Despesas futuras:
+1500.00;
+500.00;
+300.00.
+
+Esperado:
+
+receitas=3500.00;
+despesas=2300.00;
+variação=1200.00;
+saldo final=6200.00.
+
+==================================================
+47. GOLDEN — EFETIVAÇÃO
+==================================================
+
+Saldo real inicial:
+5000.00.
+
+Compromisso despesa:
+200.00.
+
+Antes da efetivação:
+
+saldo real=5000.00;
+saldo projetado=4800.00.
+
+Após efetivação:
+
+saldo real=4800.00;
+compromisso deixa de ser evento futuro;
+saldo projetado=4800.00.
+
+Não debitar duas vezes.
+
+==================================================
+48. GOLDEN — CANCELAMENTO
+==================================================
+
+Saldo real:
+5000.00.
+
+Compromisso pendente:
+300.00.
+
+Antes:
+
+projeção=4700.00.
+
+Cancelar compromisso.
+
+Depois:
+
+projeção=5000.00.
+
+==================================================
+49. GOLDEN — MÚLTIPLAS CONTAS
+==================================================
+
+Conta A:
+1000.00.
+
+Conta B:
+2000.00.
+
+Despesa futura em A:
+200.00.
+
+Receita futura em B:
+500.00.
+
+Esperado:
+
+A projetada=800.00;
+B projetada=2500.00;
+consolidado=3300.00.
+
+==================================================
+50. GOLDEN — MULTIUSER
+==================================================
+
+User A possui compromissos próprios.
+
+User B possui compromissos próprios.
+
+Projeção de A não inclui B.
+
+Projeção de B não inclui A.
+
+==================================================
+51. GOLDEN — SALDO NEGATIVO
+==================================================
+
+Saldo real:
+500.00.
+
+Despesa futura:
+800.00.
+
+Esperado:
+
+saldo projetado=-300.00.
+
+Exibir risco de saldo negativo.
+
+==================================================
+52. GOLDEN — REGRESSÃO LEDGER
+==================================================
+
+Conta A inicial=1000.00.
+Conta B inicial=500.00.
+
+Income A=700.00.
+Expense A=200.00.
+Transfer A->B=300.00.
+
+Esperado:
+
+A=1200.00;
+B=800.00;
+patrimônio=2000.00;
+receitas=700.00;
+despesas=200.00;
+resultado=500.00;
+histórico=3 transações lógicas.
+
+==================================================
+53. TESTES BACKEND
+==================================================
+
+Cobrir:
+
+saldo inicial;
+compromissos;
+cancelamentos;
+efetivações;
+recorrências;
+múltiplas contas;
+datas;
+horizontes;
+precisão;
+transferências, se aplicáveis;
+ownership;
+consultas;
+performance.
+
+==================================================
+54. TESTCONTAINERS
+==================================================
+
+Executar integração MySQL real.
+
+Validar queries, migrations
+e reconciliação.
+
+Não substituir por H2.
+
+==================================================
+55. TESTES FRONTEND
+==================================================
+
+Cobrir:
+
+service HTTP;
+filtros;
+KPIs;
+gráfico;
+eventos;
+loading;
+empty;
+error;
+retry;
+race conditions;
+responsividade.
+
+==================================================
+56. REGRESSÕES
+==================================================
+
+Executar testes relevantes:
+
+Authentication;
+Accounts;
+Categories;
+Expenses;
+Income;
+Transfers;
+Dashboard;
+History;
+Reports;
+Budgets;
+Alerts;
+Goals;
+Recurrences;
+Commitments;
+Calendar.
+
+==================================================
+57. QUALIDADE
+==================================================
+
+Executar:
+
+backend tests;
+Testcontainers/MySQL;
+backend build;
+Angular lint;
+Angular tests;
+Angular production build;
+E2E, se configurado.
+
+Registrar comandos e resultados reais.
+
+==================================================
+58. FORA DO ESCOPO
+==================================================
+
+Não implementar:
+
+- alteração de ledger;
+- novas transações automáticas;
+- pagamento automático;
+- notificações externas;
+- alertas avançados da TASK-7.6;
+- novas periodicidades;
+- refatoração ampla;
+- TASK-7.6.
+
+==================================================
+59. DEFINITION OF DONE
+==================================================
+
+TASK-7.5 concluída quando:
+
+- cálculo aprovado pelo ADR;
+- saldo inicial reconciliado;
+- compromissos elegíveis corretos;
+- efetivados não duplicados;
+- cancelados excluídos;
+- receitas/despesas corretas;
+- múltiplas contas corretas;
+- precisão BigDecimal;
+- endpoint read-only;
+- owner-scoping;
+- OpenAPI;
+- frontend integrado;
+- gráfico responsivo;
+- loading/empty/error/retry;
+- testes backend;
+- Testcontainers/MySQL;
+- testes frontend;
+- lint;
+- builds;
+- regressões aprovadas.
+
+==================================================
+60. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-7.5 — PROJEÇÃO DE FLUXO DE CAIXA
+
+STATUS:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+1. ADR utilizado.
+2. Modelo de projeção.
+3. Fonte do saldo real.
+4. Compromissos elegíveis.
+5. Tratamento de efetivados.
+6. Tratamento de cancelados.
+7. Tratamento de atrasados.
+8. Recorrências.
+9. Transferências.
+10. Datas e horizonte.
+11. Fórmulas.
+12. Reconciliação.
+13. Endpoint.
+14. DTOs.
+15. Segurança.
+16. OpenAPI.
+17. Performance.
+18. Frontend.
+19. Rota e sidebar.
+20. KPIs.
+21. Gráfico.
+22. Filtros.
+23. Responsividade.
+24. Acessibilidade.
+25. Golden Scenarios.
+26. Testes backend.
+27. Testcontainers/MySQL.
+28. Testes frontend.
+29. E2E.
+30. Lint.
+31. Builds.
+32. Regressões.
+33. Arquivos modificados.
+34. Bugs encontrados/corrigidos.
+35. Divergências do ADR.
+36. Dívidas técnicas.
+37. Fora do escopo confirmado.
+
+Se concluída:
+
+READY FOR TASK-7.6 — Indicadores de Vencimentos
+e Compromissos Atrasados.
+
+NÃO implementar TASK-7.6 nesta execução.

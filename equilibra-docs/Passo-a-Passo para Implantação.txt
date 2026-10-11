@@ -1,0 +1,349 @@
+Abaixo está um passo a passo para executar o Equilibra localmente em um ambiente com Docker instalado.
+
+1. Pré-requisitos
+
+Verifique:
+
+docker --version
+docker compose version
+git --version
+
+Recomendado:
+
+- Docker Engine atualizado;
+- Docker Compose v2;
+- pelo menos 4 GB de memória disponível para containers;
+- portas livres 3306, 8080 e 4200/4201.
+
+Clone o projeto, caso ainda não tenha:
+
+git clone https://github.com/br-techlabz/equilibra.git
+cd equilibra
+
+Se já possui o projeto:
+
+cd equilibra
+git checkout main
+git pull origin main
+
+---
+
+2. Configurar variáveis de ambiente
+
+Crie um arquivo .env na raiz do projeto:
+
+dotenv
+MYSQL_ROOT_PASSWORD=uma-senha-root-local
+MYSQL_USER=equilibra
+MYSQL_PASSWORD=uma-senha-equilibra-local
+MYSQL_PORT=3306
+TZ=America/Sao_Paulo
+
+O arquivo .env não deve ser versionado. Confirme que está ignorado:
+
+git check-ignore .env
+
+Se não estiver ignorado, adicione .env ao .gitignore.
+
+▎ Para uso local, essas credenciais são suficientes. Não use essas mesmas credenciais em produção real ou em uma
+▎ rede pública.
+
+---
+
+3. Subir MySQL e backend
+
+Na raiz do projeto:
+
+docker compose up -d mysql backend
+
+Verifique os containers:
+
+docker compose ps
+
+O esperado é algo semelhante a:
+
+equilibra-mysql     Up ... (healthy)
+equilibra-backend   Up ...
+
+Acompanhe os logs:
+
+docker compose logs -f backend
+
+Aguarde a mensagem:
+
+Started EquilibraApiApplication
+
+As migrations Flyway serão aplicadas automaticamente. Verifique se não há erro:
+
+docker compose logs backend | grep -E "ERROR|Exception|Successfully applied|Started"
+
+---
+
+4. Validar o backend
+
+O contexto da API usa o prefixo /api.
+
+Teste o health check:
+
+curl http://localhost:8080/actuator/health
+
+Resultado esperado:
+
+{"status":"UP"}
+
+Teste a documentação OpenAPI:
+
+http://localhost:8080/api-docs
+
+Swagger UI:
+
+http://localhost:8080/swagger-ui/index.html
+
+Se a configuração expuser o Swagger pelo contexto da aplicação, use também:
+
+http://localhost:8080/api/swagger-ui/index.html
+
+---
+
+5. Subir o frontend
+
+Em outro terminal:
+
+cd frontend
+npm install
+
+Suba o frontend apontando o proxy para o ba
+
+npm start -- --host 0.0.0.0 --port 4200 --p
+
+Acesse:
+
+http://localhost:4200
+
+O proxy já deve encaminhar chamadas:
+
+/api/* -> http://localhost:8080
+
+Se estiver usando a porta 4202, lembre-se dtir essa origem no CORS. A configuraçãoatual já foi ajustada para permitir:
+
+http://localhost:4200
+http://localhost:4201
+http://localhost:4202
+
+---
+
+6. Fluxo inicial de uso
+
+No navegador:
+
+1. Acesse http://localhost:4200.
+2. Crie um usuário em Cadastro.
+3. Faça login.
+4. Crie pelo menos:
+   - uma conta;
+   - uma categoria de despesa;
+   - uma categoria de receita.
+5. Crie uma recorrência ou compromisso.
+6. Acesse:
+   - Agenda Financeira;
+   - Fluxo de Caixa;
+   - Dashboard.
+7. Confirme a separação entre:
+   - saldo real;
+   - valores previstos;
+   - valores efetivados;
+   - compromissos atrasados.
+
+---
+
+7. Comandos úteis
+
+Ver status
+
+docker compose ps
+
+Ver logs do backend
+
+docker compose logs -f backend
+
+Ver logs do MySQL
+
+docker compose logs -f mysql
+
+Reiniciar backend
+
+docker compose restart backend
+
+Reconstruir backend após alteração Java ou migration
+
+docker compose build backend
+docker compose up -d backend
+
+Parar containers sem apagar banco
+
+docker compose stop
+
+Parar e remover containers, preservando vol
+
+docker compose down
+
+Parar e apagar também os dados do MySQL
+
+⚠️ Este comando remove todos os dados locai
+
+docker compose down -v
+
+Depois, para subir novamente:
+
+docker compose up -d mysql backend
+
+---
+
+8. Limpar completamente o banco
+
+Se quiser iniciar os testes com banco vazio
+
+docker compose down
+docker volume ls | grep mysql
+docker compose down -v
+docker compose up -d mysql backend
+
+Atenção: isso apaga permanentemente os dados armazenados no volume MySQL local.
+
+Acompanhe a aplicação:
+
+docker compose logs -f backend
+
+Aguarde novamente:
+
+Started EquilibraApiApplication
+
+---
+
+9. Validar a API de compromissos
+
+Sem autenticação, a resposta deve ser 401:
+
+curl -i "http://localhost:8080/api/commitments?page=0&size=20"
+
+Isso confirma que o endpoint existe e está protegido.
+
+A API de indicadores:
+
+curl -i "http://localhost:8080/api/commitments/indicators"
+
+A projeção:
+
+curl -i "http://localhost:8080/api/cash-flow/projection?from=2026-10-01&to=2026-10-31"
+
+Também deve exigir autenticação.
+
+---
+
+10. Executar validações do projeto
+
+Backend
+
+cd backend
+./mvnw test
+./mvnw package
+
+Frontend
+
+cd frontend
+npm run lint
+npm run build
+
+E2E
+
+Com backend e frontend ativos:
+
+cd frontend
+npm run e2e
+
+Caso o frontend esteja na porta 4202:
+
+E2E_BASE_URL=http://127.0.0.1:4202 \
+npm run e2e -- --reporter=line
+
+---
+
+11. Problema conhecido do Karma
+
+O projeto possui um bloqueio conhecido nos testes unitários Angular:
+
+- Angular 19;
+- Node 26;
+- Karma conecta ao ChromeHeadless;
+- mas não apresenta o resumo Jasmine nem en
+
+O ambiente usa Node:
+
+node --version
+
+O recomendado para Angular 19 é utilizar No
+
+Com nvm:
+
+nvm install 20
+nvm use 20
+
+Depois reinstale as dependências:
+
+cd frontend
+rm -rf node_modules
+npm ci
+npm test -- --watch=false --browsers=Chromefalse
+
+Não use Node 26 para validar oficialmente o
+
+---
+
+12. Usar frontend também via Docker
+
+Atualmente o docker-compose.yml possui apenos. O frontend está documentado comoplaceholder.
+
+A forma mais simples e confiável hoje é:
+
+- MySQL e backend via Docker;
+- frontend Angular via npm start.
+
+Arquitetura local:
+
+Browser
+   |
+   v
+Angular dev server :4200
+   |
+   | /api via proxy
+   v
+Spring Boot :8080
+   |
+   v
+MySQL :3306
+
+---
+
+13. Checklist final
+
+Antes de considerar o ambiente local pronto
+
+- [ ] Docker está ativo;
+- [ ] MySQL está healthy;
+- [ ] backend está Up;
+- [ ] Flyway chegou à migration V14;
+- [ ] /actuator/health retorna UP;
+- [ ] frontend responde em http://localhost:4200;
+- [ ] cadastro funciona;
+- [ ] login funciona;
+- [ ] conta pode ser criada;
+- [ ] categorias podem ser criadas;
+- [ ] recorrências carregam;
+- [ ] compromissos carregam;
+- [ ] Agenda Financeira carrega;
+- [ ] Fluxo de Caixa carrega;
+- [ ] Dashboard carrega;
+- [ ] indicadores aparecem;
+- [ ] nenhuma chamada envia ownerId;
+- [ ] previsões não alteram saldo real;
+- [ ] efetivação altera saldo apenas uma ve

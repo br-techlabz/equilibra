@@ -138,6 +138,8 @@
   color: var(--color-danger-600);
 }
 
+.transaction-icon--credit-card { background: var(--color-primary-50); color: var(--color-primary-600); }
+
 .transaction-icon--transfer {
   background: var(--color-info-50);
   color: var(--color-info-600);

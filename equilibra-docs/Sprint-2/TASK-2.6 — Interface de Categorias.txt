@@ -1,0 +1,1745 @@
+# TASK-2.6 — Interface de Categorias
+
+Estamos na:
+
+# Sprint 2 — Contas e Categorias
+
+Já foram concluídas:
+
+- TASK-2.1 — Domínio e persistência de Contas de Ativo
+- TASK-2.2 — Casos de Uso e API REST de Contas de Ativo
+- TASK-2.3 — Interface de Contas de Ativo
+- TASK-2.4 — Domínio e persistência de Categorias
+- TASK-2.5 — Casos de Uso e API REST de Categorias
+
+Agora implemente:
+
+# Interface de Categorias
+
+Esta TASK deverá implementar o CRUD funcional de Categorias no frontend
+Angular, integrado exclusivamente à API real criada na TASK-2.5.
+
+A implementação deverá reutilizar o Design System aprovado na Sprint UI
+e os padrões concretos estabelecidos pela interface de Contas de Ativo.
+
+NÃO crie uma abstração CRUD genérica apenas para reutilizar código.
+
+---
+
+# 1. ESCOPO
+
+Implementar:
+
+- rota de Categorias;
+- navegação;
+- listagem;
+- criação;
+- edição;
+- desativação;
+- reativação;
+- visualização de categorias inativas;
+- filtro por aplicabilidade;
+- estados de loading;
+- empty state;
+- error state;
+- tratamento de conflitos;
+- responsividade;
+- acessibilidade;
+- integração real com API.
+
+NÃO implementar:
+
+- Despesas;
+- Receitas;
+- Transferências;
+- Tags;
+- subcategorias;
+- categorias globais;
+- categorias padrão;
+- relatórios;
+- Dashboard financeiro real;
+- orçamentos;
+- exclusão física.
+
+---
+
+# 2. FONTE DE VERDADE
+
+Antes de escrever código, analise a implementação REAL existente.
+
+Não suponha que TASK-2.5 foi implementada exatamente conforme o
+planejamento.
+
+Descubra:
+
+- endpoints reais;
+- DTOs;
+- query params;
+- CategoryApplicability real;
+- comportamento de includeInactive;
+- comportamento dos filtros;
+- respostas HTTP;
+- Problem Details;
+- códigos estruturados de erro, se existirem;
+- OpenAPI;
+- autenticação;
+- componentes frontend existentes.
+
+O código atual é a fonte de verdade.
+
+---
+
+# 3. REFERÊNCIA PRINCIPAL
+
+Analise detalhadamente a feature frontend de AssetAccount criada na
+TASK-2.3.
+
+Ela é a principal referência para:
+
+- organização da feature;
+- API service;
+- state;
+- PageHeader;
+- ContentPanel;
+- toolbar;
+- desktop table;
+- mobile cards;
+- drawer/dialog;
+- formulário;
+- loading;
+- empty;
+- error;
+- snackbar;
+- confirmação;
+- testes;
+- responsividade.
+
+Reutilize padrões que provaram funcionar.
+
+Não copie código cegamente.
+
+---
+
+# 4. PREPARAÇÃO
+
+Leia:
+
+- CLAUDE.md
+- README.md
+- docs/design-system.md
+- docs/frontend-architecture.md
+- docs/architecture.md
+- docs/api-guidelines.md
+- docs/security.md
+
+Analise:
+
+- routing;
+- AuthenticatedLayout;
+- Sidebar;
+- PageHeader;
+- ContentPanel;
+- EmptyState;
+- AssetAccount feature;
+- Angular Material;
+- forms;
+- signals/RxJS;
+- HTTP services;
+- interceptors;
+- snackbars;
+- dialogs/drawers;
+- testes;
+- Playwright.
+
+---
+
+# 5. RELATÓRIO PRÉVIO
+
+Antes de modificar arquivos, apresente:
+
+## API encontrada
+
+Liste endpoints e contratos reais.
+
+## Padrões reutilizados de AssetAccount
+
+Liste componentes/estratégias.
+
+## Estrutura proposta
+
+Explique:
+
+- página;
+- listagem;
+- filtros;
+- formulário;
+- mobile;
+- estado.
+
+## Arquivos previstos
+
+Depois implemente.
+
+---
+
+# 6. NAVEGAÇÃO
+
+Adicione:
+
+Categorias
+
+à navegação autenticada.
+
+Use a organização atual da Sidebar.
+
+Não redesenhe a navegação.
+
+---
+
+# 7. ROTA
+
+Preferência:
+
+/categories
+
+ou equivalente coerente com as rotas existentes.
+
+A rota deve ser privada.
+
+---
+
+# 8. LAZY LOADING
+
+Mantenha lazy loading quando esse for o padrão atual.
+
+---
+
+# 9. ESTRUTURA
+
+Utilize:
+
+AuthenticatedLayout
+→ PageHeader
+→ ContentPanel
+→ conteúdo
+
+---
+
+# 10. PAGE HEADER
+
+Título:
+
+Categorias
+
+Subtítulo:
+
+Organize suas receitas e despesas.
+
+ou texto curto equivalente.
+
+Ação principal:
+
++ Nova categoria
+
+---
+
+# 11. CONTENT PANEL
+
+Título conceitual:
+
+Categorias
+
+A listagem deverá ficar dentro do padrão visual consolidado.
+
+---
+
+# 12. TOOLBAR
+
+A toolbar deverá possuir:
+
+- filtro de aplicabilidade;
+- opção "Mostrar categorias inativas".
+
+Evite controles desnecessários.
+
+---
+
+# 13. FILTRO DE APLICABILIDADE
+
+Apresente opções:
+
+Todas
+Despesas
+Receitas
+
+Não é necessário oferecer "Ambos" como filtro isolado, salvo se a API
+real exigir ou houver caso de uso claro.
+
+---
+
+# 14. SEMÂNTICA DO FILTRO
+
+"TODAS"
+
+→ categorias sem filtro de contexto.
+
+"DESPESAS"
+
+→ utilizar filtro real da API para contexto EXPENSE.
+
+Resultado deverá incluir:
+
+EXPENSE
++
+BOTH
+
+"RECEITAS"
+
+→ utilizar filtro real da API para contexto INCOME.
+
+Resultado deverá incluir:
+
+INCOME
++
+BOTH
+
+NÃO implemente essa regra manualmente no frontend se a API já a implementa.
+
+---
+
+# 15. BOTH
+
+Categoria BOTH deverá aparecer:
+
+- em Todas;
+- no contexto Despesas;
+- no contexto Receitas.
+
+---
+
+# 16. INATIVAS
+
+Controle:
+
+Mostrar categorias inativas
+
+Default:
+
+desligado.
+
+Quando habilitado, utilize o contrato real:
+
+includeInactive=true
+
+ou equivalente.
+
+---
+
+# 17. FILTROS COMBINADOS
+
+Confirme funcionamento de:
+
+Todas + somente ativas
+
+Todas + incluir inativas
+
+Despesas + somente ativas
+
+Despesas + incluir inativas
+
+Receitas + somente ativas
+
+Receitas + incluir inativas
+
+Não faça filtragem duplicada no frontend se backend já oferece isso.
+
+---
+
+# 18. LISTAGEM DESKTOP
+
+Prefira tabela limpa.
+
+Colunas conceituais:
+
+Categoria
+Aplicação
+Status
+Atualizada em
+Ações
+
+---
+
+# 19. CATEGORIA
+
+Exiba:
+
+name
+
+Não exiba:
+
+normalizedName
+ownerId
+
+---
+
+# 20. APLICAÇÃO
+
+Traduza CategoryApplicability para pt-BR:
+
+EXPENSE → Despesas
+INCOME → Receitas
+BOTH → Despesas e receitas
+
+Use os valores REAIS encontrados no backend.
+
+---
+
+# 21. INDICADORES VISUAIS
+
+Pode utilizar chips/badges.
+
+Exemplos:
+
+[ Despesas ]
+
+[ Receitas ]
+
+[ Despesas e receitas ]
+
+Mas:
+
+- não depender somente da cor;
+- texto sempre presente;
+- contraste adequado.
+
+---
+
+# 22. CORES
+
+Utilize tokens semânticos existentes.
+
+Não crie cores hardcoded espalhadas pela feature.
+
+Não associe obrigatoriamente verde=receita e vermelho=despesa em todos
+os contextos se isso comprometer legibilidade.
+
+---
+
+# 23. STATUS
+
+Ativa
+
+Inativa
+
+Utilize badge/chip consistente com AssetAccount.
+
+---
+
+# 24. UPDATED AT
+
+Formatar conforme pt-BR.
+
+Não mostrar timestamp ISO cru.
+
+---
+
+# 25. AÇÕES
+
+Categoria ativa:
+
+- Editar
+- Desativar
+
+Categoria inativa:
+
+- Editar, se API permitir e comportamento fizer sentido;
+- Reativar
+
+Siga contrato real.
+
+---
+
+# 26. MENU CONTEXTUAL
+
+Preferência:
+
+ícone de três pontos.
+
+Accessible name:
+
+"Ações da categoria Alimentação"
+
+---
+
+# 27. MOBILE
+
+NÃO comprima a tabela desktop.
+
+Em mobile, apresente cards/list items.
+
+Exemplo estrutural:
+
+┌─────────────────────────────┐
+│ Alimentação           Ativa │
+│ [Despesas]                  │
+│                             │
+│ Atualizada em 06/10/2026    │
+│                       [ ⋮ ] │
+└─────────────────────────────┘
+
+O exemplo é apenas estrutural.
+
+NÃO introduza dados fake.
+
+---
+
+# 28. EMPTY STATE — SEM CATEGORIAS
+
+Título:
+
+Nenhuma categoria cadastrada
+
+Texto:
+
+Crie categorias para organizar suas receitas e despesas.
+
+Ação:
+
++ Nova categoria
+
+---
+
+# 29. EMPTY STATE COM FILTRO
+
+Se existem categorias, mas nenhuma corresponde ao filtro:
+
+NÃO mostrar:
+
+"Nenhuma categoria cadastrada."
+
+Mostrar algo contextual, por exemplo:
+
+"Nenhuma categoria encontrada para este filtro."
+
+Permita limpar/alterar filtro quando apropriado.
+
+---
+
+# 30. LOADING
+
+Utilize exatamente o padrão estabelecido em AssetAccount.
+
+Evite layout shift excessivo.
+
+---
+
+# 31. ERROR STATE
+
+Falha na listagem:
+
+"Não foi possível carregar suas categorias."
+
+Ação:
+
+"Tentar novamente"
+
+quando apropriado.
+
+---
+
+# 32. FORMULÁRIO
+
+Criação e edição devem compartilhar formulário quando tecnicamente
+apropriado.
+
+Não crie dois formulários quase idênticos.
+
+---
+
+# 33. UX DO FORMULÁRIO
+
+Preferencialmente utilize o mesmo padrão de AssetAccount:
+
+Desktop:
+drawer/painel lateral.
+
+Mobile:
+drawer amplo/full-screen.
+
+Se AssetAccount consolidou outro padrão melhor, siga-o.
+
+Consistência é prioridade.
+
+---
+
+# 34. CRIAÇÃO
+
+Título:
+
+Nova categoria
+
+Texto opcional:
+
+Crie uma categoria para organizar seus lançamentos.
+
+---
+
+# 35. EDIÇÃO
+
+Título:
+
+Editar categoria
+
+---
+
+# 36. CAMPOS
+
+Esperados:
+
+- Nome
+- Aplicação
+
+Somente isso.
+
+Não adicionar:
+
+- owner;
+- status;
+- cor;
+- ícone;
+- orçamento;
+- categoria pai;
+- tag.
+
+---
+
+# 37. NOME
+
+Label:
+
+Nome da categoria
+
+Placeholder opcional:
+
+Ex.: Alimentação
+
+Placeholder não substitui label.
+
+---
+
+# 38. VALIDAÇÃO
+
+No frontend:
+
+- required;
+- maxLength conforme API;
+- trim coerente.
+
+Backend permanece autoridade final.
+
+---
+
+# 39. APLICAÇÃO
+
+Label:
+
+Usar esta categoria em
+
+Apresente opções de maneira clara:
+
+- Despesas
+- Receitas
+- Despesas e receitas
+
+---
+
+# 40. CONTROLE
+
+Pode utilizar:
+
+- select;
+- radio group;
+- segmented control acessível;
+
+conforme Design System.
+
+Para apenas três opções, prefira a alternativa que torne a escolha mais
+compreensível.
+
+Não introduza biblioteca.
+
+---
+
+# 41. MAPEAMENTO
+
+UI:
+
+Despesas
+
+envia:
+
+EXPENSE
+
+UI:
+
+Receitas
+
+envia:
+
+INCOME
+
+UI:
+
+Despesas e receitas
+
+envia:
+
+BOTH
+
+Use enum real.
+
+---
+
+# 42. EXPLICAÇÃO
+
+Se útil, apresente helper text:
+
+"Define em quais tipos de lançamento esta categoria poderá ser usada."
+
+Mantenha curto.
+
+---
+
+# 43. SUBMIT
+
+Botão:
+
+Salvar categoria
+
+Durante request:
+
+- loading;
+- disabled;
+- evitar duplo submit.
+
+---
+
+# 44. CANCELAR
+
+Botão:
+
+Cancelar
+
+Segue comportamento já consolidado.
+
+---
+
+# 45. POST
+
+Envie apenas:
+
+name
+applicability
+
+ou os campos reais aceitos.
+
+Nunca envie:
+
+ownerId.
+
+---
+
+# 46. SUCESSO NA CRIAÇÃO
+
+Após sucesso:
+
+- fechar formulário;
+- atualizar listagem;
+- snackbar.
+
+Mensagem:
+
+"Categoria criada com sucesso."
+
+---
+
+# 47. EDIÇÃO
+
+Carregue:
+
+name
+applicability
+
+da categoria selecionada.
+
+---
+
+# 48. PUT
+
+Envie apenas campos editáveis.
+
+Nunca:
+
+id
+ownerId
+active
+normalizedName
+createdAt
+updatedAt
+
+salvo contrato explicitamente diferente e justificado.
+
+---
+
+# 49. ALTERAÇÃO DE APLICABILIDADE
+
+Permita alterar entre:
+
+EXPENSE
+INCOME
+BOTH
+
+conforme API.
+
+---
+
+# 50. REGRA FUTURA
+
+Não tente resolver agora impacto de mudança de applicability em
+transações históricas.
+
+Ainda não existem transações.
+
+---
+
+# 51. SUCESSO NA EDIÇÃO
+
+Mensagem:
+
+"Categoria atualizada com sucesso."
+
+Atualize lista sem reload da página.
+
+---
+
+# 52. 409 — DUPLICIDADE
+
+Quando backend indicar conflito de nome:
+
+"Já existe uma categoria ativa com esse nome."
+
+Use estrutura real do Problem Details.
+
+Não dependa de string parsing frágil se houver código estruturado.
+
+---
+
+# 53. 400
+
+Quando possível, associe erros estruturados aos campos.
+
+Caso contrário, apresente mensagem geral apropriada.
+
+---
+
+# 54. 401
+
+Deixe infraestrutura global de autenticação tratar.
+
+Não implemente lógica local de login.
+
+---
+
+# 55. 404
+
+Se recurso não existir/não estiver acessível:
+
+mensagem segura.
+
+Não mencionar outro usuário.
+
+---
+
+# 56. 500
+
+Mensagem genérica:
+
+"Não foi possível concluir a operação. Tente novamente."
+
+---
+
+# 57. DESATIVAÇÃO
+
+Ação:
+
+Desativar
+
+deve pedir confirmação.
+
+---
+
+# 58. CONFIRMAÇÃO
+
+Título:
+
+Desativar categoria?
+
+Mensagem:
+
+"A categoria deixará de estar disponível para novos lançamentos, mas
+permanecerá no histórico."
+
+Botões:
+
+Cancelar
+Desativar
+
+---
+
+# 59. SEM DELETE
+
+NÃO mostrar:
+
+Excluir categoria
+
+---
+
+# 60. SUCESSO DA DESATIVAÇÃO
+
+Snackbar:
+
+"Categoria desativada."
+
+Atualize lista.
+
+Se inativas estiverem ocultas, categoria deverá desaparecer naturalmente.
+
+---
+
+# 61. REATIVAÇÃO
+
+Categoria inativa:
+
+ação "Reativar".
+
+Não é necessário dialog de confirmação salvo padrão global existente.
+
+---
+
+# 62. CONFLITO NA REATIVAÇÃO
+
+Se houver outra categoria ativa com mesmo nome:
+
+"Não é possível reativar esta categoria porque já existe uma categoria
+ativa com o mesmo nome."
+
+---
+
+# 63. SUCESSO NA REATIVAÇÃO
+
+Snackbar:
+
+"Categoria reativada."
+
+---
+
+# 64. ESTADO
+
+Siga estratégia consolidada pela feature AssetAccount:
+
+Signals / RxJS / outra abordagem real.
+
+Não introduza NgRx.
+
+---
+
+# 65. API SERVICE
+
+Crie/estenda serviço específico.
+
+Exemplo:
+
+CategoriesApiService
+
+Operações:
+
+list
+get, se necessário
+create
+update
+deactivate
+activate
+
+---
+
+# 66. TIPAGEM
+
+Não utilize any.
+
+Crie/reutilize tipos para:
+
+Category
+CategoryApplicability
+CreateCategoryRequest
+UpdateCategoryRequest
+
+Se cliente/tipos são gerados via OpenAPI, reutilize-os.
+
+---
+
+# 67. NÃO DUPLICAR ENUM
+
+Centralize metadados de apresentação.
+
+Exemplo conceitual:
+
+CATEGORY_APPLICABILITY_OPTIONS
+
+Cada opção poderá conter:
+
+value
+label
+
+e eventualmente ícone se realmente usado.
+
+---
+
+# 68. NÃO CRIAR GENERIC CRUD
+
+IMPORTANTE:
+
+Agora existem dois CRUDs:
+
+- AssetAccount
+- Category
+
+Ainda assim NÃO crie automaticamente:
+
+GenericCrudComponent
+GenericCrudService
+GenericFormComponent
+DynamicCrud
+CrudBaseClass
+
+Antes de abstrair, precisamos observar pelo menos mais casos concretos.
+
+---
+
+# 69. REUTILIZAÇÃO VÁLIDA
+
+É aceitável extrair/reutilizar componentes puramente visuais que já
+demonstraram ser genéricos, por exemplo:
+
+- status badge;
+- empty state;
+- confirmation dialog;
+- responsive action menu;
+
+somente se a abstração for pequena, clara e comprovadamente útil.
+
+---
+
+# 70. DATAS
+
+Formatar updatedAt conforme infraestrutura global pt-BR.
+
+---
+
+# 71. ACENTUAÇÃO
+
+Confirme correta exibição de:
+
+Alimentação
+Educação
+Habitação
+
+Não corromper Unicode.
+
+---
+
+# 72. ACESSIBILIDADE
+
+Todos os campos devem possuir labels.
+
+---
+
+# 73. RADIO/SELECT
+
+Se usar radio group:
+
+- group label;
+- keyboard navigation;
+- checked state acessível.
+
+Se usar select:
+
+- label associado;
+- opções compreensíveis.
+
+---
+
+# 74. CHIPS
+
+Chips de applicability/status não podem depender apenas de cor.
+
+---
+
+# 75. ACTION MENU
+
+Deve ser navegável por teclado.
+
+---
+
+# 76. FOCUS
+
+Ao abrir formulário:
+
+foco coerente.
+
+Ao fechar:
+
+retornar foco ao acionador quando possível.
+
+---
+
+# 77. ESCAPE
+
+Drawer/dialog deve respeitar Escape conforme padrão existente.
+
+---
+
+# 78. TOUCH TARGETS
+
+Mobile:
+
+controles adequados para toque.
+
+---
+
+# 79. RESPONSIVIDADE
+
+Teste obrigatoriamente:
+
+360 × 800
+390 × 844
+768 × 1024
+1024 × 768
+1280 × 720
+1920 × 1080
+
+---
+
+# 80. MOBILE
+
+Em 360px:
+
+- nenhum overflow horizontal global;
+- filtros utilizáveis;
+- botão Nova categoria acessível;
+- cards legíveis;
+- menu de ações funcional;
+- formulário utilizável.
+
+---
+
+# 81. FILTROS MOBILE
+
+Não permita toolbar quebrada.
+
+Se necessário:
+
+empilhe controles verticalmente.
+
+Não reduza selects/toggles a tamanhos inadequados.
+
+---
+
+# 82. DESKTOP
+
+Tabela deve aproveitar espaço sem ficar excessivamente larga.
+
+---
+
+# 83. TESTES UNITÁRIOS
+
+Cubra lógica relevante.
+
+---
+
+# 84. TESTE DE MAPEAMENTO
+
+Confirme:
+
+EXPENSE → Despesas
+INCOME → Receitas
+BOTH → Despesas e receitas
+
+---
+
+# 85. TESTE DE LISTAGEM
+
+Valide chamada padrão.
+
+---
+
+# 86. TESTE INCLUDE INACTIVE
+
+Toggle deve produzir request correto.
+
+---
+
+# 87. TESTE FILTRO EXPENSE
+
+Selecionar:
+
+Despesas
+
+deve utilizar o contrato real da API.
+
+Não filtrar localmente de forma divergente.
+
+---
+
+# 88. TESTE FILTRO INCOME
+
+Mesmo princípio.
+
+---
+
+# 89. TESTE BOTH
+
+Confirme que BOTH recebido da API é exibido corretamente.
+
+---
+
+# 90. TESTE CREATE
+
+POST correto.
+
+Confirme ausência de ownerId.
+
+---
+
+# 91. TESTE UPDATE
+
+PUT correto.
+
+---
+
+# 92. TESTE DEACTIVATE
+
+Endpoint correto + atualização da UI.
+
+---
+
+# 93. TESTE ACTIVATE
+
+Endpoint correto + atualização.
+
+---
+
+# 94. TESTE 409
+
+Duplicidade:
+
+feedback amigável.
+
+---
+
+# 95. TESTE REACTIVATION 409
+
+Mensagem específica quando possível.
+
+---
+
+# 96. TESTE EMPTY
+
+Sem categorias:
+
+EmptyState.
+
+---
+
+# 97. TESTE FILTERED EMPTY
+
+Existem categorias, mas nenhuma no contexto selecionado:
+
+mensagem contextual.
+
+---
+
+# 98. TESTE LOADING
+
+Loading correto.
+
+---
+
+# 99. TESTE ERROR
+
+Falha de listagem:
+
+error state + retry.
+
+---
+
+# 100. E2E PRINCIPAL
+
+Com Playwright, quando disponível:
+
+1. criar/login com usuário de teste;
+2. acessar Categorias;
+3. verificar empty state;
+4. criar "Alimentação" / EXPENSE;
+5. criar "Salário" / INCOME;
+6. criar "Outros" / BOTH;
+7. validar listagem;
+8. filtrar Despesas;
+9. validar Alimentação + Outros;
+10. confirmar ausência de Salário;
+11. filtrar Receitas;
+12. validar Salário + Outros;
+13. confirmar ausência de Alimentação;
+14. voltar para Todas;
+15. editar uma categoria;
+16. alterar applicability;
+17. validar atualização;
+18. desativar categoria;
+19. confirmar ausência na listagem padrão;
+20. mostrar inativas;
+21. validar status Inativa;
+22. reativar;
+23. validar status Ativa.
+
+---
+
+# 101. E2E DUPLICIDADE
+
+Criar:
+
+Alimentação
+
+Tentar:
+
+alimentação
+
+Esperado:
+
+mensagem de conflito.
+
+---
+
+# 102. E2E MOBILE
+
+Viewport:
+
+360 × 800
+
+Fluxo mínimo:
+
+- abrir Categorias;
+- criar categoria;
+- visualizar card;
+- alterar filtro;
+- editar;
+- abrir menu;
+- desativar/reativar quando apropriado.
+
+---
+
+# 103. REGRESSÃO ASSET ACCOUNT
+
+A interface de Contas deve continuar funcionando.
+
+Execute testes relevantes.
+
+---
+
+# 104. REGRESSÃO AUTH
+
+Confirme:
+
+Login
+Register
+Guards
+Interceptors
+Logout
+
+---
+
+# 105. REGRESSÃO DASHBOARD
+
+Dashboard deve continuar carregando normalmente.
+
+---
+
+# 106. BACKEND
+
+NÃO altere backend por conveniência.
+
+Se descobrir bug real impeditivo:
+
+documente;
+corrija minimamente;
+adicione teste;
+informe no relatório.
+
+---
+
+# 107. BROWSER CONSOLE
+
+Nenhum erro inesperado.
+
+---
+
+# 108. NETWORK
+
+Verifique:
+
+- requests duplicados;
+- chamadas desnecessárias;
+- filtros gerando chamadas incorretas.
+
+---
+
+# 109. LINT
+
+Execute lint completo.
+
+Esperado:
+
+PASS
+
+---
+
+# 110. TESTES FRONTEND
+
+Execute suíte completa.
+
+Esperado:
+
+PASS
+
+---
+
+# 111. PRODUCTION BUILD
+
+Execute build de produção.
+
+Esperado:
+
+PASS
+
+---
+
+# 112. PLAYWRIGHT
+
+Execute E2E configurados.
+
+Esperado:
+
+PASS
+
+---
+
+# 113. DOCUMENTAÇÃO
+
+Atualize docs/frontend-architecture.md se necessário.
+
+Documente o padrão real adotado para feature Category.
+
+---
+
+# 114. COMPARAÇÃO COM ASSET ACCOUNT
+
+Após implementação, faça uma comparação entre:
+
+AssetAccount
+Category
+
+Identifique duplicações reais.
+
+Classifique cada uma:
+
+A) duplicação aceitável específica do domínio;
+
+B) candidato futuro a componente compartilhado;
+
+C) duplicação que já deveria usar componente do Design System.
+
+Corrija apenas C nesta TASK.
+
+Documente B para revisão futura.
+
+---
+
+# 115. NÃO ABSTRAIR PREMATURAMENTE
+
+Itens classificados como B NÃO devem automaticamente virar abstração
+agora.
+
+O objetivo é aprender com dois CRUDs reais.
+
+---
+
+# 116. DEFINITION OF DONE
+
+TASK-2.6 estará concluída quando:
+
+- rota Categorias existir;
+- rota for privada;
+- navegação existir;
+- API real for utilizada;
+- listagem funcionar;
+- filtro Todas funcionar;
+- filtro Despesas funcionar;
+- EXPENSE + BOTH aparecerem em Despesas;
+- filtro Receitas funcionar;
+- INCOME + BOTH aparecerem em Receitas;
+- includeInactive funcionar;
+- criação funcionar;
+- edição funcionar;
+- mudança de applicability funcionar;
+- desativação funcionar;
+- reativação funcionar;
+- conflitos 409 forem tratados;
+- empty state funcionar;
+- filtered empty funcionar;
+- loading funcionar;
+- error/retry funcionar;
+- nenhuma entidade expuser ownerId;
+- nenhum ownerId for enviado;
+- desktop funcionar;
+- tablet funcionar;
+- mobile funcionar;
+- acessibilidade estiver validada;
+- AssetAccount não sofrer regressão;
+- Auth não sofrer regressão;
+- Dashboard não sofrer regressão;
+- lint passar;
+- testes passarem;
+- build passar;
+- E2E passar quando configurado.
+
+---
+
+# 117. RELATÓRIO FINAL
+
+Apresente:
+
+# TASK-2.6
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## API utilizada
+
+Liste endpoints e query params reais.
+
+## Rota
+
+Informe rota.
+
+## Navegação
+
+Informe onde Categorias foi adicionada.
+
+## Estrutura da página
+
+Descreva:
+
+- PageHeader;
+- ContentPanel;
+- toolbar;
+- filtros;
+- desktop;
+- mobile.
+
+## Formulário
+
+Liste campos.
+
+## CategoryApplicability
+
+Liste:
+
+valor backend
+→
+label frontend
+
+## Filtros
+
+### Todas
+PASS / FAIL
+
+### Despesas
+PASS / FAIL
+
+### Receitas
+PASS / FAIL
+
+### BOTH em Despesas
+PASS / FAIL
+
+### BOTH em Receitas
+PASS / FAIL
+
+### Include inactive
+PASS / FAIL
+
+## CRUD
+
+### Create
+PASS / FAIL
+
+### Update
+PASS / FAIL
+
+### Deactivate
+PASS / FAIL
+
+### Activate
+PASS / FAIL
+
+## Conflitos
+
+### Duplicate 409
+PASS / FAIL
+
+### Reactivation conflict
+PASS / FAIL
+
+## Estados
+
+### Loading
+PASS / FAIL
+
+### Empty
+PASS / FAIL
+
+### Filtered empty
+PASS / FAIL
+
+### Error
+PASS / FAIL
+
+### Retry
+PASS / FAIL
+
+## Responsividade
+
+### 360 × 800
+PASS / FAIL
+
+### 390 × 844
+PASS / FAIL
+
+### 768 × 1024
+PASS / FAIL
+
+### 1024 × 768
+PASS / FAIL
+
+### 1280 × 720
+PASS / FAIL
+
+### 1920 × 1080
+PASS / FAIL
+
+## Acessibilidade
+
+### Keyboard
+PASS / FAIL
+
+### Focus
+PASS / FAIL
+
+### Labels
+PASS / FAIL
+
+### Action menus
+PASS / FAIL
+
+### Drawer/Dialog
+PASS / FAIL
+
+### Contrast
+PASS / FAIL
+
+## Regressão
+
+### AssetAccount UI
+PASS / FAIL
+
+### Authentication
+PASS / FAIL
+
+### Dashboard
+PASS / FAIL
+
+## Qualidade
+
+### Unit tests
+PASS / FAIL
+
+### E2E
+PASS / FAIL / NÃO CONFIGURADO
+
+### Mobile E2E
+PASS / FAIL / NÃO CONFIGURADO
+
+### Lint
+PASS / FAIL
+
+### Production build
+PASS / FAIL
+
+### Browser console
+PASS / FAIL
+
+## Backend alterado
+
+Esperado:
+
+NÃO
+
+Se alterado, explique.
+
+## Comparação AssetAccount × Category
+
+Liste:
+
+### A — Específico do domínio
+
+### B — Candidato futuro à reutilização
+
+### C — Deveria utilizar Design System
+
+Confirme que itens C foram corrigidos.
+
+## Arquivos
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## Pendências
+
+### Bloqueantes
+
+### Não bloqueantes
+
+Inclua quando aplicável:
+
+"Reavaliar mudança de CategoryApplicability quando existirem transações
+associadas."
+
+## Próxima tarefa
+
+Se TASK-2.6 estiver aprovada, informe prontidão para:
+
+# TASK-2.7 — Integração inicial de Contas com o Dashboard
+
+NÃO implemente TASK-2.7 nesta execução.

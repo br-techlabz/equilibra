@@ -1,0 +1,1365 @@
+# TASK-2.7 — Integração Inicial de Contas com o Dashboard
+
+Estamos na:
+
+# Sprint 2 — Contas e Categorias
+
+Já foram concluídas:
+
+- TASK-2.1 — Domínio e persistência de Contas de Ativo
+- TASK-2.2 — API REST de Contas de Ativo
+- TASK-2.3 — Interface de Contas de Ativo
+- TASK-2.4 — Domínio e persistência de Categorias
+- TASK-2.5 — API REST de Categorias
+- TASK-2.6 — Interface de Categorias
+
+Agora implemente:
+
+# Integração Inicial de Contas com o Dashboard
+
+Esta TASK deverá integrar ao Dashboard somente informações financeiras que
+podem ser calculadas corretamente com o domínio atualmente existente.
+
+IMPORTANTE:
+
+Ainda NÃO existem:
+
+- Despesas;
+- Receitas;
+- Transferências;
+- ledger financeiro;
+- histórico de movimentações;
+- cálculo de saldo corrente baseado em transações.
+
+Portanto NÃO invente esses dados.
+
+---
+
+# 1. OBJETIVO
+
+Ao final desta TASK, o Dashboard deverá utilizar as Contas de Ativo reais
+do usuário para apresentar:
+
+- Patrimônio líquido inicial;
+- resumo das contas.
+
+Os demais indicadores dependentes de transações deverão continuar em
+estado neutro/vazio.
+
+---
+
+# 2. FONTE DE VERDADE
+
+Antes de alterar código, analise a implementação REAL atual.
+
+Leia:
+
+- CLAUDE.md
+- README.md
+- docs/architecture.md
+- docs/frontend-architecture.md
+- docs/design-system.md
+- docs/api-guidelines.md
+- docs/security.md
+
+Analise:
+
+- Dashboard atual;
+- Dashboard components;
+- KPI cards;
+- gráfico;
+- transações recentes;
+- resumo de contas;
+- AssetAccount frontend;
+- AssetAccount API;
+- DTOs;
+- API services;
+- estado Angular;
+- autenticação;
+- interceptors;
+- formatação monetária;
+- ECharts, se utilizado;
+- testes;
+- Playwright.
+
+Não suponha que tarefas anteriores foram implementadas exatamente conforme
+o planejamento.
+
+O código atual é a fonte de verdade.
+
+---
+
+# 3. RELATÓRIO PRÉVIO
+
+Antes de modificar arquivos, apresente:
+
+## Dashboard atual
+
+Explique:
+
+- componentes existentes;
+- origem atual dos valores;
+- empty states;
+- estrutura visual.
+
+## Dados disponíveis
+
+Explique quais dados reais de AssetAccount estão disponíveis.
+
+## Dados ainda indisponíveis
+
+Liste explicitamente informações que dependeriam de transações.
+
+## Plano de integração
+
+Explique exatamente o que será integrado e o que continuará vazio.
+
+Depois implemente.
+
+---
+
+# 4. PRINCÍPIO FINANCEIRO
+
+Não apresente informação como "real" se ela ainda não pode ser calculada
+corretamente.
+
+A UI deve refletir o estágio atual do domínio.
+
+---
+
+# 5. ENTRADAS
+
+Card:
+
+Entradas
+
+deve continuar:
+
+R$ 0,00
+
+Não calcule Entradas a partir de contas.
+
+AssetAccount não representa receita.
+
+---
+
+# 6. SAÍDAS
+
+Card:
+
+Saídas
+
+deve continuar:
+
+R$ 0,00
+
+Não calcule Saídas a partir de contas.
+
+AssetAccount não representa despesa.
+
+---
+
+# 7. SALDO
+
+O card "Saldo" conceitualmente representa:
+
+Receitas - Despesas
+
+Como ainda não existem transações:
+
+R$ 0,00
+
+NÃO utilizar soma das contas para preencher esse card.
+
+---
+
+# 8. PATRIMÔNIO LÍQUIDO
+
+Este é o único KPI que pode começar a utilizar dados reais nesta Sprint.
+
+Enquanto não existem transações:
+
+Patrimônio líquido inicial =
+soma dos initialBalance das contas de ativo ATIVAS.
+
+Exemplo conceitual:
+
+Conta corrente: R$ 1.500,00
+Carteira:        R$   200,00
+Investimentos:   R$ 3.000,00
+
+Patrimônio líquido inicial:
+
+R$ 4.700,00
+
+---
+
+# 9. IMPORTANTE — SEMÂNTICA
+
+Não trate esse valor como cálculo definitivo de patrimônio líquido do
+sistema.
+
+É uma aproximação válida para o estado atual:
+
+"patrimônio baseado nos saldos iniciais cadastrados".
+
+Quando transações forem implementadas, a fórmula deverá evoluir.
+
+---
+
+# 10. CONTA INATIVA
+
+Contas inativas NÃO devem participar do valor exibido como patrimônio
+atual/inicial do Dashboard.
+
+Utilize somente contas ativas.
+
+---
+
+# 11. SALDOS NEGATIVOS
+
+Saldo inicial negativo participa normalmente da soma.
+
+Exemplo:
+
+Conta A: R$ 1.000,00
+Conta B: -R$ 300,00
+
+Patrimônio:
+
+R$ 700,00
+
+Não use Math.abs.
+
+---
+
+# 12. PRECISÃO MONETÁRIA
+
+IMPORTANTE:
+
+Não introduza cálculo financeiro ingênuo com Number se isso puder causar
+problemas de precisão.
+
+Avalie como os valores monetários chegam da API e como o frontend atual
+os representa.
+
+Para uma simples soma de valores DECIMAL(19,2), utilize estratégia segura.
+
+Possibilidade recomendada:
+
+converter cada valor para centavos inteiros de maneira controlada,
+somar em centavos e formatar o resultado.
+
+Não adicione biblioteca decimal pesada sem necessidade.
+
+Documente a estratégia.
+
+---
+
+# 13. EXEMPLOS DE TESTE
+
+0,00 + 0,00
+= 0,00
+
+100,10 + 200,20
+= 300,30
+
+1000,00 + (-350,50)
+= 649,50
+
+0,10 + 0,20
+= 0,30
+
+O último caso é importante para evitar problemas clássicos de floating
+point.
+
+---
+
+# 14. NOME DO CARD
+
+Se o Dashboard atualmente mostra:
+
+Patrimônio líquido
+
+pode manter o título.
+
+Entretanto, considere helper/tooltip discreto:
+
+"Baseado nos saldos iniciais das contas ativas."
+
+Isso evita comunicar uma precisão que o sistema ainda não possui.
+
+---
+
+# 15. TOOLTIP
+
+Se utilizar tooltip:
+
+deve ser acessível.
+
+Não criar ícone sem accessible name.
+
+---
+
+# 16. FUTURO
+
+Documente explicitamente:
+
+Quando transações forem implementadas:
+
+currentBalance(account) =
+initialBalance
++ receitas
+- despesas
++ transferências recebidas
+- transferências enviadas
+
+Patrimônio líquido =
+soma dos currentBalance das contas ativas.
+
+NÃO implemente essa fórmula agora.
+
+---
+
+# 17. RESUMO DAS CONTAS
+
+O painel inferior existente:
+
+"Minhas contas"
+
+ou:
+
+"Resumo das contas"
+
+deverá começar a utilizar dados reais.
+
+---
+
+# 18. CONTEÚDO DO RESUMO
+
+Apresente somente contas ATIVAS.
+
+Para cada conta:
+
+- nome;
+- tipo;
+- saldo inicial.
+
+Não chamar saldo inicial de saldo atual.
+
+---
+
+# 19. EXEMPLO ESTRUTURAL
+
+Nubank
+Conta digital
+Saldo inicial: R$ 1.250,00
+
+Carteira
+Dinheiro
+Saldo inicial: R$ 200,00
+
+Não inserir esses dados como fixtures.
+
+---
+
+# 20. TIPO DE CONTA
+
+Reutilize exatamente o mapeamento pt-BR criado na TASK-2.3.
+
+NÃO crie segundo mapeamento de:
+
+CHECKING
+SAVINGS
+CASH
+etc.
+
+---
+
+# 21. ÍCONES
+
+Se AssetAccount já possui mapeamento de ícones, reutilize.
+
+Não duplique switch.
+
+---
+
+# 22. ORDEM
+
+Utilize a mesma ordenação previsível adotada pela API/listagem de contas.
+
+Não invente ordenação diferente no Dashboard.
+
+---
+
+# 23. QUANTIDADE
+
+Se houver poucas contas, mostre todas.
+
+Se o layout ficar inadequado com muitas contas, implemente solução simples
+e previsível.
+
+Preferência:
+
+mostrar primeiras contas e disponibilizar:
+
+"Ver todas as contas"
+
+que navega para a tela de Contas.
+
+Não implemente carousel complexo.
+
+---
+
+# 24. LINK CONTAS
+
+Inclua ação contextual quando fizer sentido:
+
+"Ver todas"
+
+→ rota de Contas.
+
+Utilize Angular Router.
+
+Não use href hardcoded incompatível com routing.
+
+---
+
+# 25. ZERO CONTAS
+
+Se usuário não possui contas:
+
+Patrimônio líquido:
+
+R$ 0,00
+
+Painel de contas:
+
+EmptyState.
+
+Mensagem sugerida:
+
+"Nenhuma conta cadastrada."
+
+Complemento:
+
+"Cadastre uma conta para começar a acompanhar seu patrimônio."
+
+Ação:
+
+"Cadastrar conta"
+
+→ tela de Contas.
+
+---
+
+# 26. CONTAS INATIVAS APENAS
+
+Se usuário possui apenas contas inativas:
+
+para fins de Dashboard, comportamento equivalente a nenhuma conta ativa.
+
+Não somar contas inativas.
+
+---
+
+# 27. GRÁFICO
+
+O gráfico:
+
+"Evolução do saldo"
+
+deve continuar SEM série financeira fictícia.
+
+Ainda não temos histórico temporal suficiente.
+
+---
+
+# 28. NÃO USAR CREATED AT PARA INVENTAR HISTÓRICO
+
+NÃO transforme:
+
+initialBalance + createdAt
+
+em uma falsa evolução histórica.
+
+Isso não representa movimentação financeira real.
+
+---
+
+# 29. EMPTY STATE DO GRÁFICO
+
+Mantenha ou melhore mensagem contextual.
+
+Exemplo:
+
+"A evolução do saldo aparecerá aqui quando houver movimentações."
+
+Não gere linha horizontal fake.
+
+---
+
+# 30. ECHARTS
+
+Se ECharts estiver configurado:
+
+não inicialize gráfico pesado desnecessariamente quando não existem dados,
+se arquitetura permitir evitar isso.
+
+Se componente já lida corretamente com empty state, preserve.
+
+---
+
+# 31. TRANSAÇÕES RECENTES
+
+O painel:
+
+"Transações recentes"
+
+continua vazio.
+
+Não transforme criação/edição de conta em transação.
+
+---
+
+# 32. EMPTY STATE DAS TRANSAÇÕES
+
+Mensagem conceitual:
+
+"Suas movimentações aparecerão aqui."
+
+Não criar transações fictícias.
+
+---
+
+# 33. CATEGORIAS
+
+Categorias NÃO devem aparecer no Dashboard nesta TASK.
+
+Elas não possuem valor financeiro próprio.
+
+---
+
+# 34. FILTRO DE PERÍODO
+
+O Dashboard já possui seletor de período.
+
+Ainda não há transações.
+
+Portanto:
+
+o período NÃO deve alterar patrimônio inicial de forma fictícia.
+
+---
+
+# 35. UX DO FILTRO
+
+Se o filtro de período permanecer visível por preparação futura:
+
+deixe-o funcional apenas como estado de UI, conforme arquitetura atual.
+
+Não faça requests inúteis ou cálculos falsos.
+
+---
+
+# 36. NÃO REMOVER O FILTRO SEM NECESSIDADE
+
+Ele faz parte da estrutura planejada do Dashboard.
+
+Não redesenhe o Dashboard.
+
+---
+
+# 37. FONTE DOS DADOS
+
+Preferência:
+
+reutilizar AssetAccountsApiService existente.
+
+Não crie:
+
+DashboardAccountsApiService
+
+apenas para chamar o mesmo endpoint.
+
+---
+
+# 38. ENDPOINT
+
+Use endpoint real da TASK-2.2 para recuperar contas ativas.
+
+Não altere backend apenas para retornar uma soma que o frontend pode
+calcular com poucas contas.
+
+---
+
+# 39. NÃO CRIAR ENDPOINT AGREGADOR PREMATURO
+
+Não criar:
+
+GET /api/dashboard
+
+GET /api/dashboard/summary
+
+nesta TASK.
+
+Isso fará mais sentido quando existirem transações e agregações reais.
+
+---
+
+# 40. ESTADO
+
+Dashboard deve possuir estados claros:
+
+loading;
+loaded;
+error.
+
+---
+
+# 41. LOADING
+
+Enquanto contas são carregadas:
+
+não mostrar momentaneamente R$ 0,00 como se fosse valor definitivo se isso
+causar flash enganoso.
+
+Use skeleton/loading no patrimônio e resumo de contas quando apropriado.
+
+---
+
+# 42. OUTROS KPIs
+
+Entradas/Saídas/Saldo podem continuar em zero porque são explicitamente
+indisponíveis no domínio atual.
+
+Não precisam depender da request de contas.
+
+---
+
+# 43. ERRO NA API
+
+Se falhar carregamento de contas:
+
+NÃO mostrar patrimônio R$ 0,00 como se fosse dado confirmado.
+
+Isso confundiria:
+
+"zero patrimônio"
+
+com:
+
+"não conseguimos carregar".
+
+---
+
+# 44. ERROR STATE NO KPI
+
+Apresente estado discreto de indisponibilidade.
+
+Exemplo:
+
+"Indisponível"
+
+ou padrão existente.
+
+Com accessible description quando necessário.
+
+---
+
+# 45. ERROR STATE DO PAINEL
+
+Resumo de contas:
+
+"Não foi possível carregar suas contas."
+
+Ação:
+
+"Tentar novamente"
+
+quando apropriado.
+
+---
+
+# 46. RETRY
+
+Retry deve refazer somente request necessário.
+
+Evite reload global da página.
+
+---
+
+# 47. 401
+
+Interceptors/auth global continuam responsáveis.
+
+Não implemente login dentro do Dashboard.
+
+---
+
+# 48. 403/404
+
+Não devem ocorrer normalmente na listagem ownership-aware.
+
+Trate genericamente sem revelar informação.
+
+---
+
+# 49. RESPONSIVIDADE
+
+Preserve o layout aprovado na Sprint UI.
+
+Desktop:
+
+KPIs
+↓
+gráfico + transações
+↓
+resumo de contas
+
+---
+
+# 50. MOBILE
+
+Em mobile:
+
+KPIs empilhados/grid existente;
+painéis empilhados;
+contas legíveis;
+sem overflow horizontal.
+
+---
+
+# 51. CONTA COM NOME LONGO
+
+Teste nomes próximos ao limite permitido.
+
+Não quebrar card/layout.
+
+Use wrapping/truncation conscientemente.
+
+Se truncar, informação completa deve continuar acessível quando apropriado.
+
+---
+
+# 52. VALORES GRANDES
+
+Teste visualmente:
+
+R$ 0,00
+
+R$ 1.234,56
+
+R$ 999.999,99
+
+R$ 9.999.999,99
+
+-R$ 1.234,56
+
+Não quebrar KPI.
+
+---
+
+# 53. ACESSIBILIDADE
+
+KPI deve continuar semanticamente compreensível.
+
+Tooltip/helper não pode ser a única forma de compreender informação
+essencial.
+
+---
+
+# 54. EMPTY STATES
+
+Devem possuir texto acessível e ação navegável por teclado.
+
+---
+
+# 55. LINK VER TODAS
+
+Accessible name claro.
+
+---
+
+# 56. TESTES UNITÁRIOS — SOMA
+
+Crie testes para cálculo monetário.
+
+Obrigatórios:
+
+0 + 0
+100.10 + 200.20
+0.10 + 0.20
+1000.00 - 350.50
+-100.00 + -200.00
+
+---
+
+# 57. TESTE CONTAS ATIVAS
+
+Ativas:
+
+A 100
+B 200
+
+Inativa:
+
+C 500
+
+Patrimônio:
+
+300
+
+Não 800.
+
+---
+
+# 58. TESTE SEM CONTAS
+
+Patrimônio:
+
+R$ 0,00
+
+EmptyState de contas.
+
+---
+
+# 59. TESTE APENAS INATIVAS
+
+Mesmo comportamento financeiro:
+
+R$ 0,00
+
+Nenhuma conta ativa no resumo.
+
+---
+
+# 60. TESTE API ERROR
+
+Patrimônio:
+
+estado indisponível
+
+e NÃO:
+
+R$ 0,00 confirmado.
+
+---
+
+# 61. TESTE RETRY
+
+Erro inicial
+→ retry
+→ sucesso
+
+Dashboard deve atualizar corretamente.
+
+---
+
+# 62. TESTE RESUMO
+
+Confirme:
+
+- nome;
+- tipo traduzido;
+- saldo inicial BRL;
+- somente contas ativas.
+
+---
+
+# 63. TESTE NÃO DUPLICAR MAPEAMENTO
+
+Verifique que labels/tipos reutilizam implementação existente de
+AssetAccount.
+
+---
+
+# 64. TESTE ENTRADAS
+
+Mesmo com contas contendo valores:
+
+Entradas:
+
+R$ 0,00
+
+---
+
+# 65. TESTE SAÍDAS
+
+Mesmo com saldo negativo em conta:
+
+Saídas:
+
+R$ 0,00
+
+Não interpretar saldo negativo como despesa.
+
+---
+
+# 66. TESTE SALDO
+
+Contas totalizando R$ 5.000:
+
+Saldo:
+
+continua R$ 0,00
+
+porque esse KPI representa Receitas - Despesas.
+
+---
+
+# 67. TESTE GRÁFICO
+
+Contas existentes não devem criar série fake.
+
+---
+
+# 68. TESTE TRANSAÇÕES RECENTES
+
+Criação de conta não deve aparecer como transação.
+
+---
+
+# 69. E2E
+
+Fluxo:
+
+1. registrar/login;
+2. Dashboard inicial;
+3. patrimônio = R$ 0,00;
+4. nenhuma conta;
+5. navegar para Contas;
+6. criar conta com saldo inicial R$ 1.000,00;
+7. voltar ao Dashboard;
+8. patrimônio = R$ 1.000,00;
+9. resumo mostra a conta;
+10. criar segunda conta com -R$ 250,00;
+11. Dashboard;
+12. patrimônio = R$ 750,00;
+13. desativar segunda conta;
+14. Dashboard;
+15. patrimônio = R$ 1.000,00;
+16. conta desativada não aparece no resumo.
+
+---
+
+# 70. E2E DE PRECISÃO
+
+Quando viável:
+
+Conta A:
+
+R$ 0,10
+
+Conta B:
+
+R$ 0,20
+
+Esperado:
+
+R$ 0,30
+
+Nunca:
+
+R$ 0,30000000000000004
+
+---
+
+# 71. E2E MOBILE
+
+Viewport:
+
+360 × 800
+
+Validar:
+
+- KPI patrimônio;
+- resumo das contas;
+- navegação para Contas;
+- gráfico empty;
+- transações empty.
+
+---
+
+# 72. REGRESSÃO CATEGORIAS
+
+Categorias deve continuar funcionando.
+
+---
+
+# 73. REGRESSÃO CONTAS
+
+CRUD de Contas deve continuar funcionando.
+
+---
+
+# 74. REGRESSÃO AUTH
+
+Login
+Register
+Guards
+Interceptors
+Logout
+
+devem continuar funcionando.
+
+---
+
+# 75. BACKEND
+
+Preferência:
+
+NÃO ALTERAR.
+
+A API existente de AssetAccount já fornece os dados necessários.
+
+Se descobrir bug real impeditivo:
+
+documente;
+corrija minimamente;
+adicione testes;
+informe no relatório.
+
+---
+
+# 76. DESIGN SYSTEM
+
+Não redesenhe Dashboard.
+
+Use componentes e tokens existentes.
+
+---
+
+# 77. CÓDIGO COMPARTILHADO
+
+Se formatação/mapeamento de AssetAccount estiver atualmente presa dentro
+da página de Contas e precisar ser reutilizada pelo Dashboard, faça
+refatoração pequena e segura.
+
+Exemplo:
+
+asset-account-type.presentation.ts
+
+ou equivalente.
+
+Não crie shared genérico excessivo.
+
+---
+
+# 78. CÁLCULO MONETÁRIO REUTILIZÁVEL
+
+Se criar helper para centavos:
+
+mantenha pequeno;
+bem testado;
+sem regras específicas do Dashboard quando puder ser reutilizado
+legitimamente.
+
+Não transforme isso em uma biblioteca financeira completa.
+
+---
+
+# 79. DOCUMENTAÇÃO
+
+Atualize docs/frontend-architecture.md quando necessário.
+
+---
+
+# 80. REGRA ARQUITETURAL FUTURA
+
+Documente claramente:
+
+Neste estágio:
+
+Dashboard patrimônio =
+soma de initialBalance das contas ativas.
+
+Após implementação de transações:
+
+Dashboard patrimônio deverá utilizar saldo corrente derivado do ledger.
+
+---
+
+# 81. TECH DEBT EXPLÍCITO
+
+Registre uma pendência rastreável:
+
+"Substituir patrimônio baseado em initialBalance por currentBalance
+derivado das transações quando o ledger financeiro for implementado."
+
+---
+
+# 82. NÃO CRIAR TODO SEM CONTEXTO
+
+Se projeto possui mecanismo para ADR/backlog/technical debt, utilize-o.
+
+Caso contrário, documente no local apropriado.
+
+---
+
+# 83. LINT
+
+Execute lint completo.
+
+Esperado:
+
+PASS
+
+---
+
+# 84. UNIT TESTS
+
+Execute testes frontend.
+
+Esperado:
+
+PASS
+
+---
+
+# 85. PRODUCTION BUILD
+
+Execute build de produção.
+
+Esperado:
+
+PASS
+
+---
+
+# 86. PLAYWRIGHT
+
+Execute E2E quando configurado.
+
+Esperado:
+
+PASS
+
+---
+
+# 87. BROWSER CONSOLE
+
+Nenhum erro inesperado.
+
+---
+
+# 88. NETWORK
+
+Confirme:
+
+- uma request necessária para contas;
+- sem loops;
+- sem requests duplicadas;
+- sem requests por categoria desnecessárias.
+
+---
+
+# 89. DEFINITION OF DONE
+
+TASK-2.7 estará concluída quando:
+
+- Dashboard carregar contas reais;
+- somente contas ativas forem utilizadas;
+- patrimônio utilizar initialBalance;
+- cálculo monetário for seguro;
+- saldo negativo funcionar;
+- contas inativas forem ignoradas;
+- resumo de contas usar dados reais;
+- tipos forem traduzidos reutilizando código existente;
+- saldo inicial estiver claramente identificado;
+- Entradas continuar R$ 0,00;
+- Saídas continuar R$ 0,00;
+- Saldo continuar R$ 0,00;
+- gráfico continuar sem dados fake;
+- transações recentes continuar sem dados fake;
+- zero contas possuir empty state;
+- erro da API não for apresentado como patrimônio zero;
+- retry funcionar;
+- link para Contas funcionar;
+- mobile funcionar;
+- acessibilidade estiver validada;
+- CRUD de Contas não sofrer regressão;
+- Categorias não sofrer regressão;
+- Auth não sofrer regressão;
+- lint passar;
+- testes passarem;
+- build passar;
+- E2E passar quando configurado.
+
+---
+
+# 90. RELATÓRIO FINAL
+
+Apresente:
+
+# TASK-2.7
+
+Status:
+
+CONCLUÍDA / NÃO CONCLUÍDA
+
+## Fonte dos dados
+
+Informe endpoint utilizado.
+
+## Patrimônio
+
+Explique fórmula atual.
+
+Confirme:
+
+somente contas ativas.
+
+## Estratégia monetária
+
+Explique como evitou problemas de floating point.
+
+## KPIs
+
+### Entradas
+Informe origem/valor.
+
+### Saídas
+Informe origem/valor.
+
+### Saldo
+Informe origem/valor.
+
+### Patrimônio líquido
+Informe origem/cálculo.
+
+## Resumo das contas
+
+Informe campos exibidos.
+
+## Contas inativas
+
+Explique comportamento.
+
+## Gráfico
+
+Confirme:
+
+SEM DADOS FICTÍCIOS
+
+## Transações recentes
+
+Confirme:
+
+SEM DADOS FICTÍCIOS
+
+## Categorias
+
+Confirme:
+
+NÃO UTILIZADAS NO DASHBOARD
+
+## Estados
+
+### Loading
+PASS / FAIL
+
+### Empty
+PASS / FAIL
+
+### Error
+PASS / FAIL
+
+### Retry
+PASS / FAIL
+
+## Precisão
+
+### 0.10 + 0.20 = 0.30
+PASS / FAIL
+
+### valores negativos
+PASS / FAIL
+
+### valores grandes
+PASS / FAIL
+
+## Responsividade
+
+### 360 × 800
+PASS / FAIL
+
+### 390 × 844
+PASS / FAIL
+
+### 768 × 1024
+PASS / FAIL
+
+### 1280 × 720
+PASS / FAIL
+
+### 1920 × 1080
+PASS / FAIL
+
+## Regressão
+
+### AssetAccount
+PASS / FAIL
+
+### Category
+PASS / FAIL
+
+### Authentication
+PASS / FAIL
+
+## Qualidade
+
+### Unit tests
+PASS / FAIL
+
+### E2E
+PASS / FAIL / NÃO CONFIGURADO
+
+### Mobile E2E
+PASS / FAIL / NÃO CONFIGURADO
+
+### Lint
+PASS / FAIL
+
+### Production build
+PASS / FAIL
+
+### Browser console
+PASS / FAIL
+
+## Backend alterado
+
+Esperado:
+
+NÃO
+
+Se alterado, explique.
+
+## Arquivos
+
+### Criados
+
+### Modificados
+
+### Removidos
+
+## Dívida técnica registrada
+
+Confirme:
+
+"Substituir patrimônio baseado em initialBalance por currentBalance
+derivado das transações quando o ledger financeiro for implementado."
+
+## Pendências
+
+### Bloqueantes
+
+### Não bloqueantes
+
+## Próxima tarefa
+
+Se TASK-2.7 estiver aprovada, informe prontidão para:
+
+# TASK-2.8 — Gate de Qualidade, Segurança e Isolamento Multiusuário da Sprint 2
+
+NÃO implemente TASK-2.8 nesta execução.

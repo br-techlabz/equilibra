@@ -1,0 +1,904 @@
+# TASK-7.6 — INDICADORES DE VENCIMENTOS E COMPROMISSOS ATRASADOS
+
+PROJETO: EQUILIBRA
+SPRINT: 7 — PREVISIBILIDADE FINANCEIRA
+
+STACK:
+Spring Boot 4
+Angular 19
+Angular Material
+MySQL
+Flyway
+Testcontainers
+
+CONTEXTO
+
+Sprints 0–6 aprovadas.
+TASK-7.0 — Arquitetura e ADR concluídos.
+TASK-7.1 — Backend de Recorrências concluído.
+TASK-7.2 — Frontend de Recorrências concluído.
+TASK-7.3 — Backend de Compromissos Futuros concluído.
+TASK-7.4 — Calendário Financeiro concluído.
+TASK-7.5 — Projeção de Fluxo de Caixa concluída.
+
+OBJETIVO
+
+Implementar indicadores de vencimentos
+e compromissos atrasados, reutilizando
+as entidades e endpoints existentes.
+
+Permitir identificar:
+
+- compromissos atrasados;
+- compromissos que vencem hoje;
+- compromissos próximos do vencimento;
+- compromissos pendentes futuros;
+- compromissos efetivados, quando aplicável;
+- valores financeiros correspondentes.
+
+Implementar cálculo autoritativo no backend
+e apresentação integrada no frontend
+conforme escopo autorizado pelo ADR.
+
+Não implementar notificações externas.
+
+Não modificar o ledger.
+
+==================================================
+1. INSPEÇÃO OBRIGATÓRIA
+==================================================
+
+Ler:
+
+- CLAUDE.md;
+- ADR da TASK-7.0;
+- relatórios TASKS 7.1–7.5;
+- entidades reais de compromissos;
+- estados reais;
+- dueDate;
+- settledAt, se existir;
+- política de vencimentos;
+- calendário financeiro;
+- agenda;
+- projeção de fluxo de caixa;
+- DTOs;
+- endpoints;
+- OpenAPI;
+- Auth;
+- CurrentUser;
+- Angular services;
+- componentes compartilhados;
+- testes existentes.
+
+Não presumir contratos.
+
+==================================================
+2. GATE DE ARQUITETURA
+==================================================
+
+Confirmar:
+
+A. Estados elegíveis para atraso.
+
+B. Definição de vencido.
+
+C. Definição de vence hoje.
+
+D. Janela de vencimento próximo.
+
+E. Tratamento de receitas.
+
+F. Tratamento de despesas.
+
+G. Compromissos cancelados.
+
+H. Compromissos efetivados.
+
+I. Compromissos parcialmente pagos,
+se existirem.
+
+J. Data de referência.
+
+K. Timezone.
+
+L. Escopo por conta.
+
+M. Horizonte de consulta.
+
+N. Integração com agenda.
+
+O. Integração com projeção.
+
+P. Indicadores persistidos ou derivados.
+
+Q. Política de atualização.
+
+Se faltar decisão essencial,
+registrar BLOCKED.
+
+Não inventar limiares.
+
+==================================================
+3. PRE-IMPLEMENTATION REPORT
+==================================================
+
+Produzir antes de editar:
+
+# TASK-7.6 — PRE-IMPLEMENTATION REPORT
+
+1. ADR.
+2. Entidades.
+3. Estados.
+4. Regras de atraso.
+5. Janela de proximidade.
+6. Data de referência.
+7. Tipos financeiros.
+8. Filtros.
+9. Fórmulas.
+10. Endpoint.
+11. DTOs.
+12. Componentes frontend.
+13. Segurança.
+14. Performance.
+15. Testes.
+16. Arquivos previstos.
+17. Bloqueadores.
+
+==================================================
+4. PRINCÍPIO CENTRAL
+==================================================
+
+Indicadores são derivados de
+compromissos financeiros existentes.
+
+Não criar movimentos no ledger.
+
+Não modificar saldos reais.
+
+Não criar nova fonte de verdade.
+
+==================================================
+5. DATA DE REFERÊNCIA
+==================================================
+
+Usar data civil conforme ADR.
+
+Definir timezone explicitamente.
+
+Não depender silenciosamente
+do timezone do servidor.
+
+Testar mudança de dia.
+
+==================================================
+6. ATRASADO
+==================================================
+
+Classificar como atrasado somente
+compromisso elegível cuja data
+de vencimento seja anterior
+à data de referência.
+
+Respeitar estados aprovados.
+
+Não classificar efetivado
+como atrasado pendente.
+
+==================================================
+7. VENCE HOJE
+==================================================
+
+dueDate igual à data de referência.
+
+Estado elegível.
+
+Não incluir cancelados ou efetivados
+indevidamente.
+
+==================================================
+8. PRÓXIMO DO VENCIMENTO
+==================================================
+
+Usar janela aprovada no ADR.
+
+Exemplo conceitual:
+próximos 7 dias.
+
+Não adotar 7 dias sem confirmação.
+
+Definir limites inclusivos/exclusivos.
+
+==================================================
+9. PENDENTE FUTURO
+==================================================
+
+Compromisso elegível com vencimento
+posterior à janela de proximidade.
+
+Evitar sobreposição com outras classes.
+
+==================================================
+10. EFETIVADOS
+==================================================
+
+Se indicador existir:
+
+usar estado real do compromisso.
+
+Não confundir valor efetivado
+com valor previsto.
+
+==================================================
+11. CANCELADOS
+==================================================
+
+Não incluir cancelados em valores
+pendentes ou atrasados.
+
+Se houver métrica histórica,
+apresentar separadamente.
+
+==================================================
+12. RECEITAS
+==================================================
+
+Diferenciar valores a receber
+de valores a pagar.
+
+Não somar receitas e despesas
+como uma obrigação única.
+
+==================================================
+13. DESPESAS
+==================================================
+
+Calcular:
+
+quantidade;
+valor total previsto;
+eventuais saldos pendentes aprovados.
+
+Usar BigDecimal.
+
+==================================================
+14. PAGAMENTOS PARCIAIS
+==================================================
+
+Se aprovados:
+
+calcular saldo ainda devido.
+
+Não contar valor já efetivado
+como pendente.
+
+Se não suportados:
+NOT APPLICABLE.
+
+==================================================
+15. CLASSIFICAÇÃO EXCLUSIVA
+==================================================
+
+Um compromisso não deve aparecer
+simultaneamente como:
+
+atrasado;
+vence hoje;
+próximo;
+futuro;
+
+salvo regra explícita de
+categorias sobrepostas.
+
+==================================================
+16. FÓRMULAS
+==================================================
+
+Para cada grupo:
+
+count = quantidade de compromissos elegíveis.
+
+amount = soma de valores pendentes
+conforme modelo aprovado.
+
+Usar BigDecimal.
+
+Não usar float/double.
+
+==================================================
+17. FILTRO POR CONTA
+==================================================
+
+Se aprovado:
+
+permitir conta única ou conjunto.
+
+Todas owner-scoped.
+
+Não incluir dados de conta estrangeira.
+
+==================================================
+18. FILTRO POR TIPO
+==================================================
+
+Se aprovado:
+
+EXPENSE;
+INCOME;
+ambos.
+
+Retornar valores separados por tipo.
+
+==================================================
+19. FILTRO POR PERÍODO
+==================================================
+
+Se aprovado:
+
+respeitar intervalo.
+
+Definir se atrasados anteriores
+ao início entram no resumo.
+
+Não esconder atrasados
+por recorte incorreto.
+
+==================================================
+20. ENDPOINT
+==================================================
+
+Criar endpoint read-only
+somente se necessário.
+
+Exemplo conceitual:
+
+GET /api/commitments/indicators
+
+Respeitar convenções reais.
+
+Se API existente já fornecer
+agregados adequados, reutilizar.
+
+==================================================
+21. DTOs
+==================================================
+
+Criar contratos tipados.
+
+Possíveis campos:
+
+referenceDate;
+overdueCount;
+overdueAmount;
+dueTodayCount;
+dueTodayAmount;
+upcomingCount;
+upcomingAmount;
+futurePendingCount;
+futurePendingAmount;
+
+conforme ADR.
+
+Não inventar campos obrigatórios.
+
+==================================================
+22. CONSULTAS
+==================================================
+
+Priorizar agregação SQL eficiente.
+
+Evitar N+1.
+
+Não carregar todos os compromissos
+em memória para agregar sem necessidade.
+
+==================================================
+23. OWNERSHIP
+==================================================
+
+ownerId derivado do JWT.
+
+Todas as consultas owner-scoped.
+
+Não aceitar ownerId do cliente.
+
+==================================================
+24. SEGURANÇA
+==================================================
+
+Validar:
+
+401;
+404 para referências estrangeiras;
+filtros;
+parâmetros;
+isolamento de agregados.
+
+Não vazar totais entre usuários.
+
+==================================================
+25. OPENAPI
+==================================================
+
+Documentar endpoint,
+filtros, semântica, datas,
+schemas e erros.
+
+==================================================
+26. PROBLEM DETAILS
+==================================================
+
+Preservar padrão existente.
+
+Não expor SQL ou stack trace.
+
+Manter Request ID.
+
+==================================================
+27. FRONTEND — INTEGRAÇÃO
+==================================================
+
+Reutilizar Agenda Financeira
+da TASK-7.4.
+
+Evitar criar módulo paralelo.
+
+==================================================
+28. FRONTEND — KPIs
+==================================================
+
+Apresentar indicadores reais:
+
+Atrasados;
+Vencem hoje;
+Próximos;
+Pendentes futuros.
+
+Mostrar valores quando API fornecer.
+
+==================================================
+29. FRONTEND — TIPOS
+==================================================
+
+Separar:
+
+a pagar;
+a receber.
+
+Não misturar sinais financeiros.
+
+==================================================
+30. FRONTEND — DESTAQUES
+==================================================
+
+Destacar compromissos
+que exigem atenção.
+
+Priorizar atrasados
+e vencimentos próximos.
+
+Não criar urgência falsa.
+
+==================================================
+31. FRONTEND — FILTROS
+==================================================
+
+Permitir clicar em indicador
+para filtrar agenda, se viável.
+
+Reutilizar filtros reais da API.
+
+==================================================
+32. FRONTEND — ESTADOS
+==================================================
+
+Usar rótulos claros:
+
+Atrasado;
+Vence hoje;
+Próximo;
+Pendente futuro.
+
+Não depender somente de cores.
+
+==================================================
+33. FRONTEND — ATUALIZAÇÃO
+==================================================
+
+Após:
+
+efetivação;
+cancelamento;
+mudança de mês;
+alteração de filtros;
+
+reconsultar dados relevantes.
+
+Não manter indicador obsoleto.
+
+==================================================
+34. FRONTEND — CONCORRÊNCIA
+==================================================
+
+Usar switchMap ou equivalente.
+
+Evitar respostas antigas
+após mudança rápida de filtros.
+
+==================================================
+35. FRONTEND — LOADING
+==================================================
+
+Exibir carregamento.
+
+Não mostrar números antigos
+como se fossem atuais.
+
+==================================================
+36. FRONTEND — EMPTY
+==================================================
+
+Sem atrasados:
+
+"Nenhum compromisso atrasado."
+
+Sem próximos:
+
+"Nenhum vencimento próximo."
+
+Não confundir erro com vazio.
+
+==================================================
+37. FRONTEND — ERROR
+==================================================
+
+Mostrar mensagem clara.
+
+Oferecer retry.
+
+Não converter falha em zero.
+
+==================================================
+38. FRONTEND — RESPONSIVIDADE
+==================================================
+
+Validar:
+
+360x800;
+390x844;
+768x1024;
+1024x768;
+1280x720;
+1366x768;
+1920x1080.
+
+Cards devem reorganizar.
+
+Sem overflow horizontal global.
+
+==================================================
+39. FRONTEND — ACESSIBILIDADE
+==================================================
+
+Garantir:
+
+labels;
+foco;
+teclado;
+contraste;
+status textual;
+valores legíveis;
+navegação acessível.
+
+==================================================
+40. GOLDEN — ATRASADO
+==================================================
+
+Data de referência:
+10/10/2026.
+
+Compromisso pendente:
+dueDate=05/10/2026;
+amount=200.00.
+
+Esperado:
+
+overdueCount=1;
+overdueAmount=200.00.
+
+==================================================
+41. GOLDEN — VENCE HOJE
+==================================================
+
+Data de referência:
+10/10/2026.
+
+Compromisso pendente:
+dueDate=10/10/2026;
+amount=150.00.
+
+Esperado:
+
+dueTodayCount=1;
+dueTodayAmount=150.00.
+
+==================================================
+42. GOLDEN — PRÓXIMO
+==================================================
+
+Data de referência:
+10/10/2026.
+
+Compromisso pendente:
+dueDate dentro da janela aprovada;
+amount=300.00.
+
+Esperado:
+
+upcomingCount=1;
+upcomingAmount=300.00.
+
+==================================================
+43. GOLDEN — EFETIVAÇÃO
+==================================================
+
+Compromisso atrasado:
+200.00.
+
+Efetivar.
+
+Esperado:
+
+deixa de constar entre atrasados;
+ledger atualizado uma vez;
+indicadores atualizados.
+
+==================================================
+44. GOLDEN — CANCELAMENTO
+==================================================
+
+Compromisso próximo:
+300.00.
+
+Cancelar.
+
+Esperado:
+
+não consta mais como pendente;
+nenhuma alteração de saldo.
+
+==================================================
+45. GOLDEN — RECEITA
+==================================================
+
+Receita pendente:
+500.00.
+
+Esperado:
+
+valor classificado como a receber.
+
+Não somar ao total a pagar.
+
+==================================================
+46. GOLDEN — MULTIUSER
+==================================================
+
+User A possui atrasados.
+
+User B possui outros atrasados.
+
+A vê apenas agregados de A.
+
+B vê apenas agregados de B.
+
+==================================================
+47. GOLDEN — VIRADA DO DIA
+==================================================
+
+Compromisso vence em 10/10/2026.
+
+Referência 10/10:
+vence hoje.
+
+Referência 11/10:
+atrasado, se continuar pendente.
+
+Sem necessidade de alterar
+status persistido indevidamente.
+
+==================================================
+48. GOLDEN — CLASSIFICAÇÃO
+==================================================
+
+Criar fixtures:
+
+atrasado;
+hoje;
+próximo;
+futuro;
+efetivado;
+cancelado.
+
+Validar grupos sem dupla contagem.
+
+==================================================
+49. TESTES BACKEND
+==================================================
+
+Cobrir:
+
+datas;
+estados;
+tipos;
+valores;
+limiares;
+contas;
+filtros;
+ownership;
+agregação;
+cancelamento;
+efetivação.
+
+==================================================
+50. TESTCONTAINERS
+==================================================
+
+Executar MySQL real.
+
+Validar queries,
+índices e precisão.
+
+Não substituir por H2.
+
+==================================================
+51. TESTES FRONTEND
+==================================================
+
+Cobrir:
+
+service;
+cards;
+filtros;
+status;
+loading;
+empty;
+error;
+retry;
+refresh;
+race conditions.
+
+==================================================
+52. REGRESSÕES
+==================================================
+
+Executar testes relevantes:
+
+Authentication;
+Accounts;
+Categories;
+Expenses;
+Income;
+Transfers;
+Dashboard;
+History;
+Reports;
+Budgets;
+Alerts;
+Goals;
+Recurrences;
+Commitments;
+Calendar;
+Cash Flow Forecast.
+
+==================================================
+53. QUALIDADE
+==================================================
+
+Executar:
+
+backend tests;
+Testcontainers/MySQL;
+backend build;
+Angular lint;
+Angular tests;
+Angular production build;
+E2E, se configurado.
+
+Registrar resultados reais.
+
+==================================================
+54. FORA DO ESCOPO
+==================================================
+
+Não implementar:
+
+- notificações push;
+- e-mails;
+- SMS;
+- WhatsApp;
+- scheduler novo;
+- WebSocket;
+- polling excessivo;
+- mudanças no ledger;
+- novas transações;
+- TASK-7.7.
+
+==================================================
+55. DEFINITION OF DONE
+==================================================
+
+TASK-7.6 concluída quando:
+
+- ADR respeitado;
+- classificação correta;
+- datas corretas;
+- valores corretos;
+- estados elegíveis;
+- cancelados excluídos;
+- efetivados excluídos dos pendentes;
+- receitas/despesas separadas;
+- endpoint autoritativo, se necessário;
+- owner-scoping;
+- OpenAPI;
+- indicadores frontend;
+- atualização após operações;
+- loading/empty/error/retry;
+- responsividade;
+- acessibilidade;
+- testes backend;
+- Testcontainers/MySQL;
+- testes frontend;
+- lint;
+- builds;
+- regressões aprovadas.
+
+==================================================
+56. RELATÓRIO FINAL
+==================================================
+
+Produzir:
+
+# TASK-7.6 — INDICADORES DE VENCIMENTOS
+
+STATUS:
+CONCLUÍDA / NÃO CONCLUÍDA / BLOCKED
+
+1. ADR utilizado.
+2. Classificações.
+3. Limiares.
+4. Datas.
+5. Estados.
+6. Tipos.
+7. Valores.
+8. Filtros.
+9. Endpoint.
+10. DTOs.
+11. Segurança.
+12. OpenAPI.
+13. Performance.
+14. Frontend.
+15. Indicadores.
+16. Integração com agenda.
+17. Atualização.
+18. Responsividade.
+19. Acessibilidade.
+20. Golden Scenarios.
+21. Testes backend.
+22. Testcontainers/MySQL.
+23. Testes frontend.
+24. E2E.
+25. Lint.
+26. Builds.
+27. Regressões.
+28. Arquivos modificados.
+29. Bugs encontrados/corrigidos.
+30. Divergências do ADR.
+31. Dívidas técnicas.
+32. Fora do escopo confirmado.
+
+Se concluída:
+
+READY FOR TASK-7.7 — Integração com Dashboard
+e Relatórios.
+
+NÃO implementar TASK-7.7 nesta execução.

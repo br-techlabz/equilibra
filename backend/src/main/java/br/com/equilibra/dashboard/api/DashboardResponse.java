@@ -20,6 +20,6 @@ public record DashboardResponse(
     public record CategoryExpense(String categoryName, BigDecimal amount) {}
     public record Summary(BigDecimal income, BigDecimal expense, BigDecimal net, BigDecimal netWorth) {}
     public record AccountBalance(String accountId, String name, String type, BigDecimal initialBalance, BigDecimal currentBalance, boolean active) {}
-    public record RecentTransaction(String id, String type, String description, Instant occurredAt, BigDecimal amount, String sourceAccountId, String destinationAccountId, String status) {}
+    public record RecentTransaction(String id, String type, String description, Instant occurredAt, BigDecimal amount, String sourceAccountId, String destinationAccountId, String status, String paymentMethod) {}
     public record CardSummary(BigDecimal pendingStatements, BigDecimal nextDueAmount, BigDecimal committedLimit, BigDecimal availableLimit) {}
 }
