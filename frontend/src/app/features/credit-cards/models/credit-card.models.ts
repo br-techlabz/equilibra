@@ -17,7 +17,7 @@ export interface CreditCard {
   updatedAt: string;
 }
 
-export interface CreditCardStatementItem { id: string; purchaseId: string; sequenceNumber: number; totalInstallments: number; amount: number; cycleMonth: string; }
+export interface CreditCardStatementItem { id: string; purchaseId: string; description: string; sequenceNumber: number; totalInstallments: number; amount: number; cycleMonth: string; }
 export interface CreditCardStatement { id: string; creditCardId: string; cycleStart: string; cycleEnd: string; closingAt: string; dueDate: string; status: 'OPEN' | 'CLOSED' | 'OVERDUE' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED'; totalAmount: number; paidAmount: number; outstandingAmount: number; items: CreditCardStatementItem[]; }
 export interface StatementPaymentRequest { bankAccountId: string; amount: number; paidAt: string; }
 

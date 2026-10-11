@@ -10,6 +10,7 @@ export interface Expense {
   creditCardId?: string | null;
   installmentCount?: number | null;
   cycleMonth?: string | null;
+  purchaseAt?: string | null;
   categoryId: string;
   notes: string | null;
   tags?: { id: string; name: string; active: boolean }[];
@@ -33,6 +34,7 @@ export interface ExpenseRequest {
 export interface CreditCardPurchaseRequest {
   description: string;
   purchaseDate: string;
+  purchaseAt?: string;
   totalAmount: number;
   installmentCount: number;
   creditCardId: string;

@@ -4,5 +4,6 @@ public interface CreditCardStatementRepository extends JpaRepository<CreditCardS
  Optional<CreditCardStatement> findByIdAndOwnerId(String id,String ownerId);
  Optional<CreditCardStatement> findByOwnerIdAndCreditCardIdAndCycleStartAndCycleEnd(String owner,String card,LocalDate start,LocalDate end);
  List<CreditCardStatement> findAllByOwnerIdAndCreditCardIdOrderByCycleStartDesc(String owner,String card);
+ List<CreditCardStatement> findAllByOwnerIdAndCreditCardId(String owner,String card);
  @Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select s from CreditCardStatement s where s.ownerId=:owner and s.creditCardId=:card and s.cycleStart=:start and s.cycleEnd=:end") Optional<CreditCardStatement> lockCycle(String owner,String card,LocalDate start,LocalDate end);
 }

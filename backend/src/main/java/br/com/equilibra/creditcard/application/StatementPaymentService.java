@@ -1,7 +1,76 @@
 package br.com.equilibra.creditcard.application;
-import br.com.equilibra.account.domain.AssetAccount; import br.com.equilibra.account.infrastructure.AssetAccountRepository; import br.com.equilibra.creditcard.api.*; import br.com.equilibra.creditcard.domain.*; import br.com.equilibra.creditcard.infrastructure.*; import br.com.equilibra.shared.api.CurrentUser; import br.com.equilibra.shared.web.exception.*; import br.com.equilibra.transaction.domain.FinancialTransaction; import br.com.equilibra.transaction.infrastructure.FinancialTransactionRepository; import org.springframework.stereotype.Service; import org.springframework.transaction.annotation.Transactional; import java.util.*;
-@Service public class StatementPaymentService{
- private final CreditCardStatementRepository statements;private final AssetAccountRepository accounts;private final FinancialTransactionRepository transactions;private final StatementPaymentRepository payments;private final CurrentUser current;
- public StatementPaymentService(CreditCardStatementRepository s,AssetAccountRepository a,FinancialTransactionRepository t,StatementPaymentRepository p,CurrentUser c){statements=s;accounts=a;transactions=t;payments=p;current=c;}
- @Transactional public StatementPayment pay(String statementId,StatementPaymentRequest r,String key){String o=current.id().toString();if(key!=null){var old=payments.findByOwnerIdAndIdempotencyKey(o,key);if(old.isPresent())return old.get();}var s=statements.findByIdAndOwnerId(statementId,o).orElseThrow(()->new ResourceNotFoundException("Statement not found."));if(s.getStatus()!=CreditCardStatementStatus.CLOSED&&s.getStatus()!=CreditCardStatementStatus.OVERDUE)throw new ResourceConflictException("Statement is not payable.");AssetAccount a=accounts.findByIdAndOwnerId(r.bankAccountId(),o).orElseThrow(()->new ResourceNotFoundException("Asset account not found."));if(!a.isActive())throw new ResourceConflictException("Asset account is inactive.");s.registerPayment(r.amount());FinancialTransaction tx=transactions.save(FinancialTransaction.statementPayment(o,"Pagamento de fatura",r.amount(),r.paidAt(),a.getId(),"statement="+statementId));var payment=payments.save(new StatementPayment(o,statementId,a.getId(),r.amount(),r.paidAt(),tx.getId(),key));statements.save(s);return payment;}
+
+import br.com.equilibra.account.domain.AssetAccount;
+import br.com.equilibra.account.infrastructure.AssetAccountRepository;
+import br.com.equilibra.creditcard.api.StatementPaymentRequest;
+import br.com.equilibra.creditcard.domain.*;
+import br.com.equilibra.creditcard.infrastructure.*;
+import br.com.equilibra.shared.api.CurrentUser;
+import br.com.equilibra.shared.web.exception.*;
+import br.com.equilibra.transaction.domain.FinancialTransaction;
+import br.com.equilibra.transaction.infrastructure.FinancialTransactionRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class StatementPaymentService {
+    private final CreditCardStatementRepository statements;
+    private final CreditCardStatementService statementService;
+    private final AssetAccountRepository accounts;
+    private final FinancialTransactionRepository transactions;
+    private final StatementPaymentRepository payments;
+    private final CurrentUser current;
+
+    public StatementPaymentService(CreditCardStatementRepository statements, CreditCardStatementService statementService,
+                                   AssetAccountRepository accounts, FinancialTransactionRepository transactions,
+                                   StatementPaymentRepository payments, CurrentUser current) {
+        this.statements = statements;
+        this.statementService = statementService;
+        this.accounts = accounts;
+        this.transactions = transactions;
+        this.payments = payments;
+        this.current = current;
+    }
+
+    @Transactional
+    public StatementPayment pay(String statementId, StatementPaymentRequest request, String key) {
+        String owner = current.id().toString();
+        if (key != null) {
+            var existing = payments.findByOwnerIdAndIdempotencyKey(owner, key);
+            if (existing.isPresent()) return existing.get();
+        }
+        CreditCardStatement statement = statements.findByIdAndOwnerId(statementId, owner)
+            .orElseThrow(() -> new ResourceNotFoundException("Statement not found."));
+        return payPersisted(statement, request, key, owner);
+    }
+
+    @Transactional
+    public StatementPayment payCurrent(String cardId, StatementPaymentRequest request, String key) {
+        String owner = current.id().toString();
+        if (key != null) {
+            var existing = payments.findByOwnerIdAndIdempotencyKey(owner, key);
+            if (existing.isPresent()) return existing.get();
+        }
+        CreditCardStatement statement = statementService.ensureCurrentPersisted(cardId);
+        return payPersisted(statement, request, key, owner);
+    }
+
+    private StatementPayment payPersisted(CreditCardStatement statement, StatementPaymentRequest request,
+                                          String key, String owner) {
+        if (statement.getStatus() != CreditCardStatementStatus.CLOSED
+            && statement.getStatus() != CreditCardStatementStatus.OVERDUE) {
+            throw new ResourceConflictException("Statement is not payable.");
+        }
+        AssetAccount account = accounts.findByIdAndOwnerId(request.bankAccountId(), owner)
+            .orElseThrow(() -> new ResourceNotFoundException("Asset account not found."));
+        if (!account.isActive()) throw new ResourceConflictException("Asset account is inactive.");
+        statement.registerPayment(request.amount());
+        FinancialTransaction transaction = transactions.save(FinancialTransaction.statementPayment(
+            owner, "Pagamento de fatura", request.amount(), request.paidAt(), account.getId(),
+            "statement=" + statement.getId()));
+        StatementPayment payment = payments.save(new StatementPayment(owner, statement.getId(), account.getId(),
+            request.amount(), request.paidAt(), transaction.getId(), key));
+        statements.save(statement);
+        return payment;
+    }
 }

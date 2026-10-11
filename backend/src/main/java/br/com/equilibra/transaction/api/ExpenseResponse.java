@@ -16,6 +16,7 @@ public record ExpenseResponse(
     String creditCardId,
     Integer installmentCount,
     java.time.LocalDate cycleMonth,
+    java.time.Instant purchaseAt,
     String categoryId,
     String notes,
     TransactionStatus status,
@@ -29,7 +30,7 @@ public record ExpenseResponse(
     public static ExpenseResponse from(FinancialTransaction transaction, java.util.List<br.com.equilibra.transaction.domain.TagSummary> tags) {
         return new ExpenseResponse(
             transaction.getId(), transaction.getDescription(), transaction.getOccurredAt(),
-            transaction.getSourceAccountId(), transaction.getAmount(), "BANK_ACCOUNT", null, null, null, transaction.getCategoryId(),
+            transaction.getSourceAccountId(), transaction.getAmount(), "BANK_ACCOUNT", null, null, null, null, transaction.getCategoryId(),
             transaction.getNotes(), transaction.getStatus(), transaction.getCreatedAt(), transaction.getUpdatedAt(), tags
         );
     }
