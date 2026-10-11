@@ -19,13 +19,13 @@ COPY mvnw .
 COPY .mvn/wrapper/maven-wrapper.jar .mvn/wrapper/maven-wrapper.jar
 
 # Baixar dependências (cache layer)
-RUN ./mvnw dependency:go-offline -B
+RUN sh mvnw dependency:go-offline -B
 
 # Copiar código fonte
 COPY src src
 
 # Build da aplicação (skip tests para build mais rápido na imagem)
-RUN ./mvnw clean package -DskipTests -B
+RUN sh mvnw clean package -DskipTests -B
 
 # ---- Stage 2: Runtime ----
 FROM eclipse-temurin:21-jre-alpine
