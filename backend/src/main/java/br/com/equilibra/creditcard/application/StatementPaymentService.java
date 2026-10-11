@@ -57,8 +57,8 @@ public class StatementPaymentService {
 
     private StatementPayment payPersisted(CreditCardStatement statement, StatementPaymentRequest request,
                                           String key, String owner) {
-        if (statement.getStatus() != CreditCardStatementStatus.CLOSED
-            && statement.getStatus() != CreditCardStatementStatus.OVERDUE) {
+        if (statement.getStatus() == CreditCardStatementStatus.PAID
+            || statement.getStatus() == CreditCardStatementStatus.CANCELLED) {
             throw new ResourceConflictException("Statement is not payable.");
         }
         AssetAccount account = accounts.findByIdAndOwnerId(request.bankAccountId(), owner)
