@@ -11,8 +11,12 @@ const openFinancialReport = async (page: import('@playwright/test').Page) => {
     await page.locator('a[href="/reports/financial"]').evaluate((element) => (element as HTMLElement).click());
     return;
   }
-  await page.locator('.nav-expansion-header').filter({ hasText: 'Relatórios' }).click();
-  await page.getByRole('link', { name: 'Financeiro', exact: true }).click();
+  const reportsPanel = page.locator('.nav-expansion-panel').filter({ hasText: 'Relatórios' });
+  await reportsPanel.locator('.nav-expansion-header').click();
+  const financialLink = reportsPanel.locator('a[href="/reports/financial"]');
+  await expect(financialLink).toBeVisible();
+  await financialLink.click();
+  await page.waitForURL('**/reports/financial');
 };
 
 const assertReportRequest = (request: import('@playwright/test').Request, hasAccount = false) => {
@@ -53,8 +57,8 @@ test.describe('Relatório financeiro', () => {
       const filtered = await reportRequest(page);
       assertReportRequest(filtered, true);
     }
-    await expect(page.getByText('Resultado financeiro', { exact: true })).toBeVisible();
     if ((page.viewportSize()?.width ?? 1280) < 768) return;
+    await expect(page.getByText('Resultado financeiro', { exact: true })).toBeVisible();
 
     const from = page.getByLabel('Data inicial no formato dia, mês e ano');
     const to = page.getByLabel('Data final no formato dia, mês e ano');

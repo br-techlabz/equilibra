@@ -1,0 +1,39 @@
+# TASK-8.2 — FRONTEND DE CARTÕES DE CRÉDITO
+PROJETO: EQUILIBRA | SPRINT 8
+
+OBJETIVO
+Criar interface Angular 19/Angular Material para cadastrar, consultar, editar e administrar cartões, consumindo exclusivamente APIs reais da TASK-8.1.
+
+ANTES DE CODIFICAR
+Inspecionar CLAUDE.md, ADR 8.0, OpenAPI, relatório 8.1, rotas, sidebar recolhível, design system, serviços, guards, formulários e testes.
+Produzir PRE-IMPLEMENTATION REPORT.
+
+ESCOPO
+1. Criar rota autenticada /credit-cards ou padrão aprovado.
+2. Adicionar menu Cartões de Crédito à sidebar.
+3. Página Meus Cartões com cards responsivos.
+4. Mostrar nome, instituição, limite total, disponível/comprometido quando calculável, fechamento, vencimento e status.
+5. Formulário reativo de cadastro/edição com validações alinhadas ao backend.
+6. Detalhamento do cartão com dados reais, sem simular faturas ainda inexistentes.
+7. Ação de desativação conforme API e ADR.
+8. Não coletar nem exibir PAN completo, CVV ou dados bancários sensíveis.
+9. Aplicar identidade Equilibra: Angular Material, cores e tokens existentes, sem design paralelo.
+10. Formatar BRL pt-BR e dias corretamente.
+11. Estados loading, empty, error, retry, confirmação e feedback.
+12. Tratar 401, 403, 404, 409 e Problem Details.
+13. Não enviar ownerId.
+14. Proteger contra respostas obsoletas em mudanças rápidas de filtros.
+15. Validar mobile 360/390px, tablet e desktop, sidebar recolhível, teclado, foco e contraste.
+16. Testes Angular de serviços, componentes, validações, navegação e estados.
+17. Executar lint, unit tests, production build e E2E se configurado.
+
+GOLDEN
+Cadastrar Cartão Principal, limite 5000,00, fechamento dia 3, vencimento dia 10.
+Exibir dados corretos e manter saldo bancário inalterado.
+
+FORA DO ESCOPO
+Compras, parcelas, faturas e pagamento.
+
+ENTREGA
+Relatório com evidências, arquivos, testes, divergências e status.
+Se aprovado: READY FOR TASK-8.3.

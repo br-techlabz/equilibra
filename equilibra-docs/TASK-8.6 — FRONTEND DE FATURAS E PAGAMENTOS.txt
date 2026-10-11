@@ -1,0 +1,45 @@
+# TASK-8.6 — FRONTEND DE FATURAS E PAGAMENTOS
+PROJETO: EQUILIBRA | SPRINT 8
+
+OBJETIVO
+Construir interface Angular 19 para visualizar faturas, consultar compras/parcelas e realizar pagamentos por conta bancária, usando exclusivamente APIs reais.
+
+INSPEÇÃO
+Ler ADR 8.0, relatórios 8.4/8.5, OpenAPI, telas de cartões, despesas, agenda, Auth, services e design system.
+Produzir PRE-IMPLEMENTATION REPORT.
+
+ESCOPO
+1. Integrar lista de faturas ao detalhe do cartão.
+2. Mostrar fatura atual, anteriores e futuras conforme API.
+3. Exibir competência/ciclo, fechamento, vencimento, total, pago, restante e estado.
+4. Detalhar compras e parcelas: descrição, data, valor e número da parcela.
+5. Diferenciar fatura aberta, fechada, vencida, parcialmente paga e paga apenas conforme estados reais.
+6. Mostrar limites total, comprometido e disponível usando dados autoritativos.
+7. Criar fluxo Pagar Fatura, selecionando uma conta bancária do usuário.
+8. Mostrar valor devido, valor a pagar, data efetiva e impacto esperado no saldo bancário.
+9. Validar valor e condições conforme backend.
+10. Exigir confirmação explícita antes de enviar.
+11. Desabilitar envio repetido e usar idempotência conforme contrato.
+12. Em timeout, reconsultar pagamento/fatura antes de permitir nova tentativa insegura.
+13. Após sucesso, atualizar fatura, limite e saldos via serviços reais.
+14. Exibir pagamentos anteriores se API suportar.
+15. Tratar pagamento parcial somente se aprovado.
+16. Não simular sucesso nem alterar saldo localmente.
+17. Estados loading, empty, error, retry, 401/403/404/409 e Problem Details.
+18. Formatação pt-BR, responsividade 360/390px, tablet e desktop, teclado, foco e contraste.
+19. Reutilizar sidebar, PageHeader e componentes Equilibra.
+20. Testar componentes, services, validações, confirmação, duplo clique, timeout, reconsulta e atualização.
+21. Executar lint, testes, build e E2E se configurado.
+
+GOLDEN
+Fatura de 200,00; conta A=1000,00.
+Antes: A permanece 1000,00.
+Pagar 200,00: backend retorna fatura paga e A=800,00.
+Interface atualiza sem duplicar operação.
+Fatura já paga não pode ser paga novamente.
+
+FORA DO ESCOPO
+Dashboard, relatórios e novas regras financeiras.
+
+ENTREGA
+Relatório e READY FOR TASK-8.7 se concluída.

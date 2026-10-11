@@ -9,6 +9,8 @@ import br.com.equilibra.transaction.domain.FinancialTransaction;
 import br.com.equilibra.transaction.domain.TransactionStatus;
 import br.com.equilibra.transaction.domain.TransactionType;
 import br.com.equilibra.transaction.infrastructure.FinancialTransactionRepository;
+import br.com.equilibra.creditcard.infrastructure.*;
+import br.com.equilibra.creditcard.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,9 +26,12 @@ import java.util.Map;
 public class DashboardQueryService {
     private final AssetAccountRepository accounts;
     private final CategoryRepository categories;
+    private final CreditCardRepository cards;
+    private final CreditCardPurchaseRepository purchases;
+    private final CreditCardStatementRepository statements;
     private final FinancialTransactionRepository transactions;
     private final CurrentUser currentUser;
-    public DashboardQueryService(AssetAccountRepository accounts, FinancialTransactionRepository transactions, CurrentUser currentUser, CategoryRepository categories){this.accounts=accounts;this.transactions=transactions;this.currentUser=currentUser;this.categories=categories;}
+    public DashboardQueryService(AssetAccountRepository accounts, FinancialTransactionRepository transactions, CurrentUser currentUser, CategoryRepository categories, CreditCardRepository cards, CreditCardPurchaseRepository purchases, CreditCardStatementRepository statements){this.accounts=accounts;this.transactions=transactions;this.currentUser=currentUser;this.categories=categories;this.cards=cards;this.purchases=purchases;this.statements=statements;}
     @Transactional(readOnly=true)
     public DashboardResponse query(Instant from, Instant to){
         if(from==null||to==null||!from.isBefore(to))throw new IllegalArgumentException("from must be before to");
@@ -63,7 +68,7 @@ public class DashboardQueryService {
         Map<String, BigDecimal> expenseByCategory = new HashMap<>(); Map<String, BigDecimal> incomeByCategory = new HashMap<>(); active.stream().filter(t -> t.getType() == TransactionType.EXPENSE).forEach(t -> expenseByCategory.merge(t.getCategoryId(), t.getAmount(), BigDecimal::add)); active.stream().filter(t -> t.getType() == TransactionType.INCOME).forEach(t -> incomeByCategory.merge(t.getCategoryId(), t.getAmount(), BigDecimal::add));
         Map<String, String> categoryNames = categories.findAllByOwnerIdOrderByNameAsc(owner).stream().collect(java.util.stream.Collectors.toMap(br.com.equilibra.category.domain.Category::getId, br.com.equilibra.category.domain.Category::getName));
         List<DashboardResponse.CategoryExpense> categoryExpenses = expenseByCategory.entrySet().stream().map(e -> new DashboardResponse.CategoryExpense(categoryNames.getOrDefault(e.getKey(), "Sem categoria"), e.getValue())).toList(); List<DashboardResponse.CategoryExpense> categoryIncome = incomeByCategory.entrySet().stream().map(e -> new DashboardResponse.CategoryExpense(categoryNames.getOrDefault(e.getKey(), "Sem categoria"), e.getValue())).toList();
-        return new DashboardResponse(new DashboardResponse.Period(from,to),new DashboardResponse.Summary(income,expense,income.subtract(expense),netWorth),balances,recent,evolution,categoryExpenses,categoryIncome);
+        BigDecimal committed=purchases.findAllByOwnerIdOrderByPurchaseDateDesc(owner).stream().filter(p->p.getStatus()==br.com.equilibra.creditcard.domain.CreditCardPurchaseStatus.ACTIVE).map(br.com.equilibra.creditcard.domain.CreditCardPurchase::getTotalAmount).reduce(BigDecimal.ZERO,BigDecimal::add); BigDecimal available=cards.findAllByOwnerIdAndStatusOrderByNameAsc(owner,br.com.equilibra.creditcard.domain.CreditCardStatus.ACTIVE).stream().map(br.com.equilibra.creditcard.domain.CreditCard::getTotalLimit).reduce(BigDecimal.ZERO,BigDecimal::add).subtract(committed); BigDecimal pending=statements.findAllByOwnerIdAndCreditCardIdOrderByCycleStartDesc(owner, cards.findAllByOwnerIdAndStatusOrderByNameAsc(owner,br.com.equilibra.creditcard.domain.CreditCardStatus.ACTIVE).stream().findFirst().map(br.com.equilibra.creditcard.domain.CreditCard::getId).orElse("__none__")).stream().filter(s->s.getOutstandingAmount().signum()>0).map(br.com.equilibra.creditcard.domain.CreditCardStatement::getOutstandingAmount).reduce(BigDecimal.ZERO,BigDecimal::add); return new DashboardResponse(new DashboardResponse.Period(from,to),new DashboardResponse.Summary(income,expense,income.subtract(expense),netWorth),balances,recent,evolution,categoryExpenses,categoryIncome,new DashboardResponse.CardSummary(pending,pending,committed,available));
     }
     private static void apply(Map<String, BigDecimal> balances, FinancialTransaction transaction) {
         if (transaction.getSourceAccountId() != null) balances.merge(transaction.getSourceAccountId(), transaction.getAmount().negate(), BigDecimal::add);

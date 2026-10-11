@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { Expense, ExpensePage, ExpenseRequest } from '../models/expense.models';
+import { CreditCardPurchase, CreditCardPurchaseRequest, Expense, ExpensePage, ExpenseRequest } from '../models/expense.models';
 
 @Injectable({ providedIn: 'root' })
 export class ExpensesApiService {
@@ -21,6 +21,10 @@ export class ExpensesApiService {
     return this.http.post<Expense>(this.apiUrl, request);
   }
 
+  createCreditCardPurchase(request: CreditCardPurchaseRequest): Observable<CreditCardPurchase> {
+    return this.http.post<CreditCardPurchase>(`${environment.apiUrl}/credit-card-purchases`, request);
+  }
+
   get(id: string): Observable<Expense> {
     return this.http.get<Expense>(`${this.apiUrl}/${id}`);
   }
@@ -31,5 +35,9 @@ export class ExpensesApiService {
 
   cancel(id: string): Observable<Expense> {
     return this.http.patch<Expense>(`${this.apiUrl}/${id}/cancel`, {});
+  }
+
+  cancelCreditCardPurchase(id: string): Observable<unknown> {
+    return this.http.post(`${environment.apiUrl}/credit-card-purchases/${id}/cancel`, {});
   }
 }

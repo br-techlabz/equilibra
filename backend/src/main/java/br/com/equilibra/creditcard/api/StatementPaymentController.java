@@ -1,0 +1,3 @@
+package br.com.equilibra.creditcard.api;
+import br.com.equilibra.creditcard.application.StatementPaymentService; import br.com.equilibra.creditcard.domain.StatementPayment; import jakarta.validation.Valid; import org.springframework.web.bind.annotation.*;
+@RestController @RequestMapping("/credit-card-statements") public class StatementPaymentController{private final StatementPaymentService service;public StatementPaymentController(StatementPaymentService s){service=s;}@PostMapping("/{statementId}/payments") public StatementPayment pay(@PathVariable String statementId,@RequestHeader(value="Idempotency-Key",required=false) String key,@Valid @RequestBody StatementPaymentRequest request){return service.pay(statementId,request,key);}}

@@ -1,0 +1,96 @@
+# TASK-8.0 — ARQUITETURA E ADR DE CARTÕES DE CRÉDITO
+PROJETO: EQUILIBRA
+SPRINT 8 — CONTROLE DE CARTÕES DE CRÉDITO
+
+PAPEL: Arquiteto de software sênior e especialista em sistemas financeiros.
+
+CONTEXTO
+Sprints 0–7 concluídas e Sprint 7 aprovada.
+Stack: Spring Boot 4, Angular 19, MySQL, Flyway, Angular Material, ECharts.
+O Equilibra possui contas financeiras, despesas, receitas, transferências, histórico, orçamentos, metas, recorrências, compromissos, projeção de caixa, dashboard e relatórios.
+
+OBJETIVO
+Definir e documentar a arquitetura do controle de cartões de crédito antes de qualquer implementação.
+
+1. INSPEÇÃO OBRIGATÓRIA
+Ler CLAUDE.md, ADRs existentes, relatório de aprovação da Sprint 7, entidades, serviços financeiros, ledger, regras de saldo, Expense, AccountMovement, CategoryBudget, FinancialCommitment, RecurrenceRule, relatórios, OpenAPI e migrations.
+
+2. PRINCÍPIO FINANCEIRO INEGOCIÁVEL
+Compra no cartão:
+- registra obrigação/despesa econômica segundo modelo aprovado;
+- reduz limite disponível conforme política;
+- integra uma fatura;
+- NÃO reduz saldo bancário;
+- NÃO cria movimento negativo em conta bancária.
+
+Pagamento da fatura:
+- reduz saldo da conta bancária escolhida;
+- liquida a obrigação do cartão;
+- NÃO registra novamente a compra como nova despesa econômica.
+
+Definir explicitamente separação entre:
+despesa por categoria, movimentação de caixa, obrigação do cartão e pagamento de fatura.
+
+3. DECISÕES OBRIGATÓRIAS DO ADR
+A. CreditCard como entidade própria, sem confundir com AssetAccount.
+B. Como cartões aparecem no seletor de origem de despesas sem serem contas bancárias.
+C. Nome, instituição, apelido, limite total, dia de fechamento, dia de vencimento, status e campos opcionais.
+D. Limite disponível, comprometido, reservado por parcelamentos, faturas abertas e fechadas.
+E. Tratamento de compras parceladas: valor integral versus parcelas na fatura e no limite.
+F. Dia de fechamento/vencimento 29, 30, 31 em meses curtos e anos bissextos.
+G. Compra exatamente no dia do fechamento: ciclo aplicável.
+H. Data civil e timezone.
+I. Modelo de CreditCardPurchase, Installment, CreditCardStatement e StatementPayment, ou nomes equivalentes.
+J. Fatura aberta, fechada, vencida, parcialmente paga, paga e cancelada, apenas estados necessários.
+K. Fechamento manual, automático ou derivado; persistência e idempotência.
+L. Pagamento total, parcial e excedente; decidir política explícita.
+M. Juros, multas, encargos e pagamento mínimo: MVP ou fora do escopo.
+N. Estorno, reembolso, contestação, edição e exclusão de compra.
+O. Compra alterada após fechamento da fatura.
+P. Limite liberado após pagamento e após estorno.
+Q. Pagamento duplicado e concorrência.
+R. Compatibilidade com Expense, orçamentos por categoria, relatórios e histórico.
+S. Reconciliação de despesas por compra versus saídas bancárias por pagamento.
+T. Integração com compromissos e projeção da Sprint 7 sem dupla contagem.
+U. Compras recorrentes e parceladas.
+V. Cartões inativos e histórico.
+W. Ownership por JWT.
+X. Precisão BigDecimal/DECIMAL(19,2).
+Y. Política de saldo devedor inicial para cartões cadastrados com compras anteriores ao sistema.
+Z. Estratégia de migração sem quebrar registros existentes.
+
+4. CENÁRIOS GOLDEN
+Cenário 1:
+Conta bancária A = 1000,00.
+Cartão limite = 5000,00.
+Compra no cartão = 200,00.
+Esperado: conta A continua 1000,00; obrigação do cartão 200,00; limite disponível 4800,00 segundo política aprovada.
+
+Cenário 2:
+Pagar fatura de 200,00 pela conta A.
+Esperado: conta A = 800,00; obrigação quitada; limite liberado segundo política; nenhuma duplicação de despesa econômica.
+
+Cenário 3:
+Compra 1200,00 em 3 parcelas de 400,00.
+Definir como afeta limite, faturas e orçamentos.
+
+Cenário 4:
+Duas compras em lados opostos da data de fechamento.
+Devem pertencer a faturas corretas.
+
+Cenário 5:
+Tentativa de pagar mesma fatura duas vezes.
+Não pode gerar débito duplicado.
+
+Cenário 6:
+User A e User B.
+Nenhum dado pode atravessar ownership.
+
+5. ENTREGÁVEIS
+Produzir ADR completo, modelo de domínio, diagramas de estados, regras de datas, matriz de impacto no ledger, contratos REST conceituais, estratégia de migração, regras de integração com orçamento/projeção, cenários golden, riscos, decisões pendentes e refinamento das TASKS 8.1–8.8.
+
+6. GATE
+Não implementar código nesta tarefa.
+Não assumir regras financeiras sem justificativa.
+Se houver decisão essencial não resolvida, marcar BLOCKED e solicitar definição.
+Encerrar com READY FOR TASK-8.1 somente quando a arquitetura estiver consistente.

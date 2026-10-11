@@ -16,6 +16,9 @@ import br.com.equilibra.transaction.domain.FinancialTransaction;
 import br.com.equilibra.transaction.domain.TransactionStatus;
 import br.com.equilibra.transaction.domain.TransactionType;
 import br.com.equilibra.transaction.infrastructure.FinancialTransactionRepository;
+import br.com.equilibra.creditcard.infrastructure.CreditCardPurchaseRepository;
+import br.com.equilibra.creditcard.domain.CreditCardPurchaseStatus;
+import br.com.equilibra.transaction.api.CreditCardExpenseResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -35,14 +38,16 @@ public class ExpenseService {
     private final CategoryRepository categories;
     private final CurrentUser currentUser;
     private final TransactionTagService transactionTags;
+    private final CreditCardPurchaseRepository cardPurchases;
 
     public ExpenseService(FinancialTransactionRepository transactions, AssetAccountRepository accounts,
-                          CategoryRepository categories, CurrentUser currentUser, TransactionTagService transactionTags) {
+                          CategoryRepository categories, CurrentUser currentUser, TransactionTagService transactionTags, CreditCardPurchaseRepository cardPurchases) {
         this.transactions = transactions;
         this.accounts = accounts;
         this.categories = categories;
         this.currentUser = currentUser;
         this.transactionTags = transactionTags;
+        this.cardPurchases = cardPurchases;
     }
 
     @Transactional
@@ -59,11 +64,15 @@ public class ExpenseService {
     public ExpensePageResponse list(int page, int size, boolean includeCancelled) {
         if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) throw new IllegalArgumentException("Invalid pagination parameters.");
         String owner = ownerId();
-        Page<FinancialTransaction> result = transactions.findPageByOwnerAndTypeAndStatus(
-            owner, TransactionType.EXPENSE, includeCancelled ? null : TransactionStatus.ACTIVE,
-            PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "occurredAt").and(Sort.by(Sort.Direction.DESC, "id"))));
-        return new ExpensePageResponse(result.getContent().stream().map(t -> ExpenseResponse.from(t, transactionTags.summaries(t))).toList(),
-            result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages());
+        Page<FinancialTransaction> result = transactions.findPageByOwnerAndTypeAndStatus(owner, TransactionType.EXPENSE, includeCancelled ? null : TransactionStatus.ACTIVE, PageRequest.of(0, 100, Sort.by(Sort.Direction.DESC, "occurredAt")));
+        var bank = result.getContent().stream().map(t -> ExpenseResponse.from(t, transactionTags.summaries(t))).toList();
+        var cards = includeCancelled ? cardPurchases.findAllByOwnerIdOrderByPurchaseDateDesc(owner) : cardPurchases.findAllByOwnerIdAndStatusOrderByPurchaseDateDesc(owner, CreditCardPurchaseStatus.ACTIVE);
+        var merged = new java.util.ArrayList<>(bank);
+        merged.addAll(cards.stream().map(CreditCardExpenseResponse::from).toList());
+        merged.sort(java.util.Comparator.comparing(ExpenseResponse::occurredAt).reversed());
+        int from = Math.min(page * size, merged.size()); int to = Math.min(from + size, merged.size());
+        var content = merged.subList(from, to); int total = merged.size();
+        return new ExpensePageResponse(content, page, size, total, (total + size - 1) / size);
     }
 
     @Transactional(readOnly = true)

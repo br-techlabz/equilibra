@@ -104,7 +104,7 @@ public class FinancialTransaction {
         this.description = normalizeDescription(description);
         this.amount = validateAmount(amount);
         this.occurredAt = Objects.requireNonNull(occurredAt, "occurredAt must not be null");
-        this.categoryId = requireUuid(categoryId, "categoryId");
+        this.categoryId = type == TransactionType.STATEMENT_PAYMENT ? null : requireUuid(categoryId, "categoryId");
         this.sourceAccountId = nullableUuid(sourceAccountId, "sourceAccountId");
         this.destinationAccountId = nullableUuid(destinationAccountId, "destinationAccountId");
         this.notes = normalizeNotes(notes);
@@ -129,6 +129,12 @@ public class FinancialTransaction {
                                                 String destinationAccountId, String notes) {
         return new FinancialTransaction(ownerId, TransactionType.TRANSFER, description, amount, occurredAt,
             categoryId, sourceAccountId, destinationAccountId, notes);
+    }
+
+    public static FinancialTransaction statementPayment(String ownerId, String description, BigDecimal amount,
+                                                        Instant occurredAt, String sourceAccountId, String notes) {
+        return new FinancialTransaction(ownerId, TransactionType.STATEMENT_PAYMENT, description, amount, occurredAt,
+            null, sourceAccountId, null, notes);
     }
 
     @PrePersist
@@ -175,6 +181,7 @@ public class FinancialTransaction {
                 if (!source || !destination) throw new IllegalArgumentException("transfer requires source and destination accounts");
                 if (sourceAccountId.equals(destinationAccountId)) throw new IllegalArgumentException("transfer accounts must differ");
             }
+            case STATEMENT_PAYMENT -> { if (!source || destination) throw new IllegalArgumentException("statement payment requires only source account"); }
         }
     }
 

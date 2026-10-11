@@ -3,5 +3,6 @@ package br.com.equilibra.transaction.domain;
 public enum TransactionType {
     EXPENSE,
     INCOME,
-    TRANSFER
+    TRANSFER,
+    STATEMENT_PAYMENT
 }

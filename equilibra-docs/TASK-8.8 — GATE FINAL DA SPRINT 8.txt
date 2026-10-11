@@ -1,0 +1,156 @@
+# TASK-8.8 — GATE FINAL DA SPRINT 8
+PROJETO: EQUILIBRA
+SPRINT 8 — CONTROLE DE CARTÕES DE CRÉDITO
+
+OBJETIVO
+Auditar, testar e validar integralmente as TASKS 8.0–8.7 e regressões das Sprints 0–7.
+Não desenvolver funcionalidades novas.
+Corrigir defeitos dentro do escopo, com testes de regressão.
+
+1. INSPEÇÃO
+Ler CLAUDE.md, ADR 8.0, relatórios 8.1–8.7, migrations, OpenAPI, backend, frontend, ledger, relatórios, orçamentos e testes.
+
+2. MATRIZ DE RASTREABILIDADE
+Para cada requisito do ADR, identificar:
+implementação, teste, evidência, resultado e pendência.
+Não marcar PASS sem execução/evidência.
+
+3. GOLDEN — COMPRA SIMPLES
+Conta A=1000,00.
+Cartão limite=5000,00.
+Compra 200,00.
+Esperado:
+saldo A=1000,00;
+despesa econômica=200,00;
+obrigação de cartão=200,00;
+limite conforme ADR;
+nenhuma saída bancária.
+
+4. GOLDEN — PAGAMENTO
+Pagar fatura 200,00.
+Esperado:
+saldo A=800,00;
+fatura quitada;
+limite liberado conforme ADR;
+uma saída bancária;
+despesa econômica continua 200,00;
+sem duplicação em relatórios.
+
+5. GOLDEN — PARCELAMENTO
+1200,00 em 3x.
+Verificar parcelas, ciclos, limite, arredondamento, orçamentos e faturas.
+
+6. GOLDEN — FECHAMENTO
+Compras antes, no dia e depois do fechamento.
+Validar faturas corretas e política ADR.
+Testar dias 28/29/30/31, fevereiro bissexto e virada de ano.
+
+7. GOLDEN — PAGAMENTO PARCIAL
+Executar se aprovado no ADR.
+Validar saldo residual, limite, histórico e projeção.
+
+8. GOLDEN — CANCELAMENTO/ESTORNO
+Validar compra pendente, fatura fechada e pagamento já realizado segundo ADR.
+Sem apagar histórico financeiro indevidamente.
+
+9. GOLDEN — DUPLO PAGAMENTO
+Repetir request e executar requisições concorrentes.
+Exatamente um débito autorizado.
+
+10. GOLDEN — ROLLBACK
+Forçar falha no fluxo de pagamento.
+Nenhum movimento órfão ou estado parcial.
+
+11. GOLDEN — MULTIUSER
+User A e B:
+cartões, compras, faturas, pagamentos, limites, indicadores, relatórios e exportações isolados.
+IDs estrangeiros indistinguíveis de inexistentes.
+
+12. AUDITORIA DO LEDGER
+Nenhuma compra em cartão debita conta bancária.
+Somente pagamento autorizado debita.
+Transferências e despesas bancárias tradicionais continuam corretas.
+
+13. AUDITORIA DE ORÇAMENTOS
+Compra em cartão contabilizada segundo ADR.
+Pagamento não duplica gasto.
+Cancelamentos e estornos corretos.
+
+14. AUDITORIA DA SPRINT 7
+Projeção de caixa, compromissos e indicadores de vencimento não duplicam faturas.
+Efetivação não produz pagamento duplo.
+Dashboard e relatórios reconciliados.
+
+15. SEGURANÇA
+JWT, owner-scoping, validações, concorrência, idempotência, 401/403/404/409, Problem Details, Request ID, ausência de PAN/CVV e vazamento de dados.
+
+16. BANCO
+Flyway incremental, FKs, constraints, índices, locks, transações, unicidade e MySQL/Testcontainers.
+
+17. FRONTEND
+Cadastro, listagem, compra, parcelas, faturas, pagamento, filtros, loading/empty/error/retry, responsividade 360–1920px, teclado, foco e contraste.
+
+18. TESTES
+Executar:
+backend unit tests;
+Testcontainers/MySQL;
+Angular unit tests;
+lint;
+backend build;
+Angular production build;
+E2E se disponível;
+regressões Sprints 0–7.
+Registrar comandos e resultados reais.
+Não declarar PASS se não executado.
+
+19. DEFEITOS
+Classificar BLOCKER, CRITICAL, MAJOR, MINOR.
+Corrigir problemas de escopo com testes.
+Não aprovar com BLOCKER/CRITICAL abertos ou evidências obrigatórias ausentes.
+
+20. RELATÓRIO FINAL
+Produzir:
+# TASK-8.8 — GATE FINAL DA SPRINT 8
+
+STATUS: APPROVED / REJECTED / BLOCKED
+
+Incluir:
+resumo executivo;
+matriz ADR;
+cadastro;
+compras;
+parcelas;
+faturas;
+fechamento;
+pagamentos;
+limites;
+ledger;
+orçamentos;
+projeção;
+dashboard;
+relatórios;
+segurança;
+ownership;
+concorrência;
+idempotência;
+rollback;
+datas;
+Testcontainers;
+testes frontend;
+E2E;
+lint;
+builds;
+regressões;
+bugs corrigidos;
+bugs pendentes;
+riscos;
+dívidas técnicas;
+arquivos modificados;
+evidências;
+decisão formal.
+
+Se aprovado:
+SPRINT 8 — APPROVED.
+READY FOR SPRINT 9 PLANNING.
+
+Não iniciar Sprint 9 automaticamente.

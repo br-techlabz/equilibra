@@ -1,0 +1,51 @@
+# TASK-8.5 — BACKEND DE PAGAMENTO DE FATURAS
+PROJETO: EQUILIBRA | SPRINT 8
+
+OBJETIVO
+Permitir pagar faturas de cartão utilizando uma conta bancária do usuário, gerando exatamente o efeito financeiro real autorizado, sem duplicar a despesa original.
+
+INSPEÇÃO
+Ler CLAUDE.md, ADR 8.0, relatórios 8.1–8.4, ledger, Expense, AccountMovement, Transfer, FinancialTransaction, cancelamentos, idempotência, pagamentos de compromissos e testes.
+Produzir PRE-IMPLEMENTATION REPORT.
+
+ESCOPO
+1. Implementar StatementPayment ou entidade aprovada.
+2. Receber cartão/fatura, conta bancária pagadora, valor, data de pagamento e chave de idempotência se prevista.
+3. Validar ownership de fatura e conta.
+4. Validar estado, valor, saldo devido e política de pagamento parcial/total/excedente.
+5. Reutilizar serviço autoritativo de movimentação financeira; não criar segunda lógica de ledger.
+6. Registrar UMA saída bancária pelo valor pago.
+7. Associar pagamento à fatura.
+8. Atualizar valor pago, saldo devido, status e limite disponível segundo ADR.
+9. NÃO criar nova despesa econômica por categoria correspondente às compras já registradas.
+10. Não contar pagamento de fatura como nova compra.
+11. Não criar movimentação fictícia em cartão como AssetAccount bancária.
+12. Garantir atomicidade: se falhar ledger ou vínculo, rollback integral.
+13. Proteger contra duplo clique, retry e requisições concorrentes com locking/constraints/idempotência.
+14. Regras explícitas para estorno/cancelamento de pagamento, com histórico auditável.
+15. Se pagamentos parciais forem aprovados, permitir saldo residual e novos pagamentos controlados.
+16. Se pagamento ocorrer antes do vencimento, refletir a data efetiva, não a data prevista.
+17. Impedir duplicidade com FinancialCommitment da Sprint 7: fatura e compromisso não podem ser liquidados duas vezes.
+18. OpenAPI, Problem Details e Request ID.
+
+GOLDEN
+Conta A=1000,00.
+Cartão limite=5000,00.
+Compra=200,00.
+Antes do pagamento: A=1000,00; fatura=200,00; limite comprometido=200,00.
+Pagamento 200,00 pela conta A:
+A=800,00; fatura quitada; limite liberado conforme ADR.
+Uma saída bancária, nenhuma duplicação da despesa econômica.
+Repetir pagamento: nenhum débito adicional.
+Duas requisições simultâneas: somente um efeito.
+Falha intermediária: rollback integral.
+Pagamento parcial: testar somente se ADR permitir.
+
+TESTES
+Unitários, MySQL/Testcontainers, locking, concorrência, idempotência, rollback, ownership, histórico, orçamentos, projeção e regressões.
+
+FORA DO ESCOPO
+Frontend de faturas e novas funcionalidades de crédito.
+
+ENTREGA
+Relatório e READY FOR TASK-8.6 se concluída.

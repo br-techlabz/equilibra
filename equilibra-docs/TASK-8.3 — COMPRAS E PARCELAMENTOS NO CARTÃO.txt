@@ -1,0 +1,48 @@
+# TASK-8.3 — COMPRAS E PARCELAMENTOS NO CARTÃO
+PROJETO: EQUILIBRA | SPRINT 8
+
+OBJETIVO
+Permitir que o usuário selecione um cartão de crédito ao incluir despesas, registre compras à vista ou parceladas e preserve o saldo bancário até o pagamento da fatura.
+
+INSPEÇÃO
+Ler CLAUDE.md, ADR 8.0, tarefas 8.1/8.2, Expense, AccountMovement, CategoryBudget, RecurrenceRule, FinancialCommitment, seletor atual de contas, DTOs, OpenAPI e testes.
+Produzir PRE-IMPLEMENTATION REPORT antes de editar.
+
+BACKEND
+1. Implementar CreditCardPurchase e Installment conforme ADR.
+2. Vincular compra ao cartão do usuário, categoria compatível, descrição, data, valor total e quantidade de parcelas.
+3. Validar limite, precisão, cartão ativo, categoria e ownership.
+4. Distribuir parcelas por ciclos segundo ADR, inclusive arredondamento de centavos. Exemplo: 100,00 em 3 parcelas precisa totalizar exatamente 100,00.
+5. Evitar duplicação por retry/concurrency.
+6. Criar ligação apropriada com Expense ou modelo econômico aprovado, SEM movimento de saída em conta bancária.
+7. Não criar FinancialTransaction bancária fictícia.
+8. Regras explícitas para editar/cancelar/estornar compras, principalmente se já faturadas ou pagas.
+9. Persistência transacional e constraints.
+10. Garantir que orçamentos por categoria não percam nem dupliquem despesas; aplicar competência e política definidas no ADR.
+11. Não alterar comportamento de despesas tradicionais pagas por conta bancária.
+
+FRONTEND
+12. No formulário existente de Nova Despesa, mostrar contas bancárias e cartões cadastrados como meios de pagamento distinguíveis.
+13. Usar seleção tipada/discriminada: BANK_ACCOUNT ou CREDIT_CARD; não misturar UUIDs de domínios diferentes.
+14. Se conta bancária: preservar fluxo anterior.
+15. Se cartão: apresentar campos aprovados de parcelamento, cartão e previsão de fatura.
+16. Exibir claramente: Esta compra será cobrada na fatura e não reduzirá o saldo bancário agora.
+17. Validar valores e mostrar erros reais.
+18. Não inventar saldo/limite localmente.
+
+GOLDEN
+Conta A=1000,00; cartão limite=5000,00.
+Compra 200,00: A permanece 1000,00; cartão passa a ter obrigação 200,00.
+Compra 1200,00 em 3x: parcelas somam 1200,00; faturas e limite seguem ADR.
+Compra no dia do fechamento segue política aprovada.
+Compra cancelada/estornada segue regras sem movimentos fantasmas.
+User A não acessa cartão de B.
+
+TESTES
+Unitários, integração MySQL/Testcontainers, formulário Angular, idempotência, ownership, orçamentos, ledger, regressões, lint e builds.
+
+FORA DO ESCOPO
+Pagamento de faturas, dashboard novo e relatórios finais.
+
+ENTREGA
+Relatório e READY FOR TASK-8.4 se concluída.

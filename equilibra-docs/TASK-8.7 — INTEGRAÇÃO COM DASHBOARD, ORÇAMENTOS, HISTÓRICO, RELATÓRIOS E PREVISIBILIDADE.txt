@@ -1,0 +1,63 @@
+# TASK-8.7 — INTEGRAÇÃO COM DASHBOARD, ORÇAMENTOS, HISTÓRICO, RELATÓRIOS E PREVISIBILIDADE
+PROJETO: EQUILIBRA | SPRINT 8
+
+OBJETIVO
+Integrar cartões e faturas às visões financeiras existentes, preservando a separação entre despesas econômicas e movimentos reais de caixa.
+
+INSPEÇÃO
+Ler ADR 8.0, TASKS 8.1–8.6, Dashboard, Reports, History, CategoryBudgets, FinancialCommitments, CashFlowForecast, DueIndicators, CSV/PDF, ledger e OpenAPI.
+Produzir PRE-IMPLEMENTATION REPORT.
+
+REGRAS CENTRAIS
+Compra no cartão:
+- conta como despesa econômica na competência definida no ADR;
+- reduz limite conforme política;
+- não reduz saldo bancário.
+
+Pagamento de fatura:
+- reduz saldo bancário;
+- liquida obrigação;
+- não duplica despesa por categoria.
+
+ESCOPO
+1. Dashboard: mostrar total de faturas a pagar, próximo vencimento, limite disponível e obrigações de cartão conforme ADR.
+2. Preservar indicadores existentes de saldo real, receitas, despesas e patrimônio.
+3. Orçamentos: contabilizar compras de cartão segundo competência aprovada, sem contabilizar pagamento de fatura novamente.
+4. Histórico: distinguir compra no cartão de pagamento de fatura; preservar histórico de caixa e histórico econômico sem dupla contagem.
+5. Relatórios: separar gastos por categoria, por cartão, por conta bancária e pagamentos de fatura conforme escopo aprovado.
+6. Exportações CSV/PDF: identificar natureza da operação e evitar duplicação.
+7. Projeção de fluxo de caixa: considerar futuros pagamentos de faturas como saídas previstas, sem contar novamente parcelas e compromissos equivalentes.
+8. Se a fatura já for representada como FinancialCommitment, definir uma única fonte autoritativa e vínculo de liquidação.
+9. Indicadores de vencimento: incluir faturas pendentes conforme política, sem duplicar alerta de compromisso associado.
+10. Tratar faturas parcialmente pagas e saldos remanescentes somente se aprovados.
+11. Reconciliar períodos, datas de compra, fechamento, vencimento e pagamento.
+12. Usar BigDecimal, owner-scoping, OpenAPI e consultas eficientes.
+13. Frontend: reutilizar componentes e ECharts existentes, responsivo e acessível.
+14. Preservar relatórios financeiros e orçamentos das Sprints anteriores.
+
+GOLDEN
+Conta A=1000,00.
+Compra no cartão categoria Alimentação=200,00.
+Antes de pagar:
+saldo A=1000,00;
+despesa econômica=200,00;
+fatura pendente=200,00.
+Após pagar:
+saldo A=800,00;
+despesa econômica continua 200,00;
+fatura pendente=0;
+saída de caixa=200,00.
+Nenhum relatório pode mostrar despesa econômica total de 400,00.
+
+GOLDEN PARCELADO
+Compra de 1200,00 em 3x.
+Verificar orçamentos, relatórios, faturas e projeção segundo competência aprovada, sem duplicar valores.
+
+TESTES
+Backend, Testcontainers/MySQL, Angular, exportações, segurança, ownership, ECharts, regressões, lint e builds.
+
+FORA DO ESCOPO
+Funcionalidades novas não aprovadas, pagamentos automáticos e gate final.
+
+ENTREGA
+Relatório e READY FOR TASK-8.8 se concluída.

@@ -1,0 +1,44 @@
+# TASK-8.4 — BACKEND DE FATURAS E FECHAMENTO
+PROJETO: EQUILIBRA | SPRINT 8
+
+OBJETIVO
+Implementar agrupamento de compras e parcelas por fatura, fechamento de ciclos e cálculo de valores devidos, sem debitar contas bancárias.
+
+INSPEÇÃO
+Ler ADR 8.0, código real das TASKS 8.1–8.3, regras de data, compras, parcelas, saldo devedor, limites, recorrências, OpenAPI e migrations.
+Produzir PRE-IMPLEMENTATION REPORT.
+
+ESCOPO
+1. Implementar CreditCardStatement e associações segundo ADR.
+2. Determinar ciclo de referência com dia de fechamento e vencimento.
+3. Tratar meses de 28/29/30/31 dias e anos bissextos.
+4. Definir compras na data exata de fechamento conforme ADR.
+5. Associar parcelas à fatura correta.
+6. Expor faturas abertas, fechadas, vencidas, pagas e demais estados realmente aprovados.
+7. Calcular total, valor pago, saldo devido e parcelas com BigDecimal.
+8. Não duplicar faturas em geração repetida ou concorrente.
+9. Se houver fechamento persistido, garantir idempotência, locking e integridade histórica.
+10. Não alterar retroativamente fatura fechada sem fluxo aprovado.
+11. Garantir que compra parcelada não seja lançada integralmente em todas as faturas.
+12. Atualizar limite comprometido/disponível conforme ADR; não liberar limite por mero fechamento.
+13. Expor listagem por cartão, competência/ciclo, detalhe e itens da fatura.
+14. Disponibilizar vencimentos para integração futura com projeção, evitando criar compromissos duplicados.
+15. Isolamento owner-scoped e IDs estrangeiros 404.
+16. OpenAPI, Problem Details, constraints, índices e Testcontainers/MySQL.
+
+GOLDEN
+Cartão com fechamento dia 3, vencimento dia 10.
+Compras antes/depois do fechamento devem pertencer aos ciclos corretos.
+Compra de 1200,00 em 3 parcelas: três itens de 400,00 em faturas correspondentes.
+Gerar/consultar fatura repetidamente não duplica parcelas.
+Fatura de 600,00 ainda não paga não altera saldo bancário.
+Vencimento passado não gera débito automático.
+
+TESTES
+Calendário, ciclos, bissextos, unicidade, concorrência, cancelamentos, ownership, ledger intacto, regressões e backend build.
+
+FORA DO ESCOPO
+Pagamento de fatura e frontend de faturas.
+
+ENTREGA
+Relatório e READY FOR TASK-8.5 se concluída.

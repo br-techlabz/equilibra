@@ -1,0 +1,38 @@
+# TASK-8.1 — BACKEND DE CADASTRO DE CARTÕES DE CRÉDITO
+PROJETO: EQUILIBRA | SPRINT 8
+
+OBJETIVO
+Implementar o backend Spring Boot 4/MySQL de cartões de crédito conforme ADR aprovado na TASK-8.0.
+
+ANTES DE CODIFICAR
+Ler CLAUDE.md, ADR 8.0, relatório 8.0, entidades AssetAccount e Expense, autenticação, migrations, validações, padrões REST e testes.
+Produzir PRE-IMPLEMENTATION REPORT com contratos e arquivos previstos.
+
+ESCOPO
+1. Implementar entidade CreditCard ou nome definido no ADR.
+2. Campos conforme ADR: UUID, ownerId, nome/apelido, instituição, limite, fechamento, vencimento, status e timestamps.
+3. Não armazenar número completo do cartão, CVV ou credenciais financeiras. Últimos quatro dígitos apenas se realmente necessários e aprovados.
+4. CRUD owner-scoped: criar, listar, detalhar, editar e desativar, conforme política de histórico.
+5. Validar limites positivos, dias permitidos e consistência entre fechamento e vencimento.
+6. Cartão não pode ser tratado como conta bancária no ledger.
+7. Disponibilizar indicadores de limite apenas com cálculo autoritativo e fonte de dados já disponível; não inventar consumo fictício.
+8. Se não houver compras ainda, limite disponível deve refletir o estado real e eventuais saldos iniciais aprovados no ADR.
+9. Não permitir exclusão física de cartão com histórico, salvo política explícita.
+10. Definir índices, constraints, FKs e migrations Flyway incrementais.
+11. Nunca aceitar ownerId do frontend; derivar do JWT.
+12. IDs estrangeiros devem ser indistinguíveis de inexistentes.
+13. DTOs, validações, OpenAPI, Problem Details e Request ID.
+14. Testes unitários e Testcontainers/MySQL: CRUD, ownership, limites, fechamento/vencimento, inativação, concorrência relevante e erros.
+15. Executar backend build e regressões financeiras.
+
+GOLDEN
+Criar cartão com limite 5000,00, fechamento dia 3 e vencimento dia 10.
+Sem compras, não criar despesas, compromissos, movimentos ou transações reais.
+Conta bancária existente mantém saldo inalterado.
+
+FORA DO ESCOPO
+Frontend, compras, parcelamentos, geração e pagamento de faturas.
+
+ENTREGA
+Relatório final com endpoints, migrations, testes executados, arquivos modificados, riscos e status.
+Se aprovado: READY FOR TASK-8.2.
