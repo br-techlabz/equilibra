@@ -6,22 +6,26 @@ import { DashboardPageComponent } from './dashboard.page';
 import { formatCentsAsBRL, sumMoneyInCents } from './money.utils';
 import { AuthService } from '../auth/data-access/auth.service';
 import { DashboardApiService } from './dashboard-api.service';
+import { FinancialPredictabilityService } from './financial-predictability.service';
 
 describe('DashboardPageComponent', () => {
   const accountsApi = jasmine.createSpyObj<AssetAccountsApiService>('AssetAccountsApiService', ['list']);
   const dashboardApi = jasmine.createSpyObj('DashboardApiService', ['get']);
+  const predictabilityApi = jasmine.createSpyObj<FinancialPredictabilityService>('FinancialPredictabilityService', ['load']);
   const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
   const authService = { currentUser: () => null } as unknown as AuthService;
 
   beforeEach(() => {
     accountsApi.list.and.returnValue(of([]));
     dashboardApi.get.and.returnValue(of({ period: { from: '', to: '' }, summary: { income: 0, expense: 0, net: 0, netWorth: 0 }, accounts: [], recentTransactions: [] }));
+    predictabilityApi.load.and.returnValue(of(null) as unknown as ReturnType<FinancialPredictabilityService['load']>);
     TestBed.configureTestingModule({
       imports: [DashboardPageComponent],
       providers: [
         { provide: AssetAccountsApiService, useValue: accountsApi },
         { provide: AuthService, useValue: authService },
         { provide: DashboardApiService, useValue: dashboardApi },
+        { provide: FinancialPredictabilityService, useValue: predictabilityApi },
         { provide: Router, useValue: router },
       ],
     });
