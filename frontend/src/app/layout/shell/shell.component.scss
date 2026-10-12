@@ -8,6 +8,8 @@
 
 .shell-sidenav {
   width: var(--sidebar-width) !important;
+  min-width: 0 !important;
+  max-width: var(--sidebar-width) !important;
   overflow: hidden !important;
   min-width: 0;
   flex: 0 0 var(--sidebar-width) !important;
@@ -86,6 +88,7 @@
 @media (min-width: 768px) {
   .shell-container.sidebar-collapsed .shell-sidenav {
     width: var(--sidebar-collapsed-width) !important;
+    max-width: var(--sidebar-collapsed-width) !important;
     min-width: var(--sidebar-collapsed-width) !important;
     flex-basis: var(--sidebar-collapsed-width) !important;
   }

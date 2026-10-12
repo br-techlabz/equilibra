@@ -14,6 +14,12 @@
 
 .sidebar::-webkit-scrollbar,
 .sidebar-nav::-webkit-scrollbar,
+.mat-drawer-inner-container {
+  overflow-x: hidden !important;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
 .mat-drawer-inner-container::-webkit-scrollbar {
   display: none;
   width: 0;
@@ -128,7 +134,10 @@
 }
 
 .sidebar-nav {
-  flex: 1;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
@@ -225,6 +234,7 @@
   display: block;
   flex: 1 1 auto;
   min-width: 0;
+  max-width: calc(100% - 5rem);
   width: auto;
   margin-left: var(--space-3);
   padding: 0;
@@ -307,6 +317,7 @@
 .nav-item .nav-label,
 .nav-child-item .nav-child-label {
   min-width: 0;
+  max-width: 100%;
   padding: 0;
   color: #ffffff !important;
   font-size: inherit;
