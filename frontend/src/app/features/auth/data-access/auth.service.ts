@@ -57,7 +57,8 @@ export class AuthService {
    */
   initialize(): Promise<boolean> {
     if (this._status() !== 'initializing') return Promise.resolve(this.isAuthenticated());
-    return this.refreshSession().then((ok) => { if (!ok) this._status.set('unauthenticated'); return ok; });
+    this.clearSession();
+    return Promise.resolve(false);
   }
 
   refreshSession(): Promise<boolean> {

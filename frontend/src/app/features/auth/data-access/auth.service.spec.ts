@@ -27,7 +27,7 @@ describe('AuthService', () => {
   };
 
   beforeEach(async () => {
-    const authApiSpy = jasmine.createSpyObj('AuthApiService', ['login', 'getCurrentUser']);
+    const authApiSpy = jasmine.createSpyObj('AuthApiService', ['login', 'getCurrentUser', 'refresh', 'logout']);
 
     await TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
@@ -49,6 +49,14 @@ describe('AuthService', () => {
     expect(service.accessToken()).toBeNull();
     expect(service.currentUser()).toBeNull();
     expect(service.isAuthenticated()).toBeFalse();
+  });
+
+  it('should not restore a previous refresh session during initialization', async () => {
+    const initialized = await service.initialize();
+
+    expect(initialized).toBeFalse();
+    expect(authApi.refresh).not.toHaveBeenCalled();
+    expect(service.status()).toBe('unauthenticated');
   });
 
   it('should login successfully and navigate to dashboard', () => {
