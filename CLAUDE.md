@@ -308,6 +308,11 @@ Não aplicar essa estrutura mecanicamente quando ela não trouxer benefício. O 
 6. **Componentes devem respeitar design system** — Reutilizar `PageHeader`, `StatCard`, `ContentPanel`, `EmptyState`, `Breadcrumb` em vez de reimplementar.
 7. **Acessibilidade básica** — Contraste WCAG AA, foco visível, navegação por teclado, ARIA labels, landmarks semânticos.
 8. **Não persistir JWT no frontend** — Token permanece apenas em memória (AuthService), sem localStorage/sessionStorage.
+9. **Agenda Financeira** — Deve combinar compromissos previstos e transações realizadas no mês selecionado; ao navegar entre meses, gerar/listar compromissos recorrentes para o intervalo civil correspondente.
+10. **Transações na agenda** — Despesas, receitas e transferências realizadas devem ser visualmente diferenciadas por classes semânticas, com fundos suaves baseados nos tokens do Design System e sem ações de efetivação indevidas.
+11. **Calendário financeiro** — Dias selecionados sem compromissos ou transações devem exibir a mensagem `Não existe nenhum compromisso financeiro para esta data.`.
+12. **Fluxo de caixa** — A visão padrão deve cobrir os últimos 30 dias, o eixo Y deve começar em `R$ 0,00` e as legendas diárias do eixo X devem usar o formato `dd/MM`.
+13. **Menu lateral** — A largura deve ser sincronizada entre o token `--sidebar-width`, o `mat-sidenav` e a margem do conteúdo; impedir expansão horizontal dos itens e ocultar o scrollbar horizontal.
 
 ---
 
