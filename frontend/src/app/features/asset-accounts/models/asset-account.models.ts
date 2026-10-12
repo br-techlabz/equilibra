@@ -11,6 +11,7 @@ export interface AssetAccount {
   name: string;
   type: AssetAccountType;
   initialBalance: number;
+  currentBalance?: number;
   active: boolean;
   createdAt: string;
   updatedAt: string;
