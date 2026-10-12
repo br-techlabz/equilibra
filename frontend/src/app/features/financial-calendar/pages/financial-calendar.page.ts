@@ -1,4 +1,6 @@
 import { CommonModule } from '@angular/common';
+import { TransactionHistoryApiService } from '../../transactions/data-access/transaction-history-api.service';
+import { TransactionHistoryItem } from '../../transactions/models/transaction-history.models';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -23,27 +25,29 @@ import { CommitmentStatus, CommitmentType, FinancialCommitment } from '../models
   templateUrl: './financial-calendar.page.html', styleUrl: './financial-calendar.page.scss',
 })
 export class FinancialCalendarPageComponent implements OnInit {
-  private readonly api = inject(FinancialCommitmentApiService); private readonly indicatorsApi = inject(CommitmentIndicatorApiService);
+  private readonly api = inject(FinancialCommitmentApiService); private readonly transactionsApi = inject(TransactionHistoryApiService); private readonly indicatorsApi = inject(CommitmentIndicatorApiService);
   private readonly accountsApi = inject(AssetAccountsApiService);
   private readonly categoriesApi = inject(CategoriesApiService);
   private readonly fb = inject(FormBuilder);
   private readonly snack = inject(MatSnackBar);
-  readonly items = signal<FinancialCommitment[]>([]); readonly indicators = signal<CommitmentIndicators|null>(null); readonly accounts = signal<AssetAccount[]>([]); readonly categories = signal<Category[]>([]); readonly loading = signal(false); readonly loaded = signal(false); readonly error = signal('');
+  readonly items = signal<FinancialCommitment[]>([]); readonly transactions = signal<TransactionHistoryItem[]>([]); readonly indicators = signal<CommitmentIndicators|null>(null); readonly accounts = signal<AssetAccount[]>([]); readonly categories = signal<Category[]>([]); readonly loading = signal(false); readonly loaded = signal(false); readonly error = signal('');
   readonly month = signal(this.currentMonth()); readonly selectedDay = signal<string | null>(null); readonly typeFilter = signal<CommitmentType | 'ALL'>('ALL'); readonly statusFilter = signal<CommitmentStatus | 'ALL'>('ALL'); readonly editing = signal<FinancialCommitment | null>(null); readonly drawer = signal(false); readonly saving = signal(false);
   readonly pageActions = [{ label: 'Novo compromisso', icon: 'add', handler: () => this.openCreate() }];
   readonly form = this.fb.nonNullable.group({ type: ['EXPENSE' as CommitmentType, Validators.required], description: ['', Validators.required], plannedAmount: ['', Validators.required], dueDate: ['', Validators.required], accountId: ['', Validators.required], categoryId: ['', Validators.required] });
   readonly visible = computed(() => this.items().filter(x => (this.typeFilter() === 'ALL' || x.type === this.typeFilter()) && (this.statusFilter() === 'ALL' || x.status === this.statusFilter()) && (!this.selectedDay() || x.dueDate === this.selectedDay())));
+  visibleTransactions(): TransactionHistoryItem[] { return this.transactions().filter(x => (this.typeFilter() === 'ALL' || x.type === this.typeFilter()) && (!this.selectedDay() || this.transactionDate(x) === this.selectedDay())); }
   ngOnInit(): void { this.indicatorsApi.indicators().subscribe({ next: value => this.indicators.set(value), error: () => undefined }); this.accountsApi.list(false).subscribe({ next: value => this.accounts.set(value), error: () => undefined }); this.categoriesApi.list(false).subscribe({ next: value => this.categories.set(value), error: () => undefined }); this.load(); }
   currentMonth(): string { return new Date().toISOString().slice(0, 7); }
   range(): { from: string; to: string } { const [y, m] = this.month().split('-').map(Number); return { from: `${this.month()}-01`, to: `${y}-${String(m).padStart(2, '0')}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}` }; }
-  load(): void { this.loading.set(true); this.loaded.set(false); this.api.list({ ...this.range(), type: this.typeFilter() === 'ALL' ? undefined : this.typeFilter() as CommitmentType, status: this.statusFilter() === 'ALL' ? undefined : this.statusFilter() as CommitmentStatus }).subscribe({ next: r => { this.items.set(r.content); this.loading.set(false); this.loaded.set(true); }, error: () => { this.error.set('Não foi possível carregar a agenda.'); this.loading.set(false); this.loaded.set(true); } }); }
+  load(): void { this.loading.set(true); this.loaded.set(false); this.error.set(''); const range = this.range(); this.api.generate(range).subscribe({ next: () => this.api.list({ ...range, type: this.typeFilter() === 'ALL' ? undefined : this.typeFilter() as CommitmentType, status: this.statusFilter() === 'ALL' ? undefined : this.statusFilter() as CommitmentStatus }).subscribe({ next: r => { this.items.set(r.content); this.transactionsApi.list(0, 100, this.typeFilter() === 'ALL' ? undefined : this.typeFilter() as 'EXPENSE' | 'INCOME' | 'TRANSFER', 'ACTIVE', `${range.from}T00:00:00Z`, `${range.to}T23:59:59.999Z`).subscribe({ next: t => { this.transactions.set(t.content); this.loading.set(false); this.loaded.set(true); }, error: () => { this.error.set('Não foi possível carregar as transações realizadas.'); this.loading.set(false); this.loaded.set(true); } }); }, error: () => { this.error.set('Não foi possível carregar a agenda.'); this.loading.set(false); this.loaded.set(true); } }), error: () => { this.error.set('Não foi possível atualizar os compromissos recorrentes.'); this.loading.set(false); this.loaded.set(true); } }); }
   changeMonth(delta: number): void { const [y, m] = this.month().split('-').map(Number); const d = new Date(y, m - 1 + delta, 1); this.month.set(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); this.selectedDay.set(null); this.load(); }
   monthLabel(): string { const [y, m] = this.month().split('-').map(Number); return new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(new Date(y, m - 1, 1)); }
   weekdays(): string[] { return ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']; }
   leadingDays(): number { const [y, m] = this.month().split('-').map(Number); return (new Date(y, m - 1, 1).getDay() + 6) % 7; }
   days(): string[] { const [y, m] = this.month().split('-').map(Number); return Array.from({ length: new Date(y, m, 0).getDate() }, (_, i) => `${this.month()}-${String(i + 1).padStart(2, '0')}`); }
   isToday(day: string): boolean { return day === new Date().toISOString().slice(0, 10); }
-  count(day: string): number { return this.items().filter(x => x.dueDate === day).length; }
+  transactionDate(item: TransactionHistoryItem): string { return item.occurredAt.slice(0, 10); }
+  count(day: string): number { return this.items().filter(x => x.dueDate === day).length + this.transactions().filter(x => this.transactionDate(x) === day).length; }
   selectDay(day: string): void { this.selectedDay.set(this.selectedDay() === day ? null : day); }
   focusIndicator(group: 'overdue' | 'dueToday' | 'upcoming' | 'futurePending'): void { const selected = this.indicators()?.[group]; if (!selected || selected.count === 0) return; if (group === 'overdue') this.statusFilter.set('PENDING'); this.selectedDay.set(null); this.load(); }
   openCreate(): void { this.editing.set(null); this.form.reset({ type: 'EXPENSE', description: '', plannedAmount: '', dueDate: `${this.month()}-01`, accountId: '', categoryId: '' }); this.drawer.set(true); }
@@ -54,5 +58,8 @@ export class FinancialCalendarPageComponent implements OnInit {
   settle(x: FinancialCommitment): void { const input = prompt('Valor efetivado', String(x.plannedAmount)); const amount = Number(input?.replace(',', '.')); if (!Number.isFinite(amount) || amount <= 0) return; this.api.settle(x.id, { amount, occurredAt: new Date().toISOString() }).subscribe({ next: () => { this.snack.open('Compromisso efetivado.', 'Fechar', { duration: 3000 }); this.load(); }, error: () => this.error.set('Não foi possível efetivar o compromisso.') }); }
   money(value: number | string): string { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value)); }
   status(value: CommitmentStatus): string { return { PENDING: 'Pendente', SETTLED: 'Efetivado', CANCELLED: 'Cancelado' }[value]; }
-  type(value: CommitmentType): string { return value === 'EXPENSE' ? 'Despesa' : 'Receita'; }
+  type(value: CommitmentType | 'TRANSFER'): string { return value === 'EXPENSE' ? 'Despesa' : value === 'INCOME' ? 'Receita' : 'Transferência'; }
+  transactionMoney(value: number): string { return this.money(value); }
+  transactionClass(type: TransactionHistoryItem['type']): string { return type === 'INCOME' ? 'income' : type === 'TRANSFER' ? 'transfer' : 'expense'; }
+  transactionLabel(type: TransactionHistoryItem['type']): string { return type === 'INCOME' ? 'Receita' : type === 'TRANSFER' ? 'Transferência' : 'Despesa'; }
 }

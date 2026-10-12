@@ -8,6 +8,7 @@
 
 .shell-sidenav {
   width: var(--sidebar-width) !important;
+  overflow: hidden !important;
   min-width: 0;
   flex: 0 0 var(--sidebar-width) !important;
   background: #4c1d95;

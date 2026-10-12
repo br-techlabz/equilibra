@@ -26,6 +26,15 @@ describe('FinancialCommitmentApiService', () => {
     request.flush({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 100 });
   });
 
+  it('generates commitments for a selected civil month without ownerId', () => {
+    service.generate({ from: '2026-12-01', to: '2026-12-31' }).subscribe();
+    const request = http.expectOne('/api/commitments/generate');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ from: '2026-12-01', to: '2026-12-31' });
+    expect(request.request.body.ownerId).toBeUndefined();
+    request.flush([]);
+  });
+
   it('uses the real settle endpoint and payload', () => {
     service.settle('c1', { occurredAt: '2026-10-10T12:00:00Z', amount: 200 }).subscribe();
     const request = http.expectOne('/api/commitments/c1/settle');
