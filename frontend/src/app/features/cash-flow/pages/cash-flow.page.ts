@@ -47,7 +47,7 @@ export class CashFlowPageComponent implements OnInit {
   private isoDate(value: Date) { return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`; }
 
   readonly chartData: ChartData<'line'> = { labels: [], datasets: [{ data: [], borderColor: '#673AB7', backgroundColor: 'rgba(103, 58, 183, 0.1)', fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#673AB7', pointBorderColor: '#fff', pointBorderWidth: 2 }] };
-  readonly chartOptions: ChartConfiguration<'line'>['options'] = { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { x: { grid: { display: false, color: '#E5E5E5' } }, y: { beginAtZero: true, ticks: { stepSize: 1000, callback: value => this.money(Number(value)) }, grid: { color: '#E5E5E5' } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => this.money(Number(context.raw)) } } } };
+  readonly chartOptions: ChartConfiguration<'line'>['options'] = { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { x: { grid: { display: false, color: '#E5E5E5' }, offset: false }, y: { beginAtZero: true, ticks: { stepSize: 1000, callback: value => this.money(Number(value)) }, grid: { color: '#E5E5E5' } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => this.money(Number(context.raw)) } } } };
 
   /* chart helpers */
   chartDates() {
