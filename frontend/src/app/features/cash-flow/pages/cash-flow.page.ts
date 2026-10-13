@@ -12,8 +12,6 @@ import { EmptyStateComponent } from '../../../shared/ui/empty-state/empty-state.
 import { CashFlowApiService } from '../data-access/cash-flow-api.service';
 import { CashFlowPoint, CashFlowProjection } from '../models/cash-flow.models';
 
-type ChartBar = { x: number; y: number; width: number; height: number; date: string; balance: number };
-
 @Component({
   selector: 'app-cash-flow-page',
   standalone: true,
@@ -48,8 +46,8 @@ export class CashFlowPageComponent implements OnInit {
   defaultTo() { return this.isoDate(new Date()); }
   private isoDate(value: Date) { return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`; }
 
-  readonly chartData: ChartData<'bar'> = { labels: [], datasets: [{ data: [], backgroundColor: '#B39DDB', hoverBackgroundColor: '#673AB7', borderWidth: 0, barPercentage: .8, categoryPercentage: .9 }] };
-  readonly chartOptions: ChartConfiguration<'bar'>['options'] = { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1000, callback: value => this.money(Number(value)) }, grid: { color: '#E5E5E5' } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => this.money(Number(context.raw)) } } } };
+  readonly chartData: ChartData<'line'> = { labels: [], datasets: [{ data: [], borderColor: '#673AB7', backgroundColor: 'rgba(103, 58, 183, 0.1)', fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#673AB7', pointBorderColor: '#fff', pointBorderWidth: 2 }] };
+  readonly chartOptions: ChartConfiguration<'line'>['options'] = { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { x: { grid: { display: false, color: '#E5E5E5' } }, y: { beginAtZero: true, ticks: { stepSize: 1000, callback: value => this.money(Number(value)) }, grid: { color: '#E5E5E5' } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => this.money(Number(context.raw)) } } } };
 
   /* chart helpers */
   chartDates() {
@@ -67,21 +65,4 @@ export class CashFlowPageComponent implements OnInit {
     return { max, range: Math.max(1000, Math.ceil(max / 1000) * 1000) };
   }
   chartAxisLabels() { const range = this.chartScale().range; return Array.from({ length: range / 1000 + 1 }, (_, index) => this.money(range - index * 1000)); }
-  chartLabelX(index: number) { return ((index + 0.5) / Math.max(this.chartDates().length, 1)) * 100; }
-
-  chartBar(index: number): ChartBar | null {
-    const dates = this.chartDates();
-    const date = dates[index];
-    if (!date) return null;
-    const item = (this.projection()?.series ?? []).find(point => point.date === date) as CashFlowPoint | undefined;
-    if (!item) return null;
-    const scale = this.chartScale();
-    const plottedCount = Math.max((this.projection()?.series ?? []).length, 1); const cellWidth = 100 / plottedCount; const width = cellWidth * 0.8;
-    const height = Number(item.balance) / scale.range * 90;
-    return { x: index * cellWidth, y: 100 - height, width, height, date, balance: Number(item.balance) };
-  }
-  selectedChartBar() { const index = this.selectedPoint(); return index === null ? null : this.chartBar(index); }
-  selectPoint(index: number) { this.selectedPoint.set(index); }
-  tooltipX() { const bar = this.selectedChartBar(); return bar ? Math.min(Math.max(bar.x + bar.width / 2, 12), 88) : 0; }
-  tooltipY() { const bar = this.selectedChartBar(); return bar ? Math.max(bar.y - 8, 12) : 0; }
 }
