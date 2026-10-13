@@ -11,6 +11,7 @@
   min-width: 0 !important;
   max-width: var(--sidebar-width) !important;
   overflow: hidden !important;
+  overflow-x: hidden !important;
   min-width: 0;
   flex: 0 0 var(--sidebar-width) !important;
   background: #4c1d95;
@@ -19,6 +20,11 @@
   border-radius: 0;
   box-shadow: var(--shadow-sm);
   transition: width var(--transition-normal);
+}
+
+.shell-sidenav * {
+  max-width: 100%;
+  overflow-x: hidden !important;
 }
 
 .shell-container.sidebar-collapsed .shell-sidenav {

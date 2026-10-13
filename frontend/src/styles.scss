@@ -407,6 +407,35 @@ img, video, canvas, svg {
   scrollbar-color: var(--color-grey-300) transparent;
 }
 
+// Hide horizontal scrollbar on sidebar components
+.sidebar,
+.sidebar-nav,
+.shell-sidenav,
+.shell-sidenav *,
+.mat-sidenav,
+.mat-drawer-inner-container,
+.mat-sidenav-content {
+  overflow-x: hidden !important;
+}
+
+.sidebar::-webkit-scrollbar,
+.sidebar-nav::-webkit-scrollbar,
+.shell-sidenav::-webkit-scrollbar,
+.mat-drawer-inner-container::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.sidebar,
+.sidebar-nav,
+.shell-sidenav,
+.shell-sidenav *,
+.mat-drawer-inner-container {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
 // ============================================================
 // UTILITY CLASSES (Semantic)
 // ============================================================
