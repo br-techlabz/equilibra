@@ -26,7 +26,6 @@ export class CashFlowPageComponent implements OnInit {
   readonly error = signal('');
   readonly from = signal(this.defaultFrom());
   readonly to = signal(this.defaultTo());
-  readonly selectedPoint = signal<number | null>(null);
   readonly pageActions = [];
 
   ngOnInit() { this.load(); }
@@ -35,7 +34,7 @@ export class CashFlowPageComponent implements OnInit {
     this.loading.set(true);
     this.error.set('');
     this.api.project(this.from(), this.to()).subscribe({
-      next: value => { this.projection.set(value); this.chartData.labels = this.chartLabels(); this.chartData.datasets[0].data = this.chartDates().map(date => Number(value.series.find(point => point.date === date)?.balance ?? 0)); this.loading.set(false); },
+      next: value => { this.projection.set(value); this.updateChart(); this.loading.set(false); },
       error: () => { this.error.set('Não foi possível carregar a projeção.'); this.loading.set(false); },
     });
   }
@@ -46,11 +45,7 @@ export class CashFlowPageComponent implements OnInit {
   defaultTo() { return this.isoDate(new Date()); }
   private isoDate(value: Date) { return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`; }
 
-  readonly chartData: ChartData<'line'> = { labels: [], datasets: [{ data: [], borderColor: '#673AB7', backgroundColor: 'rgba(103, 58, 183, 0.1)', fill: true, tension: 0.3, pointRadius: 4, pointHoverRadius: 6, pointBackgroundColor: '#673AB7', pointBorderColor: '#fff', pointBorderWidth: 2 }] };
-  readonly chartOptions: ChartConfiguration<'line'>['options'] = { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { x: { grid: { display: false, color: '#E5E5E5' }, offset: false }, y: { beginAtZero: true, ticks: { stepSize: 1000, callback: value => this.money(Number(value)) }, grid: { color: '#E5E5E5' } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => this.money(Number(context.raw)) } } } };
-
-  /* chart helpers */
-  chartDates() {
+  private chartDates(): string[] {
     const projection = this.projection();
     if (!projection) return [];
     const dates: string[] = [];
@@ -59,10 +54,58 @@ export class CashFlowPageComponent implements OnInit {
     while (current <= end) { dates.push(current.toISOString().slice(0, 10)); current.setUTCDate(current.getUTCDate() + 1); }
     return dates;
   }
-  chartLabels() { return this.chartDates().map(value => this.date(value)); }
-  chartScale() {
-    const max = Math.max(0, ...(this.projection()?.series ?? []).map(point => Number(point.balance)));
-    return { max, range: Math.max(1000, Math.ceil(max / 1000) * 1000) };
+
+  private chartLabels(): string[] {
+    return this.chartDates().map(value => this.date(value));
   }
-  chartAxisLabels() { const range = this.chartScale().range; return Array.from({ length: range / 1000 + 1 }, (_, index) => this.money(range - index * 1000)); }
+
+  private updateChart(): void {
+    const dates = this.chartDates();
+    const balances = dates.map(date =>
+      Number(this.projection()?.series.find(point => point.date === date)?.balance ?? 0)
+    );
+    this.chartData.labels = this.chartLabels();
+    this.chartData.datasets[0].data = balances;
+  }
+
+  readonly chartData: ChartData<'line'> = {
+    labels: [],
+    datasets: [{
+      data: [],
+      label: 'Saldo projetado',
+      borderColor: '#673AB7',
+      backgroundColor: 'rgba(103, 58, 183, 0.1)',
+      fill: true,
+      tension: 0.25,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      pointBackgroundColor: '#673AB7',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2,
+    }]
+  };
+
+  readonly chartOptions: ChartConfiguration<'line'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    scales: {
+      x: {
+        grid: { display: false, color: '#E5E5E5' },
+        offset: false,
+        ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 15 }
+      },
+      y: {
+        beginAtZero: true,
+        ticks: { stepSize: 1000, callback: value => this.money(Number(value)) },
+        grid: { color: '#E5E5E5' }
+      }
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: { label: context => this.money(Number(context.raw)) }
+      }
+    }
+  };
 }
