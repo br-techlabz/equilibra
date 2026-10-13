@@ -1,5 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { BaseChartDirective } from 'ng2-charts';
+import { ChartConfiguration, ChartData } from 'chart.js';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,7 +17,7 @@ type ChartBar = { x: number; y: number; width: number; height: number; date: str
 @Component({
   selector: 'app-cash-flow-page',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, PageHeaderComponent, ContentPanelComponent, EmptyStateComponent],
+  imports: [CommonModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, BaseChartDirective, PageHeaderComponent, ContentPanelComponent, EmptyStateComponent],
   templateUrl: './cash-flow.page.html',
   styleUrl: './cash-flow.page.scss',
 })
@@ -35,7 +37,7 @@ export class CashFlowPageComponent implements OnInit {
     this.loading.set(true);
     this.error.set('');
     this.api.project(this.from(), this.to()).subscribe({
-      next: value => { this.projection.set(value); this.loading.set(false); },
+      next: value => { this.projection.set(value); this.chartData.labels = this.chartLabels(); this.chartData.datasets[0].data = this.chartDates().map(date => Number(value.series.find(point => point.date === date)?.balance ?? 0)); this.loading.set(false); },
       error: () => { this.error.set('Não foi possível carregar a projeção.'); this.loading.set(false); },
     });
   }
@@ -46,7 +48,10 @@ export class CashFlowPageComponent implements OnInit {
   defaultTo() { return this.isoDate(new Date()); }
   private isoDate(value: Date) { return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`; }
 
-  /* chart removed */
+  readonly chartData: ChartData<'bar'> = { labels: [], datasets: [{ data: [], backgroundColor: '#B39DDB', hoverBackgroundColor: '#673AB7', borderWidth: 0, barPercentage: .8, categoryPercentage: .9 }] };
+  readonly chartOptions: ChartConfiguration<'bar'>['options'] = { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1000, callback: value => this.money(Number(value)) }, grid: { color: '#E5E5E5' } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => this.money(Number(context.raw)) } } } };
+
+  /* chart helpers */
   chartDates() {
     const projection = this.projection();
     if (!projection) return [];

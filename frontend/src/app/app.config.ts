@@ -9,12 +9,14 @@ import { provideAppInitializer } from '@angular/core';
 import { authTokenInterceptor } from './core/http/auth-token.interceptor';
 import { authErrorInterceptor } from './core/http/auth-error.interceptor';
 import { MAT_DATE_LOCALE } from '@angular/material/core';
+import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     { provide: MAT_DATE_LOCALE, useValue: 'pt-BR' },
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
+    provideCharts(withDefaultRegisterables()),
     provideAppInitializer(() => inject(AuthService).initialize()),
     provideHttpClient(
       withInterceptors([
