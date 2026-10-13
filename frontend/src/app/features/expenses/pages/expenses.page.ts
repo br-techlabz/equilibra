@@ -29,7 +29,17 @@ import { TagsApiService } from '../../tags/data-access/tags-api.service';
 import { Tag } from '../../tags/models/tag.models';
 import { TagSelectorComponent } from '../../../shared/ui/tag-selector/tag-selector.component';
 
-interface ExpenseForm { description: FormControl<string>; occurredAt: FormControl<string>; paymentMethod: FormControl<ExpensePaymentMethod>; accountId: FormControl<string>; creditCardId: FormControl<string>; installmentCount: FormControl<number>; amount: FormControl<string>; categoryId: FormControl<string>; notes: FormControl<string>; }
+interface ExpenseForm {
+  description: FormControl<string>;
+  occurredAt: FormControl<string>;
+  paymentMethod: FormControl<ExpensePaymentMethod>;
+  accountId: FormControl<string>;
+  creditCardId: FormControl<string>;
+  installmentCount: FormControl<number>;
+  amount: FormControl<string>;
+  categoryId: FormControl<string>;
+  notes: FormControl<string>;
+}
 
 @Component({
   selector: 'app-expenses-page',
@@ -64,10 +74,35 @@ interface ExpenseForm { description: FormControl<string>; occurredAt: FormContro
   styleUrl: './expenses.page.scss',
 })
 export class ExpensesPageComponent implements OnInit {
-  private readonly api = inject(ExpensesApiService); private readonly accountsApi = inject(AssetAccountsApiService); private readonly creditCardsApi = inject(CreditCardsApiService); private readonly categoriesApi = inject(CategoriesApiService); private readonly tagsApi = inject(TagsApiService); private readonly snackBar = inject(MatSnackBar);
-  readonly expenses = signal<Expense[]>([]); readonly tags = signal<Tag[]>([]); readonly selectedTagIds = signal<string[]>([]); readonly accounts = signal<AssetAccount[]>([]); readonly creditCards = signal<CreditCard[]>([]); readonly categories = signal<Category[]>([]); readonly isLoading = signal(false); readonly errorMessage = signal<string | null>(null); readonly includeCancelled = signal(false); readonly page = signal(0); readonly totalElements = signal(0); readonly totalPages = signal(0); readonly isFormOpen = signal(false); readonly editingExpense = signal<Expense | null>(null); readonly isSaving = signal(false); readonly formError = signal<string | null>(null); readonly pageSize = 20;
+  private readonly api = inject(ExpensesApiService);
+  private readonly accountsApi = inject(AssetAccountsApiService);
+  private readonly creditCardsApi = inject(CreditCardsApiService);
+  private readonly categoriesApi = inject(CategoriesApiService);
+  private readonly tagsApi = inject(TagsApiService);
+  private readonly snackBar = inject(MatSnackBar);
+
+  readonly expenses = signal<Expense[]>([]);
+  readonly tags = signal<Tag[]>([]);
+  readonly selectedTagIds = signal<string[]>([]);
+  readonly accounts = signal<AssetAccount[]>([]);
+  readonly creditCards = signal<CreditCard[]>([]);
+  readonly categories = signal<Category[]>([]);
+  readonly isLoading = signal(false);
+  readonly errorMessage = signal<string | null>(null);
+  readonly includeCancelled = signal(false);
+  readonly page = signal(0);
+  readonly totalElements = signal(0);
+  readonly totalPages = signal(0);
+  readonly isFormOpen = signal(false);
+  readonly editingExpense = signal<Expense | null>(null);
+  readonly isSaving = signal(false);
+  readonly formError = signal<string | null>(null);
+  readonly pageSize = 20;
+
   readonly form: FormGroup<ExpenseForm>;
-  readonly pageActions = [{ label: 'Nova despesa', icon: 'add', handler: () => this.openCreateForm() }]; readonly emptyActions = [{ label: 'Nova despesa', icon: 'add', handler: () => this.openCreateForm() }];
+  readonly pageActions = [{ label: 'Nova despesa', icon: 'add', handler: () => this.openCreateForm() }];
+  readonly emptyActions = [{ label: 'Nova despesa', icon: 'add', handler: () => this.openCreateForm() }];
+
   constructor(private readonly formBuilder: NonNullableFormBuilder) {
     this.form = this.formBuilder.group({
       description: this.formBuilder.control('', [Validators.required, Validators.maxLength(255)]),
@@ -81,13 +116,58 @@ export class ExpensesPageComponent implements OnInit {
       notes: this.formBuilder.control('', Validators.maxLength(4000)),
     });
   }
-  ngOnInit(): void { this.loadOptions(); this.tagsApi.list(false).subscribe({next: value => this.tags.set(value)}); this.loadExpenses(); }
-  loadOptions(): void { this.accountsApi.list(false).subscribe({ next: (v) => this.accounts.set(v), error: () => undefined }); this.creditCardsApi.list(false).subscribe({ next: (v) => this.creditCards.set(v), error: () => undefined }); this.categoriesApi.list(false, 'EXPENSE').subscribe({ next: (v) => this.categories.set(v), error: () => undefined }); }
-  loadExpenses(): void { this.isLoading.set(true); this.errorMessage.set(null); this.api.list(this.page(), this.pageSize, this.includeCancelled()).subscribe({ next: (v) => { this.expenses.set(v.content); this.totalElements.set(v.totalElements); this.totalPages.set(v.totalPages); this.isLoading.set(false); }, error: () => { this.isLoading.set(false); this.errorMessage.set('Não foi possível carregar suas despesas.'); } }); }
-  setIncludeCancelled(value: boolean): void { this.includeCancelled.set(value); this.page.set(0); this.loadExpenses(); }
-  onPageChange(event: PageEvent): void { this.page.set(event.pageIndex); this.loadExpenses(); }
-  accountsForPayment(): AssetAccount[] { return this.form.controls.paymentMethod.value === 'CASH' ? this.accounts().filter((account) => account.type === 'CASH') : this.accounts().filter((account) => account.type !== 'CASH'); }
-  isPaymentSelectionValid(): boolean { const method = this.form.controls.paymentMethod.value; return method === 'CREDIT_CARD' ? !!this.form.controls.creditCardId.value : !!this.form.controls.accountId.value; }
+
+  ngOnInit(): void {
+    this.loadOptions();
+    this.tagsApi.list(false).subscribe({ next: value => this.tags.set(value) });
+    this.loadExpenses();
+  }
+
+  loadOptions(): void {
+    this.accountsApi.list(false).subscribe({ next: (v) => this.accounts.set(v), error: () => undefined });
+    this.creditCardsApi.list(false).subscribe({ next: (v) => this.creditCards.set(v), error: () => undefined });
+    this.categoriesApi.list(false, 'EXPENSE').subscribe({ next: (v) => this.categories.set(v), error: () => undefined });
+  }
+
+  loadExpenses(): void {
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+    this.api.list(this.page(), this.pageSize, this.includeCancelled()).subscribe({
+      next: (v) => {
+        this.expenses.set(v.content);
+        this.totalElements.set(v.totalElements);
+        this.totalPages.set(v.totalPages);
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.isLoading.set(false);
+        this.errorMessage.set('Não foi possível carregar suas despesas.');
+      }
+    });
+  }
+
+  setIncludeCancelled(value: boolean): void {
+    this.includeCancelled.set(value);
+    this.page.set(0);
+    this.loadExpenses();
+  }
+
+  onPageChange(event: PageEvent): void {
+    this.page.set(event.pageIndex);
+    this.loadExpenses();
+  }
+
+  accountsForPayment(): AssetAccount[] {
+    return this.form.controls.paymentMethod.value === 'CASH'
+      ? this.accounts().filter((account) => account.type === 'CASH')
+      : this.accounts().filter((account) => account.type !== 'CASH');
+  }
+
+  isPaymentSelectionValid(): boolean {
+    const method = this.form.controls.paymentMethod.value;
+    return method === 'CREDIT_CARD' ? !!this.form.controls.creditCardId.value : !!this.form.controls.accountId.value;
+  }
+
   isFormReady(): boolean {
     const value = this.form.getRawValue();
     const amount = value.amount.trim();
@@ -96,19 +176,66 @@ export class ExpensesPageComponent implements OnInit {
       && value.installmentCount >= 1 && value.installmentCount <= 60
       && this.isPaymentSelectionValid();
   }
-  accountName(id: string | null): string { return id ? this.accounts().find((v) => v.id === id)?.name ?? 'Conta indisponível' : 'Cartão de crédito'; }
-  paymentLabel(expense: Expense): string { return expense.paymentMethod === 'CREDIT_CARD' ? 'Cartão de crédito' : this.accountName(expense.accountId); }
-  expenseDateValue(expense: Expense): string { return expense.paymentMethod === 'CREDIT_CARD' && expense.purchaseAt ? expense.purchaseAt : expense.occurredAt; }
-  categoryName(id: string): string { return this.categories().find((v) => v.id === id)?.name ?? 'Categoria indisponível'; }
-  formatDate(value: string): string { const d = new Date(value); return Number.isNaN(d.getTime()) ? '—' : new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(d); }
-  formatMoney(value: number | string): string { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value)); }
-  statusLabel(value: Expense['status']): string { return value === 'CANCELLED' ? 'Cancelada' : 'Ativa'; }
-  openCreateForm(): void { this.accountsApi.list(false).subscribe({ next: accounts => this.accounts.set(accounts), error: () => undefined }); this.creditCardsApi.list(false).subscribe({ next: cards => this.creditCards.set(cards), error: () => undefined }); this.resetFormForNewEntry(); this.isFormOpen.set(true); }
-  openEditForm(expense: Expense): void { this.editingExpense.set(expense); this.formError.set(null); this.selectedTagIds.set((expense.tags ?? []).map(tag => tag.id)); this.form.reset({ description: expense.description, occurredAt: this.localDateTime(expense.occurredAt), paymentMethod: 'BANK_ACCOUNT', accountId: expense.accountId ?? '', creditCardId: '', installmentCount: 1, amount: expense.amount.toFixed(2).replace('.', ','), categoryId: expense.categoryId, notes: expense.notes ?? '' }); this.isFormOpen.set(true); }
-  closeForm(): void { if (!this.isSaving()) this.isFormOpen.set(false); }
-  saveExpense(): void { if (this.form.invalid || this.isSaving()) { this.form.markAllAsTouched(); return; } const v = this.form.getRawValue(); const amount = Number(v.amount.replace('.', '').replace(',', '.')); const current = this.editingExpense(); const isNew = !current; this.isSaving.set(true); this.formError.set(null); const op: Observable<Expense | object> = v.paymentMethod === 'CREDIT_CARD' && isNew ? this.api.createCreditCardPurchase({ description: v.description, purchaseDate: v.occurredAt.slice(0, 10), purchaseAt: this.localDateTimeToInstant(v.occurredAt), totalAmount: amount, installmentCount: v.installmentCount, creditCardId: v.creditCardId, categoryId: v.categoryId }) : current ? this.api.update(current.id, { description: v.description, occurredAt: new Date(v.occurredAt).toISOString(), accountId: v.accountId, amount, categoryId: v.categoryId, notes: v.notes || null, tagIds: this.selectedTagIds() }) : this.api.create({ description: v.description, occurredAt: new Date(v.occurredAt).toISOString(), accountId: v.accountId, amount, categoryId: v.categoryId, notes: v.notes || null, tagIds: this.selectedTagIds() }); op.subscribe({ next: (savedExpense) => { this.isSaving.set(false); this.snackBar.open(current ? 'Despesa atualizada com sucesso.' : 'Despesa registrada com sucesso. Agora você pode adicionar anexos.', 'Fechar', { duration: 3500 }); if (isNew) { // For new expenses, reset form for next entry this.resetFormForNewEntry(); } else if (savedExpense && 'status' in savedExpense) { this.editingExpense.set(savedExpense as Expense); } this.loadExpenses(); }, error: (e: HttpErrorResponse) => { this.isSaving.set(false); const detail = typeof e.error?.detail === 'string' ? e.error.detail : ''; this.formError.set(e.status === 409 ? this.conflictMessage(detail, v.paymentMethod) : e.status === 404 ? 'Cartão, conta, categoria ou despesa não encontrada.' : e.status === 400 ? (detail || 'Confira os dados informados.') : 'Não foi possível concluir a operação. Tente novamente.'); } }); }
 
-  private resetFormForNewEntry(): void {
+  accountName(id: string | null): string {
+    return id ? this.accounts().find((v) => v.id === id)?.name ?? 'Conta indisponível' : 'Cartão de crédito';
+  }
+
+  paymentLabel(expense: Expense): string {
+    return expense.paymentMethod === 'CREDIT_CARD' ? 'Cartão de crédito' : this.accountName(expense.accountId);
+  }
+
+  expenseDateValue(expense: Expense): string {
+    return expense.paymentMethod === 'CREDIT_CARD' && expense.purchaseAt ? expense.purchaseAt : expense.occurredAt;
+  }
+
+  categoryName(id: string): string {
+    return this.categories().find((v) => v.id === id)?.name ?? 'Categoria indisponível';
+  }
+
+  formatDate(value: string): string {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? '—' : new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(d);
+  }
+
+  formatMoney(value: number | string): string {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value));
+  }
+
+  statusLabel(value: Expense['status']): string {
+    return value === 'CANCELLED' ? 'Cancelada' : 'Ativa';
+  }
+
+  openCreateForm(): void {
+    this.accountsApi.list(false).subscribe({ next: accounts => this.accounts.set(accounts), error: () => undefined });
+    this.creditCardsApi.list(false).subscribe({ next: cards => this.creditCards.set(cards), error: () => undefined });
+    this.resetFormForNewEntry();
+    this.isFormOpen.set(true);
+  }
+
+  openEditForm(expense: Expense): void {
+    this.editingExpense.set(expense);
+    this.formError.set(null);
+    this.selectedTagIds.set((expense.tags ?? []).map(tag => tag.id));
+    this.form.reset({
+      description: expense.description,
+      occurredAt: this.localDateTime(expense.occurredAt),
+      paymentMethod: 'BANK_ACCOUNT',
+      accountId: expense.accountId ?? '',
+      creditCardId: '',
+      installmentCount: 1,
+      amount: expense.amount.toFixed(2).replace('.', ','),
+      categoryId: expense.categoryId,
+      notes: expense.notes ?? ''
+    });
+    this.isFormOpen.set(true);
+  }
+
+  closeForm(): void {
+    if (!this.isSaving()) this.isFormOpen.set(false);
+  }
+
+  resetFormForNewEntry(): void {
     this.editingExpense.set(null);
     this.formError.set(null);
     this.selectedTagIds.set([]);
@@ -123,10 +250,117 @@ export class ExpensesPageComponent implements OnInit {
       categoryId: '',
       notes: ''
     });
+    // Mark all controls as pristine and untouched to prevent immediate validation errors
+    Object.values(this.form.controls).forEach(control => {
+      control.markAsPristine();
+      control.markAsUntouched();
+    });
   }
-  private conflictMessage(detail: string, paymentMethod: ExpensePaymentMethod): string { const normalized = detail.toLowerCase(); if (normalized.includes('inactive')) return paymentMethod === 'CREDIT_CARD' ? 'O cartão selecionado está inativo.' : 'A conta selecionada está inativa.'; if (normalized.includes('category') || normalized.includes('applicable')) return 'A categoria selecionada não pode ser usada para despesas.'; if (normalized.includes('limit')) return 'O limite disponível do cartão é insuficiente para esta compra.'; if (normalized.includes('modified') || normalized.includes('concurr')) return 'O recurso foi alterado. Atualize a tela e tente novamente.'; return detail || 'A operação entrou em conflito. Confira os dados e tente novamente.'; }
-  cancelCardPurchase(expense: Expense): void { if (!window.confirm('Cancelar esta compra no cartão?')) return; this.api.cancelCreditCardPurchase(expense.id).subscribe({ next: () => { this.snackBar.open('Compra no cartão cancelada.', 'Fechar', { duration: 3500 }); this.loadExpenses(); }, error: () => this.snackBar.open('Não foi possível cancelar a compra.', 'Fechar', { duration: 3500 }) }); }
-  cancelExpense(expense: Expense): void { if (!window.confirm('Cancelar esta despesa? Ela permanecerá no histórico, mas deixará de afetar os cálculos financeiros.')) return; this.api.cancel(expense.id).subscribe({ next: () => { this.snackBar.open('Despesa cancelada com sucesso.', 'Fechar', { duration: 3500 }); this.loadExpenses(); }, error: () => this.snackBar.open('Não foi possível cancelar a despesa.', 'Fechar', { duration: 3500 }) }); }
-  private localDateTimeToInstant(value: string): string { const [date, time] = value.split('T'); const [year, month, day] = date.split('-').map(Number); const [hour, minute] = (time || '00:00').split(':').map(Number); return new Date(year, month - 1, day, hour, minute).toISOString(); }
-  private localDateTime(iso: string): string { const d = new Date(iso); const pad = (n: number) => String(n).padStart(2, '0'); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+
+  saveExpense(): void {
+    if (this.form.invalid || this.isSaving()) {
+      this.form.markAllAsTouched();
+      return;
+    }
+    const v = this.form.getRawValue();
+    const amount = Number(v.amount.replace('.', '').replace(',', '.'));
+    const current = this.editingExpense();
+    const isNew = !current;
+    this.isSaving.set(true);
+    this.formError.set(null);
+    const op: Observable<Expense | object> = v.paymentMethod === 'CREDIT_CARD' && isNew
+      ? this.api.createCreditCardPurchase({
+          description: v.description,
+          purchaseDate: v.occurredAt.slice(0, 10),
+          purchaseAt: this.localDateTimeToInstant(v.occurredAt),
+          totalAmount: amount,
+          installmentCount: v.installmentCount,
+          creditCardId: v.creditCardId,
+          categoryId: v.categoryId
+        })
+      : current
+        ? this.api.update(current.id, {
+            description: v.description,
+            occurredAt: new Date(v.occurredAt).toISOString(),
+            accountId: v.accountId,
+            amount,
+            categoryId: v.categoryId,
+            notes: v.notes || null,
+            tagIds: this.selectedTagIds()
+          })
+        : this.api.create({
+            description: v.description,
+            occurredAt: new Date(v.occurredAt).toISOString(),
+            accountId: v.accountId,
+            amount,
+            categoryId: v.categoryId,
+            notes: v.notes || null,
+            tagIds: this.selectedTagIds()
+          });
+    op.subscribe({
+      next: (savedExpense) => {
+        this.isSaving.set(false);
+        this.snackBar.open(current ? 'Despesa atualizada com sucesso.' : 'Despesa registrada com sucesso. Agora você pode adicionar anexos.', 'Fechar', { duration: 3500 });
+        if (isNew) {
+          this.resetFormForNewEntry();
+        } else if (savedExpense && 'status' in savedExpense) {
+          this.editingExpense.set(savedExpense as Expense);
+        }
+        this.loadExpenses();
+      },
+      error: (e: HttpErrorResponse) => {
+        this.isSaving.set(false);
+        const detail = typeof e.error?.detail === 'string' ? e.error.detail : '';
+        this.formError.set(e.status === 409 ? this.conflictMessage(detail, v.paymentMethod)
+          : e.status === 404 ? 'Cartão, conta, categoria ou despesa não encontrada.'
+          : e.status === 400 ? (detail || 'Confira os dados informados.')
+          : 'Não foi possível concluir a operação. Tente novamente.');
+      }
+    });
+  }
+
+  cancelCardPurchase(expense: Expense): void {
+    if (!window.confirm('Cancelar esta compra no cartão?')) return;
+    this.api.cancelCreditCardPurchase(expense.id).subscribe({
+      next: () => {
+        this.snackBar.open('Compra no cartão cancelada.', 'Fechar', { duration: 3500 });
+        this.loadExpenses();
+      },
+      error: () => this.snackBar.open('Não foi possível cancelar a compra.', 'Fechar', { duration: 3500 })
+    });
+  }
+
+  cancelExpense(expense: Expense): void {
+    if (!window.confirm('Cancelar esta despesa? Ela permanecerá no histórico, mas deixará de afetar os cálculos financeiros.')) return;
+    this.api.cancel(expense.id).subscribe({
+      next: () => {
+        this.snackBar.open('Despesa cancelada com sucesso.', 'Fechar', { duration: 3500 });
+        this.loadExpenses();
+      },
+      error: () => this.snackBar.open('Não foi possível cancelar a despesa.', 'Fechar', { duration: 3500 })
+    });
+  }
+
+  localDateTimeToInstant(value: string): string {
+    const [date, time] = value.split('T');
+    const [year, month, day] = date.split('-').map(Number);
+    const [hour, minute] = (time || '00:00').split(':').map(Number);
+    return new Date(year, month - 1, day, hour, minute).toISOString();
+  }
+
+  localDateTime(iso: string): string {
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  // Public methods called from template
+  conflictMessage(detail: string, paymentMethod: ExpensePaymentMethod): string {
+    const normalized = detail.toLowerCase();
+    if (normalized.includes('inactive')) return paymentMethod === 'CREDIT_CARD' ? 'O cartão selecionado está inativo.' : 'A conta selecionada está inativa.';
+    if (normalized.includes('category') || normalized.includes('applicable')) return 'A categoria selecionada não pode ser usada para despesas.';
+    if (normalized.includes('limit')) return 'O limite disponível do cartão é insuficiente para esta compra.';
+    if (normalized.includes('modified') || normalized.includes('concurr')) return 'O recurso foi alterado. Atualize a tela e tente novamente.';
+    return detail || 'A operação entrou em conflito. Confira os dados e tente novamente.';
+  }
 }
