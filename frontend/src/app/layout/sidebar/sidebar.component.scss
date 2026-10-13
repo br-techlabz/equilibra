@@ -451,9 +451,32 @@
     pointer-events: none;
   }
 
+  .sidebar.collapsed .nav-expansion-panel .mat-expansion-panel-body {
+    display: none !important;
+  }
+
+  .sidebar.collapsed .nav-expansion-panel .mat-expansion-panel-header {
+    pointer-events: none;
+  }
+
   .sidebar.collapsed .nav-item {
     justify-content: flex-start;
     padding-inline: var(--space-3) !important;
+  }
+}
+
+/* Ensure expansion panel works when sidebar is NOT collapsed */
+@media (min-width: 768px) {
+  .sidebar:not(.collapsed) .nav-expansion-panel {
+    pointer-events: auto;
+  }
+
+  .sidebar:not(.collapsed) .nav-expansion-panel .mat-expansion-panel-body {
+    display: block !important;
+  }
+
+  .sidebar:not(.collapsed) .nav-expansion-panel .mat-expansion-panel-header {
+    pointer-events: auto;
   }
 }
 

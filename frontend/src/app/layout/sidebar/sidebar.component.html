@@ -10,7 +10,6 @@
           <!-- Expandable Menu Item -->
           <mat-expansion-panel
             [expanded]="hasActiveChildren(item) || isActive(item.route)"
-            [disabled]="collapsed()"
             class="nav-expansion-panel"
             [class.active]="hasActiveChildren(item)"
             (opened)="onExpansionOpened()"
