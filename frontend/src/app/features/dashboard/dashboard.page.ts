@@ -1,4 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { BaseChartDirective } from 'ng2-charts';
+import { ChartConfiguration, ChartData } from 'chart.js';
 import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -32,6 +34,7 @@ import { formatCentsAsBRL, sumMoneyInCents } from './money.utils';
     StatCardComponent,
     ContentPanelComponent,
     EmptyStateComponent,
+    BaseChartDirective,
   ],
   templateUrl: './dashboard.page.html',
   styleUrl: './dashboard.page.scss',
@@ -74,6 +77,62 @@ export class DashboardPageComponent implements OnInit {
   readonly chartActions = [];
   readonly transactionsActions = [];
   readonly recentTransactions: never[] = [];
+  readonly balanceChartData: ChartData<'line'> = { labels: [], datasets: [] };
+  readonly balanceChartOptions: ChartConfiguration<'line'>['options'] = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => `${context.dataset.label}: ${this.formatMoney(Number(context.raw))}` } } }, scales: { x: { grid: { display: false }, ticks: { display: false } }, y: { beginAtZero: true, grid: { color: 'rgba(128,128,128,.2)' } } } };
+
+  // Pie chart data for expenses by category
+  readonly expensePieChartData: ChartData<'doughnut'> = { labels: [], datasets: [] };
+  readonly expensePieChartOptions: ChartConfiguration<'doughnut'>['options'] = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => `${context.label}: ${this.formatMoney(Number(context.raw))}` } } }, cutout: '60%' };
+
+  // Pie chart data for income by category
+  readonly incomePieChartData: ChartData<'doughnut'> = { labels: [], datasets: [] };
+  readonly incomePieChartOptions: ChartConfiguration<'doughnut'>['options'] = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => `${context.label}: ${this.formatMoney(Number(context.raw))}` } } }, cutout: '60%' };
+
+  // Paleta de cores do Design System (valores hex reais para Chart.js)
+  readonly chartColorPalette = [
+    { border: '#7c3aed', bg: '#f5f3ff', legend: 'legend-0' },     // primary-500 / primary-50
+    { border: '#4caf50', bg: '#e8f5e9', legend: 'legend-1' },      // success-500 / success-50
+    { border: '#e54848', bg: '#fdf2f2', legend: 'legend-2' },      // danger-500 / danger-50
+    { border: '#ffc107', bg: '#fff8e1', legend: 'legend-3' },      // warning-500 / warning-50
+    { border: '#2196f3', bg: '#e3f2fd', legend: 'legend-4' },      // info-500 / info-50
+  ];
+
+  // Mapeia accountId para índice de cor consistente
+  private accountColorMap = new Map<string, number>();
+  private nextColorIndex = 0;
+
+  private getColorIndexForAccount(accountId: string): number {
+    if (this.accountColorMap.has(accountId)) {
+      return this.accountColorMap.get(accountId)!;
+    }
+    // Atribuir cores sequencialmente para as primeiras 5 contas (sem repetição)
+    // Se já usamos todas as 5 cores, usar hash determinístico para as demais
+    let index: number;
+    if (this.nextColorIndex < this.chartColorPalette.length) {
+      index = this.nextColorIndex;
+      this.nextColorIndex++;
+    } else {
+      // Hash simples determinístico do accountId para contas extras
+      let hash = 0;
+      for (let i = 0; i < accountId.length; i++) {
+        hash = ((hash << 5) - hash) + accountId.charCodeAt(i);
+        hash |= 0;
+      }
+      index = Math.abs(hash) % this.chartColorPalette.length;
+    }
+    this.accountColorMap.set(accountId, index);
+    return index;
+  }
+
+  // Reset do contador de cores ao recarregar dashboard
+  private resetColorAssignment(): void {
+    this.accountColorMap.clear();
+    this.nextColorIndex = 0;
+  }
+
+  ngAfterViewInit(): void {
+    // As cores já são definidas como hex no loadDashboard
+  }
 
   ngOnInit(): void {
     this.loadDashboard(); this.loadPredictability();
@@ -81,11 +140,43 @@ export class DashboardPageComponent implements OnInit {
 
   loadPredictability(): void { const { from, to } = this.periodRange(this.selectedPeriod()); this.predictabilityLoading.set(true); this.predictabilityError.set(false); this.predictabilityApi.load(from.toISOString().slice(0,10),to.toISOString().slice(0,10)).subscribe({next:value=>{this.predictability.set(value);this.predictabilityLoading.set(false)},error:()=>{this.predictabilityLoading.set(false);this.predictabilityError.set(true)}}); }
   loadDashboard(): void {
+    this.resetColorAssignment();
     this.accountsLoading.set(true);
     const { from, to } = this.periodRange(this.selectedPeriod());
     this.dashboardApi.get(from.toISOString(), to.toISOString()).subscribe({
       next: (data) => {
         this.dashboardData.set(data);
+        this.balanceChartData.labels = data.balanceEvolution[0]?.points.map(point => point.at) ?? [];
+        this.balanceChartData.datasets = data.balanceEvolution.map((series) => {
+          const colorIndex = this.getColorIndexForAccount(series.accountId);
+          const color = this.chartColorPalette[colorIndex];
+          return {
+            label: series.accountName,
+            data: series.points.map(point => Number(point.balance)),
+            borderColor: color.border,
+            backgroundColor: 'transparent',
+            tension: .25,
+            pointRadius: 2,
+            fill: false,
+            className: `balance-line-${colorIndex}`,
+          };
+        });
+        // Populate expense pie chart
+        const expenseItems = data.expenseByCategory ?? [];
+        this.expensePieChartData.labels = expenseItems.map(item => item.categoryName);
+        this.expensePieChartData.datasets = [{
+          data: expenseItems.map(item => Number(item.amount)),
+          backgroundColor: expenseItems.map((_, index) => this.chartColorPalette[index % this.chartColorPalette.length].border),
+          borderWidth: 0,
+        }];
+        // Populate income pie chart
+        const incomeItems = data.incomeByCategory ?? [];
+        this.incomePieChartData.labels = incomeItems.map(item => item.categoryName);
+        this.incomePieChartData.datasets = [{
+          data: incomeItems.map(item => Number(item.amount)),
+          backgroundColor: incomeItems.map((_, index) => this.chartColorPalette[index % this.chartColorPalette.length].border),
+          borderWidth: 0,
+        }];
         this.accounts.set(data.accounts.map((account) => ({ id: account.accountId, name: account.name, type: account.type as AssetAccount['type'], initialBalance: account.currentBalance, active: account.active, createdAt: '', updatedAt: '' })));
         this.accountsLoaded.set(true); this.accountsLoading.set(false); this.accountsError.set(false);
       },
@@ -194,27 +285,8 @@ export class DashboardPageComponent implements OnInit {
     return Array.from({ length: totalDays }, (_, index) => String(index + 1).padStart(2, '0'));
   }
 
-  incomePieGradient(): string {
-    const items = this.dashboardData()?.incomeByCategory ?? []; const total = items.reduce((sum, item) => sum + Number(item.amount), 0); if (!total) return 'conic-gradient(var(--canvas-bg-alt) 0 100%)'; let start = 0; const colors = ['var(--color-primary-500)', 'var(--color-success-500)', 'var(--color-danger-500)', 'var(--color-warning-500)', 'var(--color-info-500)']; return `conic-gradient(${items.map((item, index) => { const end = start + Number(item.amount) / total * 100; const part = `${colors[index % colors.length]} ${start}% ${end}%`; start = end; return part; }).join(', ')})`;
-  }
-
-  expensePieGradient(): string {
-    const items = this.dashboardData()?.expenseByCategory ?? []; const total = items.reduce((sum, item) => sum + Number(item.amount), 0); if (!total) return 'conic-gradient(var(--canvas-bg-alt) 0 100%)'; let start = 0; const colors = ['var(--color-primary-500)', 'var(--color-success-500)', 'var(--color-danger-500)', 'var(--color-warning-500)', 'var(--color-info-500)']; return `conic-gradient(${items.map((item, index) => { const end = start + Number(item.amount) / total * 100; const part = `${colors[index % colors.length]} ${start}% ${end}%`; start = end; return part; }).join(', ')})`;
-  }
-
-  chartYAxis(): string[] {
-    const values = this.dashboardData()?.balanceEvolution.flatMap(series => series.points.map(point => Number(point.balance))) ?? [];
-    if (!values.length) return ['R$ 0,00'];
-    const min = Math.min(...values); const max = Math.max(...values); const step = (max - min || Math.max(Math.abs(max), 1)) / 4;
-    return [max, max - step, max - step * 2, max - step * 3, min].map(value => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value));
-  }
-
-  balanceLinePoints(points: Array<{ at: string; balance: number }>): string {
-    if (!points.length) return '';
-    const visibleDays = this.currentMonthDays().length;
-    const visiblePoints = points.slice(0, visibleDays);
-    const values = visiblePoints.map(point => Number(point.balance));
-    const min = Math.min(...values); const max = Math.max(...values); const range = max - min || 1;
-    return visiblePoints.map((point, index) => `${4 + (index / Math.max(visiblePoints.length - 1, 1)) * 92},${88 - ((Number(point.balance) - min) / range) * 76}`).join(' ');
+  getLegendClassForAccount(accountId: string): string {
+    const colorIndex = this.getColorIndexForAccount(accountId);
+    return `legend-${colorIndex}`;
   }
 }

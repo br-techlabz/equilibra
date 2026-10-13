@@ -17,7 +17,7 @@ describe('DashboardPageComponent', () => {
 
   beforeEach(() => {
     accountsApi.list.and.returnValue(of([]));
-    dashboardApi.get.and.returnValue(of({ period: { from: '', to: '' }, summary: { income: 0, expense: 0, net: 0, netWorth: 0 }, accounts: [], recentTransactions: [] }));
+    dashboardApi.get.and.returnValue(of({ period: { from: '', to: '' }, summary: { income: 0, expense: 0, net: 0, netWorth: 0 }, accounts: [], recentTransactions: [], balanceEvolution: [] }));
     predictabilityApi.load.and.returnValue(of(null) as unknown as ReturnType<FinancialPredictabilityService['load']>);
     TestBed.configureTestingModule({
       imports: [DashboardPageComponent],
@@ -41,7 +41,7 @@ describe('DashboardPageComponent', () => {
   });
 
   it('loads only active accounts and calculates initial net worth', () => {
-    dashboardApi.get.and.returnValue(of({ period: { from: '', to: '' }, summary: { income: 0, expense: 0, net: 0, netWorth: 300 }, accounts: [{ accountId: '1', name: 'A', type: 'CASH', initialBalance: 100, currentBalance: 300, active: true }], recentTransactions: [] }));
+    dashboardApi.get.and.returnValue(of({ period: { from: '', to: '' }, summary: { income: 0, expense: 0, net: 0, netWorth: 300 }, accounts: [{ accountId: '1', name: 'A', type: 'CASH', initialBalance: 100, currentBalance: 300, active: true }], recentTransactions: [], balanceEvolution: [] }));
     accountsApi.list.and.returnValue(of([
       { id: '1', name: 'A', type: 'CASH', initialBalance: 100, active: true, createdAt: '', updatedAt: '' },
       { id: '2', name: 'B', type: 'CASH', initialBalance: 200, active: true, createdAt: '', updatedAt: '' },
@@ -62,7 +62,7 @@ describe('DashboardPageComponent', () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.accountsError()).toBeTrue();
     expect(fixture.componentInstance.accountsLoaded()).toBeFalse();
-    dashboardApi.get.and.returnValue(of({ period: { from: '', to: '' }, summary: { income: 0, expense: 0, net: 0, netWorth: 0 }, accounts: [], recentTransactions: [] }));
+    dashboardApi.get.and.returnValue(of({ period: { from: '', to: '' }, summary: { income: 0, expense: 0, net: 0, netWorth: 0 }, accounts: [], recentTransactions: [], balanceEvolution: [] }));
     fixture.componentInstance.loadDashboard();
     expect(fixture.componentInstance.accountsError()).toBeFalse();
     expect(fixture.componentInstance.accountsLoaded()).toBeTrue();

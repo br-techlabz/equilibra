@@ -39,8 +39,8 @@
     <app-content-panel title="Evolução do saldo" subtitle="Saldos das contas no período">
       @if (dashboardData()?.balanceEvolution?.length) {
         <div class="balance-chart" role="img" aria-label="Evolução do saldo por conta">
-          <div class="chart-legend">@for (series of dashboardData()!.balanceEvolution; track series.accountId) { <span><i [class]="'legend-dot legend-' + $index"></i>{{ series.accountName }}</span> }</div>
-          <div class="chart-with-y-axis"><div class="chart-y-axis">@for (label of chartYAxis(); track label) { <span>{{ label }}</span> }</div><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><line x1="4" y1="50" x2="96" y2="50" class="chart-grid-line" /><line x1="4" y1="20" x2="96" y2="20" class="chart-grid-line" /><line x1="4" y1="80" x2="96" y2="80" class="chart-grid-line" /> @for (series of dashboardData()!.balanceEvolution; track series.accountId) { <polyline [attr.points]="balanceLinePoints(series.points)" [class]="'balance-line balance-line-' + $index" /> } </svg></div><div class="chart-axis"><div class="chart-axis-track">@for (day of currentMonthDays(); track day) { <span>{{ day }}</span> }</div></div>
+          <div class="chart-legend">@for (series of dashboardData()!.balanceEvolution; track series.accountId) { <span><i [class]="'legend-dot ' + getLegendClassForAccount(series.accountId)"></i>{{ series.accountName }}</span> }</div>
+          <div class="chart-with-y-axis"><canvas baseChart [data]="balanceChartData" [options]="balanceChartOptions" type="line" aria-label="Evolução do saldo por conta"></canvas></div><div class="chart-axis"><div class="chart-axis-track">@for (day of currentMonthDays(); track day) { <span>{{ day }}</span> }</div></div>
         </div>
       } @else { <app-empty-state icon="show_chart" iconVariant="chart" title="Evolução disponível em breve" description="Os dados do ledger serão exibidos nesta área." [centered]="true" /> }
     </app-content-panel>
@@ -66,9 +66,23 @@
       }
     </app-content-panel>
 
-    <app-content-panel title="Despesas por categoria" subtitle="Distribuição das despesas no período"><div class="expense-pie" role="img" aria-label="Despesas por categoria"><div class="pie-chart" [style.background]="expensePieGradient()"></div><div class="pie-legend">@for (item of dashboardData()?.expenseByCategory ?? []; track item.categoryName) { <span><i [class]="'legend-dot legend-' + $index"></i>{{ item.categoryName }}: {{ formatMoney(item.amount) }}</span> }</div></div></app-content-panel>
+    <app-content-panel title="Despesas por categoria" subtitle="Distribuição das despesas no período">
+      @if (dashboardData()?.expenseByCategory?.length) {
+        <div class="pie-chart-wrapper" role="img" aria-label="Despesas por categoria">
+          <canvas baseChart [data]="expensePieChartData" [options]="expensePieChartOptions" type="doughnut" aria-label="Despesas por categoria"></canvas>
+          <div class="pie-legend">@for (item of dashboardData()!.expenseByCategory; track item.categoryName; let i = $index) { <span><i class="legend-dot" [style.background]="chartColorPalette[i % chartColorPalette.length].border"></i>{{ item.categoryName }}: {{ formatMoney(item.amount) }}</span> }</div>
+        </div>
+      } @else { <app-empty-state icon="pie_chart" iconVariant="chart" title="Sem despesas no período" description="As despesas por categoria aparecerão aqui quando houver dados." [centered]="true" /> }
+    </app-content-panel>
 
-    <app-content-panel title="Receitas por categoria" subtitle="Distribuição das receitas no período"><div class="expense-pie" role="img" aria-label="Receitas por categoria"><div class="pie-chart" [style.background]="incomePieGradient()"></div><div class="pie-legend">@for (item of dashboardData()?.incomeByCategory ?? []; track item.categoryName) { <span><i [class]="'legend-dot legend-' + $index"></i>{{ item.categoryName }}: {{ formatMoney(item.amount) }}</span> }</div></div></app-content-panel>
+    <app-content-panel title="Receitas por categoria" subtitle="Distribuição das receitas no período">
+      @if (dashboardData()?.incomeByCategory?.length) {
+        <div class="pie-chart-wrapper" role="img" aria-label="Receitas por categoria">
+          <canvas baseChart [data]="incomePieChartData" [options]="incomePieChartOptions" type="doughnut" aria-label="Receitas por categoria"></canvas>
+          <div class="pie-legend">@for (item of dashboardData()!.incomeByCategory; track item.categoryName; let i = $index) { <span><i class="legend-dot" [style.background]="chartColorPalette[i % chartColorPalette.length].border"></i>{{ item.categoryName }}: {{ formatMoney(item.amount) }}</span> }</div>
+        </div>
+      } @else { <app-empty-state icon="pie_chart" iconVariant="chart" title="Sem receitas no período" description="As receitas por categoria aparecerão aqui quando houver dados." [centered]="true" /> }
+    </app-content-panel>
 
     <app-content-panel title="Minhas contas" subtitle="Saldos correntes derivados do ledger" class="accounts-panel">
       @if (accountsLoading()) {
