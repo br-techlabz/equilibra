@@ -35,7 +35,7 @@ public class CorsConfig {
             ));
         }
 
-        // Métodos HTTP permitidos
+        // Metodos HTTP permitidos
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 
         // Headers permitidos
