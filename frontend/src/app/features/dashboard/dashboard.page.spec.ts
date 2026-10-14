@@ -15,10 +15,15 @@ describe('DashboardPageComponent', () => {
   const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
   const authService = { currentUser: () => null } as unknown as AuthService;
 
+  const emptyPredictability = {
+    projection: { closingBalance: 0, projectedExpense: 0, projectedIncome: 0, from: '', to: '' },
+    indicators: { overdue: { count: 0, amount: 0 }, upcoming: { count: 0, amount: 0 } }
+  };
+
   beforeEach(() => {
     accountsApi.list.and.returnValue(of([]));
     dashboardApi.get.and.returnValue(of({ period: { from: '', to: '' }, summary: { income: 0, expense: 0, net: 0, netWorth: 0 }, accounts: [], recentTransactions: [], balanceEvolution: [] }));
-    predictabilityApi.load.and.returnValue(of(null) as unknown as ReturnType<FinancialPredictabilityService['load']>);
+    predictabilityApi.load.and.returnValue(of(emptyPredictability) as unknown as ReturnType<FinancialPredictabilityService['load']>);
     TestBed.configureTestingModule({
       imports: [DashboardPageComponent],
       providers: [
