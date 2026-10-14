@@ -28,11 +28,12 @@ public class CorsConfig {
         if (allowedOrigins != null && !allowedOrigins.isBlank()) {
             configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
         } else {
-            configuration.setAllowedOrigins(List.of(
+           /** configuration.setAllowedOrigins(List.of(
                 "http://localhost:4200",
                 "http://localhost:4201",
                 "http://localhost:4202"
-            ));
+            )); **/
+            configuration.setAllowedOrigins(List.of("*"));
         }
 
         // Métodos HTTP permitidos
@@ -51,7 +52,7 @@ public class CorsConfig {
         configuration.setExposedHeaders(Arrays.asList("X-Request-ID"));
 
         // Permitir credenciais (cookies, Authorization header)
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(false);
 
         // Cache de preflight por 1 hora
         configuration.setMaxAge(3600L);
