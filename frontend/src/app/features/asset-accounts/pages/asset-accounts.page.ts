@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -21,13 +22,16 @@ import {
 import { ContentPanelComponent } from '../../../shared/ui/content-panel/content-panel.component';
 import { EmptyStateComponent } from '../../../shared/ui/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
-import { Router } from '@angular/router';
 
 interface AccountForm {
   name: FormControl<string>;
   type: FormControl<AssetAccountType>;
   initialBalance: FormControl<string>;
 }
+
+/* ============================================================
+   Página de Listagem de Contas de Ativo
+   ============================================================ */
 
 @Component({
   selector: 'app-asset-accounts-page',
@@ -89,17 +93,17 @@ interface AccountForm {
                   <strong>{{ formatMoney(account.initialBalance) }}</strong>
                 </div>
 
+                <div class="account-value">
+                  <span class="field-label">Saldo atual</span>
+                  <strong [class.negative]="(account.currentBalance ?? 0) < 0">{{ formatMoney(account.currentBalance ?? account.initialBalance) }}</strong>
+                </div>
+
                 <div class="account-status">
                   <span class="field-label">Status</span>
                   <span class="status" [class.status-inactive]="!account.active">
                     <span class="status-dot" aria-hidden="true"></span>
                     {{ account.active ? 'Ativa' : 'Inativa' }}
                   </span>
-                </div>
-
-                <div class="account-updated">
-                  <span class="field-label">Atualizada em</span>
-                  <span>{{ formatDate(account.updatedAt) }}</span>
                 </div>
 
                 <button
@@ -196,6 +200,7 @@ export class AssetAccountsPageComponent implements OnInit {
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly snackBar = inject(MatSnackBar);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly accounts = signal<AssetAccount[]>([]);
   readonly accountsLoaded = signal(false);
@@ -220,6 +225,13 @@ export class AssetAccountsPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadAccounts();
+
+    // Watch for reload query param to refresh accounts
+    this.route.queryParams.subscribe(params => {
+      if (params['reload']) {
+        this.loadAccounts();
+      }
+    });
   }
 
   loadAccounts(): void {

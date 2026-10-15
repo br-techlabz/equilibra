@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
@@ -52,7 +53,10 @@ public class BalanceReconciliationService {
         AssetAccount account = accounts.findByIdAndOwnerId(accountId, ownerId)
             .orElseThrow(() -> new ResourceNotFoundException("Asset account not found."));
 
-        Instant cutoff = date.atTime(23, 59, 59, 999999999).toInstant(ZoneOffset.UTC);
+        // Use Brazil timezone (America/Sao_Paulo) for end-of-day cutoff
+        // MySQL TIMESTAMP(6) supports microsecond precision
+        ZoneId brazilZone = ZoneId.of("America/Sao_Paulo");
+        Instant cutoff = date.atTime(23, 59, 59, 999999000).atZone(brazilZone).toInstant();
 
         BigDecimal balance = account.getInitialBalance();
         List<FinancialTransaction> activeTransactions = transactions
@@ -87,8 +91,9 @@ public class BalanceReconciliationService {
 
         BigDecimal informedBalance = validateMoney(request.informedBalance(), "informedBalance");
         LocalDate date = request.reconciliationDate();
+        ZoneId brazilZone = ZoneId.of("America/Sao_Paulo");
 
-        if (date.isAfter(LocalDate.now(ZoneOffset.UTC))) {
+        if (date.isAfter(LocalDate.now(brazilZone))) {
             throw new IllegalArgumentException("Reconciliation date cannot be in the future.");
         }
 
@@ -100,7 +105,9 @@ public class BalanceReconciliationService {
 
         if (difference.signum() != 0) {
             Category category = getOrCreateAdjustmentCategory(ownerId);
-            Instant occurredAt = date.atTime(23, 59, 59, 999999999).toInstant(ZoneOffset.UTC);
+            // Use Brazil timezone (America/Sao_Paulo) for end-of-day timestamp
+            // MySQL TIMESTAMP(6) supports microsecond precision
+            Instant occurredAt = date.atTime(23, 59, 59, 999999000).atZone(brazilZone).toInstant();
 
             FinancialTransaction tx;
             if (difference.signum() > 0) {

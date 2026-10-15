@@ -23,7 +23,8 @@ import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.
 import { ReconciliationResultDialogComponent } from './reconciliation-result-dialog.component';
 
 interface ReconcileForm {
-  reconciliationDate: FormControl<string>;
+  reconciliationDate: FormControl<Date>;
+  reconciliationTime: FormControl<string>;
   informedBalance: FormControl<string>;
 }
 
@@ -59,19 +60,32 @@ interface ReconcileForm {
 
       <app-content-panel>
         <form class="reconcile-form" [formGroup]="form" (ngSubmit)="onSubmit()">
-          <!-- Data da reconciliação -->
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Data da reconciliação</mat-label>
-            <input matInput [matDatepicker]="picker" formControlName="reconciliationDate" [max]="maxDate" />
-            <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-            <mat-datepicker #picker></mat-datepicker>
-            @if (form.controls.reconciliationDate.hasError('required')) {
-              <mat-error>Informe a data da reconciliação.</mat-error>
-            }
-            @if (form.controls.reconciliationDate.hasError('futureDate')) {
-              <mat-error>Não é permitido reconciliar datas futuras.</mat-error>
-            }
-          </mat-form-field>
+          <!-- Data e hora da reconciliação -->
+          <div class="datetime-row">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Data da reconciliação</mat-label>
+              <input matInput [matDatepicker]="picker" formControlName="reconciliationDate" [max]="maxDate" />
+              <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+              <mat-datepicker #picker></mat-datepicker>
+              @if (form.controls.reconciliationDate.hasError('required')) {
+                <mat-error>Informe a data da reconciliação.</mat-error>
+              }
+              @if (form.controls.reconciliationDate.hasError('futureDate')) {
+                <mat-error>Não é permitido reconciliar datas futuras.</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="time-field">
+              <mat-label>Hora da reconciliação</mat-label>
+              <input matInput type="time" formControlName="reconciliationTime" />
+              @if (form.controls.reconciliationTime.hasError('required')) {
+                <mat-error>Informe a hora da reconciliação.</mat-error>
+              }
+              @if (form.controls.reconciliationTime.hasError('pattern')) {
+                <mat-error>Formato inválido. Use HH:mm (ex: 23:59).</mat-error>
+              }
+            </mat-form-field>
+          </div>
 
           <!-- Saldo de referência (preview) -->
           @if (referenceBalance() !== null) {
@@ -157,9 +171,13 @@ export class ReconcileAccountPageComponent implements OnInit {
   readonly maxDate = new Date();
 
   readonly form: FormGroup<ReconcileForm> = this.formBuilder.group({
-    reconciliationDate: this.formBuilder.control<string>('', [
+    reconciliationDate: this.formBuilder.control<Date>(new Date(), [
       Validators.required,
       futureDateValidator(),
+    ]),
+    reconciliationTime: this.formBuilder.control<string>(this.getCurrentTimeString(), [
+      Validators.required,
+      Validators.pattern(/^([01]\d|2[0-3]):([0-5]\d)$/),
     ]),
     informedBalance: this.formBuilder.control<string>('', [
       Validators.required,
@@ -237,10 +255,16 @@ export class ReconcileAccountPageComponent implements OnInit {
 
     const values = this.form.getRawValue();
     const rawDate = values.reconciliationDate;
-    const date = rawDate && typeof rawDate === 'object' && 'getTime' in rawDate
+    const parsedDate = rawDate && typeof rawDate === 'object' && 'getTime' in rawDate
       ? rawDate as Date
       : new Date(String(rawDate) + 'T00:00:00');
-    const isoDate = date.toISOString().split('T')[0];
+
+    // Combine date with time
+    const timeStr = values.reconciliationTime || '23:59';
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    parsedDate.setHours(hours, minutes, 0, 0);
+
+    const isoDate = parsedDate.toISOString().split('T')[0];
 
     const request: ReconcileAccountRequest = {
       reconciliationDate: isoDate,
@@ -272,7 +296,9 @@ export class ReconcileAccountPageComponent implements OnInit {
     });
 
     dialogRef.afterClosed().subscribe(() => {
-      this.router.navigate(['/accounts']);
+      // Navigate with a timestamp query param to force component reload
+      const timestamp = Date.now();
+      this.router.navigate(['/accounts'], { queryParams: { reload: timestamp }, replaceUrl: true });
     });
   }
 
@@ -294,6 +320,13 @@ export class ReconcileAccountPageComponent implements OnInit {
 
   formatMoney(value: number): string {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+  }
+
+  private getCurrentTimeString(): string {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
   }
 }
 

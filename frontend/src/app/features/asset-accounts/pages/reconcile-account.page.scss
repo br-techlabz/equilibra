@@ -12,8 +12,15 @@
   gap: var(--spacing-md);
 }
 
-.full-width {
-  width: 100%;
+.datetime-row {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: flex-end;
+}
+
+.datetime-row .time-field {
+  width: 160px;
+  flex-shrink: 0;
 }
 
 .reference-balance {
@@ -107,5 +114,14 @@
 @media (max-width: 599px) {
   .reconcile-page {
     padding: var(--spacing-md);
+  }
+
+  .datetime-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .datetime-row .time-field {
+    width: 100%;
   }
 }
