@@ -1,0 +1,124 @@
+# TASK-9.1 — BACKEND DE RECONCILIAÇÃO DE SALDO
+PROJETO: EQUILIBRA | SPRINT 9
+
+OBJETIVO
+Implementar a reconciliação de saldo no backend, conforme ADR aprovado na TASK-9.0.
+
+1. INSPEÇÃO
+Ler CLAUDE.md, ADR 9.0, serviços de contas, receitas, despesas, ledger, histórico, categorias, autenticação, migrations e testes.
+
+Produzir PRE-IMPLEMENTATION REPORT com regras, serviços a reutilizar, endpoints e arquivos previstos.
+
+2. CÁLCULO DO SALDO
+Implementar consulta autoritativa do saldo da conta na data solicitada.
+
+Considerar saldo inicial e movimentos financeiros válidos segundo as regras existentes, incluindo transferências, cancelamentos, estornos e ajustes anteriores.
+
+Usar a semântica temporal aprovada no ADR.
+
+Não usar o saldo atual para responder a uma consulta histórica.
+
+Não duplicar a lógica de cálculo se já existir serviço de saldo histórico confiável.
+
+3. OPERAÇÃO DE RECONCILIAÇÃO
+Receber conta, data e saldo informado, conforme contrato aprovado.
+
+Identificar a conta pelo recurso autenticado e pela rota/solicitação validada.
+
+Calcular:
+diferença = saldo informado − saldo calculado.
+
+Se positiva:
+criar receita de valor igual à diferença.
+
+Se negativa:
+criar despesa de valor absoluto da diferença.
+
+Descrição exata para ambos:
+"Ajuste de Saldo".
+
+Se zero:
+não criar lançamento financeiro.
+
+Retornar resumo contendo saldo calculado, saldo informado, diferença, tipo de ajuste e identificação do lançamento criado, quando aplicável.
+
+4. LANÇAMENTOS REAIS
+Utilizar os serviços de receita e despesa existentes.
+Não criar ledger paralelo.
+Não alterar saldo diretamente.
+Não criar transferências artificiais.
+Não gerar lançamento bancário para cartão de crédito.
+
+5. ATOMICIDADE
+A leitura do saldo e a criação do ajuste devem ser protegidas contra concorrência, conforme estratégia aprovada no ADR.
+
+Usar transação de banco, locking ou mecanismo equivalente para impedir que operações simultâneas produzam um resultado inconsistente.
+
+Se ocorrer falha, não deixar lançamento parcial.
+
+Proteger contra retries e submissões repetidas usando estratégia idempotente adequada ao projeto.
+
+6. HISTÓRICO
+Registrar a receita/despesa pelo mecanismo de auditoria já existente.
+
+Preservar rastreabilidade entre a reconciliação e o lançamento, usando entidade ou vínculo apenas se aprovado no ADR.
+
+7. CATEGORIA
+Aplicar a categoria aprovada no ADR.
+Garantir que a categoria esteja disponível e seja reutilizada sem duplicações.
+Respeitar validações de categoria e ownership.
+
+8. SEGURANÇA
+Owner derivado do JWT.
+Consultas sempre owner-scoped.
+Não aceitar ownerId.
+Conta de outro usuário deve ser indistinguível de inexistente.
+Não permitir reconciliar contas inativas ou tipos não elegíveis segundo ADR.
+
+9. VALIDAÇÃO
+Validar data, saldo, precisão decimal, limites e estado da conta.
+Não aceitar valores com mais de duas casas decimais se essa for a regra global.
+Não arredondar silenciosamente.
+
+10. API E BANCO
+Seguir convenções REST existentes.
+Atualizar OpenAPI.
+Usar Problem Details e Request ID.
+Criar migrations Flyway incrementais somente se necessárias.
+Adicionar índices e constraints necessários.
+
+11. TESTES
+Unitários e Testcontainers/MySQL:
+- diferença positiva;
+- diferença negativa;
+- diferença zero;
+- saldo histórico;
+- transferências;
+- movimentos cancelados;
+- reconciliação anterior;
+- data inválida;
+- conta inexistente;
+- conta de outro usuário;
+- conta inativa;
+- concorrência;
+- retry;
+- rollback;
+- categoria;
+- precisão monetária.
+
+12. GOLDEN
+Saldo calculado=1000,00; saldo informado=1200,00:
+criar receita 200,00; saldo final da data=1200,00.
+
+Saldo calculado=1000,00; saldo informado=850,00:
+criar despesa 150,00; saldo final da data=850,00.
+
+Saldo calculado=1000,00; informado=1000,00:
+nenhum lançamento; saldo permanece 1000,00.
+
+13. FORA DO ESCOPO
+Não implementar a tela Angular nesta tarefa.
+
+14. ENTREGA
+Relatório final com endpoints, regras, arquivos, migrations, testes executados, riscos e status.
+Se concluída: READY FOR TASK-9.2.

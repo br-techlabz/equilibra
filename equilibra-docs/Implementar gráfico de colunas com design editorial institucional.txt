@@ -1,0 +1,209 @@
+# Implementar gráfico de colunas com design editorial institucional
+
+## Objetivo
+
+Implemente um gráfico de colunas visualmente semelhante à imagem de referência fornecida pelo usuário, intitulada “Evolução da Densidade demográfica | Brasil”.
+
+O resultado deve ser um componente de visualização de dados real, responsivo, acessível e pronto para produção. Reproduza a linguagem visual da referência, sem copiar a imagem como fundo e sem inventar dados.
+
+## 1. Antes de implementar
+
+1. Inspecione a estrutura do repositório e identifique o framework, a linguagem, o sistema de estilos, as bibliotecas de gráficos e os padrões de componentes já existentes.
+2. Reutilize as dependências existentes sempre que forem adequadas.
+3. Se o projeto já possuir uma biblioteca de gráficos, utilize-a. Caso contrário, prefira Recharts em projetos React; para outros frameworks, selecione uma solução equivalente compatível com a stack.
+4. Evite adicionar dependências desnecessárias.
+5. Implemente a solução diretamente nos arquivos apropriados do projeto. Não entregue apenas uma explicação ou um exemplo isolado.
+
+## 2. Design system
+
+### Identidade visual
+- Estética editorial, institucional, minimalista e orientada a dados.
+- Fundo branco puro.
+- Hierarquia tipográfica clara.
+- Sem sombras decorativas, gradientes, efeitos 3D ou bordas desnecessárias.
+- Priorizar legibilidade e fidelidade à referência.
+
+### Tokens de design
+
+Defina tokens reutilizáveis, adaptando a convenção ao sistema de estilos existente:
+
+```css
+:root {
+  --chart-bg: #FFFFFF;
+  --chart-bar: #A8CFE3;
+  --chart-bar-opacity: 0.90;
+  --chart-text-primary: #343434;
+  --chart-text-secondary: #555555;
+  --chart-grid: #E5E5E5;
+  --chart-axis: #D8D8D8;
+
+  --chart-title-size: 22px;
+  --chart-axis-size: 11px;
+  --chart-source-size: 10px;
+
+  --chart-padding-top: 8px;
+  --chart-padding-horizontal: 54px;
+  --chart-padding-bottom: 12px;
+}
+```
+
+Os valores são aproximações visuais iniciais. Ajuste-os após comparar a renderização com a referência.
+
+### Tipografia
+- Utilizar a fonte sem serifa já adotada pelo projeto; na ausência de uma, utilizar Arial ou uma stack de fontes de sistema.
+- Título centralizado, entre 20 e 22 px, peso 700, cor grafite.
+- Rótulos dos eixos entre 10 e 12 px, peso regular.
+- Fonte e créditos entre 9 e 10 px.
+- Evitar títulos excessivamente grandes e rótulos em negrito.
+
+## 3. Estrutura do gráfico
+
+Implemente um gráfico de colunas verticais com os seguintes elementos:
+
+1. Título centralizado no topo: “Evolução da Densidade demográfica | Brasil”.
+2. Área de plotagem ocupando a maior parte do componente.
+3. Eixo Y à esquerda, identificado como “Habitantes/km²”.
+4. Eixo X com os anos fornecidos nos dados.
+5. Linhas de grade horizontais discretas.
+6. Colunas azul-claras, sem contorno, com espaçamento uniforme.
+7. Tooltip informativo ao passar o cursor ou focar uma coluna.
+8. Rodapé com fonte bibliográfica alinhada à esquerda.
+
+### Aparência das colunas
+- Cor aproximada: #A8CFE3.
+- Opacidade próxima de 90%.
+- Formato retangular, sem bordas arredondadas perceptíveis.
+- Largura consistente, com intervalos visíveis entre colunas.
+- Base alinhada a zero.
+- Sem sombras.
+- Preservar o espaço em branco entre o título, a área de plotagem e o rodapé.
+
+### Eixos e grade
+- Grade horizontal fina, cor #E5E5E5.
+- Não desenhar grade vertical.
+- Eixos e marcas de referência em cinza-claro.
+- Textos dos eixos em cinza-escuro.
+- Manter os rótulos dos anos legíveis, sem colisões.
+- No eixo Y, utilizar uma escala adequada aos dados, com intervalos regulares e início em zero quando apropriado.
+
+## 4. Dados e configuração
+
+Não invente, complete ou altere silenciosamente valores.
+
+Crie uma estrutura de dados independente do componente de apresentação. Caso os dados exatos da aplicação não estejam disponíveis, utilize a seguinte série ilustrativa, baseada aproximadamente nos valores visíveis na referência:
+
+```ts
+type ChartDatum = {
+  year: number;
+  value: number;
+};
+
+const data: ChartDatum[] = [
+  { year: 1940, value: 4.8 },
+  { year: 1950, value: 6.1 },
+  { year: 1960, value: 8.3 },
+  { year: 1970, value: 11.1 },
+  { year: 1980, value: 14.2 },
+  { year: 1991, value: 17.26 },
+  { year: 2000, value: 19.8 },
+  { year: 2010, value: 22.4 },
+  { year: 2022, value: 23.8 }
+];
+```
+
+IMPORTANTE: esses números são aproximações visuais, não uma transcrição validada de dados oficiais. Mantenha-os claramente identificados como ilustrativos até que uma fonte de dados oficial seja fornecida ou validada.
+
+Permita configurar externamente:
+- título;
+- unidade do eixo Y;
+- conjunto de dados;
+- fonte bibliográfica;
+- intervalo e domínio do eixo Y;
+- formatação dos valores;
+- destaque de um ponto específico.
+
+## 5. Tooltip e destaque de dados
+
+Implemente um tooltip discreto, semelhante ao pequeno rótulo branco exibido na imagem de referência.
+
+Requisitos:
+- Fundo branco.
+- Texto grafite, entre 11 e 12 px.
+- Padding compacto.
+- Sem sombra forte.
+- Cantos discretamente arredondados.
+- Exibir ano e valor com a unidade correspondente.
+- Utilizar formatação decimal consistente com o idioma português do Brasil.
+
+Exemplo de conteúdo:
+“1991: 17,26 hab/km²”.
+
+O tooltip deve aparecer próximo à coluna selecionada, sem ultrapassar os limites do gráfico. Deve funcionar com mouse, teclado e dispositivos de toque quando suportado pela biblioteca utilizada.
+
+## 6. Fonte bibliográfica
+
+Adicionar uma área de créditos abaixo da plotagem, em fonte pequena e cinza.
+
+Permitir que a fonte seja informada por propriedade ou configuração. Se a aplicação utilizar os dados da imagem de referência, o crédito poderá seguir este padrão:
+
+“Fonte: Censo Demográfico 2022: população residente, área territorial e densidade demográfica. IBGE. Sidra: sistema IBGE de recuperação automática. Rio de Janeiro, 2023.”
+
+Não afirmar que dados ilustrativos foram verificados pelo IBGE. O crédito deve corresponder à fonte efetivamente utilizada para os valores apresentados.
+
+## 7. Responsividade
+
+- O gráfico deve ocupar 100% da largura disponível do contêiner.
+- Proporção visual de referência próxima de 16:9 em telas largas, sem impor altura fixa inadequada em telas pequenas.
+- Em desktop, manter o título centralizado e as nove categorias do eixo X visíveis.
+- Em tablets, reduzir proporcionalmente os espaços externos.
+- Em dispositivos móveis, reduzir o título para aproximadamente 17–19 px, ajustar as margens e evitar sobreposição dos rótulos.
+- Se necessário, reduzir o tamanho dos rótulos ou permitir rolagem horizontal dentro do componente, preservando a legibilidade.
+- Não permitir que o rodapé, os eixos ou o tooltip sejam cortados.
+
+## 8. Acessibilidade
+
+- Fornecer um nome acessível e uma descrição textual do gráfico.
+- Garantir contraste suficiente entre texto, grade e barras.
+- Oferecer acesso aos valores por teclado e tooltip acessível, conforme os recursos da biblioteca.
+- Não depender exclusivamente de cores para transmitir informações.
+- Considerar uma tabela de dados acessível como alternativa complementar, sem poluir a apresentação visual.
+
+## 9. Arquitetura e qualidade
+
+- Separar dados, configuração, apresentação e estilos de acordo com as convenções do repositório.
+- Criar um componente reutilizável, com propriedades tipadas se a stack oferecer suporte a tipos.
+- Evitar duplicação de estilos e valores mágicos.
+- Não utilizar coordenadas fixas para desenhar as barras manualmente se uma biblioteca de gráficos já estiver disponível.
+- Não transformar a imagem de referência em background.
+- Evitar alterações em áreas não relacionadas da aplicação.
+- Garantir que a implementação funcione com os scripts e comandos existentes do projeto.
+
+## 10. Critérios de aceitação
+
+Considere a tarefa concluída somente quando:
+
+- [ ] O gráfico renderizar corretamente no projeto.
+- [ ] O título estiver centralizado e visualmente semelhante à referência.
+- [ ] As barras apresentarem azul-claro uniforme.
+- [ ] A grade horizontal for discreta e não houver grade vertical.
+- [ ] Os eixos, anos e unidade estiverem corretamente posicionados.
+- [ ] O tooltip apresentar ano, valor e unidade.
+- [ ] A fonte bibliográfica estiver abaixo do gráfico.
+- [ ] O layout for responsivo e acessível.
+- [ ] Os dados estiverem separados da camada de apresentação.
+- [ ] Os dados ilustrativos não forem apresentados como oficiais sem validação.
+- [ ] Os testes, verificações de tipos e build disponíveis no projeto forem executados.
+
+## 11. Validação visual final
+
+Após implementar:
+
+1. Execute a aplicação conforme os procedimentos existentes.
+2. Se houver ferramentas de navegador ou captura de tela disponíveis, gere uma captura do componente renderizado.
+3. Compare a captura com a referência considerando título, proporções, margens, altura das colunas, cor, grade, eixos e rodapé.
+4. Corrija as diferenças visuais mais importantes.
+5. Verifique o comportamento em desktop e mobile.
+6. Execute os testes e o build disponíveis.
+7. Ao finalizar, informe quais arquivos foram criados ou modificados, quais verificações foram executadas e quais limitações permanecem.
+
+Comece inspecionando o repositório e implemente a solução completa seguindo os padrões existentes.

@@ -1,0 +1,101 @@
+# TASK-9.4 — GATE FINAL DA SPRINT 9
+PROJETO: EQUILIBRA
+SPRINT 9 — RECONCILIAÇÃO DE SALDO
+
+OBJETIVO
+Auditar e validar a funcionalidade completa de reconciliação, corrigindo defeitos dentro do escopo e comprovando a integridade financeira.
+
+1. INSPEÇÃO
+Ler CLAUDE.md, ADR 9.0 e relatórios das TASKS 9.1–9.3, migrations, OpenAPI, código e testes.
+
+2. RASTREABILIDADE
+Criar matriz:
+requisito; implementação; teste; evidência; resultado; pendência.
+Não declarar PASS sem execução real.
+
+3. AÇÃO NA LISTAGEM
+Confirmar que cada conta elegível tem ação "Reconciliar".
+Preservar demais ações.
+Cartões de crédito não devem ser tratados como contas bancárias reconciliáveis.
+
+4. FORMULÁRIO
+Validar data e saldo, conta correta, erros, confirmação, cancelamento, loading e sucesso.
+
+5. GOLDEN POSITIVO
+Saldo calculado=1000,00.
+Informado=1200,00.
+Esperado: receita Ajuste de Saldo=200,00.
+
+6. GOLDEN NEGATIVO
+Saldo calculado=1000,00.
+Informado=850,00.
+Esperado: despesa Ajuste de Saldo=150,00.
+
+7. GOLDEN IGUAL
+Saldo calculado=1000,00.
+Informado=1000,00.
+Esperado: nenhum lançamento.
+
+8. SALDO HISTÓRICO
+Criar movimentos antes e depois da data escolhida.
+Reconciliar a data intermediária.
+Confirmar saldo correto nessa data e preservação dos movimentos posteriores.
+
+9. TRANSFERÊNCIAS
+Verificar reconciliação de conta que teve transferências de entrada e saída, sem duplicar a movimentação nas duas contas.
+
+10. IDEMPOTÊNCIA E CONCORRÊNCIA
+Repetir submissão e executar requests concorrentes.
+Não permitir ajuste duplicado por retry da mesma operação.
+Garantir consistência quando outra movimentação ocorre simultaneamente.
+
+11. ROLLBACK
+Simular falha.
+Não deixar lançamento parcial nem saldo inconsistente.
+
+12. AUDITORIA E HISTÓRICO
+Verificar descrição, tipo, data, conta, categoria e vínculo de reconciliação, se aprovado no ADR.
+
+13. ORÇAMENTOS E RELATÓRIOS
+Confirmar classificação correta e ausência de dupla contagem.
+
+14. DASHBOARD E PROJEÇÃO
+Validar atualização do saldo real e do fluxo projetado, sem criar compromisso futuro artificial.
+
+15. SEGURANÇA
+JWT, owner-scoping, IDs estrangeiros, validação, Problem Details, Request ID e tratamento de erros.
+
+16. BANCO
+Flyway, FKs, índices, constraints, precisão DECIMAL(19,2) e transações.
+
+17. TESTES
+Executar:
+backend unit tests;
+Testcontainers/MySQL;
+Angular tests;
+lint;
+backend build;
+Angular production build;
+E2E se disponível;
+regressões financeiras.
+
+Registrar comandos e resultados reais.
+Não declarar PASS para testes não executados.
+
+18. CORREÇÃO
+Classificar defeitos como BLOCKER, CRITICAL, MAJOR ou MINOR.
+Corrigir problemas do escopo com testes de regressão.
+Não aprovar com BLOCKER/CRITICAL abertos ou evidências obrigatórias ausentes.
+
+19. RELATÓRIO FINAL
+Produzir:
+# TASK-9.4 — GATE FINAL DA SPRINT 9
+STATUS: APPROVED / REJECTED / BLOCKED
+
+Incluir ADR, matriz de rastreabilidade, UX, backend, frontend, saldo histórico, ledger, auditoria, segurança, ownership, testes, builds, regressões, bugs, riscos e evidências.
+
+Se aprovada:
+SPRINT 9 — APPROVED.
+READY FOR SPRINT 10 PLANNING.
+
+Não iniciar Sprint 10 automaticamente.

@@ -56,6 +56,11 @@ export const routes: Routes = [
           import('./features/asset-accounts/pages/asset-accounts.page').then((m) => m.AssetAccountsPageComponent),
       },
       {
+        path: 'accounts/:accountId/reconcile',
+        loadComponent: () =>
+          import('./features/asset-accounts/pages/reconcile-account.page').then((m) => m.ReconcileAccountPageComponent),
+      },
+      {
         path: 'credit-cards',
         loadComponent: () =>
           import('./features/credit-cards/pages/credit-cards.page').then((m) => m.CreditCardsPageComponent),

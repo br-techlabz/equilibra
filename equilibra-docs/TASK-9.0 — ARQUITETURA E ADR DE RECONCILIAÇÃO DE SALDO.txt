@@ -1,0 +1,116 @@
+# TASK-9.0 — ARQUITETURA E ADR DE RECONCILIAÇÃO DE SALDO
+PROJETO: EQUILIBRA
+SPRINT 9 — RECONCILIAÇÃO DE SALDO
+
+PAPEL: Arquiteto de software sênior especializado em sistemas financeiros.
+
+STACK: Spring Boot 4, Angular 19, MySQL, Flyway, Angular Material, ECharts.
+
+OBJETIVO
+Definir a arquitetura e as regras de negócio da reconciliação de saldo antes de implementar funcionalidades.
+
+1. INSPEÇÃO OBRIGATÓRIA
+Ler CLAUDE.md, ADRs existentes, relatório de aprovação das sprints, entidades Account, Expense, Income, AccountMovement, FinancialTransaction, histórico, Dashboard, relatórios, orçamentos, segurança, OpenAPI, migrations e testes.
+
+Identificar como o sistema calcula o saldo de uma conta e como registra receitas e despesas. Não inventar nomes de classes, endpoints ou campos.
+
+2. REGRA DE NEGÓCIO
+Na listagem de Contas, a ação Reconciliar abre uma tela com:
+- Data;
+- Saldo.
+
+A conta reconciliada é a conta selecionada na listagem. Não solicitar outra conta se ela já estiver identificada pela rota ou contexto.
+
+O sistema calcula o saldo registrado da conta na data informada e compara com o saldo informado pelo usuário.
+
+Diferença = saldo informado − saldo calculado pelo sistema na data.
+
+Se diferença > 0:
+criar receita na conta selecionada, descrição exatamente "Ajuste de Saldo", valor igual à diferença.
+
+Se diferença < 0:
+criar despesa na conta selecionada, descrição exatamente "Ajuste de Saldo", valor absoluto da diferença.
+
+Se diferença = 0:
+não criar receita ou despesa de valor zero.
+
+3. SALDO HISTÓRICO
+Definir formalmente como calcular o saldo na data:
+- saldo inicial;
+- lançamentos efetivos da conta;
+- data de ocorrência financeira (occurredAt);
+- receitas, despesas e transferências;
+- lançamentos cancelados ou estornados;
+- ajustes de reconciliações anteriores.
+
+Não utilizar o saldo atual como substituto do saldo histórico.
+
+Considerar a convenção de inclusão de movimentos ocorridos na data selecionada. A reconciliação deve produzir o saldo informado ao final dessa data sem duplicar ou omitir movimentos.
+
+Se a data for anterior à data atual, verificar o impacto no saldo atual e nas movimentações posteriores. Não alterar nem apagar lançamentos posteriores.
+
+4. CATEGORIAS E CLASSIFICAÇÃO
+Determinar como categorizar a receita/despesa de ajuste utilizando o modelo atual de categorias.
+
+Preferir categoria dedicada "Ajuste de Saldo" quando compatível com a arquitetura. Caso não seja possível, documentar a alternativa aprovada.
+
+Não criar categoria automaticamente em cada reconciliação. Definir provisionamento idempotente ou estratégia equivalente.
+
+Preservar descrição exatamente "Ajuste de Saldo".
+
+5. REGRAS ADICIONAIS
+Definir:
+- data permitida, incluindo se datas futuras são aceitas;
+- validação de saldo não negativo, se aplicável;
+- valor máximo e precisão;
+- contas inativas;
+- contas com lançamentos históricos;
+- saldo inicial;
+- reconciliações repetidas na mesma data;
+- prevenção de submissões duplicadas;
+- edição, cancelamento e auditoria de reconciliações;
+- autorização e ownership;
+- comportamento se o saldo calculado for zero;
+- tratamento de erros e concorrência.
+
+Não presumir que duas reconciliações na mesma data são proibidas. Definir política que preserve a correção do saldo e o histórico.
+
+6. INTEGRIDADE FINANCEIRA
+Usar BigDecimal no backend e DECIMAL(19,2) no banco.
+
+Não arredondar silenciosamente.
+
+Não alterar diretamente o saldo persistido da conta como atalho.
+
+Criar a correção utilizando os serviços existentes de receita/despesa e o ledger oficial.
+
+Uma reconciliação deve gerar, no máximo, um lançamento de ajuste por operação confirmada.
+
+7. IMPACTOS
+Documentar impacto em:
+- saldo da conta;
+- histórico;
+- receitas e despesas;
+- orçamentos por categoria;
+- relatórios;
+- Dashboard;
+- fluxo de caixa e compromissos;
+- transferências;
+- auditoria.
+
+Não contar o mesmo ajuste duas vezes.
+
+8. SEGURANÇA
+O proprietário deve vir do JWT e do CurrentUser.
+Nunca aceitar ownerId do frontend.
+IDs de outras pessoas devem ser tratados conforme a política de recursos inexistentes.
+Não permitir reconciliar cartão de crédito como se fosse conta bancária.
+
+9. ENTREGÁVEIS
+Produzir ADR com decisões, modelo de dados, fluxos, contratos conceituais, estratégia de transação, riscos, casos golden e plano das TASKS 9.1–9.4.
+
+10. GATE
+Não implementar código nesta tarefa.
+Se uma regra essencial não puder ser determinada, marcar BLOCKED e explicar a pendência.
+
+Ao concluir, apresentar READY FOR TASK-9.1.

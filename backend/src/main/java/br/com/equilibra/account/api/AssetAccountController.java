@@ -1,6 +1,8 @@
 package br.com.equilibra.account.api;
 
 import br.com.equilibra.account.application.AssetAccountService;
+import br.com.equilibra.account.application.BalanceReconciliationService;
+import br.com.equilibra.account.application.AccountBalanceQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,11 +29,13 @@ import java.util.List;
 public class AssetAccountController {
 
     private final AssetAccountService service;
-    private final br.com.equilibra.account.application.AccountBalanceQueryService balances;
+    private final AccountBalanceQueryService balances;
+    private final BalanceReconciliationService reconciliation;
 
-    public AssetAccountController(AssetAccountService service, br.com.equilibra.account.application.AccountBalanceQueryService balances) {
+    public AssetAccountController(AssetAccountService service, AccountBalanceQueryService balances, BalanceReconciliationService reconciliation) {
         this.service = service;
         this.balances = balances;
+        this.reconciliation = reconciliation;
     }
 
     @PostMapping
@@ -78,5 +82,15 @@ public class AssetAccountController {
     @Operation(summary = "Reativar conta de ativo")
     public ResponseEntity<AssetAccountResponse> activate(@PathVariable String id) {
         return ResponseEntity.ok(service.activate(id));
+    }
+
+    @PostMapping("/{id}/reconcile")
+    @Operation(summary = "Reconciliar saldo da conta de ativo")
+    public ResponseEntity<ReconciliationResultResponse> reconcile(
+        @PathVariable String id,
+        @Valid @RequestBody ReconcileAccountRequest request
+    ) {
+        ReconciliationResultResponse response = reconciliation.reconcile(id, request);
+        return ResponseEntity.ok(response);
     }
 }

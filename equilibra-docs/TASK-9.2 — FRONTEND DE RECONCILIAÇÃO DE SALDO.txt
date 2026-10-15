@@ -1,0 +1,109 @@
+# TASK-9.2 — FRONTEND DE RECONCILIAÇÃO DE SALDO
+PROJETO: EQUILIBRA | SPRINT 9
+
+OBJETIVO
+Adicionar a ação "Reconciliar" à coluna Ações da listagem de Contas e criar a tela para informar data e saldo.
+
+1. INSPEÇÃO
+Ler CLAUDE.md, ADR 9.0, relatório 9.1, tela atual de Contas, roteamento, componentes, serviços HTTP, formulários, autenticação e design system.
+
+Produzir PRE-IMPLEMENTATION REPORT.
+
+2. LISTAGEM DE CONTAS
+Adicionar ação "Reconciliar" em cada linha ou card de conta elegível.
+
+Preservar ações existentes, estilos, permissões e responsividade.
+
+Não exibir a ação para cartões de crédito nem tipos de recurso não elegíveis conforme ADR.
+
+3. NAVEGAÇÃO
+Criar rota conforme padrão do projeto, por exemplo:
+/accounts/:accountId/reconcile
+
+Usar a conta selecionada para identificar o recurso.
+Não pedir que o usuário selecione novamente a conta se ela já estiver no contexto.
+
+4. TELA DE RECONCILIAÇÃO
+Exibir:
+- título "Reconciliar Saldo";
+- nome da conta;
+- campo Data;
+- campo Saldo;
+- botão Cancelar/Voltar;
+- botão Confirmar Reconciliação.
+
+Campos obrigatórios:
+Data e Saldo.
+
+Usar formulário reativo e Angular Material conforme padrões existentes.
+
+5. SALDO DE REFERÊNCIA
+Se a API disponibilizar o saldo calculado na data selecionada, exibi-lo como informação de referência.
+
+Atualizar o valor de referência ao mudar a data, sem recalcular de forma independente no frontend.
+
+Não tratar o saldo atual como saldo histórico.
+
+6. PREVISUALIZAÇÃO
+Se existir endpoint autoritativo de simulação, mostrar:
+saldo calculado;
+saldo informado;
+diferença;
+tipo de ajuste esperado.
+
+Se não existir, não criar cálculo financeiro paralelo no cliente. O backend deverá retornar o resultado após a confirmação.
+
+7. CONFIRMAÇÃO
+Antes de confirmar, informar que o sistema criará uma receita ou despesa "Ajuste de Saldo" caso exista diferença.
+
+Evitar submissões repetidas com estado de loading e proteção contra duplo clique.
+
+8. RESULTADO
+Após sucesso, mostrar:
+saldo de referência;
+saldo informado;
+valor ajustado;
+tipo de lançamento criado ou ausência de ajuste;
+data reconciliada.
+
+Atualizar dados da conta e histórico por meio dos serviços existentes.
+
+Não atualizar o saldo artificialmente no frontend.
+
+9. VALIDAÇÃO
+Data e saldo obrigatórios.
+Validar formato monetário conforme padrões do projeto.
+Não enviar ownerId.
+Tratar erros de API e Problem Details.
+
+10. ESTADOS
+Loading, empty quando aplicável, error, retry e sucesso.
+Tratar 400, 401, 403, 404, 409 e erros inesperados.
+Não limpar dados de forma enganosa após falha.
+
+11. EXPERIÊNCIA
+Formato pt-BR.
+Valores BRL.
+Layout coerente com identidade visual Equilibra.
+Responsividade em celular, tablet e desktop.
+Acessibilidade, foco visível, teclado e mensagens claras.
+
+12. TESTES
+Testar ação na listagem, navegação, formulário, validação, cancelamento, confirmação, loading, erro, retry, sucesso e atualização de dados.
+
+Executar lint, testes Angular e production build.
+
+13. GOLDEN
+Conta com saldo na data de 1000,00.
+Informar 1200,00: backend retorna receita de ajuste de 200,00.
+Informar 850,00: backend retorna despesa de ajuste de 150,00.
+Informar 1000,00: backend informa nenhuma diferença e nenhum lançamento.
+
+14. FORA DO ESCOPO
+Não reconstruir a tela inteira de Contas.
+Não implementar relatórios nesta tarefa.
+Não implementar regras financeiras no frontend.
+
+15. ENTREGA
+Relatório final com rota, componentes, serviços, testes e arquivos modificados.
+Se concluída: READY FOR TASK-9.3.

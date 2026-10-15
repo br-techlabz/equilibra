@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { AssetAccount, AssetAccountRequest } from '../models/asset-account.models';
+import { ReconcileAccountRequest, ReconciliationResultResponse } from '../models/reconciliation.models';
 
 @Injectable({ providedIn: 'root' })
 export class AssetAccountsApiService {
@@ -28,5 +29,14 @@ export class AssetAccountsApiService {
 
   activate(id: string): Observable<AssetAccount> {
     return this.http.patch<AssetAccount>(`${this.apiUrl}/${id}/activate`, {});
+  }
+
+  reconcile(accountId: string, request: ReconcileAccountRequest): Observable<ReconciliationResultResponse> {
+    return this.http.post<ReconciliationResultResponse>(`${this.apiUrl}/${accountId}/reconcile`, request);
+  }
+
+  getBalanceAt(accountId: string, date: string): Observable<{ balance: number }> {
+    const params = new HttpParams().set('date', date);
+    return this.http.get<{ balance: number }>(`${this.apiUrl}/${accountId}/balance-at`, { params });
   }
 }

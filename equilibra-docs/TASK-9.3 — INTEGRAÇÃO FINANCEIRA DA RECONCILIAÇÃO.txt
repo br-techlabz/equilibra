@@ -1,0 +1,75 @@
+# TASK-9.3 — INTEGRAÇÃO FINANCEIRA DA RECONCILIAÇÃO
+PROJETO: EQUILIBRA | SPRINT 9
+
+OBJETIVO
+Garantir que os ajustes de saldo sejam corretamente refletidos no histórico, saldo da conta, Dashboard, relatórios e orçamentos, sem duplicar valores.
+
+1. INSPEÇÃO
+Ler ADR 9.0, relatórios 9.1 e 9.2, serviços de saldo, histórico, Dashboard, relatórios, orçamentos, projeções e regras do ledger.
+
+Produzir PRE-IMPLEMENTATION REPORT.
+
+2. HISTÓRICO
+Ajustes devem aparecer como receitas ou despesas reais, com descrição "Ajuste de Saldo", data correta, conta correta, valor e categoria aprovada.
+
+Se existir vínculo de auditoria da reconciliação, preservar o vínculo.
+
+3. SALDOS
+Verificar saldo na data da reconciliação e saldo atual após o ajuste.
+
+Para reconciliação histórica, validar como o ajuste afeta o saldo da data e os saldos subsequentes, preservando movimentos posteriores.
+
+Não alterar saldo inicial nem apagar movimentos anteriores.
+
+4. DASHBOARD
+Os ajustes devem refletir-se nas métricas reais conforme a data e a semântica já adotadas pelo Dashboard.
+
+Não criar indicadores duplicados nem somar o ajuste duas vezes.
+
+5. RELATÓRIOS
+Receitas e despesas de ajuste devem ser identificáveis.
+Preservar a descrição "Ajuste de Saldo".
+Aplicar datas e filtros coerentes.
+Não misturar o evento administrativo de reconciliação com um segundo movimento financeiro.
+
+6. ORÇAMENTOS
+Aplicar as regras existentes de categoria e período.
+Não modificar regras globais de orçamento.
+Se a categoria "Ajuste de Saldo" for excluída de algum indicador por decisão do ADR, documentar e testar a exceção explicitamente.
+
+7. PROJEÇÃO E COMPROMISSOS
+Ajustes são lançamentos reais, não compromissos futuros.
+Não criar FinancialCommitment nem recorrência para um ajuste.
+Garantir que o saldo de abertura das projeções considere o ledger atualizado uma única vez.
+
+8. DATAS HISTÓRICAS
+Testar reconciliação anterior com receitas, despesas e transferências posteriores.
+O saldo final na data deve corresponder ao saldo informado, e os movimentos posteriores devem continuar preservados e contabilizados normalmente.
+
+9. MULTIUSER
+Garantir que Dashboard, histórico e relatórios respeitem ownership.
+
+10. TESTES
+- ajuste positivo;
+- ajuste negativo;
+- diferença zero;
+- reconciliação histórica;
+- lançamentos posteriores;
+- transferências;
+- cancelamento/estorno, se suportados;
+- filtros por conta e período;
+- Dashboard;
+- relatórios;
+- orçamento;
+- projeção;
+- ownership;
+- ausência de dupla contagem.
+
+Executar Testcontainers/MySQL, testes frontend, lint e builds conforme configuração.
+
+11. FORA DO ESCOPO
+Não alterar funcionalidades financeiras sem relação com reconciliação.
+
+12. ENTREGA
+Relatório com evidências de reconciliação entre ledger, saldos, histórico, Dashboard e relatórios.
+Se concluída: READY FOR TASK-9.4.

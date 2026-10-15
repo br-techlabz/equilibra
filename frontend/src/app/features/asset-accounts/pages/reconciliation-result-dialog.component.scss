@@ -1,0 +1,60 @@
+@use '../../../../styles' as *;
+
+.dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.icon-income { color: var(--color-success); }
+.icon-expense { color: var(--color-error); }
+.icon-none { color: var(--color-success); }
+
+.dialog-content { padding: 16px 24px 0; min-width: 320px; }
+
+.result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+}
+
+.result-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.result-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-secondary);
+}
+
+.result-value {
+  font-size: 1rem;
+  color: var(--color-text-primary);
+}
+
+.result-value.positive { color: var(--color-success); }
+.result-value.negative { color: var(--color-error); }
+
+.transaction-id {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  background: var(--color-surface-variant);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.dialog-actions { padding: 16px 24px; }
+
+@media (max-width: 599px) {
+  .result-grid {
+    grid-template-columns: 1fr;
+  }
+}

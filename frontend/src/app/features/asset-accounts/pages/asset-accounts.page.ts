@@ -21,6 +21,7 @@ import {
 import { ContentPanelComponent } from '../../../shared/ui/content-panel/content-panel.component';
 import { EmptyStateComponent } from '../../../shared/ui/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../../shared/ui/page-header/page-header.component';
+import { Router } from '@angular/router';
 
 interface AccountForm {
   name: FormControl<string>;
@@ -172,6 +173,9 @@ interface AccountForm {
           <button mat-menu-item (click)="openEditForm(account)">
             <mat-icon>edit</mat-icon><span>Editar</span>
           </button>
+          <button mat-menu-item (click)="openReconcile(account)">
+            <mat-icon>sync</mat-icon><span>Reconciliar</span>
+          </button>
           @if (account.active) {
             <button mat-menu-item (click)="deactivate(account)">
               <mat-icon>pause_circle</mat-icon><span>Desativar</span>
@@ -191,6 +195,7 @@ export class AssetAccountsPageComponent implements OnInit {
   private readonly api = inject(AssetAccountsApiService);
   private readonly formBuilder = inject(NonNullableFormBuilder);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly router = inject(Router);
 
   readonly accounts = signal<AssetAccount[]>([]);
   readonly accountsLoaded = signal(false);
@@ -328,5 +333,9 @@ export class AssetAccountsPageComponent implements OnInit {
         { duration: 4000 },
       ),
     });
+  }
+
+  openReconcile(account: AssetAccount): void {
+    this.router.navigate(['/accounts', account.id, 'reconcile']);
   }
 }
