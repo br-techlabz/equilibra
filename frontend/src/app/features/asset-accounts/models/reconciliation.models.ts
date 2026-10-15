@@ -1,5 +1,6 @@
 export interface ReconcileAccountRequest {
   reconciliationDate: string;
+  reconciliationTime: string;
   informedBalance: number;
 }
 

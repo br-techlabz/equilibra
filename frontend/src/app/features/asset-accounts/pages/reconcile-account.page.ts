@@ -265,9 +265,11 @@ export class ReconcileAccountPageComponent implements OnInit {
     parsedDate.setHours(hours, minutes, 0, 0);
 
     const isoDate = parsedDate.toISOString().split('T')[0];
+    const isoTime = values.reconciliationTime;
 
     const request: ReconcileAccountRequest = {
       reconciliationDate: isoDate,
+      reconciliationTime: isoTime,
       informedBalance: parseMoneyInput(values.informedBalance),
     };
 

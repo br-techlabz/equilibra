@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -91,6 +92,7 @@ public class BalanceReconciliationService {
 
         BigDecimal informedBalance = validateMoney(request.informedBalance(), "informedBalance");
         LocalDate date = request.reconciliationDate();
+        LocalTime time = LocalTime.parse(request.reconciliationTime());
         ZoneId brazilZone = ZoneId.of("America/Sao_Paulo");
 
         if (date.isAfter(LocalDate.now(brazilZone))) {
@@ -105,9 +107,9 @@ public class BalanceReconciliationService {
 
         if (difference.signum() != 0) {
             Category category = getOrCreateAdjustmentCategory(ownerId);
-            // Use Brazil timezone (America/Sao_Paulo) for end-of-day timestamp
+            // Use the specified time in Brazil timezone
             // MySQL TIMESTAMP(6) supports microsecond precision
-            Instant occurredAt = date.atTime(23, 59, 59, 999999000).atZone(brazilZone).toInstant();
+            Instant occurredAt = date.atTime(time).atZone(brazilZone).toInstant();
 
             FinancialTransaction tx;
             if (difference.signum() > 0) {
