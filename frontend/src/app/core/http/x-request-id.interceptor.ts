@@ -1,6 +1,7 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { HttpRequest, HttpHandlerFn, HttpEvent } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { newRequestId } from './request-id.util';
 
 /**
  * Header para correlação de requisições
@@ -22,9 +23,10 @@ export const xRequestIdInterceptor: HttpInterceptorFn = (
 
   let requestId = existingRequestId;
 
-  // Se não existe ou é inválido, gera novo UUID
+  // Se não existe ou é inválido, gera novo UUID (com fallback para
+  // contextos não-seguros como HTTP via IP, onde crypto.randomUUID não existe)
   if (!requestId || !isValidRequestId(requestId)) {
-    requestId = crypto.randomUUID();
+    requestId = newRequestId();
   }
 
   // Clona a requisição adicionando o header
