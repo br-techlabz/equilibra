@@ -41,10 +41,11 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-equilibra}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200,http://localhost:4201,http://localhost:4202}
     ports:
-      - "8080:8080"
+      - "8090:8090"
     depends_on:
       mysql:
         condition: service_healthy
+    restart: unless-stopped
     networks:
       - equilibra-network
 

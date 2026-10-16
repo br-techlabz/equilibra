@@ -46,11 +46,11 @@ RUN mkdir -p /app/logs && chown -R equilibra:equilibra /app
 USER equilibra
 
 # Expor porta
-EXPOSE 8080
+EXPOSE 8090
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/api/actuator/health/liveness || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8090/api/actuator/health/liveness || exit 1
 
 # Entry point
 ENTRYPOINT ["java", \
