@@ -304,11 +304,19 @@ export class ExpensesPageComponent implements OnInit {
     op.subscribe({
       next: (savedExpense) => {
         this.isSaving.set(false);
+        const isCardPurchase = v.paymentMethod === 'CREDIT_CARD' && isNew;
         this.snackBar.open(current ? 'Despesa atualizada com sucesso.' : 'Despesa registrada com sucesso. Agora você pode adicionar anexos.', 'Fechar', { duration: 3500 });
-        if (isNew) {
-          this.resetFormForNewEntry();
+        if (isCardPurchase) {
+          // Compra no cartão gera fatura, não despesa editável: fecha o drawer.
+          this.isFormOpen.set(false);
         } else if (savedExpense && 'status' in savedExpense) {
+          // Permanece no drawer em modo edição para permitir anexos.
           this.editingExpense.set(savedExpense as Expense);
+          // Limpa o estado "submitted" mantendo os valores, para que
+          // validações só voltem a aparecer após novo Salvar.
+          if (this.formDirective) {
+            this.formDirective.resetForm(this.form.getRawValue());
+          }
         }
         this.loadExpenses();
       },
