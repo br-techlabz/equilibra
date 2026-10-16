@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { FormControl, FormGroup, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, FormGroupDirective, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -100,6 +100,7 @@ export class ExpensesPageComponent implements OnInit {
   readonly pageSize = 20;
 
   readonly form: FormGroup<ExpenseForm>;
+  @ViewChild(FormGroupDirective) private formDirective?: FormGroupDirective;
   readonly pageActions = [{ label: 'Nova despesa', icon: 'add', handler: () => this.openCreateForm() }];
   readonly emptyActions = [{ label: 'Nova despesa', icon: 'add', handler: () => this.openCreateForm() }];
 
@@ -239,22 +240,25 @@ export class ExpensesPageComponent implements OnInit {
     this.editingExpense.set(null);
     this.formError.set(null);
     this.selectedTagIds.set([]);
-    this.form.reset({
+    const defaults = {
       description: '',
       occurredAt: this.localDateTime(new Date().toISOString()),
-      paymentMethod: 'BANK_ACCOUNT',
+      paymentMethod: 'BANK_ACCOUNT' as ExpensePaymentMethod,
       accountId: '',
       creditCardId: '',
       installmentCount: 1,
       amount: '',
       categoryId: '',
       notes: ''
-    });
-    // Mark all controls as pristine and untouched to prevent immediate validation errors
-    Object.values(this.form.controls).forEach(control => {
-      control.markAsPristine();
-      control.markAsUntouched();
-    });
+    };
+    // resetForm limpa também o estado "submitted" da diretiva do form —
+    // sem isso, o ErrorStateMatcher do Material exibe erros nos campos
+    // obrigatórios vazios logo após um registro bem-sucedido.
+    if (this.formDirective) {
+      this.formDirective.resetForm(defaults);
+    } else {
+      this.form.reset(defaults);
+    }
   }
 
   saveExpense(): void {
